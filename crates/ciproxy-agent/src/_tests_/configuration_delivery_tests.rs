@@ -16,7 +16,7 @@ use crate::guest_transport::{GuestRead, GuestSocket, GuestSocketMock, GuestTrans
 use crate::layout::Layout;
 use crate::process::{CommandsMock, UnitState};
 
-use super::{Guests, LinuxGuests};
+use super::{GuestChannels, Guests};
 
 pub(super) fn hello(received: bool) -> GuestToAgent {
     GuestToAgent::Hello {
@@ -99,7 +99,7 @@ async fn dropped_configuration_write_replays_until_the_guest_confirms_receipt() 
             })),
     );
     let (events, mut observed) = mpsc::channel(16);
-    let mut guests = LinuxGuests::new(
+    let mut guests = GuestChannels::new(
         Layout {
             data: PathBuf::from("/fixture"),
             firecracker: PathBuf::new(),
@@ -161,7 +161,7 @@ async fn restored_guest_hello_distinguishes_lost_configuration_from_configured_r
                 .returns(Ok(socket(vec![hello(received)], None))),
         );
         let (events, mut observed) = mpsc::channel(16);
-        let mut guests = LinuxGuests::new(
+        let mut guests = GuestChannels::new(
             Layout {
                 data: PathBuf::from("/fixture"),
                 firecracker: PathBuf::new(),

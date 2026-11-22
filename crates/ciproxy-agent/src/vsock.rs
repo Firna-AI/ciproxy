@@ -11,10 +11,17 @@ use tokio::task::JoinHandle;
 
 use crate::boundaries::GuestEvent;
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::guest_transport::{GuestTransport, UnixGuestTransport};
-use crate::layout::Layout;
+use crate::guest_transport::GuestTransport;
+#[cfg(target_os = "linux")]
+use crate::guest_transport::UnixGuestTransport;
+#[cfg(target_os = "linux")]
+use crate::layout::{Layout, unit_name};
+#[cfg(target_os = "linux")]
 use crate::process::Commands;
 use crate::state::VmRecord;
+#[cfg(target_os = "linux")]
+use crate::vm_liveness::UnitState;
+use crate::vm_liveness::VmLiveness;
 use crate::vsock_stream::GuestBridge;
 
 #[cfg_attr(test, unimock::unimock(api = GuestsMock))]
@@ -50,30 +57,60 @@ struct Channel {
     task: JoinHandle<()>,
 }
 
-pub(crate) struct LinuxGuests {
-    pub(crate) commands: Arc<dyn Commands>,
+/// The guest channels of one VM backend. The transport and the liveness
+/// check are the platform parts.
+pub(crate) struct GuestChannels {
+    pub(crate) liveness: Arc<dyn VmLiveness>,
     pub(crate) events: mpsc::Sender<GuestEvent>,
     channels: Mutex<HashMap<String, Channel>>,
     pub(crate) transport: Arc<dyn GuestTransport>,
 }
 
-impl LinuxGuests {
+impl GuestChannels {
+    pub(crate) fn with_parts(
+        transport: Arc<dyn GuestTransport>,
+        liveness: Arc<dyn VmLiveness>,
+        events: mpsc::Sender<GuestEvent>,
+    ) -> Self {
+        Self {
+            liveness,
+            events,
+            channels: Mutex::new(HashMap::new()),
+            transport,
+        }
+    }
+
+    /// Firecracker VMs: the jail's vsock socket and the systemd VM unit.
+    #[cfg(target_os = "linux")]
     pub(crate) fn new(
         layout: Layout,
         commands: Arc<dyn Commands>,
         events: mpsc::Sender<GuestEvent>,
     ) -> Self {
-        Self {
-            commands,
+        Self::with_parts(
+            Arc::new(UnixGuestTransport { layout }),
+            Arc::new(UnitLiveness { commands }),
             events,
-            channels: Mutex::new(HashMap::new()),
-            transport: Arc::new(UnixGuestTransport { layout }),
-        }
+        )
+    }
+}
+
+/// A Firecracker VM lives while its systemd unit is active.
+#[cfg(target_os = "linux")]
+struct UnitLiveness {
+    commands: Arc<dyn Commands>,
+}
+
+#[cfg(target_os = "linux")]
+#[async_trait]
+impl VmLiveness for UnitLiveness {
+    async fn state(&self, vm: &VmRecord) -> Result<UnitState> {
+        self.commands.unit(&unit_name(vm)).await
     }
 }
 
 #[async_trait]
-impl Guests for LinuxGuests {
+impl Guests for GuestChannels {
     async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool> {
         let channels = self.channels.lock().await;
         let channel = channels.get(&vm.local_id).ok_or(Error::Disconnected)?;
@@ -92,7 +129,7 @@ impl Guests for LinuxGuests {
             initial: AtomicBool::new(initial),
             configuration: configuration.clone(),
             transport: self.transport.clone(),
-            commands: self.commands.clone(),
+            liveness: self.liveness.clone(),
             events: self.events.clone(),
             vm: vm.clone(),
         };

@@ -1,4 +1,7 @@
-//! Bounded Firecracker vsock framing behind the guest connection boundary.
+//! Bounded guest framing behind the guest connection boundary.
+//!
+//! Linux connects through the Firecracker vsock socket and its `CONNECT`
+//! handshake. macOS takes a connected stream from the VM helper.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -8,9 +11,11 @@ use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
+#[cfg(target_os = "linux")]
 use tokio::time::{Duration, timeout};
 
 use crate::error::{Error, ErrorResultExt, Result};
+#[cfg(target_os = "linux")]
 use crate::layout::Layout;
 use crate::state::VmRecord;
 
@@ -33,6 +38,7 @@ pub trait GuestSocket: Send + Sync {
     async fn send(&mut self, message: &AgentToGuest) -> Result<()>;
 }
 
+#[cfg(target_os = "linux")]
 pub(crate) struct UnixGuestTransport {
     pub(crate) layout: Layout,
 }
@@ -43,6 +49,7 @@ struct Socket {
     bytes: Vec<u8>,
 }
 
+#[cfg(target_os = "linux")]
 #[async_trait]
 impl GuestTransport for UnixGuestTransport {
     async fn connect(&self, vm: &VmRecord) -> Result<Box<dyn GuestSocket>> {
@@ -72,6 +79,20 @@ impl GuestTransport for UnixGuestTransport {
             bytes: Vec::new(),
         }))
     }
+}
+
+/// Frame a connected guest stream that needs no handshake.
+#[cfg_attr(
+    not(target_os = "macos"),
+    allow(dead_code, reason = "Only the macOS transport frames a passed stream.")
+)]
+pub(crate) fn framed(stream: UnixStream) -> Box<dyn GuestSocket> {
+    let (read, writer) = stream.into_split();
+    Box::new(Socket {
+        reader: BufReader::new(read),
+        writer,
+        bytes: Vec::new(),
+    })
 }
 
 #[async_trait]

@@ -207,7 +207,7 @@ The default gate does not compile them because it leaves their feature off.
 Run this command after changing these files or their dependencies:
 
 - `tests/root_disk_regression.rs` uses path includes for `src/error.rs`,
-  `src/process.rs`, and `src/vm_root.rs`.
+  `src/process.rs`, `src/unit_state.rs`, and `src/vm_root.rs`.
 - `tests/storage_regression.rs` uses path includes for `src/budget_file.rs`,
   `src/error.rs`, `src/host_system.rs`, `src/image_space.rs`,
   `src/sparse_copy.rs`, and `src/storage_sizing.rs`.

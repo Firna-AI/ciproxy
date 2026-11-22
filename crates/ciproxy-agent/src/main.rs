@@ -65,7 +65,6 @@ mod endpoint;
 mod endpoint_files;
 mod error;
 mod gateway;
-#[cfg(target_os = "linux")]
 mod guest_transport;
 #[cfg(target_os = "linux")]
 mod hardware;
@@ -150,6 +149,7 @@ mod storage_sizing;
 #[cfg(target_os = "linux")]
 mod system_service;
 mod terminal_completion;
+mod unit_state;
 #[cfg(target_os = "linux")]
 mod updates;
 #[cfg(target_os = "linux")]
@@ -158,13 +158,12 @@ mod vm_config;
 mod vm_drives;
 #[cfg(target_os = "linux")]
 mod vm_files;
+mod vm_liveness;
 #[cfg(target_os = "linux")]
 mod vm_root;
 #[cfg(target_os = "linux")]
 mod vms;
-#[cfg(target_os = "linux")]
 mod vsock;
-#[cfg(target_os = "linux")]
 mod vsock_stream;
 mod workload_space;
 
