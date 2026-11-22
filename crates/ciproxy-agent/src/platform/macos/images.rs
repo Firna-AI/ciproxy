@@ -3,6 +3,8 @@
 //! `images/index.json` lists the published images. A download goes to
 //! `images/NAME.tar`, extracts into `images/NAME.pending/`, and a rename
 //! publishes `images/NAME/`. Recovery removes every pending part.
+//! `import-image` puts a local archive at `images/NAME.tar` instead of the
+//! download, and then publishes it in the same way.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -135,33 +137,57 @@ impl Images for MacImages {
         if image.platform != Platform::MacosArm64 {
             return Err(Error::PlatformMismatch);
         }
-        if self
-            .inner
+        if self.known(&image.image_id) {
+            return Ok(());
+        }
+        let archive = self.archive(&image.image_id);
+        self.download(image, &archive).await?;
+        self.publish(&image.image_id, image.root_disk_bytes, &archive)
+            .await
+    }
+}
+
+impl MacImages {
+    /// The index already lists this image.
+    pub(super) fn known(&self, image: &ImageId) -> bool {
+        self.inner
             .state()
             .index
             .images
             .iter()
-            .any(|known| known.image_id == image.image_id)
-        {
-            return Ok(());
-        }
-        let name = folder_name(&image.image_id);
-        let archive = self.inner.folder.join(format!("{name}.tar"));
+            .any(|known| known.image_id == *image)
+    }
+
+    /// `images/NAME.tar`: where a checked archive waits for extraction.
+    /// Recovery removes it.
+    pub(super) fn archive(&self, image: &ImageId) -> PathBuf {
+        self.inner
+            .folder
+            .join(format!("{}.tar", folder_name(image)))
+    }
+
+    /// Extract a checked archive, publish `images/NAME/`, and make it the
+    /// newest image. The download and `import-image` both end here.
+    pub(super) async fn publish(
+        &self,
+        image_id: &ImageId,
+        root: u64,
+        archive: &std::path::Path,
+    ) -> Result<()> {
+        let name = folder_name(image_id);
         let pending = self.inner.folder.join(format!("{name}.pending"));
-        self.download(image, &archive).await?;
-        let root = image.root_disk_bytes;
-        let (archive_path, pending_path) = (archive.clone(), pending.clone());
+        let (archive_path, pending_path) = (archive.to_path_buf(), pending.clone());
         let manifest =
             tokio::task::spawn_blocking(move || extract(&archive_path, &pending_path, root))
                 .await
                 .context("join image extraction")??;
-        std::fs::remove_file(&archive).context("remove the image download")?;
+        std::fs::remove_file(archive).context("remove the image download")?;
         let target = self.inner.folder.join(&name);
         remove_folder(&target)?;
         std::fs::rename(&pending, &target).context("publish the image")?;
         let mut state = self.inner.state();
         state.index.publish(IndexedImage {
-            image_id: image.image_id.clone(),
+            image_id: image_id.clone(),
             root_disk_bytes: root,
             minimum_host_macos: manifest.minimum_host_macos,
             free_job_bytes: manifest.free_job_bytes,

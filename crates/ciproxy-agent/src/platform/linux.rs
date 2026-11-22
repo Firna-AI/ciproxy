@@ -11,7 +11,7 @@ use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
 use crate::boundaries::{DockerDisks, Host, Service, Updates, Vms};
 use crate::docker::LinuxDockers;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::hardware::LinuxHost;
 use crate::host_composition::{HostServices, services};
 use crate::host_file_ops::directory;
@@ -22,7 +22,7 @@ use crate::layout::Layout;
 use crate::network::LinuxNetwork;
 use crate::preparation::{Preparation, Uninstall, stage_error};
 use crate::process::{Commands, LinuxCommands};
-use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
+use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, requested_image_budget};
 use crate::system_service::SystemService;
 use crate::updates::AgentUpdates;
 use crate::vm_files::LinuxVmFiles;
@@ -85,17 +85,7 @@ impl Platform for LinuxPlatform {
                 "Restore root ownership and write access to /var/lib/ciproxy. Then rerun install.",
             ));
         }
-        let requested = match std::env::var("CIPROXY_IMAGE_BUDGET_BYTES") {
-            Ok(value) => Some(value),
-            Err(std::env::VarError::NotPresent) => None,
-            Err(std::env::VarError::NotUnicode(_)) => {
-                return Err(Error::Preparation {
-                    component: "image budget setting",
-                    repair: "Set CIPROXY_IMAGE_BUDGET_BYTES to an integer byte count.",
-                });
-            }
-        };
-        let requested_budget = setting(requested.as_deref())?;
+        let requested_budget = requested_image_budget()?;
         let services = services(self.files.clone(), self.system.clone(), requested_budget)?;
         Ok((
             services.preparation.clone(),
