@@ -1,7 +1,7 @@
 //! Host preparation on a Mac: the install check, the control directory,
 //! the area volume, and the pf rules. Uninstall removes them again.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -9,9 +9,12 @@ use async_trait::async_trait;
 use super::area;
 use super::host::macos_version;
 use super::isolation::Isolation;
+use super::launchctl::Launchd;
+use super::recovery::remove_orphans;
 use crate::boundaries::{Images, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos::guests::VmFolders;
 use crate::macos::hardware::install_check;
 use crate::macos::paths::{AREA, CONTROL};
 use crate::persistence::private_directory;
@@ -21,6 +24,7 @@ use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 
 pub(crate) struct MacPreparation {
     pub(crate) isolation: Arc<dyn Isolation>,
+    pub(crate) launchd: Arc<dyn Launchd>,
     /// `CIPROXY_AREA_BYTES`, the size of a new area volume.
     pub(crate) area_bytes: Option<u64>,
 }
@@ -67,7 +71,11 @@ impl Preparation for MacPreparation {
                 "area volume",
                 "Mount the ciproxy volume in Disk Utility. Then restart the agent.",
             )
-        })
+        })?;
+        let folders = VmFolders {
+            area: PathBuf::from(AREA),
+        };
+        remove_orphans(self.launchd.as_ref(), &folders).await
     }
 
     async fn remove(&self) -> Result<()> {

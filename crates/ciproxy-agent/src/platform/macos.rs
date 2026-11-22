@@ -27,6 +27,7 @@ mod images;
 mod isolation;
 mod launchctl;
 mod preparation;
+mod recovery;
 mod service;
 mod updates;
 pub(crate) mod vm_helper;
@@ -94,6 +95,7 @@ impl Platform for MacPlatform {
         Ok((
             Arc::new(MacPreparation {
                 isolation: self.isolation.clone(),
+                launchd: Arc::new(Launchctl),
                 area_bytes,
             }),
             (),
