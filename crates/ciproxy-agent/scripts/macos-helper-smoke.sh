@@ -1,23 +1,30 @@
 #!/usr/bin/env bash
 # Run one macOS VM helper under launchd as root, with no control plane.
 #
-# Usage: sudo macos-helper-smoke.sh SIGNED_AGENT BUNDLE
+# Usage: sudo macos-helper-smoke.sh SIGNED_AGENT BUNDLE [GUEST_BINARY]
 #
 # SIGNED_AGENT is an agent binary signed with the virtualization
 # entitlement. BUNDLE is a VM bundle in the ciproxy-vz layout, with its own
 # machine-identifier.bin and mac-address.txt, on the data volume. The
-# script clones it, starts the helper, checks the control socket and the
-# vsock fd passing, stops the VM, and removes every file that it made.
-# It refuses a Mac with an installed agent. Take the test Mac's VM lock
-# first.
+# script clones it, starts the helper, checks the control socket, stops the
+# VM, and removes every file that it made.
+#
+# With GUEST_BINARY, a macOS build of ciproxy-guest, the script copies it
+# into the VM over SSH as the user that ran sudo, starts it on vsock port
+# 5252, and proves that CONNECT passes a working stream fd. The guest
+# account is CIPROXY_VZ_GUEST_USER, by default admin, with SSH by key and
+# `sudo -n`. The script refuses a Mac with an installed agent. Take the
+# test Mac's VM lock first.
 set -euo pipefail
 
-if [[ "$(uname -s)" != Darwin || "${EUID}" -ne 0 || $# -ne 2 ]]; then
+if [[ "$(uname -s)" != Darwin || "${EUID}" -ne 0 || $# -lt 2 || $# -gt 3 ]]; then
   echo "SKIP: run as root on macOS with an agent binary and a bundle" >&2
   exit 77
 fi
 agent="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 source_bundle=$2
+guest_binary=${3:-}
+guest_user=${CIPROXY_VZ_GUEST_USER:-admin}
 client="$(cd "$(dirname "$0")" && pwd)/macos_vm_control.py"
 control=/var/db/ciproxy
 if [[ -e "${control}/state.json" || -e "${control}/area.json" ]]; then
@@ -75,6 +82,34 @@ for _ in $(seq 1 60); do
 done
 echo "state after $(($(date +%s) - started)) s: $(python3 "${client}" "${socket}" state)"
 
+if [[ -n "${guest_binary}" ]]; then
+  ssh_options=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+    -o BatchMode=yes -o ConnectTimeout=5)
+  as_user() { sudo -u "${SUDO_USER:?run the script with sudo}" "$@"; }
+  mac=$(cat "${folder}/bundle/mac-address.txt")
+  address=""
+  for _ in $(seq 1 90); do
+    address=$(python3 "${client}" lease "${mac}")
+    if [[ -n "${address}" ]] &&
+      as_user ssh "${ssh_options[@]}" "${guest_user}@${address}" true 2>/dev/null; then
+      break
+    fi
+    address=""
+    sleep 1
+  done
+  if [[ -z "${address}" ]]; then
+    echo "FAIL: no SSH to the guest" >&2
+    exit 1
+  fi
+  echo "SSH after $(($(date +%s) - started)) s at ${address}"
+  as_user scp "${ssh_options[@]}" "${guest_binary}" \
+    "${guest_user}@${address}:ciproxy-guest"
+  as_user ssh "${ssh_options[@]}" "${guest_user}@${address}" \
+    "chmod 0755 ciproxy-guest && sudo -n nohup \"\$HOME/ciproxy-guest\" \
+     --image-id smoke --runner-account ${guest_user} --runner-entry /usr/bin/true \
+     vsock --port 5252 </dev/null >guest.log 2>&1 &"
+fi
+
 connected=no
 for _ in $(seq 1 90); do
   answer=$(python3 "${client}" "${socket}" connect 5252 || true)
@@ -87,14 +122,25 @@ for _ in $(seq 1 90); do
   sleep 1
 done
 [[ "${connected}" == yes ]] || echo "connect: ${answer} (no guest listener)"
+if [[ -n "${guest_binary}" && "${connected}" != yes ]]; then
+  echo "FAIL: the guest listened, but CONNECT gave no stream" >&2
+  exit 1
+fi
 
+# STOP only asks the guest. A guest with a desktop session can ignore it.
 echo "stop: $(python3 "${client}" "${socket}" stop)"
-if ! wait_answer=$(python3 "${client}" "${socket}" wait 120 2>/dev/null); then
-  echo "wait: the guest did not stop in 120 s; stop the helper"
-  launchctl bootout "system/${label}" || true
-  sleep 2
+if wait_answer=$(python3 "${client}" "${socket}" wait 60 2>/dev/null); then
+  echo "wait after the guest stop: ${wait_answer}"
 else
-  echo "wait: ${wait_answer}"
+  echo "the guest did not stop in 60 s; stop the VM from the host"
+  waiter_output=$(mktemp)
+  python3 "${client}" "${socket}" wait 60 >"${waiter_output}" 2>&1 &
+  waiter=$!
+  sleep 1
+  launchctl bootout "system/${label}" || true
+  wait "${waiter}" || true
+  echo "wait during the host stop: $(cat "${waiter_output}")"
+  rm -f "${waiter_output}"
 fi
 for _ in $(seq 1 30); do
   [[ -f "${folder}/exit.json" ]] && break

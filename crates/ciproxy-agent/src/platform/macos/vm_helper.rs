@@ -21,6 +21,9 @@ use crate::macos::vm_control::{ControlError, StopReason, VmPhase};
 use crate::macos::vm_control_server::{VmControl, bind, serve};
 use crate::macos::vm_spec::{ExitReason, VmExit, VmSpec};
 
+/// The time that open WAIT requests get to send their answer after a stop.
+const WAIT_ANSWER_GRACE: std::time::Duration = std::time::Duration::from_secs(1);
+
 /// The file that `SAVE` writes in the VM folder.
 pub(crate) const SAVED_STATE_FILE: &str = "state.vzvmsave";
 
@@ -62,6 +65,9 @@ pub(crate) async fn run(local_id: &str) -> Result<()> {
     };
     tracing::info!(local_id, reason = reason.word(), "VM stopped");
     write_exit(&folder, reason)?;
+    // Each open WAIT answers from its own task when the VM stops. Keep the
+    // process alive briefly, so those answers reach the agent before exit.
+    tokio::time::sleep(WAIT_ANSWER_GRACE).await;
     server.abort();
     let _ = std::fs::remove_file(folders.client(local_id).socket);
     Ok(())

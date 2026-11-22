@@ -2,6 +2,7 @@
 """Send one control request to a macOS VM helper, as the agent does.
 
 Usage: macos_vm_control.py SOCKET state|stop|save|wait [SECONDS]|connect PORT
+       macos_vm_control.py lease MAC
 
 For connect, the helper passes the guest vsock stream fd by SCM_RIGHTS.
 The script then reads one guest line and prints only its message type,
@@ -33,7 +34,31 @@ def request(path, line, want_fd=False, timeout=None):
     return data.decode().strip(), fds
 
 
+def lease(mac):
+    """Print the IPv4 address of the newest vmnet lease of MAC, if any."""
+    wanted = ":".join(f"{int(part, 16):x}" for part in mac.strip().split(":"))
+    best = None
+    try:
+        text = open("/var/db/dhcpd_leases").read()
+    except FileNotFoundError:
+        return
+    for block in text.split("}"):
+        fields = dict(
+            line.strip().split("=", 1) for line in block.splitlines() if "=" in line
+        )
+        if fields.get("hw_address", "").split(",", 1)[-1] != wanted:
+            continue
+        expiry = int(fields.get("lease", "0x0"), 16)
+        if best is None or expiry > best[0]:
+            best = (expiry, fields.get("ip_address", ""))
+    if best:
+        print(best[1])
+
+
 def main():
+    if sys.argv[1] == "lease":
+        lease(sys.argv[2])
+        return
     path, command = sys.argv[1], sys.argv[2]
     if command == "connect":
         answer, fds = request(path, f"CONNECT {sys.argv[3]}", True, 30)
