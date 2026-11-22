@@ -30,3 +30,10 @@ mod pf;
 #[cfg(test)]
 #[path = "_tests_/pf_tests.rs"]
 mod pf_tests;
+
+mod seats;
+mod vm_spec;
+
+#[cfg(test)]
+#[path = "_tests_/seats_tests.rs"]
+mod seats_tests;
