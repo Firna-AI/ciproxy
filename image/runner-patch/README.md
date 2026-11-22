@@ -12,6 +12,14 @@ It replaces only `Runner.Worker.dll` with a source-built assembly.
 `image/build-runner.sh WORK_DIR` downloads the pinned source, verifies its
 checksum, applies `prepare-source.py`, and publishes the Worker.
 The source requires the .NET SDK version in its `global.json`.
+`image/build-runner.sh WORK_DIR osx-arm64` builds the Worker for the
+`osx-arm64` runner of the macOS image into `WORK_DIR/patched-worker-osx-arm64`.
+The runner source takes its OS constants, such as `OS_OSX`, from the build
+host and not from `PackageRuntime`. So each Worker builds on its own OS, and
+the script stops on another OS. The hook itself has no OS-specific code.
+On macOS, the guest passes the socket `/var/run/ciproxy/assignment.sock`,
+and the `cache_ready` decision names the loopback proxy
+`http://127.0.0.1:8230`, because macOS jobs have no Docker.
 The assembly keeps the official identity and dependency references.
 The image retains separate stock and own-machine Worker assemblies.
 The trusted entry mode selects the own-machine assembly for vsock mode.

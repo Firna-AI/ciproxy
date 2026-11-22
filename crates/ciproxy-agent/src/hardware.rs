@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_protocol::reports::{DiskReport, HardwareReport};
 
 use crate::area::AreaFiles;
@@ -67,10 +68,15 @@ impl Host for LinuxHost {
             disk.host_bytes.min(record.source_capacity)
         });
         Ok(HardwareReport {
+            platform: Platform::LinuxX64,
             processor,
             threads,
             memory_bytes: memory_kib.saturating_mul(1024),
-            kvm: self.system.kvm(),
+            virtualization: if self.system.kvm() {
+                Virtualization::Available
+            } else {
+                Virtualization::KvmUnavailable
+            },
             disks: vec![DiskReport {
                 name: CONTROL.to_owned(),
                 capacity_bytes: capacity,

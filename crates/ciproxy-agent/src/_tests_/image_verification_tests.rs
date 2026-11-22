@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
 
 use crate::error::Error;
@@ -15,6 +16,7 @@ use crate::image_verification::{BundleMembers, DownloadDigest, ImageMember};
 fn only_the_complete_expected_download_passes_checksum_verification() {
     let image = ImageDownload {
         image_id: ImageId("image".to_owned()),
+        platform: Platform::LinuxX64,
         download_url: Secret::new("https://images.example/image"),
         sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".to_owned(),
         size_bytes: 3,

@@ -8,6 +8,7 @@ use ciproxy_gateway::gateway::{Gateway, MachineGateway};
 use ciproxy_gateway::types::{Delivery, Session};
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::identifiers::{CommandId, LabelName, OrganizationId, RunnerId};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 use ciproxy_protocol::runners::RunnerSpec;
 use ciproxy_protocol::secret::Secret;
@@ -70,6 +71,7 @@ async fn closes_stale_socket_before_a_queued_runner_start_can_reach_it() {
             runner_id: RunnerId("stale-runner".into()),
             organization_id: OrganizationId("org-1".into()),
             label: LabelName("ciproxy".into()),
+            platform: Platform::LinuxX64,
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,

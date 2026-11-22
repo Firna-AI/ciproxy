@@ -10,9 +10,9 @@ use crate::application_metadata::MetadataTarget;
 use crate::application_setup::InvocationSetup;
 use crate::boundaries::{ConnectionMock, HostMock, ServiceMock};
 use crate::cli::Action;
-use crate::host_preparation::PreparationMock;
 use crate::identity_store_fixtures::{IdentityFiles, legacy_state};
 use crate::installation::{Install, Installer};
+use crate::preparation::PreparationMock;
 
 #[tokio::test]
 async fn legacy_repair_keeps_service_and_state_and_reports_the_retained_endpoint() {

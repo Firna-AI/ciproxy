@@ -14,8 +14,11 @@ the warm runners.
 - The disk of an own machine is the space in which the agent keeps the
   images, the job VMs, the machine cache, and the Docker disks.
 - First subtract the image budget from the disk capacity.
-- The default image budget is 140,000,000,000 bytes, or 140 GB.
+- The default image budget is 140,000,000,000 bytes, or 140 GB, on Linux.
 - It holds two full images and one compressed download during an update.
+- A Mac has its own default image budget, for two full macOS images and
+  one compressed download. Its value is a placeholder until the size of the
+  [macOS image](agent-images.md#the-macos-image) is measured.
 - An explicit image budget override stays separate from the job disk.
 - The host reserve keeps a quarter of the remaining disk for the system
   and filesystem overhead.
@@ -27,7 +30,18 @@ the warm runners.
 - Each job VM holds its complete root allocation in the job disk until
   the agent removes the VM.
 - That root includes the image, the label's free job disk, and an allowance
-  for ext4 metadata growth and its 1% root reserve.
+  for the filesystem. On Linux, the allowance covers ext4 metadata growth
+  and its 1% root reserve.
+- On a Mac, the root is an APFS clone of the fixed image disk. The clone
+  takes space only as the job writes, and it can grow by at most about the
+  free bytes of the image.
+- So each macOS job VM holds the measured free bytes of its image in the
+  job disk, whatever the free disk of its label.
+- **Decision:** a macOS job VM holds the free bytes of its image. Rejected:
+  the logical size of the image disk, because the shared blocks of a clone
+  take no space. Rejected: the written bytes of each clone, because the
+  host disk could then fill during a job. This is a proposal until the user
+  decides it.
 - Scheduling uses the logical image root length from the same image release
   that the VM starts. Installed file bytes are not that length.
 - The agent reports the exact root length of each local image release.
@@ -47,6 +61,7 @@ the warm runners.
   image of its new job VMs set the spare disk.
 - Attached [Docker disks](cache.md#docker-disks) reserve space only from
   the spare disk.
+- A Mac has no Docker disks, because a macOS job VM has no Docker.
 - **Decision:** a Docker disk reserves only spare disk, so it stops no
   start, except for a short time after a label or image change. Rejected:
   all available job disk, because Docker disks could then delay jobs at any
@@ -78,10 +93,13 @@ the warm runners.
   keep no job VM from starting.
 - After such a change, only the reservations made before it can delay a
   job VM, until their jobs end.
-- The jobs of one size that an own machine runs at a time are the smaller
-  of these two numbers:
+- A job VM starts on a Mac only when the Mac also runs fewer than 2 job
+  VMs.
+- The jobs of one size that an own machine runs at a time are the smallest
+  of these numbers:
   - its slots, divided by the slots of the size and rounded down
   - its job disk, divided by the complete root allocation and rounded down
+  - on a Mac, 2
 
 ## Related docs
 

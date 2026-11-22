@@ -18,6 +18,16 @@ pub enum Error {
     /// Run this command as root on x64 Linux.
     #[error("[agent] run this command as root on x64 Linux")]
     HostUnsupported,
+    /// This platform does not support the named agent part yet.
+    #[cfg_attr(
+        target_os = "linux",
+        expect(dead_code, reason = "Linux implements every agent part.")
+    )]
+    #[error("[agent/platform] {part} is not supported on this platform yet")]
+    PlatformUnsupported {
+        /// Agent part that has no implementation on this platform.
+        part: &'static str,
+    },
     /// Host preparation needs the named repair before it can continue safely.
     #[error("[agent/host] {component}: {repair}")]
     Preparation {
@@ -91,3 +101,8 @@ pub enum Error {
 }
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
+
+/// Name a host component and the action that repairs it.
+pub(crate) fn repair(component: &'static str, repair: &'static str) -> Error {
+    Error::Preparation { component, repair }
+}

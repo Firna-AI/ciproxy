@@ -4,11 +4,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_protocol::agent::AgentMessage;
-use ciproxy_protocol::cache::{CacheConnection, MachineCacheReport};
+use ciproxy_protocol::cache::{
+    CacheConnection, DockerDiskAttachment, DockerDiskReport, MachineCacheReport,
+};
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::identifiers::RunnerId;
-use ciproxy_protocol::images::{ImageDownload, ImageReport};
+use ciproxy_protocol::images::{ImageDownload, ImageMetadata, ImageReport};
 use ciproxy_protocol::jobs::{JobFacts, JobScope};
 use ciproxy_protocol::reports::HardwareReport;
 use ciproxy_protocol::runners::RunnerReport;
@@ -16,7 +18,6 @@ use ciproxy_protocol::runners::RunnerReport;
 use crate::cache_authority::CheckedRuntime;
 use crate::connection_types::{ConnectionResult, ControlEvent};
 use crate::error::Result;
-use crate::image_registry::ImageLease;
 use crate::state::{MachineState, VmRecord};
 
 #[cfg_attr(test, unimock::unimock(api = StoreMock))]
@@ -58,6 +59,36 @@ pub(crate) trait Images: Send + Sync {
     async fn fetch(&self, image: &ImageDownload) -> Result<()>;
 }
 
+/// A preparation hold keeps its selected image until its last reference ends.
+#[cfg_attr(test, unimock::unimock(api = ImageLeaseMock))]
+pub trait ImageLease: Send + Sync {
+    /// Return the exact selected release and its logical root length.
+    fn metadata(&self) -> ImageMetadata;
+}
+
+#[cfg_attr(test, unimock::unimock(api = DockerDisksMock))]
+#[async_trait]
+/// Durable Docker reservations and disk attachment operations.
+pub trait DockerDisks: Send + Sync {
+    fn reserved(&self, vm: &VmRecord) -> Result<bool>;
+    fn offered(&self, vm: &VmRecord) -> Result<()>;
+    fn failed(&self, vm: &VmRecord) -> Result<bool>;
+    fn pending(&self, vm: &VmRecord) -> Result<bool>;
+    async fn discard(&self, vm: &VmRecord) -> Result<()>;
+    async fn prepare(
+        &self,
+        vm: &VmRecord,
+        facts: &JobFacts,
+        scope: &JobScope,
+        data_bytes: u64,
+        spare: u64,
+    ) -> Result<Option<DockerDiskAttachment>>;
+    fn release(&self, vm: &VmRecord) -> Result<()>;
+    fn report(&self) -> Result<DockerDiskReport>;
+    fn unused_bytes(&self) -> Result<u64>;
+    fn reclaim(&self, free_pool: u64) -> Result<u64>;
+}
+
 #[cfg_attr(test, unimock::unimock(api = CacheMock))]
 #[async_trait]
 pub(crate) trait Cache: Send + Sync {
@@ -87,7 +118,8 @@ pub(crate) trait Vms: Send + Sync {
     /// Retry network cleanup independently of VM and disk removal.
     async fn remove_network(&self, index: u16) -> Result<()>;
     async fn start(&self, vm: &VmRecord, config: AgentToGuest) -> Result<()>;
-    async fn restore(&self, vm: &VmRecord) -> Result<()>;
+    /// Connect again to a VM that kept running across an agent restart.
+    async fn reattach(&self, vm: &VmRecord) -> Result<()>;
     async fn request_stop(&self, vm: &VmRecord) -> Result<()>;
     async fn stop(&self, vm: &VmRecord) -> Result<()>;
     async fn send(&self, vm: &VmRecord, message: &AgentToGuest) -> Result<()>;

@@ -12,7 +12,7 @@ use crate::connection_types::ControlEvent;
 use crate::controller::Agent;
 use crate::endpoint::AgentEndpoint;
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::host_preparation::Preparation;
+use crate::preparation::Preparation;
 use crate::state::{Identity, Mode};
 
 #[async_trait]

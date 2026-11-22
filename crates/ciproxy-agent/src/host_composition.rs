@@ -10,12 +10,13 @@ use crate::area::{AreaFiles, PersistentArea};
 use crate::area_mounts::LinuxAreaMounts;
 use crate::error::{ErrorResultExt, Result};
 use crate::host_packages::{DistributionPackages, Packages};
-use crate::host_preparation::{HostPreparation, Preparation};
+use crate::host_preparation::HostPreparation;
 use crate::host_release::PINNED;
 use crate::host_system::HostSystem;
 use crate::host_tool_files::LinuxToolFiles;
 use crate::host_tools::{HttpsHostDownload, Tools, VerifiedTools};
 use crate::network_preparation::NetworkPackages;
+use crate::preparation::Preparation;
 
 pub(crate) struct HostServices {
     pub(crate) preparation: Arc<dyn Preparation>,

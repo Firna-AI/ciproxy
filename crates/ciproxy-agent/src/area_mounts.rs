@@ -8,10 +8,10 @@ use async_trait::async_trait;
 
 use crate::area::AreaMounts;
 use crate::area_types::{AreaRecord, Filesystem};
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::error::{Error, ErrorResultExt, Result, repair};
 use crate::host_file_ops::{directory, metadata};
 use crate::host_paths::{AREA, BACKING, MOUNT};
-use crate::host_system::{HostSystem, repair};
+use crate::host_system::HostSystem;
 use crate::process::arguments;
 
 pub(crate) struct LinuxAreaMounts {

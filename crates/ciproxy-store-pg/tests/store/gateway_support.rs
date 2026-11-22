@@ -2,6 +2,7 @@
 
 use ciproxy_protocol::cache::{DockerDiskReport, MachineCacheReport};
 use ciproxy_protocol::images::ImageReport;
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_protocol::reports::{DrainState, HardwareReport, MachineReport};
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::statistics::Statistics;
@@ -25,10 +26,11 @@ pub(super) fn registration(workspace_id: Uuid, install_hash: TokenHash) -> Regis
                 hostname: "builder".into(),
                 agent_version: "0.1.0".into(),
                 hardware: HardwareReport {
+                    platform: Platform::LinuxX64,
                     processor: "x64".into(),
                     threads: 4,
                     memory_bytes: 16_000_000_000,
-                    kvm: false,
+                    virtualization: Virtualization::KvmUnavailable,
                     disks: vec![],
                 },
                 capacity: Slots(0),

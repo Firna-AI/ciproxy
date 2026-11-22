@@ -8,10 +8,10 @@ use ciproxy_protocol::cache::DockerDiskReport;
 use ciproxy_protocol::identifiers::CommandId;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisksMock;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
-use crate::docker::DockerDisksMock;
 use crate::fixtures::{
     applied, controller, hardware, report_dependencies_for, spec, start_image, vm,
 };

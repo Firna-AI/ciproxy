@@ -4,6 +4,22 @@ use clap::ValueEnum;
 
 use crate::command::CommandSpec;
 
+/// The target of the macOS agent and the macOS VM layer.
+pub(crate) const MACOS_TARGET: &str = "aarch64-apple-darwin";
+
+/// The crates with macOS code and the cargo target options to check. The
+/// `rust-macos` phase checks each of them for [`MACOS_TARGET`]. Use
+/// `["--lib", "--bins"]` for a crate whose tests do not build for macOS yet.
+pub(crate) const MACOS_CRATES: &[(&str, &[&str])] = &[("ciproxy-vz", &["--all-targets"])];
+
+/// Stub C tools, so build scripts with C code pass a type check on a host
+/// with no Apple SDK. The check never links.
+const MACOS_STUB_TOOLS: [(&str, &str); 3] = [
+    ("CC_aarch64_apple_darwin", "xtask/macos-stubs/cc"),
+    ("CXX_aarch64_apple_darwin", "xtask/macos-stubs/cc"),
+    ("AR_aarch64_apple_darwin", "xtask/macos-stubs/ar"),
+];
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub(crate) enum Phase {
     /// Rust format: cargo fmt --all -- --check.
@@ -16,6 +32,8 @@ pub(crate) enum Phase {
     Markdown,
     /// Rust lint: cargo clippy --workspace --all-targets -- -D warnings.
     RustClippy,
+    /// cargo check and cargo clippy of the macOS crates for aarch64-apple-darwin.
+    RustMacos,
     /// ESLint and typecheck of tokens, app, and site, plus token unit tests.
     Typescript,
     /// Regenerate Rust-owned OpenAPI and TypeScript, then fail on drift.
@@ -37,6 +55,7 @@ pub(crate) fn selected_phases(include: &[Phase], exclude: &[Phase]) -> Vec<Phase
         Phase::FileLength,
         Phase::Markdown,
         Phase::RustClippy,
+        Phase::RustMacos,
         Phase::Typescript,
         Phase::ApiTypes,
         Phase::RustTest,
@@ -68,6 +87,7 @@ pub(super) fn commands(phase: Phase) -> Vec<CommandSpec> {
                 "warnings",
             ],
         )],
+        Phase::RustMacos => macos_commands(),
         Phase::Typescript => vec![
             npm_script("tokens:check"),
             npm_script("app:lint"),
@@ -83,6 +103,33 @@ pub(super) fn commands(phase: Phase) -> Vec<CommandSpec> {
         Phase::SiteBuild => vec![npm_script("site:build")],
         Phase::AppExport => vec![npm_script("app:export")],
     }
+}
+
+/// Check the default features, then lint every feature, of each macOS crate.
+fn macos_commands() -> Vec<CommandSpec> {
+    MACOS_CRATES
+        .iter()
+        .flat_map(|(package, targets)| {
+            let common = ["--target", MACOS_TARGET, "--package", package];
+            let check = [&["check"], &common[..], targets].concat();
+            let clippy = [
+                &["clippy"],
+                &common[..],
+                targets,
+                &["--all-features", "--", "-D", "warnings"],
+            ]
+            .concat();
+            [macos_command(&check), macos_command(&clippy)]
+        })
+        .collect()
+}
+
+fn macos_command(args: &[&str]) -> CommandSpec {
+    MACOS_STUB_TOOLS
+        .iter()
+        .fold(CommandSpec::new("cargo", args), |command, (name, path)| {
+            command.root_path(name, path)
+        })
 }
 
 fn npm_script(script: &str) -> CommandSpec {

@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::error::Result;
-use crate::host_system::{HostSystem, repair};
+use crate::error::{Result, repair};
+use crate::host_system::HostSystem;
 use crate::process::arguments;
 
 #[cfg_attr(test, unimock::unimock(api = PackagesMock))]

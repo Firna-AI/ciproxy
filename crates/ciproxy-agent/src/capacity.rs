@@ -9,6 +9,6 @@ pub(crate) fn machine_resources(hardware: &HardwareReport, image_budget: u64) ->
         hardware.memory_bytes,
         hardware.disks.first().map_or(0, |disk| disk.capacity_bytes),
         image_budget,
-        hardware.kvm,
+        hardware.virtualization.is_available(),
     )
 }

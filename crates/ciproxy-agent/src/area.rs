@@ -6,8 +6,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::area_types::{AreaRecord, Filesystem, Inventory, Phase};
-use crate::error::{Error, Result};
-use crate::host_system::repair;
+use crate::error::{Error, Result, repair};
 use crate::storage_sizing::{AreaSizing, DEFAULT_IMAGE_BYTES, MINIMUM_DISK_BYTES};
 
 #[cfg_attr(test, unimock::unimock(api = AreaFilesMock))]

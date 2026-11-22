@@ -7,9 +7,8 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use tokio::sync::Mutex;
 
-use crate::error::{ErrorResultExt, Result};
+use crate::error::{ErrorResultExt, Result, repair};
 use crate::host_release::{CheckedTools, LIMIT, Release, URL};
-use crate::host_system::repair;
 
 #[cfg_attr(test, unimock::unimock(api = HostDownloadMock))]
 #[async_trait]

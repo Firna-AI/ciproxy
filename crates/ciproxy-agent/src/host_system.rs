@@ -5,7 +5,7 @@ use std::fs::{self, OpenOptions};
 use async_trait::async_trait;
 use tokio::process::Command;
 
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::error::{ErrorResultExt, Result};
 
 #[derive(Clone, Debug)]
 /// Exit code and stdout from one host preparation tool.
@@ -52,8 +52,4 @@ impl HostSystem for LinuxHostSystem {
             stdout: output.stdout,
         })
     }
-}
-
-pub(crate) fn repair(component: &'static str, repair: &'static str) -> Error {
-    Error::Preparation { component, repair }
 }

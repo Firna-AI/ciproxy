@@ -10,7 +10,7 @@ use tokio::time::interval;
 use crate::boundaries::GuestEvent;
 use crate::controller::Agent;
 use crate::error::{Error, Result};
-use crate::host_preparation::{Uninstall, UninstallState};
+use crate::preparation::{Uninstall, UninstallState};
 
 pub(crate) async fn execute(
     uninstall: Arc<dyn Uninstall>,
