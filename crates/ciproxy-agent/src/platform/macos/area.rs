@@ -111,9 +111,20 @@ pub(crate) fn mount(record: &AreaRecord) -> Result<()> {
 }
 
 /// The volume at the area path is the recorded one.
+///
+/// `/var` is a link to `/private/var`, and `diskutil` reports the real
+/// path. So the agent reads the facts of the volume by its UUID and
+/// compares the mount point with the real path of the area. A volume that
+/// is already mounted there counts as mounted.
 pub(crate) fn mounted(record: &AreaRecord) -> bool {
-    info_value(AREA, "MountPoint").is_ok_and(|point| point == AREA)
-        && info_value(AREA, "VolumeUUID").is_ok_and(|uuid| uuid == record.volume_uuid)
+    info_value(&record.volume_uuid, "MountPoint")
+        .is_ok_and(|point| Path::new(&point) == real_area().as_path())
+}
+
+/// The area path with `/var` resolved, such as `/private/var/db/ciproxy/area`.
+fn real_area() -> PathBuf {
+    std::fs::canonicalize(AREA)
+        .unwrap_or_else(|_| PathBuf::from(AREA.replacen("/var/", "/private/var/", 1)))
 }
 
 /// Delete the recorded volume, its fstab line, and the record.
@@ -187,6 +198,12 @@ fn info_value(target: &str, key: &str) -> Result<String> {
         .output()
         .context("run diskutil info")?;
     if !plist.status.success() {
+        tracing::warn!(
+            target_volume = target,
+            output = %String::from_utf8_lossy(&plist.stdout).trim(),
+            stderr = %String::from_utf8_lossy(&plist.stderr).trim(),
+            "diskutil info failed"
+        );
         return Err(area_error("read volume facts"));
     }
     let mut child = Command::new("plutil")
@@ -213,6 +230,8 @@ fn diskutil(args: &[&str]) -> Result<String> {
         .context("run diskutil")?;
     if !output.status.success() {
         tracing::warn!(
+            args = ?args,
+            output = %String::from_utf8_lossy(&output.stdout).trim(),
             stderr = %String::from_utf8_lossy(&output.stderr).trim(),
             "diskutil failed"
         );
