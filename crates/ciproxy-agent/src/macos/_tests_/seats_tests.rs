@@ -202,5 +202,11 @@ fn the_vm_settings_round_a_decimal_label_down_to_a_whole_mib() {
         .check(limits)
         .is_err()
     );
+    let large = VmSpec {
+        memory_bytes: 16_000_000_000,
+        ..spec()
+    };
+    // 15,258.79 MiB: rounding to the nearest MiB would exceed the label.
+    assert_eq!(large.settings().memory_bytes, 15_258 * MIB);
     assert_eq!(spec().settings().memory_bytes, 8 << 30);
 }
