@@ -60,6 +60,13 @@ queue demand. Waiting jobs have priority over warm starts. The scaler
 retires idle runners after label edits or organization removal. Running
 jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 
+A launched Boat runner that has taken no job by its
+[ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
+retires with `ReadyDeadlinePassed`. The deadline counts from
+`BoatRunner.launched_at`. A runner without a launch time has no deadline.
+The retiring runner is no supply, so no waiting job claims it. The same
+decision can start a replacement by the usual placement.
+
 ### Snapshot contract
 
 - Supply a complete, consistent view of one workspace.
@@ -69,10 +76,12 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
   Its exact release metadata takes precedence over that fallback.
 - List each machine, runner, and sandbox once.
 - Supply each `Sandbox.runner` as `BoatRunner { runner,
-  required_root_disk_bytes }`. Take the required root directly from that
-  delivery's `StartRecord.required_root_disk_bytes` in `OverflowView.starts`.
-  Keep it required for retained Boat runners. Do not infer it from current
-  image settings or actual catalog disk. Orphans have no runner.
+  required_root_disk_bytes, launched_at }`. Take the required root directly
+  from that delivery's `StartRecord.required_root_disk_bytes` in
+  `OverflowView.starts`. Keep it required for retained Boat runners. Do not
+  infer it from current image settings or actual catalog disk. Take
+  `launched_at` from `StartRecord.launched_at` of the same record. Use `None`
+  when no launch is saved. Orphans have no runner.
 - Supply each waiting GitHub job once. Exclude jobs already running.
 - Supply each label's active saved `targets` from the same snapshot as
   demand. Each `WaitingJob.target` names its exact saved binding.
@@ -83,7 +92,8 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 - Include every accepted start before the next decision call.
 - Retain starting, retiring, and exited VMs until capacity is released.
 - Supply only organizations that can receive new runners.
-- Use one clock origin for `now`, queue timestamps, and retry timestamps.
+- Use one clock origin for `now`, queue timestamps, retry timestamps, and
+  launch times.
 - Preserve `RunnerReport.requested_size` as `Runner.requested_size`.
   Preserve `RunnerReport.size` as the actual allocation in `Runner.size`.
   Do not derive either from current labels or the newest image.
@@ -137,9 +147,9 @@ Its tests check allocation enforcement. The snapshot builder owns the
 history calculation.
 
 The overflow integration supplies the Boat catalog, prices, largest size,
-retry times, billing recovery, key recovery, and monthly spend. It also
-applies sandbox marks, exit reports, lifetime limits, deletion, and key
-retention.
+retry times, billing recovery, key recovery, monthly spend, and launch
+times. It also applies sandbox marks, exit reports, lifetime limits,
+deletion, and key retention.
 
 Convert label free bytes with `ciproxy-agent::root_sizing::RootSizing`.
 Total and free capacity checks use `ciproxy-protocol::resources::Resources`
@@ -172,12 +182,15 @@ Tests use the public decision entry point with literal states and actions.
 - [src/decision.rs](src/decision.rs) owns the public `decide` entry point.
 - [src/warm.rs](src/warm.rs) separates existing target reconciliation from
   capacity checks and new warm replenishment.
+- [src/lifecycle.rs](src/lifecycle.rs) lets waiting jobs claim existing
+  runners and retires idle ones, also at the Boat ready deadline.
 - [src/snapshot.rs](src/snapshot.rs) defines the caller's workspace facts.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
 - [src/registration.rs](src/registration.rs) defines the immutable target
   carried through demand, supply, and start actions.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
-  `BoatRunner` requires the saved root for each retained Boat runner.
+  `BoatRunner` requires the saved root for each retained Boat runner, and
+  holds its launch time when one is saved.
 - [src/capacity.rs](src/capacity.rs) checks complete allocated roots with the
   protocol resource API.
 - [Agent root sizing](../ciproxy-agent/src/root_sizing.rs) defines the shared
@@ -193,4 +206,6 @@ Tests use the public decision entry point with literal states and actions.
 - [Job routing](../../docs/protocol/job-routing.md) defines routing rules.
 - [Labels](../../docs/protocol/labels.md) defines labels and size changes.
 - [Overflow](../../docs/protocol/overflow.md) defines the Boat rules.
+- [Sandbox end](../../docs/protocol/overflow-sandbox-end.md) defines idle
+  Boat retirement and the ready deadline.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization scope.

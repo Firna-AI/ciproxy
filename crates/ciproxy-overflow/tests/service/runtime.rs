@@ -132,7 +132,7 @@ pub(super) fn build(
         Runtime::Cancellation => Unimock::new((extra, now)),
         Runtime::KeyCheck => Unimock::new(extra),
         Runtime::Connect => Unimock::new((extra, now, seal)),
-        Runtime::Recover => Unimock::new((extra, open)),
+        Runtime::Recover => Unimock::new((extra, now, open)),
         Runtime::Read => Unimock::new((extra, now, open)),
         Runtime::ExitReport => Unimock::new((extra, now, open)).no_verify_in_drop(),
         Runtime::Authority => Unimock::new((extra, now, seal, open)),

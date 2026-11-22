@@ -145,7 +145,7 @@ impl OverflowService {
                 .launcher()
                 .launch(sandbox, record.delivery_id)
                 .await?;
-            record.phase = StartPhase::Running;
+            record.mark_launched(self.dependencies.clock.now());
             let changed = record.clone();
             session
                 .call(move |session| session.save_start(&changed))

@@ -275,7 +275,7 @@ GitHub, and database access, so they stay operator work.
 - [src/boat_start.rs](src/boat_start.rs) starts a Boat delivery after its
   GitHub registration, in a supervised task.
 - [src/boat_snapshot.rs](src/boat_snapshot.rs) turns saved Boat deliveries,
-  registrations, and runner states into scaler supply.
+  registrations, runner states, and launch times into scaler supply.
 - [src/boat_authority.rs](src/boat_authority.rs) defines
   `BoatRunnerAuthority`. It retires Boat registrations GitHub-first for the
   overflow service and for runtime recovery. It asks GitHub again about a

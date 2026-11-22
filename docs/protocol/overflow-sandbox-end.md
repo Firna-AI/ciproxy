@@ -1,7 +1,8 @@
 # Sandbox end
 
-This doc states when ciproxy stops and deletes a Boat sandbox, and what the
-control plane does with the exit report of its runner.
+This doc states when ciproxy stops and deletes a Boat sandbox, what the
+control plane does with the exit report of its runner, and how long a
+waiting job waits for that runner.
 [Overflow](overflow.md) states the Boat account, the backend contract, the
 overflow runners, and the spend limit.
 
@@ -14,6 +15,10 @@ overflow runners, and the spend limit.
   [Overflow runners](overflow.md#overflow-runners) says.
 - **cleanup:** the regular work in which ciproxy deletes the sandboxes that
   it no longer needs.
+- **launch:** the moment when Boat accepts the command that starts the
+  ciproxy program in a sandbox.
+- **ready deadline:** the time by which the runner of a sandbox must take a
+  job, as [The ready deadline](#the-ready-deadline) says.
 
 ## The end of a job
 
@@ -59,6 +64,38 @@ overflow runners, and the spend limit.
   each sandbox, and AWS EC2 as the first backend. Reason: each sandbox
   ends soon after its runner exits, and no sandbox bills past its
   lifetime.
+
+## The ready deadline
+
+- Each sandbox gets a ready deadline 10 minutes after ciproxy records its
+  launch.
+- A runner that takes a job before its ready deadline keeps running.
+- When the runner of a sandbox has taken no job by its ready deadline, and
+  a waiting job needs that runner, ciproxy replaces the runner.
+- ciproxy starts the new runner at once, by the rules of
+  [Where a job runs](job-routing.md#where-a-job-runs): on an own machine
+  first, and otherwise on Boat within the
+  [spend limit](overflow.md#spend-limit).
+- ciproxy first removes the GitHub registration of the old runner, and then
+  deletes its sandbox.
+- When GitHub gave the old runner a job before that removal, ciproxy keeps
+  its sandbox, and the job runs.
+- A runner that no waiting job needs follows
+  [Idle runners](#idle-runners), also before its ready deadline.
+- An App removal changes this rule, as
+  [After an App removal](#after-an-app-removal) says.
+- So ciproxy also replaces a slow but healthy runner that has taken no job
+  by its ready deadline.
+- So a lasting cause of failed starts can repeat paid Boat starts until the
+  spend limit stops new starts.
+- **Decision:** ciproxy replaces a runner that takes no job within 10
+  minutes of its launch while a job waits for it. Rejected: a failure
+  report from the sandbox, because it misses a hang, a lost report, and
+  each failure after the ciproxy program removes its stored token.
+  Rejected: a ready report from the sandbox with a deadline, because it
+  needs a new report and a new image for the same result. Reason: the
+  deadline covers each cause of a failed start, also a hang, with a change
+  in the control plane only.
 
 ## Idle runners
 
@@ -107,6 +144,8 @@ overflow runners, and the spend limit.
 
 - [Overflow](overflow.md): the Boat account, the backend contract, the
   overflow runners, and the spend limit.
+- [Job routing](job-routing.md#where-a-job-runs): where a waiting job gets
+  its next runner.
 - [Removing the App](app-removal.md#removing-the-app): the other effects of
   an App removal.
 - [Security](security.md#key-custody): the token of each sandbox.

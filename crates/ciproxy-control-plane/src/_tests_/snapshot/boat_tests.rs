@@ -147,6 +147,7 @@ fn accepted() -> RoutingSnapshot {
         phase: StartPhase::Running,
         sandbox: None,
         starts_at: at(),
+        launched_at: None,
         ends_at: None,
         billing: None,
         start_fee_bound_usd: None,

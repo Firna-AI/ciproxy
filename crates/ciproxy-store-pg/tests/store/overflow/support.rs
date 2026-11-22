@@ -74,6 +74,7 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
         phase: StartPhase::Creating,
         sandbox: None,
         starts_at: at(),
+        launched_at: None,
         ends_at: None,
         billing: None,
         start_fee_bound_usd: Some(Decimal::new(3, 2)),

@@ -72,7 +72,7 @@ impl OverflowService {
         }
         match backend.inspect_launch(sandbox, record.delivery_id).await {
             Ok(LaunchState::Started) => {
-                record.phase = StartPhase::Running;
+                record.mark_launched(self.dependencies.clock.now());
                 let saved = record.clone();
                 session
                     .call(move |session| session.save_start(&saved))

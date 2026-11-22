@@ -95,6 +95,10 @@ async fn paid_start_sends_private_input_and_persists_identity_before_launch() {
     let harness = Harness::new(backend, (), Runtime::Start);
     let outcome = harness.service.start(id(1), request()).await.unwrap();
     assert!(matches!(outcome, StartOutcome::Started(_)), "{outcome:?}");
+    assert_eq!(
+        harness.start(id(11)).launched_at,
+        Some("2026-11-05T12:00:00Z".parse().unwrap())
+    );
     let state = harness.state.lock().unwrap();
     assert_eq!(
         state.phases,

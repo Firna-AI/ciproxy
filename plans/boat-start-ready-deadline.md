@@ -47,8 +47,8 @@ Contract owners:
   because a new gate needs the user's explicit approval. The item stays
   open.
 - **2026-11-22, `boat-client-diagnostic-stderr.md`:** the change in
-  `futex-ai/sandbox` waits until after the launch. PR #96 fixed the warning
-  that caused the failure at its source. The item stays open.
+  `futex-ai/sandbox` waits until after the production launch. PR #96 fixed
+  the warning that caused the failure at its source. The item stays open.
 - **2026-11-22, `agent-release-git-sources.md`:** apply option A. The
   agent release guide gets the step "raise the agent version by hand when
   a shared library moves". The item is then deleted.
@@ -87,6 +87,9 @@ The calls below are the orchestrator's design calls, made on 2026-11-22.
 - The step for option A of `agent-release-git-sources.md` goes into
   `crates/ciproxy-agent/updates-and-releases.md`. Reason: the agent README
   sends release readers to that guide.
+- The hand tag of such a release goes on the merge commit on `main`.
+  Reason: the push of that commit to `main` runs the gate job of the
+  release workflow, and a tag push does not.
 - This change also deletes `plans/follow-ups/boat-start-report-credential-scope.md`.
   Reason: its only subject is the text of option A in the readiness item,
   which this change deletes with option A rejected.
@@ -101,18 +104,19 @@ Depends on: none
 The sandbox end doc states the ready deadline and its decision. The three
 follow-up records get their updates. The `docs implementor` does this work.
 
-- [ ] Add the ready deadline rule and its decision line to
+- [x] Add the ready deadline rule and its decision line to
       `docs/protocol/overflow-sandbox-end.md`.
-- [ ] Update `plans/follow-ups/image-checks-in-gate.md`. Its **Action**
+- [x] Update `plans/follow-ups/image-checks-in-gate.md`. Its **Action**
       line says that no new gate check comes now, and the item stays open.
-- [ ] Update `plans/follow-ups/boat-client-diagnostic-stderr.md`. The
+- [x] Update `plans/follow-ups/boat-client-diagnostic-stderr.md`. The
       change waits until after the launch, PR #96 fixed the warning at its
       source, and the item stays open.
-- [ ] Write the step of option A of
+- [x] Write the step of option A of
       `plans/follow-ups/agent-release-git-sources.md` in
       `crates/ciproxy-agent/updates-and-releases.md`. Delete the item.
-- [ ] Delete `plans/follow-ups/boat-start-report-credential-scope.md`.
-- [ ] Run the Markdown check.
+- [x] Delete `plans/follow-ups/boat-start-report-credential-scope.md`.
+- [x] Run the Markdown check. The report is in
+      `.context/boat-start-ready-deadline/reports/milestone-1.md`.
 
 ## Milestone 2: Launch time and ready deadline
 
@@ -122,19 +126,20 @@ The start record saves its launch time, and the scaler retires a launched
 Boat runner that took no job by its deadline. The `non-ui implementor`
 does this work.
 
-- [ ] Add the launch time to the start record, with the method that saves
+- [x] Add the launch time to the start record, with the method that saves
       a launch.
-- [ ] Save the launch time with the overflow clock in both launch paths.
+- [x] Save the launch time with the overflow clock in both launch paths.
       Extend the existing overflow service tests of both paths.
-- [ ] Add the launch time to the scaler's Boat runner, the 10-minute
+- [x] Add the launch time to the scaler's Boat runner, the 10-minute
       deadline, and the new stop reason. Add scaler unit tests at the
       boundary.
-- [ ] Pass the launch time from the start record to the scaler snapshot in
+- [x] Pass the launch time from the start record to the scaler snapshot in
       the control plane.
-- [ ] Add a control-plane runtime test: a launched start with a waiting
+- [x] Add a control-plane runtime test: a launched start with a waiting
       job keeps its runner at 9 minutes 59 seconds, and at 10 minutes its
       sandbox is deleted and another start follows.
-- [ ] Run the targeted tests of each changed crate and the early check.
+- [x] Run the targeted tests of each changed crate and the early check. The
+      reports are in `.context/boat-start-ready-deadline/reports/`.
 
 ## Milestone 3: README alignment
 
@@ -143,14 +148,15 @@ Depends on: 2
 The READMEs of the changed crates describe the launch time and the ready
 deadline. The `docs implementor` does this work.
 
-- [ ] Update the READMEs and guides of the changed crates.
-- [ ] Run the Markdown check.
+- [x] Update the READMEs and guides of the changed crates.
+- [x] Run the Markdown check. The report is in
+      `.context/boat-start-ready-deadline/reports/milestone-3.md`.
 
 ## Milestone 4: Verification, commit, review, and pull request
 
 Depends on: 1, 2, 3
 
-- [ ] Delete `plans/follow-ups/boat-launched-runner-readiness.md`.
+- [x] Delete `plans/follow-ups/boat-launched-runner-readiness.md`.
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
 - [ ] Open a draft pull request into `main`. Its description starts with

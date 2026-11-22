@@ -121,6 +121,7 @@ pub(super) fn boat_runner(pages: &Pages, github: i64) -> Runner {
         phase: StartPhase::Unsent,
         sandbox: None,
         starts_at,
+        launched_at: None,
         ends_at: None,
         billing: None,
         start_fee_bound_usd: None,

@@ -125,7 +125,7 @@ backend must give ciproxy.
   runner exits, with a token that works only for that sandbox.
 - [Sandbox end](overflow-sandbox-end.md) states when ciproxy stops and
   deletes each sandbox, what the control plane does with that exit report,
-  and the lifetime of each sandbox.
+  and the ready deadline and the lifetime of each sandbox.
 - A Boat runner that takes no job is not a [start](metering.md#starts).
 - A job on Boat uses only the [GitHub cache](cache.md#cache-tiers).
 
@@ -210,7 +210,7 @@ backend must give ciproxy.
   decision.
 - [Labels](labels.md): the labels, their sizes, and "When nothing fits".
 - [Sandbox end](overflow-sandbox-end.md): when ciproxy deletes a sandbox,
-  the exit report, and the lifetime.
+  the exit report, the ready deadline, and the lifetime.
 - [Job routing](job-routing.md): slots and where a job runs.
 - [Agent](agent.md): own machines and the image.
 - [Security](security.md): key custody.
