@@ -17,3 +17,10 @@ mod vm_control_tests;
 #[cfg(test)]
 #[path = "_tests_/vm_control_socket_tests.rs"]
 mod vm_control_socket_tests;
+
+mod launchd;
+mod paths;
+
+#[cfg(test)]
+#[path = "_tests_/launchd_tests.rs"]
+mod launchd_tests;

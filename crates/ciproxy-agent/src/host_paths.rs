@@ -9,7 +9,11 @@ use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use crate::host_release::VERSION;
 
+#[cfg(not(target_os = "macos"))]
 pub(crate) const CONTROL: &str = "/var/lib/ciproxy";
+/// macOS keeps daemon data in `/var/db`. See `macos-host.md`.
+#[cfg(target_os = "macos")]
+pub(crate) const CONTROL: &str = "/var/db/ciproxy";
 #[cfg(target_os = "linux")]
 pub(crate) const AREA: &str = "/var/lib/ciproxy/area";
 #[cfg(target_os = "linux")]

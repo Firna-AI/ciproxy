@@ -1,0 +1,100 @@
+//! launchd files keep the restart rules of the design and escape their text.
+
+use super::launchd::{agent_plist, launchctl, newsyslog_conf, vm_helper_plist};
+use super::paths::{
+    control_socket, local_id_of_label, seat_folder, valid_local_id, vm_label, vm_plist,
+};
+
+const ID: &str = "0123456789abcdef0123456789abcdef";
+
+#[test]
+fn the_agent_restarts_only_after_a_failure() {
+    let plist = agent_plist();
+    assert!(plist.contains("<key>Label</key>\n  <string>dev.ciproxy.agent</string>"));
+    assert!(plist.contains(
+        "<array><string>/usr/local/bin/ciproxy-agent</string><string>run</string></array>"
+    ));
+    assert!(plist.contains("<dict><key>SuccessfulExit</key><false/></dict>"));
+    assert!(plist.contains("<key>ThrottleInterval</key>\n  <integer>5</integer>"));
+    assert!(plist.contains("<string>/var/log/ciproxy/launchd.log</string>"));
+    assert!(plist.ends_with("</dict>\n</plist>\n"));
+}
+
+#[test]
+fn a_vm_helper_runs_once_with_its_local_id_only() {
+    let plist = vm_helper_plist(ID);
+    assert!(plist.contains(&format!("<string>dev.ciproxy.vm.{ID}</string>")));
+    assert!(plist.contains(&format!("<string>vm-run</string><string>{ID}</string>")));
+    assert!(plist.contains("<key>KeepAlive</key>\n  <false/>"));
+    assert!(plist.contains("<key>ExitTimeOut</key>\n  <integer>30</integer>"));
+    assert!(!plist.contains("SuccessfulExit"));
+}
+
+#[test]
+fn launchctl_targets_the_system_domain() {
+    assert_eq!(
+        launchctl::bootstrap_vm(ID),
+        [
+            "bootstrap",
+            "system",
+            &format!("/var/db/ciproxy/vms/{ID}.plist")
+        ]
+    );
+    assert_eq!(
+        launchctl::bootout_vm(ID),
+        ["bootout", &format!("system/dev.ciproxy.vm.{ID}")]
+    );
+    assert_eq!(
+        launchctl::restart_agent(),
+        ["kickstart", "-k", "system/dev.ciproxy.agent"]
+    );
+    assert_eq!(
+        launchctl::bootstrap_agent(),
+        [
+            "bootstrap",
+            "system",
+            "/Library/LaunchDaemons/dev.ciproxy.agent.plist"
+        ]
+    );
+}
+
+#[test]
+fn recovery_owns_only_labels_with_a_valid_local_id() {
+    assert!(valid_local_id(ID));
+    assert_eq!(local_id_of_label(&vm_label(ID)), Some(ID));
+    for label in [
+        "dev.ciproxy.agent",
+        "dev.ciproxy.vm.",
+        "dev.ciproxy.vm.0123456789ABCDEF0123456789ABCDEF",
+        "dev.ciproxy.vm.0123456789abcdef0123456789abcde",
+        "dev.ciproxy.vm.../../etc/passwd/0123456789abcdef",
+        "com.example.vm.0123456789abcdef0123456789abcdef",
+    ] {
+        assert_eq!(local_id_of_label(label), None, "{label}");
+    }
+}
+
+#[test]
+fn paths_stay_in_the_owned_folders() {
+    assert_eq!(
+        vm_plist(ID).to_str(),
+        Some(format!("/var/db/ciproxy/vms/{ID}.plist").as_str())
+    );
+    let socket = control_socket(ID);
+    assert_eq!(
+        socket.to_str(),
+        Some(format!("/var/db/ciproxy/area/vms/{ID}/control.sock").as_str())
+    );
+    assert!(socket.as_os_str().len() < 104);
+    assert_eq!(
+        seat_folder(1, true).to_str(),
+        Some("/var/db/ciproxy/area/seats/1/build")
+    );
+}
+
+#[test]
+fn logs_rotate_without_a_signal() {
+    let conf = newsyslog_conf();
+    assert!(conf.contains("/var/log/ciproxy/agent.log\troot:wheel\t600\t5\t10240\t*\tNJ\n"));
+    assert!(conf.contains("/var/log/ciproxy/launchd.log\t"));
+}
