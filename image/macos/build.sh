@@ -103,7 +103,7 @@ phase_provision() {
     PKR_VAR_vm_password=$(cat "$secrets/password")
     PKR_VAR_github_api_pat=${GITHUB_API_PAT:-$(cat "$secrets/github-api-pat" 2>/dev/null || true)}
     export PKR_VAR_vm_password PKR_VAR_github_api_pat
-    (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false \
+    (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false -timestamp-ui \
         -var "source_vm_name=$(guest_ip 5)" -var "build_id=$IMAGE_ID" \
         -var "vm_username=$guest_user" \
         -var "xcode_install_storage_url=http://127.0.0.1:$port/" -var "xcode_install_sas=build" \

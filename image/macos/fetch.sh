@@ -19,7 +19,14 @@ check() {
 fetch() {
     local url=$1 checksum=$2 destination=$3
     if [[ ! -f "$destination" ]]; then
-        curl --fail --location --retry 3 "$url" --output "$destination.part"
+        # A broken download resumes from its .part file, also in a later run.
+        local attempt
+        for attempt in 1 2 3 4 5; do
+            curl --fail --location --retry 3 --continue-at - "$url" \
+                --output "$destination.part" && break
+            [[ $attempt == 5 ]] && { echo "the download of $url failed" >&2; return 1; }
+            sleep 10
+        done
         mv "$destination.part" "$destination"
     fi
     check "$checksum" "$destination"

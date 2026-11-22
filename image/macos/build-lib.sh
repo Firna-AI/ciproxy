@@ -159,15 +159,27 @@ xcode_tunnel() {
 }
 
 # Stop the provision when the host runs short of space, before the host or
-# the VM fails. MIN_FREE_GB sets the limit, 15 GB by default.
+# the VM fails. MIN_FREE_GB sets the limit, 15 GB by default. Every 5 minutes
+# it also writes the sizes to run/space.log: the time, the host's free GB,
+# the allocated GB of disk.img, and the used GB of the guest data volume.
 space_guard() {
-    local limit=$(( ${MIN_FREE_GB:-15} * 1000000 )) free
+    local limit=$(( ${MIN_FREE_GB:-15} * 1000000 )) free allocated used next=0
     while true; do
         free=$(df -k "$work_dir" | awk 'NR == 2 {print $4}')
         if (( free * 1024 / 1000 < limit )); then
             echo "only $(( free / 1000000 )) GB free on the host; stopping the provision" >&2
             pkill -f "$work_dir/inputs/packer build" || true
             return
+        fi
+        if (( SECONDS >= next )); then
+            allocated=$(du -k "$bundle/disk.img" | cut -f1)
+            used=$(guest_ssh "df -k /System/Volumes/Data | awk 'NR == 2 {print \$3}'" \
+                2>/dev/null || echo 0)
+            printf '%s host_free_gb=%s disk_allocated_gb=%s guest_used_gb=%s\n' \
+                "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(( free * 1024 / 1000000000 ))" \
+                "$(( allocated * 1024 / 1000000000 ))" "$(( ${used:-0} * 1024 / 1000000000 ))" \
+                >> "$run_dir/space.log"
+            next=$(( SECONDS + 300 ))
         fi
         sleep 30
     done
