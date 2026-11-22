@@ -319,9 +319,11 @@ pass the terms step.
 
 ## Milestone 6: Follow-up items
 
-Depends on: 2, 4, 5
+Depends on: 2, 3, 4
 
-The five items close, and the other items stay true after the change.
+The five items close, and the other items stay true after the change. No
+item names a fixture or a smoke of Milestone 5, so this milestone runs beside
+it.
 
 - [ ] Delete `plans/follow-ups/terms-notice-on-every-sign-in.md`,
       `plans/follow-ups/terms-acceptance-parties.md`,
