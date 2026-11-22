@@ -70,10 +70,27 @@ variable "ciproxy_definition" {
   type = string
 }
 
+variable "ciproxy_ssh_key" {
+  type = string
+}
+
 variable "ciproxy_runner_sha256" {
   type = string
 }
 '''
+
+
+def add_retries(text):
+    """Retry each upstream shell step that expects no restart, twice. Over
+    SSH, a step can lose its session in rare cases while softwareupdate
+    works. The upstream install steps can run again."""
+    marker = 'provisioner "shell" {'
+    parts = text.split(marker)
+    for index in range(1, len(parts)):
+        block = parts[index][:parts[index].find("\n  }")]
+        if "expect_disconnect" not in block:
+            parts[index] = "\n    max_retries = 2" + parts[index]
+    return marker.join(parts)
 
 
 def prepare_template(source):
@@ -83,6 +100,11 @@ def prepare_template(source):
                         "the builder_type default")
     text = replace_once(text, "toolsets/toolset-26.json", f"toolsets/{TOOLSET_NAME}",
                         "the toolset path")
+    # Packer logs in with the build's SSH key. The upstream scripts still get
+    # the password through their environment variables.
+    text = replace_once(text, 'ssh_password = "${var.vm_password}"',
+                        'ssh_private_key_file = "${var.ciproxy_ssh_key}"', "the SSH password")
+    text = add_retries(text)
     text = text.rstrip()
     if not text.endswith("}"):
         raise SystemExit("the upstream template changed: the end of the build block")

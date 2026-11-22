@@ -31,12 +31,20 @@ source "veertu-anka-vm-clone" "template" {
 
 source "null" "template" {
   ssh_host = "${var.source_vm_name}"
+  ssh_password = "${var.vm_password}"
 }
 
 build {
   sources = ["source.${var.builder_type}.template"]
   provisioner "file" {
     source = "${path.root}/../toolsets/toolset-26.json"
+  }
+  provisioner "shell" {
+    scripts = ["install.sh"]
+  }
+  provisioner "shell" {
+    expect_disconnect = true
+    inline = ["shutdown -r now"]
   }
 }
 '''
@@ -63,6 +71,16 @@ class Template(unittest.TestCase):
         self.assertIn('variable "ciproxy_inputs"', text)
         self.assertLess(text.index("install-runner.sh"), text.index('variable "ciproxy_inputs"'))
         self.assertEqual(text.count("{"), text.count("}"))
+
+    def test_key_login_and_retries(self):
+        text = prepare.prepare_template(TEMPLATE)
+        self.assertNotIn("ssh_password", text)
+        self.assertIn('ssh_private_key_file = "${var.ciproxy_ssh_key}"', text)
+        self.assertIn('variable "ciproxy_ssh_key"', text)
+        install = text.index('scripts = ["install.sh"]')
+        restart = text.index("expect_disconnect = true")
+        self.assertIn("max_retries = 2", text[text.rindex('provisioner "shell"', 0, install):install])
+        self.assertNotIn("max_retries", text[text.rindex('provisioner "shell"', 0, restart):restart])
 
     def test_changed_upstream_fails(self):
         with self.assertRaises(SystemExit):
