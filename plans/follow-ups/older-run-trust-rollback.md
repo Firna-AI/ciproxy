@@ -5,15 +5,16 @@
 - **Kind:** Needs decision.
 - **Added:** 2026-11-22, from the branch
   `ops/production-image-trust-2026-11-22`, the blocked wider fix of review
-  finding 1.
+  finding 1. Updated on the same day with review finding 6 of round 2.
 - **Source:** Review.
 - **Category:** Security.
 - **Location:** `deploy/scripts/promotion_event.py:15-50`,
   `deploy/scripts/shared_routing.py:34-46`,
   `deploy/scripts/ci_roots.py:14-19`,
   `deploy/scripts/terraform_policy.py:60-86`,
+  `deploy/scripts/deploy_support.py:30-32`,
   `.github/workflows/deploy-infrastructure.yml:16-28`,
-  `.github/workflows/deploy-main-preview.yml:13-19`, and
+  `.github/workflows/deploy-main-preview.yml:13-31`, and
   `.github/workflows/deploy-production.yml:15-26`.
 - **Reason:** Each option that closes the class adds a CI rejection or
   reverses automatic trust updates, and only the user can approve either.
@@ -53,7 +54,8 @@
     In-place trust updates stay automatic.
   - `deploy/scripts/terraform_policy.py:60-86` enforces that rule in CI. It
     refuses a delete, a replacement, or a forget of a trust resource. It
-    allows an in-place update and a create.
+    allows a create and an in-place update, such as a change of a provider
+    condition or a custom role.
   - A rerun keeps the commit and the event of its first attempt.
     `deploy/scripts/promotion_event.py:15-50` accepts any push commit on
     `main` for main preview. For production, it accepts any successful main
@@ -72,23 +74,48 @@
     move applies the primary-branch claim again. Its image job then calls
     the workflow on the primary branch and can authenticate. So the run can
     pass.
-  - The launch guide has a direct mitigation for that case. "Move the
-    binding to main at launch" in `deploy/image-workflow-bootstrap.md`
-    reruns only the preview push of the current reviewed `main` commit. It
-    also says not to rerun a `main` push from before the move.
-  - "Permit production" in `deploy/launch.md` repeats the image provider
-    check after the last operator bootstrap and before the production
-    switch. Keep both mitigations until a chosen option replaces them.
+  - Each `main` commit from before the move calls the image workflow on the
+    primary branch by name. For example, line 23 of
+    `.github/workflows/deploy-main-preview.yml` at commit `c3616d15` calls
+    `deploy-control-plane-image.yml@calummoore/ci-proxy-load-balancer`. That
+    branch has no ruleset.
+  - A rerun keeps that caller. A rerun of all jobs resolves the branch name
+    again, so it runs the current code of the primary branch. GitHub allows
+    a rerun for 30 days after the initial run.
+  - While the control-plane runtime is off,
+    `deploy/scripts/deploy_support.py:30-32` does not check the image
+    output. So changed primary-branch code can skip the image identities,
+    and the run can still pass.
+  - After the launch, production follows such a successful run. It applies
+    the trust roots of that pre-move commit through the production trust
+    account. Those roots restore the primary-branch claim of both image
+    providers.
+  - Commits after the move call the image workflow locally, from their own
+    commit. A rerun of their runs runs reviewed code, but it still applies
+    their older trust roots.
+  - The launch guide has direct mitigations. The move in
+    `deploy/image-workflow-bootstrap.md` and the run after the production
+    switch in "Permit production" of `deploy/launch.md` rerun only the
+    preview push of the current reviewed `main` commit.
+  - Both steps fetch `origin/main` and set `COMMIT` from
+    `git rev-parse origin/main`. Then both use the block "Rerun a reviewed
+    main push" of `deploy/image-workflow-bootstrap.md`. The block reruns
+    the selected run only when its `headSha` equals `COMMIT`.
+  - The move also says not to rerun a `main` push from before the move.
+    "Permit production" repeats the image provider read after the last
+    operator bootstrap and before the production switch. Keep these
+    mitigations until a chosen option replaces them.
 - **Problem:** A rerun of an older run plans and applies the trust roots of
   its own commit. That apply silently reverts each later in-place trust
-  change, such as a provider condition or a custom role. It can also
-  create again a trust resource that a later operator recovery removed,
-  because the CI policy allows creates.
+  change, and it can create again a trust resource that an operator
+  recovery removed. For 30 days after the last `main` push from before the
+  image trust move, a writer can also change the image job that a rerun of
+  that push runs.
 - **Impact if no action:** After the launch, one rerun of an older
   production run, or of an older main preview run that production then
-  follows, can undo a reviewed trust change. The trust accounts hold
-  effective owner power, so the undo can reopen access with no failed
-  check.
+  follows, can undo a reviewed trust change with no failed check. The
+  trust accounts hold effective owner power, and for 30 days a writer
+  needs no reviewed change to start such a run from a pre-move `main` push.
 - **Root question:** How does CI keep each applied trust change in force
   when someone reruns a run of an older commit?
 - **Options:**
@@ -118,6 +145,10 @@
     It covers only the launch, and production keeps the class. On
     22 November 2026, the user also required the approved launch order
     unchanged.
+  - Delete the main preview runs of the commits from before the move, or
+    keep production off until 30 days after the last such push: it fails
+    the goal. It covers only that window, and later trust changes keep the
+    class. A deletion also removes the logs of those runs.
   - Add a marker resource to each trust change, so that the CI delete
     refusal stops older plans: C is better on every point. C needs no
     author to remember a marker.
@@ -128,8 +159,10 @@
 - **Wider fix:** D removes the class, because CI no longer writes the trust
   roots. C is the detection form, with a smaller change of behaviour.
 - **Previous examples:** The image trust move of 22 November 2026, which
-  the background gives. The review that added this item did not search the
-  history for other cases.
+  the background gives. Its move rerun and its rerun after the production
+  switch both allowed an older run, until the same branch added the commit
+  selection. The review that added this item did not search the history
+  for other cases.
 - **Related:**
   - `plans/follow-ups/prelaunch-image-boundary.md` covers images that a
     primary-branch writer published before the same move. It is a separate

@@ -119,14 +119,20 @@ No production data or workload resource needs to exist for this step.
    `CONTROL_PLANE_RUNTIME_READY=false` and `PUBLIC_UPTIME_ENABLED=false`.
    Leave `CDN_SIGNING_KEY_NAME` unset until production key registration.
 4. Limit its deployment branch to protected `main`.
-5. After the last operator bootstrap, repeat the provider check of the
-   [image trust move][image-trust] with the claim on `main`. Each image
-   provider must print `true`. The retirement stopped preview trust
-   writes. Production CI stays off until the switch. So this check reads
-   the provider state that production starts with.
+5. After the last operator bootstrap, set the claim on `main`. Then
+   [read both providers][provider-read]:
+
+   ```sh
+   CLAIM=Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main
+   ```
+
+   Each image provider must print `true`. The retirement stopped preview
+   trust writes. Production CI stays off until the switch. So this read
+   gives the provider state that production starts with.
 
    If a provider fails, keep the switch false. Repeat the bootstrap apply
-   and the provider check of the move from protected `main`.
+   and the provider read of the [image trust move][image-trust] from
+   protected `main`.
 
 6. Enable the repository switch:
 
@@ -134,7 +140,21 @@ No production data or workload resource needs to exist for this step.
    gh variable set PRODUCTION_DEPLOY_ENABLED --repo=Firna-AI/ciproxy --body=true
    ```
 
-7. Start a new main preview push run on `main`, or rerun all jobs of one.
+7. Start a main preview run of the current reviewed `main` commit. Start a
+   new push, or rerun its push run. For a rerun, set `COMMIT` from a fresh
+   fetch:
+
+   ```sh
+   git fetch origin main
+   COMMIT="$(git rev-parse origin/main)"
+   ```
+
+   Then [rerun its main push][main-rerun]. A new push must also come from
+   the current reviewed `main` commit. If an image job of the run fails
+   authentication, first check the commit of the run. A `main` commit from
+   before the move calls the primary workflow, and the providers refuse its
+   claim.
+
 8. Let production follow that exact successful commit.
 
 The GCP latch makes preview read central state even before the repository
@@ -199,3 +219,5 @@ No migration is needed. No previous deployment has applied in either
 project. Spike/test machines stay in `internal-498318`.
 
 [image-trust]: image-workflow-bootstrap.md#move-the-binding-to-main-at-launch
+[provider-read]: image-workflow-bootstrap.md#read-both-providers
+[main-rerun]: image-workflow-bootstrap.md#rerun-a-reviewed-main-push

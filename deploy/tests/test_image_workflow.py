@@ -15,6 +15,7 @@ from deploy.tests import image_security_support as security
 
 
 PRIMARY_CALLER_REF = "refs/heads/calummoore/ci-proxy-load-balancer"
+CALLER_REFS = (PRIMARY_CALLER_REF, "refs/heads/main")
 
 
 class ImageWorkflowTests(unittest.TestCase):
@@ -25,25 +26,27 @@ class ImageWorkflowTests(unittest.TestCase):
 
     def test_only_reusable_image_jobs_on_main_satisfy_real_provider_conditions(self):
         workload = self.documents["deploy-main-preview.yml"]["jobs"]["workloads"]
-        ordinary = security.claims(workload, PRIMARY_CALLER_REF)
-        self.assertNotIn("job_workflow_ref", ordinary)
         self.assertEqual(set(self.providers), {"image_lookup", "image_publish"})
-        for name, provider in self.providers.items():
-            with self.subTest(identity=name, scenario="ordinary workload"):
-                self.assertFalse(security.admits(provider, ordinary))
-                self.assertEqual(provider["attribute_mapping"]["attribute.job_workflow_ref"], "assertion.job_workflow_ref")
-            for scenario, reference in security.UNTRUSTED.items():
-                with self.subTest(identity=name, scenario=scenario):
-                    self.assertFalse(security.admits(provider, dict(ordinary, job_workflow_ref=reference)))
-        for caller_ref in (PRIMARY_CALLER_REF, "refs/heads/main"):
+        for caller_ref in CALLER_REFS:
+            ordinary = security.claims(workload, caller_ref)
             privileged = security.image_jobs(self.documents, caller_ref)
-            self.assertEqual(len(privileged), 2)
-            for job_name, job, _, _ in privileged:
-                trusted_claims = security.claims(job, caller_ref, security.TRUSTED)
-                for name, provider in self.providers.items():
+            with self.subTest(caller_ref=caller_ref):
+                self.assertNotIn("job_workflow_ref", ordinary)
+                self.assertEqual(len(privileged), 2)
+            for name, provider in self.providers.items():
+                with self.subTest(identity=name, caller_ref=caller_ref, scenario="ordinary workload"):
+                    self.assertFalse(security.admits(provider, ordinary))
+                    self.assertEqual(provider["attribute_mapping"]["attribute.job_workflow_ref"],
+                                     "assertion.job_workflow_ref")
+                for job_name, job, origin, _ in privileged:
+                    selected_claims = security.claims(job, caller_ref, origin)
                     with self.subTest(identity=name, job=job_name, caller_ref=caller_ref,
                                       scenario="trusted workflow on main"):
-                        self.assertTrue(security.admits(provider, trusted_claims))
+                        self.assertTrue(security.admits(provider, selected_claims))
+                    for scenario, reference in security.UNTRUSTED.items():
+                        with self.subTest(identity=name, job=job_name, caller_ref=caller_ref, scenario=scenario):
+                            denied = dict(selected_claims, job_workflow_ref=reference)
+                            self.assertFalse(security.admits(provider, denied))
         build = next(item for item in security.jobs(self.documents, PRIMARY_CALLER_REF) if any(
             "control_plane_image.py build" in step.get("run", "") for step in item[1].get("steps", [])))
         permissions = build[1].get("permissions", build[3])
@@ -56,11 +59,15 @@ class ImageWorkflowTests(unittest.TestCase):
                     oidc=permissions.get("id-token") == "write"))
 
     def test_main_image_workflow_uses_its_own_tools_revision_without_token_output(self):
-        privileged = security.image_jobs(self.documents, PRIMARY_CALLER_REF)
-        self.assertEqual(len(privileged), 2)
-        for name, _, origin, _ in privileged:
-            with self.subTest(job=name, scenario="preview calls image workflow on main"):
-                self.assertEqual(origin, security.TRUSTED)
+        privileged_by_caller = {caller_ref: security.image_jobs(self.documents, caller_ref)
+                                for caller_ref in CALLER_REFS}
+        for caller_ref, privileged in privileged_by_caller.items():
+            with self.subTest(caller_ref=caller_ref):
+                self.assertEqual(len(privileged), 2)
+            for name, _, origin, _ in privileged:
+                with self.subTest(job=name, caller_ref=caller_ref, scenario="preview calls image workflow on main"):
+                    self.assertEqual(origin, security.TRUSTED)
+        privileged = privileged_by_caller[PRIMARY_CALLER_REF]
         for _, job, _, _ in privileged:
             for executable in job.get("steps", []):
                 command = executable.get("run", "")

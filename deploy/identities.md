@@ -51,7 +51,9 @@ through `ciproxyImageRepositoryPolicy`. The build runner has no cloud role.
 every permission.
 Both image providers also require one exact reusable workflow claim. The
 claim stays independent of the caller's branch. It names the image workflow
-on protected `main`. The prelaunch claim named the workflow on the primary
+on protected `main`. A preview run on `main` calls that workflow locally,
+from its own commit. A primary-branch run calls it with the remote
+reference `@main`. The prelaunch claim named the workflow on the primary
 branch. That branch has no ruleset. So the prelaunch claim was a trust root
 outside protected `main`. An ordinary npm
 workload job cannot obtain either identity. The reusable workflow reads its

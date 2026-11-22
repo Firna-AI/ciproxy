@@ -78,13 +78,35 @@ def preview_workflow_ref(caller_ref):
     return f"Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@{caller_ref}"
 
 
+def image_workflow_ref(uses, caller_ref):
+    path = ".github/workflows/deploy-control-plane-image.yml"
+    if uses == f"./{path}":
+        return f"Firna-AI/ciproxy/{path}@{caller_ref}"
+    if uses.startswith(f"Firna-AI/ciproxy/{path}@"):
+        return uses.replace("@", "@refs/heads/", 1)
+    return None
+
+
+def image_call_runs_for_ref(condition, caller_ref):
+    if condition is None:
+        return True
+    match = re.fullmatch(r"github\.ref\s*(==|!=)\s*'([^']+)'", condition.strip())
+    if not match:
+        raise ValueError(f"The image job fixture cannot resolve condition: {condition}")
+    operator, reference = match.groups()
+    matches = caller_ref.casefold() == reference.casefold()
+    return matches if operator == "==" else not matches
+
+
 def jobs(documents, caller_ref):
     entry = documents["deploy-main-preview.yml"]
     result = []
     caller = preview_workflow_ref(caller_ref)
     for name, job in entry["jobs"].items():
-        if job.get("uses", "").startswith("Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@"):
-            reference = job["uses"].replace("@", "@refs/heads/", 1)
+        reference = image_workflow_ref(job.get("uses", ""), caller_ref)
+        if reference:
+            if not image_call_runs_for_ref(job.get("if"), caller_ref):
+                continue
             called = documents.get("deploy-control-plane-image.yml", {})
             for child, configuration in called.get("jobs", {}).items():
                 result.append((child, configuration, reference, called.get("permissions", {})))
