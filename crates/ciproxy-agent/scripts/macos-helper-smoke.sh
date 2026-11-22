@@ -17,6 +17,11 @@
 # The guest account is CIPROXY_VZ_GUEST_USER, by default admin, with SSH
 # by key and `sudo -n`. The script refuses a Mac with an installed agent.
 # Take the test Mac's VM lock first.
+#
+# CIPROXY_SMOKE_HELPER_USER runs the helper as that user instead of root.
+# CIPROXY_SMOKE_HELPER_DOMAIN then selects the launchd domain: `system`
+# (the default, with a UserName key), `user` (the user's background domain),
+# or `gui` (the user's login session).
 set -euo pipefail
 
 if [[ "$(uname -s)" != Darwin || "${EUID}" -ne 0 || $# -lt 2 || $# -gt 3 ]]; then
@@ -35,6 +40,22 @@ if [[ -e "${control}/state.json" || -e "${control}/area.json" ]]; then
 fi
 log="/tmp/ciproxy-helper-$$.log"
 ids=()
+helper_user=${CIPROXY_SMOKE_HELPER_USER:-}
+domain=${CIPROXY_SMOKE_HELPER_DOMAIN:-system}
+target=system
+user_key=""
+if [[ -n "${helper_user}" ]]; then
+  helper_uid=$(id -u "${helper_user}")
+  case "${domain}" in
+  system) user_key="<key>UserName</key><string>${helper_user}</string>" ;;
+  user | gui) target="${domain}/${helper_uid}" ;;
+  *)
+    echo "SKIP: CIPROXY_SMOKE_HELPER_DOMAIN is system, user, or gui" >&2
+    exit 77
+    ;;
+  esac
+  echo "helper user: ${helper_user}, launchd target: ${target}"
+fi
 
 new_id() { uuidgen | tr -d - | tr '[:upper:]' '[:lower:]'; }
 folder_of() { echo "${control}/area/vms/$1"; }
@@ -44,9 +65,9 @@ control_call() { python3 "${client}" "$(socket_of "$1")" "${@:2}"; }
 # bootout can return once it has sent SIGTERM. Wait until launchd has
 # unloaded the job: the helper's exit timeout of 30 s and a margin.
 stop_helper() {
-  launchctl bootout "system/dev.ciproxy.vm.$1" 2>/dev/null || true
+  launchctl bootout "${target}/dev.ciproxy.vm.$1" 2>/dev/null || true
   for _ in $(seq 1 160); do
-    launchctl print "system/dev.ciproxy.vm.$1" >/dev/null 2>&1 || return 0
+    launchctl print "${target}/dev.ciproxy.vm.$1" >/dev/null 2>&1 || return 0
     sleep 0.25
   done
   echo "FAIL: the helper job $1 did not unload" >&2
@@ -85,11 +106,17 @@ JSON
   <key>KeepAlive</key><false/>
   <key>ExitTimeOut</key><integer>30</integer>
   <key>StandardErrorPath</key><string>${log}</string>
+  ${user_key}
 </dict>
 </plist>
 PLIST
-  chmod 600 "${plist}"
-  launchctl bootstrap system "${plist}"
+  chmod 644 "${plist}"
+  if [[ -n "${helper_user}" ]]; then
+    chown -R "${helper_user}" "${folder}"
+    touch "${log}"
+    chown "${helper_user}" "${log}"
+  fi
+  launchctl bootstrap "${target}" "${plist}"
 }
 
 # running ID: wait up to 60 s until the helper answers `OK running`.
@@ -121,6 +148,10 @@ connect() {
 
 mkdir -p "${control}/area/vms" "${control}/vms"
 chmod 700 "${control}" "${control}/area" "${control}/area/vms" "${control}/vms"
+if [[ -n "${helper_user}" ]]; then
+  # The helper user may pass through to its own VM folder only.
+  chmod 711 "${control}" "${control}/area" "${control}/area/vms"
+fi
 id=$(new_id)
 ids+=("${id}")
 mkdir -m 700 "$(folder_of "${id}")"
@@ -173,6 +204,7 @@ if [[ -n "${guest_binary}" ]]; then
   stop_helper "${id}"
   first=$(folder_of "${id}")
   mv "${first}/state.vzvmsave" "${first}/bundle/state.vzvmsave"
+  echo "state file: $(du -h "${first}/bundle/state.vzvmsave" | cut -f1)"
   id=$(new_id)
   ids+=("${id}")
   mkdir -m 700 "$(folder_of "${id}")"
@@ -218,7 +250,7 @@ echo "helper log (last lines):"
 tail -n 20 "${log}" || true
 for each in "${ids[@]}"; do
   stop_helper "${each}"
-  if launchctl list | grep -q "dev.ciproxy.vm.${each}"; then
+  if launchctl print "${target}/dev.ciproxy.vm.${each}" >/dev/null 2>&1; then
     echo "FAIL: the helper job ${each} is still loaded" >&2
     exit 1
   fi

@@ -28,8 +28,11 @@ const WAIT_ANSWER_GRACE: std::time::Duration = std::time::Duration::from_secs(1)
 
 /// Run one VM until it stops, then write `exit.json` and return.
 pub(crate) async fn run(local_id: &str) -> Result<()> {
-    if !valid_local_id(local_id) || rustix::process::geteuid().as_raw() != 0 {
-        return Err(helper("the VM helper needs root and a valid local ID"));
+    // The helper needs only its own VM folder. It can run as a normal user,
+    // because Virtualization.framework needs a user security context to
+    // save a VM. The root agent still reaches its socket.
+    if !valid_local_id(local_id) {
+        return Err(helper("the VM helper needs a valid local ID"));
     }
     let folders = VmFolders {
         area: PathBuf::from(AREA),
