@@ -22,8 +22,13 @@ CONTINUE = r"^Continue$"
 
 def steps(password):
     return [
-        ("language", r"^English", [("press", "return")], 900),
-        ("country", r"Country or Region", [("click", r"^United States$"), ("click", CONTINUE)], 120),
+        # "English" is the US entry. "English (UK)" sets the British input
+        # source and lists the United Kingdom first.
+        ("language", r"^English \(UK\)$|^English$",
+         [("select", r"^English$", r"^English", "English"), ("press", "return")], 900),
+        ("country", r"Country or Region",
+         [("select", r"^United States$", r"^(Afghanistan|Albania|Algeria)$", "United States"),
+          ("click", CONTINUE)], 120),
         ("transfer", r"Transfer Your Data|Migration Assistant",
          [("click", r"Set up as new|Not Now"), ("click", CONTINUE)], 120),
         ("languages", r"Written and Spoken Languages", [("click", CONTINUE)], 120),

@@ -74,6 +74,16 @@ class Screen:
         self.vnc.click(target["x"], target["y"])
         time.sleep(1)
 
+    def select(self, pattern, row, text, timeout=30):
+        """Select a list entry. When it is not on screen, click any row and
+        type its name, so the list jumps to it."""
+        if not self.find(pattern):
+            self.click(row, False)
+            self.vnc.type(text)
+            time.sleep(2)
+            self.wait(pattern, timeout)
+        self.click(pattern, False)
+
     def type(self, text):
         self.vnc.type(text)
 
@@ -98,6 +108,8 @@ def run_steps(screen, steps, log=print):
         for action, *values in actions:
             if action == "click":
                 screen.click(*values)
+            elif action == "select":
+                screen.select(*values)
             elif action == "type":
                 screen.type(values[0])
             elif action == "press":
