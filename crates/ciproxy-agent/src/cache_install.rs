@@ -10,7 +10,7 @@ use cli_updater::{TarGzBinaryInstaller, UpdateRequest, Updater, UpgradeOutcome};
 use crate::error::{ErrorResultExt, Result};
 use crate::persistence::{atomic_private_write, private_directory};
 use crate::release_client::SecureReleases;
-use crate::updates::CheckedInstaller;
+use crate::updates_checked::CheckedInstaller;
 
 const BINARY: &str = "/usr/local/bin/ciproxy-cache-sidecar";
 const VERSION: &str = "/var/lib/ciproxy/cache-sidecar-version";
