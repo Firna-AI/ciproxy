@@ -48,3 +48,9 @@ mod hardware_tests;
 #[cfg(test)]
 #[path = "_tests_/guests_tests.rs"]
 mod guests_tests;
+
+pub(crate) mod image_bundle;
+
+#[cfg(test)]
+#[path = "_tests_/image_bundle_tests.rs"]
+mod image_bundle_tests;
