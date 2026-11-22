@@ -46,9 +46,11 @@ def main():
     pins = dict(line.split("=", 1) for line in (definition / "pins.env").read_text().splitlines()
                 if line and not line.startswith("#"))
     guest = json.loads((args.artifacts / "guest-facts.json").read_text())
-    if guest["macos_build"] != pins["MACOS_TARGET_BUILD"]:
-        raise SystemExit(f"the guest runs {guest['macos_build']}, "
-                         f"not the pinned {pins['MACOS_TARGET_BUILD']}")
+    # The guest's version is the minimum host version, because
+    # Virtualization.framework runs no guest that is newer than its host.
+    running = f"{guest['macos_version']}-{guest['macos_build']}"
+    if running != pins["MACOS_TARGET"]:
+        raise SystemExit(f"the guest runs {running}, not the pinned {pins['MACOS_TARGET']}")
     disk = args.artifacts / "bundle/disk.img"
     measurement = {
         "platform": "macos",

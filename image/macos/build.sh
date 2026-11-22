@@ -57,18 +57,18 @@ phase_configure() {
     guest_scp /tmp/ "$definition/configure-guest.sh" "$definition/update-macos.sh"
     guest_ssh 'sudo bash /tmp/configure-guest.sh'
     local status=0
-    guest_ssh "sudo bash /tmp/update-macos.sh $MACOS_TARGET_VERSION $MACOS_TARGET_BUILD \
-        $guest_user" < "$secrets/password" || status=$?
+    guest_ssh "sudo bash /tmp/update-macos.sh $MACOS_TARGET $guest_user" \
+        < "$secrets/password" || status=$?
     if [[ $status == 10 ]]; then
         sleep 120
         wait_ssh 3600
         status=0
     fi
     [[ $status == 0 ]] || return "$status"
-    local build
-    build=$(guest_ssh 'sw_vers -buildVersion')
-    [[ $build == "$MACOS_TARGET_BUILD" ]] || {
-        echo "the guest runs $build, not $MACOS_TARGET_BUILD" >&2
+    local running
+    running=$(guest_ssh 'echo "$(sw_vers -productVersion)-$(sw_vers -buildVersion)"')
+    [[ $running == "$MACOS_TARGET" ]] || {
+        echo "the guest runs $running, not $MACOS_TARGET" >&2
         return 1
     }
 }

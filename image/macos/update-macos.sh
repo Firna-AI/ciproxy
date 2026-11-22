@@ -6,9 +6,10 @@
 # Exit 0: the guest already runs the target. Exit 10: the update restarts it.
 set -euo pipefail
 
-target_version=${1:?Usage: update-macos.sh TARGET_VERSION TARGET_BUILD USER_NAME}
-target_build=${2:?}
-user_name=${3:?}
+target=${1:?Usage: update-macos.sh VERSION-BUILD USER_NAME}
+user_name=${2:?}
+target_version=${target%-*}
+target_build=${target##*-}
 current=$(sw_vers -buildVersion)
 if [[ $current == "$target_build" ]]; then
     echo "macOS already runs $target_version ($target_build)"
