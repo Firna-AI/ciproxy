@@ -15,6 +15,7 @@ use tokio::process::Command;
 use crate::assignment::WorkerReply;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::guest_setup::PreloadedDocker;
+use crate::platform::{Account, Platform};
 use crate::proxy::{self, ProxySession};
 
 #[derive(Clone, Deserialize)]
@@ -24,36 +25,25 @@ pub(crate) struct Handoff {
     pub(crate) runtime: RuntimeCredentials,
 }
 
-pub(crate) async fn listen() -> Result<UnixListener> {
-    tokio::fs::create_dir_all("/run/ciproxy")
+pub(crate) async fn listen(platform: Platform, account: &Account) -> Result<UnixListener> {
+    let directory = platform.assignment_directory();
+    tokio::fs::create_dir_all(directory)
         .await
         .context("create assignment directory")?;
-    tokio::fs::set_permissions("/run/ciproxy", std::fs::Permissions::from_mode(0o700))
+    tokio::fs::set_permissions(directory, std::fs::Permissions::from_mode(0o700))
         .await
         .context("protect assignment directory")?;
-    let status = Command::new("chown")
-        .args(["runner:runner", "/run/ciproxy"])
-        .status()
-        .await
+    std::os::unix::fs::chown(directory, Some(account.uid), Some(account.gid))
         .context("assign handoff directory")?;
-    if !status.success() {
-        return Err(Error::PoweroffFailed);
-    }
-    let path = "/run/ciproxy/assignment.sock";
+    let path = platform.assignment_socket();
     match tokio::fs::remove_file(path).await {
         Ok(()) => {}
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => return Err(error).context("replace assignment socket"),
     }
     let listener = UnixListener::bind(path).context("bind assignment socket")?;
-    let status = Command::new("chown")
-        .args(["runner:runner", path])
-        .status()
-        .await
+    std::os::unix::fs::chown(path, Some(account.uid), Some(account.gid))
         .context("assign handoff socket")?;
-    if !status.success() {
-        return Err(Error::PoweroffFailed);
-    }
     Ok(listener)
 }
 
@@ -102,7 +92,7 @@ pub(crate) async fn prepare(
             outcome,
         });
     }
-    if let Some(disk) = docker {
+    if let Some(disk) = docker.filter(|_| Platform::current().docker()) {
         let result = Command::new("/usr/local/libexec/ciproxy-docker-attach")
             .arg(disk.free_bytes.to_string())
             .status()
