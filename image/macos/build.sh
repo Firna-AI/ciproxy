@@ -83,19 +83,25 @@ phase_provision() {
     phase_provision_check
     vm_running || vm_start
     wait_ssh 600
-    local template port=8765 server tunnel guard status=0
+    local template port=8765 ssh_port=2222 server tunnel guard status=0
     template=$(python3 "$definition/prepare-template.py" "$work_dir/upstream" \
         --template "$RUNNER_IMAGES_TEMPLATE" --xcode-links "$XCODE_LINKS" \
         --xcode-xip "$XCODE_XIP_NAME" --xcode-sha256 "$XCODE_SHA256")
     # The guest downloads the Xcode archive in place of upstream's storage
-    # account. The host serves it on its loopback address, and a reverse SSH
-    # tunnel that the host opens brings it to the guest's 127.0.0.1. So the
-    # agent's pf rules, which block guests from the host, do not matter.
+    # account. The host serves it on its loopback address, and the tunnel of
+    # guest_tunnel brings it to the guest's 127.0.0.1. So the agent's pf
+    # rules, which block guests from the host, do not matter. Packer reaches
+    # the guest through the same tunnel.
     python3 -m http.server "$port" --bind 127.0.0.1 --directory "$work_dir/inputs/xcode" \
         > "$run_dir/xcode-server.log" 2>&1 &
     server=$!
-    xcode_tunnel "$port" &
+    guest_tunnel "$ssh_port" "$port" &
     tunnel=$!
+    local wait
+    for wait in $(seq 60); do
+        nc -z 127.0.0.1 "$ssh_port" 2>/dev/null && break
+        sleep 1
+    done
     space_guard &
     guard=$!
     export PACKER_PLUGIN_PATH="$work_dir/packer-plugins" PACKER_CACHE_DIR="$work_dir/packer-cache"
@@ -107,7 +113,8 @@ phase_provision() {
     # of sensitive variables, such as the password, in it.
     export PACKER_LOG=1 PACKER_LOG_PATH="$run_dir/packer-debug.log"
     (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false -timestamp-ui \
-        -var "source_vm_name=$(guest_ip 5)" -var "build_id=$IMAGE_ID" \
+        -var "source_vm_name=127.0.0.1" -var "source_vm_port=$ssh_port" \
+        -var "build_id=$IMAGE_ID" \
         -var "vm_username=$guest_user" -var "ciproxy_ssh_key=$ssh_key" \
         -var "xcode_install_storage_url=http://127.0.0.1:$port/" -var "xcode_install_sas=build" \
         -var "ciproxy_inputs=$work_dir/inputs" -var "ciproxy_definition=$definition" \

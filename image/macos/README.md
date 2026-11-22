@@ -94,9 +94,13 @@ limit in the upstream scripts. The token stays out of the image.
    `/opt/actions-runner`, the guest's `install.sh` adds the guest and its
    launchd service, and `clean-image.sh` removes the build state. The host
    serves the Xcode archive on its loopback address, in place of upstream's
-   storage account. A reverse SSH tunnel, which the host opens again after
-   each guest restart, brings it to the guest's `127.0.0.1`. So the agent's
-   pf rules, which block guests from the host, do not stop the build. Set
+   storage account. One SSH connection from Apple's `ssh`, which the host
+   opens again after each guest restart, carries two tunnels. It brings the
+   archive to the guest's `127.0.0.1`, so the agent's pf rules, which block
+   guests from the host, do not stop the build. It also brings the guest's
+   SSH to the host's `127.0.0.1:2222`, where Packer connects. macOS Local
+   Network privacy cut Packer off from the VM network a few minutes after
+   the session that started the build ended. Loopback is not covered. Set
    `GITHUB_API_PAT` to a token without rights for a higher GitHub API rate
    limit, or put it in `secrets/github-api-pat` of the work folder. It
    reaches Packer through the environment, not the command line.
