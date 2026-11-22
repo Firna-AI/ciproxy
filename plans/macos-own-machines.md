@@ -78,7 +78,9 @@ The spike needs an Apple Silicon Mac with macOS 14 or later.
 - [x] Clone the base VM with APFS clones and cold-start the clone to an SSH
       login. Pass: a clone in under 1 s, SSH in under 60 s.
       Passed: a clone in 1 ms, SSH login in 11.4 s.
-- [ ] Run one real GitHub job on a just-in-time runner in a fresh clone.
+- [x] Run one real GitHub job on a just-in-time runner in a fresh clone.
+      Passed: the runner listened 9.8 s after the VM started, the job
+      passed, and the VM stopped when the runner exited.
 - [x] Find the limit of concurrent macOS VMs and its error text.
       Passed: the limit is 2, and the third start fails at once.
 - [x] Save a VM state, restore it, and measure the time to SSH. Check
