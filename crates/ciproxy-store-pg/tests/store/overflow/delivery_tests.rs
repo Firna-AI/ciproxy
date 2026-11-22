@@ -1,5 +1,7 @@
 //! Durable key retention and concurrent delivery session exclusion.
 
+use std::thread;
+
 use chrono::Duration;
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
@@ -8,6 +10,8 @@ use diesel::prelude::*;
 use diesel::sql_types;
 use rust_decimal::Decimal;
 use uuid::Uuid;
+
+use crate::store::metering::concurrent::support::tagged_store;
 
 use super::super::support::{Database, at};
 use super::authority_support::assert_label_and_binding_liveness;
@@ -112,7 +116,26 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
 fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authority() {
     let mut database = Database::new();
     let (workspace_id, account, record) = setup(&database);
-    let mut session = database.store.lock_overflow(workspace_id).unwrap();
+    let holder = tagged_store(&database.url);
+    let waiter = tagged_store(&database.url);
+    let mut session = thread::scope(|scope| {
+        let waiting = {
+            let _session = holder.store.lock_overflow(workspace_id).unwrap();
+            let holder_pid = holder.workspace_session_pid(&mut database.connection);
+            let waiting = scope.spawn(|| waiter.store.lock_overflow(workspace_id));
+            assert!(
+                waiter.wait_for_workspace_blocker(&mut database.connection, holder_pid, &|| {
+                    waiting.is_finished()
+                }),
+                "lock_overflow returned without waiting for the held workspace lock"
+            );
+            waiting
+        };
+        waiting
+            .join()
+            .unwrap()
+            .expect("the waiting call must acquire the released workspace lock")
+    });
     assert!(
         database
             .store

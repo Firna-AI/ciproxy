@@ -233,6 +233,17 @@ fn stale_delivery_save_waits_for_claim_and_preserves_it() {
     let hash = TokenHash::new(vec![5, 6, 7]);
     save_running_delivery(&mut *session, &mut record, &hash);
     let stale = session.snapshot().unwrap().starts.remove(0);
+    assert_eq!(
+        database
+            .store
+            .runners(workspace_id, stale.organization_id)
+            .unwrap()
+            .into_iter()
+            .map(|runner| (runner.id, runner.state))
+            .collect::<Vec<_>>(),
+        vec![(stale.runner_id, RunnerState::Starting)],
+        "the claim must meet a starting runner"
+    );
     let mut observer = PgConnection::establish(&database.url).unwrap();
     let saver_pid = saver.workspace_session_pid(&mut observer);
     let claimant = tagged_store(&database.url);
@@ -273,5 +284,16 @@ fn stale_delivery_save_waits_for_claim_and_preserves_it() {
             .unwrap(),
         None,
         "the stale write must not let the token claim again"
+    );
+    assert_eq!(
+        database
+            .store
+            .runners(workspace_id, stale.organization_id)
+            .unwrap()
+            .into_iter()
+            .map(|runner| (runner.id, runner.state))
+            .collect::<Vec<_>>(),
+        vec![(stale.runner_id, RunnerState::Stopping)],
+        "the stale write must keep the runner stopping after the claim"
     );
 }

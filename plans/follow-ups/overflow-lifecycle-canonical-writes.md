@@ -5,7 +5,8 @@
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-22, from `fix/boat-exit-report-claim-first`, review
   round 1, findings 2 and 3. It records the shared wider fix of finding 2,
-  option C, and of finding 3, option B.
+  option C, and of finding 3, option B. Round 2 added the placement case
+  of finding 6, option C, to the same work.
 - **Source:** Review.
 - **Category:** Code structure.
 - **Location:** `crates/ciproxy-store-pg/src/overflow/deliveries.rs:17-99`,
@@ -117,6 +118,11 @@
     - Each transaction runs at the default READ COMMITTED level, through
       `transaction` in `crates/ciproxy-store-pg/src/gateway_transaction.rs`.
       So the row locks order the overlapping writes.
+  - `overflow/placements.rs` also uses the merged phase for its proposed
+    runner state. A claim moves a `starting` runner to `stopping`.
+    Passing the older `Running` copy would move it back to `starting`.
+    The upsert still keeps `ready`, `busy`, and `stopped` against that
+    proposal. The ordered stale-save test checks this placement copy too.
   - The store tests under `crates/ciproxy-store-pg/tests/store/overflow/`
     check these rules. The branch that added this item adds three kinds of
     cases:
@@ -174,7 +180,9 @@
   - **B.** Build the JSON and both columns from one changeset type that
     only the merged record can create. Use the same type for the insert in
     `reserve`. A column then cannot come from another record. The two
-    copies and the separate locked read stay. Effort: Small.
+    copies and the separate locked read stay. Make the placement writer
+    take the private merged type too, so it cannot take the older input.
+    Effort: Small.
   - **C.** Give the store one locked change function for a delivery row.
     It locks the row, passes the current record to a change, and saves the
     result with the lifecycle merge. The exit claim, dispatch, and every
@@ -208,7 +216,8 @@
       `ends_at`, for example with `COALESCE`, and applies the phase rule to
       the current row.
     - The runner placement and cost writes stay in the transaction of
-      their delivery write.
+      their delivery write. The placement uses the canonical phase that
+      the statement returns, with the current state-preservation rule.
     - Cost: it changes correct readers, the saved data format, and every
       delivery writer. Effort: Large.
 - **Left out:**
