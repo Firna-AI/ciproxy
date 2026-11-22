@@ -10,11 +10,11 @@
 //! `cargo test --package ciproxy-guest --test macos_vm -- --ignored --nocapture --test-threads=1`.
 #![cfg(target_os = "macos")]
 
+mod macos_vm_support;
+
 use std::io::{BufRead, BufReader, Write};
 use std::net::Ipv4Addr;
 use std::os::unix::net::UnixStream;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
 use std::time::{Duration, Instant};
 
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent, JobDecision, JobPreparation};
@@ -22,110 +22,13 @@ use ciproxy_protocol::identifiers::{JobId, OrganizationId, RunnerId};
 use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::version::ProtocolVersion;
-use ciproxy_vz::lease::{LEASE_FILE, lookup};
-use ciproxy_vz::{Bundle, Error, Identity, StopReason, Vm, VmSettings, clone_bundle};
+use ciproxy_vz::{Bundle, Error, Identity, StopReason, Vm};
 use futures_executor::block_on;
+use macos_vm_support::{Clone, guest_address, settings, ssh, start_guest, variable};
 
 const TIMEOUT: Duration = Duration::from_secs(120);
 const PORT: u32 = 5252;
 const JOB: &str = "00000000-0000-0000-0000-000000000123";
-
-fn variable(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|_| panic!("set {name}"))
-}
-
-fn ssh(address: Ipv4Addr, command: &str) -> Output {
-    Command::new("ssh")
-        .args([
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-        ])
-        .args(["-o", "BatchMode=yes", "-o", "ConnectTimeout=5"])
-        .arg(format!("{}@{address}", variable("CIPROXY_VZ_GUEST_USER")))
-        .arg(command)
-        .output()
-        .unwrap()
-}
-
-fn scp(address: Ipv4Addr, file: &Path, name: &str) {
-    let status = Command::new("scp")
-        .args([
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-        ])
-        .args(["-o", "BatchMode=yes"])
-        .arg(file)
-        .arg(format!(
-            "{}@{address}:{name}",
-            variable("CIPROXY_VZ_GUEST_USER")
-        ))
-        .status()
-        .unwrap();
-    assert!(status.success(), "scp {name} failed");
-}
-
-/// A clone that is removed on drop.
-struct Clone(Bundle);
-
-impl Clone {
-    fn new(source: &Bundle, name: &str, identity: &Identity) -> Self {
-        let target = PathBuf::from(variable("CIPROXY_VZ_WORK"))
-            .join(format!("guest-{name}-{}", std::process::id()));
-        Self(clone_bundle(source, &target, identity).unwrap())
-    }
-}
-
-impl Drop for Clone {
-    fn drop(&mut self) {
-        let _ignored = std::fs::remove_dir_all(self.0.root());
-    }
-}
-
-fn settings() -> VmSettings {
-    VmSettings {
-        cpus: 4,
-        memory_bytes: 4 << 30,
-        display: None,
-    }
-}
-
-fn guest_address(vm: &Vm, since: Instant) -> Ipv4Addr {
-    loop {
-        assert!(since.elapsed() < TIMEOUT, "no SSH");
-        if let Some(address) = lookup(LEASE_FILE.as_ref(), vm.mac_address()).unwrap()
-            && ssh(address, "true").status.success()
-        {
-            return address;
-        }
-        std::thread::sleep(Duration::from_millis(500));
-    }
-}
-
-/// Copy the guest and the fake entry over SSH, and start the guest as root.
-fn start_guest(address: Ipv4Addr) {
-    let user = variable("CIPROXY_VZ_GUEST_USER");
-    let entry = std::env::temp_dir().join(format!("ciproxy-fake-entry-{}", std::process::id()));
-    let script = include_str!("fixtures/macos-fake-entry.sh").replace("EXPECTED_USER", &user);
-    std::fs::write(&entry, script).unwrap();
-    scp(address, &entry, "fake-entry");
-    let _ignored = std::fs::remove_file(entry);
-    scp(
-        address,
-        Path::new(&variable("CIPROXY_GUEST_BINARY")),
-        "ciproxy-guest",
-    );
-    let start = format!(
-        "chmod 0755 fake-entry ciproxy-guest && sudo -n env LEAK=x \
-         nohup \"$HOME/ciproxy-guest\" --image-id e2e --runner-account {user} \
-         --runner-entry \"$HOME/fake-entry\" vsock --port {PORT} \
-         </dev/null >guest.log 2>&1 &"
-    );
-    assert!(ssh(address, &start).status.success());
-}
 
 struct Agent {
     reader: BufReader<UnixStream>,
@@ -133,25 +36,57 @@ struct Agent {
 }
 
 impl Agent {
-    /// Connect to the guest port, and retry until the guest listens.
-    fn connect(vm: &Vm, since: Instant) -> Self {
-        let fd = loop {
-            match block_on(vm.connect(PORT)) {
-                Ok(fd) => break fd,
-                Err(Error::GuestNotListening { .. }) if since.elapsed() < TIMEOUT => {
+    /// Connect to the guest port and read its first Hello. A refused
+    /// connection, a dead stream, or an end before the Hello is retried
+    /// until `TIMEOUT`, and each retry is logged. Returns the agent and the
+    /// number of retries.
+    fn open(vm: &Vm, since: Instant) -> Result<(Self, u32), String> {
+        let mut retries = 0;
+        loop {
+            match Self::try_open(vm) {
+                Ok(agent) => return Ok((agent, retries)),
+                Err(reason) if since.elapsed() < TIMEOUT => {
+                    retries += 1;
+                    if reason != "guest not listening" {
+                        eprintln!("retry {retries} at {:?}: {reason}", since.elapsed());
+                    }
                     std::thread::sleep(Duration::from_millis(100));
                 }
-                Err(error) => panic!("{error}"),
+                Err(reason) => return Err(format!("no guest connection: {reason}")),
             }
+        }
+    }
+
+    fn try_open(vm: &Vm) -> Result<Self, String> {
+        let fd = match block_on(vm.connect(PORT)) {
+            Ok(fd) => fd,
+            Err(Error::GuestNotListening { .. }) => return Err("guest not listening".into()),
+            Err(error) => panic!("{error}"),
         };
         let stream = UnixStream::from(fd);
         stream
             .set_read_timeout(Some(Duration::from_secs(60)))
-            .unwrap();
-        Self {
-            reader: BufReader::new(stream.try_clone().unwrap()),
+            .map_err(|error| format!("dead stream: {error}"))?;
+        let mut agent = Self {
+            reader: BufReader::new(stream.try_clone().map_err(|error| error.to_string())?),
             writer: stream,
+        };
+        let mut line = String::new();
+        match agent.reader.read_line(&mut line) {
+            Ok(0) => return Err("end before Hello".into()),
+            Ok(_) => {}
+            Err(error) => return Err(format!("read before Hello: {error}")),
         }
+        eprintln!("guest: {}", line.trim_end());
+        assert!(matches!(
+            serde_json::from_str(&line).unwrap(),
+            GuestToAgent::Hello {
+                handoff_protocol_version: 2,
+                configuration_received: false,
+                ..
+            }
+        ));
+        Ok(agent)
     }
 
     fn receive(&mut self) -> GuestToAgent {
@@ -165,17 +100,6 @@ impl Agent {
         let mut bytes = serde_json::to_vec(message).unwrap();
         bytes.push(b'\n');
         self.writer.write_all(&bytes).unwrap();
-    }
-
-    fn hello(&mut self) {
-        assert!(matches!(
-            self.receive(),
-            GuestToAgent::Hello {
-                handoff_protocol_version: 2,
-                configuration_received: false,
-                ..
-            }
-        ));
     }
 
     /// Configure the runner, answer its job with GitHubOnly, and return the
@@ -238,8 +162,7 @@ fn guest_runs_one_runner_over_vsock_and_powers_off() {
     block_on(vm.start()).unwrap();
     let address = guest_address(&vm, started);
     start_guest(address);
-    let mut agent = Agent::connect(&vm, started);
-    agent.hello();
+    let (mut agent, _) = Agent::open(&vm, started).unwrap();
     let exit = agent.run_job();
     expect_success_and_power_off(&vm, address, exit);
 }
@@ -259,8 +182,7 @@ fn restored_guest_takes_its_first_configuration_after_a_closed_hello() {
     let started = Instant::now();
     block_on(vm.start()).unwrap();
     start_guest(guest_address(&vm, started));
-    let mut agent = Agent::connect(&vm, started);
-    agent.hello();
+    let (agent, _) = Agent::open(&vm, started).unwrap();
     drop(agent);
     std::thread::sleep(Duration::from_secs(1));
     block_on(vm.pause()).unwrap();
@@ -274,12 +196,13 @@ fn restored_guest_takes_its_first_configuration_after_a_closed_hello() {
     let restoring = Instant::now();
     block_on(vm.restore(&job.0.root().join("state.vzvmsave"))).unwrap();
     block_on(vm.resume()).unwrap();
-    let mut agent = Agent::connect(&vm, restoring);
-    eprintln!("restore to vsock connection: {:?}", restoring.elapsed());
-    agent.hello();
+    let opened = Agent::open(&vm, restoring);
+    eprintln!("restore to Hello: {:?}", restoring.elapsed());
+    let address = guest_address(&vm, restoring);
+    let log = ssh(address, "cat guest.log");
+    eprintln!("guest log:\n{}", String::from_utf8_lossy(&log.stdout));
+    let (mut agent, retries) = opened.unwrap();
+    eprintln!("retries before the Hello: {retries}");
     let exit = agent.run_job();
-    let address = lookup(LEASE_FILE.as_ref(), vm.mac_address())
-        .unwrap()
-        .unwrap_or(Ipv4Addr::UNSPECIFIED);
     expect_success_and_power_off(&vm, address, exit);
 }
