@@ -115,6 +115,21 @@ class Screen:
                 return x - 4
         return None
 
+    def click_until(self, pattern, expected, timeout=60, every=15):
+        """Click, then wait for the expected text, such as a dialog. Click
+        again while the control stays and the text does not come."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self.find(pattern):
+                self.click(pattern)
+            retry = min(time.monotonic() + every, deadline)
+            while time.monotonic() < retry:
+                time.sleep(2)
+                self.read()
+                if self.find(expected):
+                    return
+        self.fail(f"{expected!r} did not appear after clicks on {pattern!r}")
+
     def row_after(self, first, second):
         """Click the row after two rows, at the same spacing. For a row whose
         text OCR reads badly, such as "Adult" after "Child" and "Teen"."""
@@ -146,6 +161,8 @@ def run_action(screen, action, values):
         screen.click(*values)
     elif action == "uncheck":
         screen.uncheck(*values)
+    elif action == "click_until":
+        screen.click_until(*values)
     elif action == "row_after":
         screen.row_after(*values)
     elif action == "select":

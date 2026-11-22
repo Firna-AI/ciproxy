@@ -58,8 +58,8 @@ def steps(password):
         # The box is clear by default. The checkbox action clicks only a
         # checked box.
         ("location", r"^Enable Location Services$",
-         [("uncheck", r"Location Services on this Mac"), ("click", CONTINUE),
-          ("wait", r"Don.t Use", 30), ("click", r"Don.t Use", False)], 180),
+         [("uncheck", r"Location Services on this Mac"),
+          ("click_until", CONTINUE, r"Don.t Use"), ("click", r"Don.t Use", False)], 180),
         ("time zone", r"Time Zone", [("click", CONTINUE)], 120),
         ("analytics", r"^Analytics$",
          [("uncheck", r"Share Mac Analytics"), ("click", CONTINUE)], 180),
@@ -67,7 +67,8 @@ def steps(password):
         # The dialog "Mac Data Will Not Be Securely Encrypted" has the only
         # Continue of this screen.
         ("filevault", r"Ready for FileVault",
-         [("click", r"^Not Now$"), ("sleep", 2), ("click", CONTINUE, False)], 180),
+         [("click_until", r"^Not Now$", r"Will Not Be Securely Encrypted"),
+          ("click", CONTINUE, False)], 180),
         ("look", r"Choose Your Look", [("click", CONTINUE)], 120),
         ("updates", r"Update Mac Automatically",
          [("click", r"Only Download Automatically")], 120),
