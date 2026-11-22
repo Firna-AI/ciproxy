@@ -126,8 +126,77 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+  package-macos:
+    name: Package the macOS agent
+    if: startsWith(github.ref, 'refs/tags/ciproxy-agent-v')
+    runs-on: macos-15
+    # The macOS signing secrets can live in this environment, so that only
+    # release tags can read them.
+    environment: macos-signing
+    permissions:
+      contents: read
+    outputs:
+      signed: ${{ steps.sign.outputs.signed }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Rust
+        run: |
+          set -euo pipefail
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d ' ' -f 1)"
+          rustup target add aarch64-apple-darwin
+      - name: Resolve the release version
+        id: release
+        run: crates/ciproxy-agent/scripts/cli-release.sh resolve-agent-tag "$GITHUB_REF" Cargo.toml >> "$GITHUB_OUTPUT"
+      - name: Build for Apple Silicon
+        run: cargo build --locked --release --package ciproxy-agent --target aarch64-apple-darwin
+      - name: Sign and notarize
+        id: sign
+        env:
+          MACOS_SIGNING_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_SIGNING_CERTIFICATE_P12_BASE64 }}
+          MACOS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_SIGNING_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_TEAM_ID: ${{ vars.MACOS_SIGNING_TEAM_ID }}
+          MACOS_NOTARY_API_KEY_P8_BASE64: ${{ secrets.MACOS_NOTARY_API_KEY_P8_BASE64 }}
+          MACOS_NOTARY_API_KEY_ID: ${{ secrets.MACOS_NOTARY_API_KEY_ID }}
+          MACOS_NOTARY_API_ISSUER_ID: ${{ secrets.MACOS_NOTARY_API_ISSUER_ID }}
+        run: crates/ciproxy-agent/scripts/macos-release.sh sign target/aarch64-apple-darwin/release/ciproxy-agent >> "$GITHUB_OUTPUT"
+      - name: Check the binary and package the release
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SIGNED: ${{ steps.sign.outputs.signed }}
+          MACOS_SIGNING_TEAM_ID: ${{ vars.MACOS_SIGNING_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          binary=target/aarch64-apple-darwin/release/ciproxy-agent
+          crates/ciproxy-agent/scripts/macos-release.sh verify "$binary" "$MACOSX_DEPLOYMENT_TARGET" "$SIGNED" "$VERSION"
+          crates/ciproxy-agent/scripts/cli-release.sh package ciproxy-agent "$VERSION" aarch64-apple-darwin "$binary" .context/agent-release
+      - name: Keep the signed release assets
+        if: steps.sign.outputs.signed == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: agent-release-macos
+          path: |
+            .context/agent-release/*.tar.gz
+            .context/agent-release/*.sha256
+          include-hidden-files: true
+          if-no-files-found: error
+      - name: Keep the ad-hoc assets apart from the release
+        if: steps.sign.outputs.signed != 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: not-for-release-agent-macos
+          path: |
+            .context/agent-release/*.tar.gz
+            .context/agent-release/*.sha256
+          include-hidden-files: true
+          if-no-files-found: error
+
   publish:
-    needs: package
+    needs: [package, package-macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -135,8 +204,13 @@ jobs:
       - name: Download the verified release assets
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          name: agent-release
+          pattern: agent-release*
+          merge-multiple: true
           path: .context/agent-release
+      - name: Report a release without a macOS agent
+        if: needs.package-macos.outputs.signed != 'true'
+        run: |
+          echo "::warning title=No macOS agent in this release::The macOS signing secrets are absent, so this release has no aarch64-apple-darwin asset. Macs cannot install or update from it."
       - name: Publish the archive and its checksum
         env:
           GH_TOKEN: ${{ github.token }}

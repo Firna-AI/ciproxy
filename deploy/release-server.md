@@ -62,6 +62,13 @@ The agent and cache sidecar archives also contain their Apache-2.0 licence.
 The upstream installer selects the binary by its member name and verifies
 the checksum before installing it.
 
+The installer maps `uname -s` and `uname -m` to a target. It maps
+`Linux x86_64` to `x86_64-unknown-linux-gnu` and `Darwin arm64` to
+`aarch64-apple-darwin`. ciproxy publishes archives for these two targets
+only. [Release targets](../crates/ciproxy-agent/updates-and-releases.md#release-targets)
+lists them. On another platform, such as an Intel Mac, the metadata request
+fails with HTTP 404, and `curl` reports only that error.
+
 ## Verify a rollout
 
 The operator runs these checks after mirroring the pinned revision,
