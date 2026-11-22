@@ -1,6 +1,8 @@
 //! launchd files and `launchctl` arguments for the agent and its VM helpers.
 
-use super::paths::{AGENT_LABEL, AGENT_PLIST, BINARY, LAUNCHD_LOG, LOG, vm_label, vm_plist};
+use super::paths::{
+    AGENT_LABEL, AGENT_PLIST, BINARY, LAUNCHD_LOG, LOG, local_id_of_label, vm_label, vm_plist,
+};
 
 /// How launchd restarts a job.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -98,6 +100,15 @@ pub(crate) fn newsyslog_conf() -> String {
     format!(
         "# ciproxy agent logs\n{LOG}\troot:wheel\t600\t5\t10240\t*\tNJ\n{LAUNCHD_LOG}\troot:wheel\t600\t5\t10240\t*\tNJ\n"
     )
+}
+
+/// Read the local IDs from `launchctl list`: PID, status, and label.
+pub(crate) fn loaded_ids(list: &str) -> Vec<String> {
+    list.lines()
+        .filter_map(|line| line.split('\t').nth(2))
+        .filter_map(local_id_of_label)
+        .map(str::to_owned)
+        .collect()
 }
 
 /// `launchctl` arguments. Each job is in the system domain.

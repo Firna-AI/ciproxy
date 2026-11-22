@@ -1,6 +1,6 @@
 //! launchd files keep the restart rules of the design and escape their text.
 
-use super::launchd::{agent_plist, launchctl, newsyslog_conf, vm_helper_plist};
+use super::launchd::{agent_plist, launchctl, loaded_ids, newsyslog_conf, vm_helper_plist};
 use super::paths::{local_id_of_label, seat_folder, valid_local_id, vm_label, vm_plist};
 
 const ID: &str = "0123456789abcdef0123456789abcdef";
@@ -89,4 +89,12 @@ fn logs_rotate_without_a_signal() {
     let conf = newsyslog_conf();
     assert!(conf.contains("/var/log/ciproxy/agent.log\troot:wheel\t600\t5\t10240\t*\tNJ\n"));
     assert!(conf.contains("/var/log/ciproxy/launchd.log\t"));
+}
+
+#[test]
+fn the_loaded_list_gives_only_our_helpers() {
+    let list = format!(
+        "PID\tStatus\tLabel\n412\t0\tdev.ciproxy.vm.{ID}\n-\t0\tdev.ciproxy.agent\n77\t0\tcom.apple.Finder\n-\t1\tdev.ciproxy.vm.bad\n"
+    );
+    assert_eq!(loaded_ids(&list), [ID]);
 }

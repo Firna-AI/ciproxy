@@ -17,8 +17,11 @@ use crate::workload_space::WorkloadSpace;
 
 use super::{Machine, MachineInput, Platform, UninstallParts};
 
+mod isolation;
+mod launchctl;
 mod unsupported;
 pub(crate) mod vm_helper;
+mod vms;
 
 use unsupported::{
     UnsupportedCache, UnsupportedHost, UnsupportedImages, UnsupportedPreparation,
