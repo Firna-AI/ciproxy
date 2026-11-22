@@ -11,8 +11,8 @@ use crate::boundaries::{ConnectionMock, HostMock, ServiceMock, StoreMock};
 use crate::cli::Action;
 use crate::endpoint::{CommandEndpoint, EndpointFilesMock};
 use crate::fixtures::identity;
-use crate::host_preparation::PreparationMock;
 use crate::installation::{Install, Installer};
+use crate::preparation::PreparationMock;
 use crate::state::MachineState;
 
 async fn repair(agent_url: Option<&str>) -> (String, MachineState, Vec<AgentMessage>) {

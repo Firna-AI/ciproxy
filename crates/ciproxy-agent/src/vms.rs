@@ -74,7 +74,7 @@ impl Vms for LinuxVms {
         self.guests.attach(vm, Some(config)).await
     }
 
-    async fn restore(&self, vm: &VmRecord) -> Result<()> {
+    async fn reattach(&self, vm: &VmRecord) -> Result<()> {
         self.guests.attach(vm, None).await
     }
 

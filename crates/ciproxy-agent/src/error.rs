@@ -91,3 +91,8 @@ pub enum Error {
 }
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
+
+/// Name a host component and the action that repairs it.
+pub(crate) fn repair(component: &'static str, repair: &'static str) -> Error {
+    Error::Preparation { component, repair }
+}

@@ -6,8 +6,7 @@ use flate2::read::GzDecoder;
 use sha2::{Digest, Sha256};
 use tar::Archive;
 
-use crate::error::{Error, ErrorResultExt, Result};
-use crate::host_system::repair;
+use crate::error::{Error, ErrorResultExt, Result, repair};
 
 pub(crate) const VERSION: &str = "1.17.0";
 pub(crate) const URL: &str = "https://github.com/firecracker-microvm/firecracker/releases/download/v1.17.0/firecracker-v1.17.0-x86_64.tgz";

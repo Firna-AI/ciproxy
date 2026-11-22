@@ -6,10 +6,10 @@ use async_trait::async_trait;
 use ciproxy_protocol::images::{ImageDownload, ImageReport};
 use tokio::sync::Mutex;
 
-use crate::boundaries::Images;
+use crate::boundaries::{ImageLease, Images};
 use crate::error::Result;
 use crate::image_download::Download;
-use crate::image_registry::{ImageLease, ImageRegistry};
+use crate::image_registry::ImageRegistry;
 use crate::image_store::ImageStore;
 
 pub(crate) struct ManagedImages {

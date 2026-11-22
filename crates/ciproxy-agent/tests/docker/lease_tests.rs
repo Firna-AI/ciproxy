@@ -4,7 +4,7 @@ use std::fs;
 
 use unimock::Unimock;
 
-use crate::docker::DockerDisks;
+use crate::boundaries::DockerDisks;
 use crate::docker_files::{self, Lease};
 use crate::fixtures::{TemporaryLayout, vm};
 

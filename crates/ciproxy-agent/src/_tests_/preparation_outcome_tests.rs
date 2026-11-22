@@ -8,10 +8,10 @@ use ciproxy_protocol::guest::{GuestToAgent, JobPreparation};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisksMock;
 use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::controller::Agent;
-use crate::docker::DockerDisksMock;
 use crate::fixtures::github_decision_sent;
 use crate::fixtures::{applied, controller, trusted_facts, vm};
 use crate::state::{MachineState, PreparationState};
@@ -24,7 +24,7 @@ async fn replay_restored(state: &MachineState, outcome: JobPreparation) {
         PreparationState::Completed(outcome)
     );
     let mock = Unimock::new((
-        VmsMock::restore.some_call(matching!(_)).returns(Ok(())),
+        VmsMock::reattach.some_call(matching!(_)).returns(Ok(())),
         DockerDisksMock::pending
             .some_call(matching!(_))
             .returns(Ok(false)),

@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::error::Result;
+use crate::error::{Result, repair};
 use crate::host_packages::Packages;
-use crate::host_system::{HostSystem, repair};
+use crate::host_system::HostSystem;
 use crate::process::arguments;
 
 const REPAIR: &str = "Restore the distribution package sources and the ip, nft, iptables, and sysctl commands. The agent will retry network preparation.";

@@ -17,19 +17,20 @@ use crate::application_setup::{
 use crate::application_uninstall;
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
+use crate::boundaries::DockerDisks;
 use crate::boundaries::{Host, Service, Vms};
 use crate::cli::{Action, Cli};
 use crate::controller::{Agent, Controller};
-use crate::docker::{DockerDisks, LinuxDockers};
+use crate::docker::LinuxDockers;
 use crate::endpoint::{CommandEndpoint, EndpointSettings};
-use crate::endpoint_files::LinuxEndpointFiles;
+use crate::endpoint_files::ControlEndpointFiles;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
 use crate::hardware::LinuxHost;
 use crate::host_composition::services;
 use crate::host_file_ops::directory;
 use crate::host_paths::{AREA, CONTROL, tools};
-use crate::host_preparation::{FinalUninstall, Uninstall, stage_error, uninstall_inventory};
+use crate::host_preparation::{FinalUninstall, uninstall_inventory};
 use crate::host_system::LinuxHostSystem;
 use crate::identity_store::IdentityStore;
 use crate::installation::{Install, Installer};
@@ -38,9 +39,10 @@ use crate::logging::subscriber;
 use crate::maintenance::{HourlyMaintenance, TokioDelay};
 use crate::network::LinuxNetwork;
 use crate::persistence::FileStore;
+use crate::preparation::{Uninstall, stage_error};
 use crate::process::{Commands, LinuxCommands};
 use crate::runtime::{AgentDaemon, Daemon};
-use crate::runtime_ownership::{CliRuntimeWaitNotice, LinuxRuntimeClaims, RuntimeClaims};
+use crate::runtime_ownership::{CliRuntimeWaitNotice, FileRuntimeClaims, RuntimeClaims};
 use crate::startup::{AgentStartup, Startup, StartupState};
 use crate::state::Mode;
 use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
@@ -62,7 +64,7 @@ pub(crate) async fn main() -> Result<()> {
 }
 
 async fn execute(action: Action) -> Result<()> {
-    let endpoint_files = Arc::new(LinuxEndpointFiles);
+    let endpoint_files = Arc::new(ControlEndpointFiles);
     let endpoints: Arc<dyn EndpointSettings> = Arc::new(CommandEndpoint {
         files: endpoint_files.clone(),
     });
@@ -105,7 +107,7 @@ async fn execute(action: Action) -> Result<()> {
         }),
         endpoints: endpoint_files,
     });
-    let runtime: Arc<dyn RuntimeClaims> = Arc::new(LinuxRuntimeClaims {
+    let runtime: Arc<dyn RuntimeClaims> = Arc::new(FileRuntimeClaims {
         control: PathBuf::from(CONTROL),
         notice: Arc::new(CliRuntimeWaitNotice),
     });

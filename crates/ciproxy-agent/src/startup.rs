@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use crate::boundaries::Images;
 use crate::controller::Agent;
 use crate::error::{Error, Result};
-use crate::host_preparation::Preparation;
+use crate::preparation::Preparation;
 use crate::state::Identity;
 use crate::terminal_completion::CompletionAction;
 

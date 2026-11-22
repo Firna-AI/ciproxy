@@ -9,9 +9,9 @@ use futures_util::{pin_mut, poll};
 use tokio::sync::oneshot;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisks;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::controller::Agent;
-use crate::docker::DockerDisks;
 use crate::error::Result;
 use crate::fixtures::{applied, controller, report_dependencies, spec, start_image, vm};
 use crate::state::MachineState;

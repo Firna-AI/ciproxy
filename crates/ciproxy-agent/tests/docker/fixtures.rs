@@ -15,9 +15,10 @@ use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::runners::{RunnerReport, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisks;
 use crate::boundaries::{Cache, CacheMock, HostMock};
 use crate::cache_authority::CacheAuthority;
-use crate::docker::{DockerDisks, LinuxDockers};
+use crate::docker::LinuxDockers;
 use crate::docker_files;
 use crate::error::Error;
 use crate::layout::Layout;

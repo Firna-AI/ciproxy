@@ -103,6 +103,7 @@ mod network_rules;
 mod network_start_failure_tests;
 mod observations;
 mod persistence;
+mod preparation;
 mod process;
 mod registration;
 mod release_client;
