@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Build the macOS job image on an Apple Silicon Mac. Run from the repository
+# root: bash image/macos/build.sh WORK_DIR [PHASE...]. With no phase, every
+# phase runs in order. The README of this folder explains each phase.
+set -euo pipefail
+
+definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+repository=$(cd "$definition/../.." && pwd)
+source "$definition/pins.env"
+work_dir=$(mkdir -p "${1:?Usage: image/macos/build.sh WORK_DIR [PHASE...]}" && cd "$1" && pwd)
+shift
+vm_tool="$work_dir/tools/ciproxy-image-vm"
+source "$definition/build-lib.sh"
+phases=("$@")
+[[ ${#phases[@]} -gt 0 ]] || phases=(fetch tools install setup recovery configure provision
+    facts package)
+trap 'vm_stop' EXIT
+
+phase_fetch() {
+    bash "$definition/fetch.sh" "$work_dir"
+}
+
+phase_tools() {
+    mkdir -p "$work_dir/tools"
+    cargo build --release --manifest-path "$repository/Cargo.toml" --package ciproxy-image-vm
+    cp "$repository/target/release/ciproxy-image-vm" "$vm_tool"
+    codesign --force --sign - \
+        --entitlements "$repository/crates/ciproxy-vz/vz.entitlements" "$vm_tool"
+    swiftc -O -o "$work_dir/tools/ocr" "$definition/ocr.swift"
+}
+
+phase_install() {
+    rm -rf "$bundle"
+    "$vm_tool" install --restore-image "$work_dir/inputs/restore.ipsw" --bundle "$bundle" \
+        --disk-bytes "$DISK_BYTES"
+}
+
+phase_setup() {
+    make_secrets
+    vm_start
+    python3 "$definition/setup-assistant.py" "$work_dir"
+    wait_ssh 300
+    guest_ssh 'sudo shutdown -h now' || true
+    vm_wait_stopped 300
+}
+
+phase_recovery() {
+    vm_start recovery
+    python3 "$definition/recovery-sip.py" "$work_dir"
+    vm_wait_stopped 300
+}
+
+phase_configure() {
+    vm_start
+    wait_ssh 600
+    guest_scp /tmp/ "$definition/configure-guest.sh" "$definition/update-macos.sh"
+    guest_ssh 'sudo bash /tmp/configure-guest.sh'
+    local status=0
+    guest_ssh "sudo bash /tmp/update-macos.sh $MACOS_TARGET_VERSION $MACOS_TARGET_BUILD \
+        $guest_user" < "$secrets/password" || status=$?
+    if [[ $status == 10 ]]; then
+        sleep 120
+        wait_ssh 3600
+        status=0
+    fi
+    [[ $status == 0 ]] || return "$status"
+    local build
+    build=$(guest_ssh 'sw_vers -buildVersion')
+    [[ $build == "$MACOS_TARGET_BUILD" ]] || {
+        echo "the guest runs $build, not $MACOS_TARGET_BUILD" >&2
+        return 1
+    }
+}
+
+phase_provision() {
+    vm_running || vm_start
+    wait_ssh 600
+    local template host port=8765 server
+    template=$(python3 "$definition/prepare-template.py" "$work_dir/upstream" \
+        --template "$RUNNER_IMAGES_TEMPLATE" --xcode-links "$XCODE_LINKS" \
+        --xcode-xip "$XCODE_XIP_NAME" --xcode-sha256 "$XCODE_SHA256")
+    host=$(host_address)
+    # The guest downloads the Xcode archives from the host, in place of
+    # upstream's storage account. Only the VM network reaches this address.
+    python3 -m http.server "$port" --bind "$host" --directory "$work_dir/inputs/xcode" \
+        > "$run_dir/xcode-server.log" 2>&1 &
+    server=$!
+    export PACKER_PLUGIN_PATH="$work_dir/packer-plugins" PACKER_CACHE_DIR="$work_dir/packer-cache"
+    PKR_VAR_vm_password=$(cat "$secrets/password")
+    export PKR_VAR_vm_password
+    local status=0
+    (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false \
+        -var "source_vm_name=$(guest_ip 5)" -var "build_id=$IMAGE_ID" \
+        -var "vm_username=$guest_user" -var "github_api_pat=${GITHUB_API_PAT:-}" \
+        -var "xcode_install_storage_url=http://$host:$port/" -var "xcode_install_sas=build" \
+        -var "ciproxy_inputs=$work_dir/inputs" -var "ciproxy_definition=$definition" \
+        -var "ciproxy_runner_sha256=$RUNNER_SHA256" "$(basename "$template")") \
+        2>&1 | tee "$run_dir/packer.log" || status=$?
+    kill "$server" 2>/dev/null || true
+    unset PKR_VAR_vm_password
+    return "$status"
+}
+
+phase_facts() {
+    vm_running || vm_start
+    wait_ssh 600
+    mkdir -p "$work_dir/artifacts/bundle"
+    guest_ssh 'bash -s' < "$definition/guest-facts.sh" > "$work_dir/artifacts/guest-facts.json"
+    cp "$work_dir/upstream/images/image-output/software-report.json" "$work_dir/artifacts/"
+    cp "$work_dir/inputs/upstream-software.json" "$work_dir/artifacts/"
+    cat "$work_dir/artifacts/guest-facts.json"
+}
+
+phase_package() {
+    vm_running && { guest_ssh 'sudo shutdown -h now' || true; vm_wait_stopped 300; }
+    local artifacts="$work_dir/artifacts"
+    mkdir -p "$artifacts/bundle"
+    python3 "$definition/compact.py" "$bundle/disk.img" "$artifacts/bundle/disk.img"
+    cp "$bundle/aux.img" "$bundle/hardware-model.bin" "$artifacts/bundle/"
+    python3 "$definition/write-manifest.py" "$artifacts" \
+        --guest-binary "$work_dir/inputs/guest/ciproxy-guest" --source-disk "$bundle/disk.img"
+    bash "$definition/package.sh" "$artifacts"
+}
+
+for phase in "${phases[@]}"; do
+    printf '== phase %s\n' "$phase"
+    "phase_$phase"
+done

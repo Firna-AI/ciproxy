@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Prepare the pinned upstream macOS template for an SSH build of our own VM.
+
+The upstream template builds with Anka or with Packer's null builder over SSH.
+This copy keeps every upstream provisioner, removes the Anka plugin and its
+source, selects the null builder, keeps the pinned Xcode set in a toolset copy,
+and appends the ciproxy steps: the runner, the guest, and the cleanup.
+"""
+
+import argparse
+import json
+import pathlib
+import re
+
+TEMPLATE_NAME = "ciproxy-macos-26-arm64.pkr.hcl"
+TOOLSET_NAME = "toolset-26-ciproxy.json"
+
+
+def replace_once(text, old, new, label):
+    if text.count(old) != 1:
+        raise SystemExit(f"the upstream template changed: {label}")
+    return text.replace(old, new)
+
+
+def remove_block(text, header, label):
+    """Remove one top-level HCL block that starts with header."""
+    start = text.find(header)
+    if start < 0 or text.find(header, start + 1) >= 0:
+        raise SystemExit(f"the upstream template changed: {label}")
+    depth, index = 0, text.index("{", start)
+    while True:
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[:start] + text[index + 1:].lstrip("\n")
+        index += 1
+
+
+CIPROXY_STEPS = '''
+  provisioner "shell" {
+    inline = ["mkdir -p /tmp/ciproxy"]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/ciproxy/"
+    sources     = ["${var.ciproxy_inputs}/runner.tar.gz", "${var.ciproxy_inputs}/guest",
+                   "${var.ciproxy_definition}/install-runner.sh",
+                   "${var.ciproxy_definition}/clean-image.sh"]
+  }
+
+  provisioner "shell" {
+    environment_vars = ["RUNNER_SHA256=${var.ciproxy_runner_sha256}"]
+    execute_command  = "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}"
+    inline           = ["bash /tmp/ciproxy/install-runner.sh /tmp/ciproxy/runner.tar.gz",
+                        "cd /tmp/ciproxy/guest && ./install.sh ${var.build_id}",
+                        "bash /tmp/ciproxy/clean-image.sh"]
+  }
+}
+'''
+
+CIPROXY_VARIABLES = '''
+variable "ciproxy_inputs" {
+  type = string
+}
+
+variable "ciproxy_definition" {
+  type = string
+}
+
+variable "ciproxy_runner_sha256" {
+  type = string
+}
+'''
+
+
+def prepare_template(source):
+    text = remove_block(source, "packer {", "the packer block")
+    text = remove_block(text, 'source "veertu-anka-vm-clone" "template"', "the Anka source")
+    text = replace_once(text, 'default = "veertu-anka-vm-clone"', 'default = "null"',
+                        "the builder_type default")
+    text = replace_once(text, "toolsets/toolset-26.json", f"toolsets/{TOOLSET_NAME}",
+                        "the toolset path")
+    text = text.rstrip()
+    if not text.endswith("}"):
+        raise SystemExit("the upstream template changed: the end of the build block")
+    return text[:-1].rstrip() + "\n" + CIPROXY_STEPS + CIPROXY_VARIABLES
+
+
+def prepare_toolset(source, links):
+    """Keep only the pinned Xcode versions. The default gets its own runtimes."""
+    toolset = json.loads(source)
+    xcode = toolset["xcode"]
+    versions = [entry for entry in xcode["arm64"]["versions"] if entry["link"] in links]
+    if sorted(entry["link"] for entry in versions) != sorted(links):
+        raise SystemExit(f"the toolset has no Xcode version for each of {links}")
+    if xcode["default"] not in links:
+        raise SystemExit(f"the pinned Xcode set has no default Xcode {xcode['default']}")
+    # Upstream's default Xcode can share the runtimes of another version. When
+    # no kept version installs runtimes, the default installs its own.
+    if all(entry["install_runtimes"] == "none" for entry in versions):
+        default = next(entry for entry in versions if entry["link"] == xcode["default"])
+        default["install_runtimes"] = "default"
+    xcode["arm64"]["versions"] = versions
+    return json.dumps(toolset, indent=4) + "\n"
+
+
+def check_xcode_pin(toolset, xip_name, sha256):
+    xcode = json.loads(toolset)["xcode"]
+    default = next(entry for entry in xcode["arm64"]["versions"]
+                   if entry["link"] == xcode["default"])
+    if f"Xcode-{default['version']}.xip" != xip_name or default["sha256"] != sha256:
+        raise SystemExit("pins.env and the upstream toolset name different Xcode archives")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("upstream", type=pathlib.Path, help="the extracted runner-images tree")
+    parser.add_argument("--template", required=True, help="the template path in the tree")
+    parser.add_argument("--xcode-links", required=True, help="comma-separated Xcode links")
+    parser.add_argument("--xcode-xip", required=True)
+    parser.add_argument("--xcode-sha256", required=True)
+    args = parser.parse_args()
+    macos = args.upstream / "images/macos"
+    source = (args.upstream / args.template).read_text()
+    links = [link for link in re.split(r"[,\s]+", args.xcode_links) if link]
+    toolset = prepare_toolset((macos / "toolsets/toolset-26.json").read_text(), links)
+    check_xcode_pin(toolset, args.xcode_xip, args.xcode_sha256)
+    (macos / "toolsets" / TOOLSET_NAME).write_text(toolset)
+    (macos / "templates" / TEMPLATE_NAME).write_text(prepare_template(source))
+    print(macos / "templates" / TEMPLATE_NAME)
+
+
+if __name__ == "__main__":
+    main()
