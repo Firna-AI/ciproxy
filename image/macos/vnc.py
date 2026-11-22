@@ -193,5 +193,15 @@ class Vnc:
         self.sock.sendall(struct.pack(">BBHH", 5, 0, x, y))
         time.sleep(0.2)
 
+    def double_click(self, x, y):
+        x, y = int(x), int(y)
+        self.sock.sendall(struct.pack(">BBHH", 5, 0, x, y))
+        for _ in range(2):
+            time.sleep(0.05)
+            self.sock.sendall(struct.pack(">BBHH", 5, 1, x, y))
+            time.sleep(0.05)
+            self.sock.sendall(struct.pack(">BBHH", 5, 0, x, y))
+        time.sleep(0.3)
+
     def close(self):
         self.sock.close()

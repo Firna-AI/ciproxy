@@ -76,16 +76,49 @@ def steps(password):
     ]
 
 
+def resume_point(screen, password, timeout=900):
+    """Wait for the first screen. Return True when the guest already shows
+    the desktop, so a rerun after a failure past "welcome" skips the steps.
+    On the login window, log in."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        screen.read()
+        if screen.find(r"^Finder$"):
+            return True
+        if screen.find(r"Enter Password"):
+            screen.type(password + "\n")
+            time.sleep(10)
+            continue
+        if screen.find(r"^English"):
+            return False
+        time.sleep(3)
+    screen.fail(f"neither the Setup Assistant nor the desktop appeared in {timeout} s")
+
+
 def terminal(screen, password, public_key):
-    """Open Terminal from Spotlight and enable sudo and SSH for the build."""
+    """Open Terminal through Finder's Go menu, which needs no modifier key,
+    and enable sudo and SSH for the build."""
     screen.wait(r"^Finder$", 600)
-    screen.press("space", ("command",))
+    screen.click(r"^Go$", False)
+    screen.wait(r"^Utilities$", 30)
+    screen.click(r"^Utilities$", False)
+    screen.wait(r"^Terminal$", 60)
+    # In icon view, the icon is above its label. In list view, the label is
+    # the row, so the label is the second try.
+    target = sorted(screen.find(r"^Terminal$"), key=lambda item: item["y"])[-1]
+    prompt = rf"{USER}@|Last login"
+    for y in (target["y"] - 2 * target["height"], target["y"]):
+        screen.vnc.double_click(target["x"], y)
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline and not screen.find(prompt):
+            time.sleep(2)
+            screen.read()
+        if screen.find(prompt):
+            break
+    screen.wait(prompt, 90)
     time.sleep(2)
-    screen.type("Terminal")
-    time.sleep(2)
-    screen.press("return")
-    screen.wait(rf"{USER}@|Last login|\$ ?$|% ?$", 120)
     sudoers = f"{USER} ALL=(ALL) NOPASSWD: ALL"
+    # The shell computes the marker, so the typed line does not match it.
     commands = [
         f"echo '{password}' | sudo -S sh -c \"echo '{sudoers}' > /etc/sudoers.d/{USER} "
         f"&& chmod 440 /etc/sudoers.d/{USER}\"",
@@ -93,12 +126,12 @@ def terminal(screen, password, public_key):
         "chmod 600 ~/.ssh/authorized_keys",
         "sudo launchctl enable system/com.openssh.sshd",
         "sudo launchctl bootstrap system /System/Library/LaunchDaemons/ssh.plist; "
-        "echo ciproxy-ssh-ready",
+        "sudo launchctl print system/com.openssh.sshd >/dev/null && echo ciproxy-ssh-$((1+1))",
     ]
     for command in commands:
         screen.type(command + "\n")
         time.sleep(2)
-    screen.wait(r"ciproxy-ssh-ready", 60)
+    screen.wait(r"^ciproxy-ssh-2$", 60)
 
 
 def main():
@@ -109,7 +142,8 @@ def main():
     screen = Screen("127.0.0.1", status["vnc_port"], work / "tools/ocr", work / "evidence/setup",
                     (secrets / "vnc-password").read_text().strip())
     try:
-        run_steps(screen, steps(password))
+        if not resume_point(screen, password):
+            run_steps(screen, steps(password))
         terminal(screen, password, (secrets / "id_ed25519.pub").read_text().strip())
     finally:
         screen.close()
