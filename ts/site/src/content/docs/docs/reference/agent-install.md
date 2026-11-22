@@ -10,8 +10,9 @@ description: >-
 curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
 ```
 
-The command fetches the install script over HTTPS from `get.ciproxy.dev`,
-and runs it as root. The script installs the agent, then runs
+The same command works on a Linux machine and on a Mac. On a Mac, run it in
+Terminal. The command fetches the install script over HTTPS from
+`get.ciproxy.dev`, and runs it as root. The script installs the agent, then runs
 `ciproxy-agent install` with the arguments after `--`. So the machine needs
 no second command.
 
@@ -22,6 +23,8 @@ A preview command includes `--agent-url` for the control plane that issued
 it. The production command keeps the form above.
 
 ## What install does
+
+On a Linux machine:
 
 - It checks the Linux distribution, systemd, and cgroup v2 of the machine,
   as [Add a machine](/docs/guides/add-a-machine/#what-the-machine-needs)
@@ -35,6 +38,17 @@ it. The production command keeps the form above.
   agent connects with the credential of its own machine.
 - It installs the systemd service of the agent.
 
+On a Mac:
+
+- It checks that the Mac has Apple Silicon and a macOS that runs the job
+  image, as
+  [Add a Mac](/docs/guides/add-a-machine/#add-a-mac) lists them.
+- It prepares the disk area of the agent, which holds the job disk and the
+  images.
+- It registers the machine once, with the install token, as on Linux.
+- It installs the launchd daemon `dev.ciproxy.agent`. The daemon keeps the
+  Mac awake while the agent runs.
+
 ## The install token
 
 - An install token belongs to one workspace.
@@ -47,7 +61,7 @@ it. The production command keeps the form above.
 
 | Command                                         | What it does                                                          |
 | ----------------------------------------------- | --------------------------------------------------------------------- |
-| `ciproxy-agent install --token <install token>` | Registers the machine and installs its systemd service.               |
+| `ciproxy-agent install --token <install token>` | Registers the machine and installs its service.                       |
 | `ciproxy-agent run`                             | Runs the agent. The service runs this command for you.                |
 | `ciproxy-agent uninstall`                       | Finishes the running jobs, discards their VMs, and removes the agent. |
 
@@ -99,10 +113,19 @@ The next install registers at the endpoint selected by its command.
 sudo /usr/local/bin/ciproxy-agent uninstall
 ```
 
-Uninstall removes the disk area of the agent after the running jobs finish.
+The command is the same on a Mac. Uninstall removes the disk area of the
+agent after the running jobs finish.
 It does not remove the machine from your workspace. Select **Remove** on the
 page of the machine for that, as
 [Remove a machine](/docs/guides/remove-a-machine/) says.
+
+### Paths
+
+| Path        | Linux                           | Mac                            |
+| ----------- | ------------------------------- | ------------------------------ |
+| The agent   | `/usr/local/bin/ciproxy-agent`  | `/usr/local/bin/ciproxy-agent` |
+| The service | systemd `ciproxy-agent.service` | launchd `dev.ciproxy.agent`    |
+| The log     | `journalctl -u ciproxy-agent`   | `/var/log/ciproxy/agent.log`   |
 
 ## Network
 

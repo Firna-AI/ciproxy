@@ -52,7 +52,8 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
           A GitHub organization with private repositories, and an x64 Linux
           machine with systemd, {unbroken("cgroup v2")}, KVM,{" "}
           {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
-          {unbroken("250 GB")} of disk or more.{" "}
+          {unbroken("250 GB")} of disk or more. For macOS jobs, you need a Mac
+          with Apple Silicon.{" "}
           <TextLink
             to={paths.addMachineGuide}
             fragment="what-the-machine-needs"
@@ -80,7 +81,7 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
             <p>
               In ciproxy, Setup shows the install command. You also find it in{" "}
               <strong>Machines</strong>, under <strong>Add machine</strong>. Run
-              the command on your Linux machine:
+              the command on your Linux machine or Mac:
             </p>
             <CodeBlock label="Terminal" lines={[docsInstallCommand]} />
             <p>

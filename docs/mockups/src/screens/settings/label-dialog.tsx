@@ -7,19 +7,21 @@
 // label name follows the GitHub label rules and never changes, as design call
 // 33 says: the add dialog refuses a name that breaks the rules, and the edit
 // dialog shows the name with a lock, beside Delete label, which a rename uses.
+// A label keeps its platform too: the add dialog asks for it, and the edit
+// dialog shows it with a lock. A macOS label runs on the Macs only.
 
-import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
-import { Switch } from "@firna/ui/switch";
-
-import { Action, LinkAction, noop } from "../../components/actions.tsx";
+import { Action, LinkAction } from "../../components/actions.tsx";
 import { Dialog } from "../../components/dialog.tsx";
 import { TextField } from "../../components/fields.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
+import { macScene } from "../../fixtures/macs.ts";
 import { machineScenes, type Machine } from "../../fixtures/machines.ts";
 import {
   boatOnlyLabel,
   labelNamed,
+  largerMacosLabel,
+  macosLabel,
   nothingFitsLabel,
   refusedLabel,
   type Label,
@@ -27,6 +29,7 @@ import {
 import { minimumFreeDiskGb } from "../../fixtures/sizes.ts";
 import { diskText, vmDiskBytes } from "../../fixtures/vm-disk.ts";
 import { FitNote } from "./label-fit.tsx";
+import { LabelPlaces, PlatformField } from "./label-platform.tsx";
 
 export type LabelDialogMode =
   | "edit"
@@ -34,7 +37,9 @@ export type LabelDialogMode =
   | "nothing-fits"
   | "mixed-machines"
   | "refused-name"
-  | "no-boat";
+  | "no-boat"
+  | "add-macos"
+  | "edit-macos";
 
 type DialogCopy = {
   label: Label;
@@ -97,19 +102,19 @@ const dialogs: Record<LabelDialogMode, DialogCopy> = {
     machines: steady,
     noBoat: true,
   },
+  "add-macos": {
+    label: largerMacosLabel,
+    edits: false,
+    list: paths.labelsMacos,
+    machines: macScene,
+  },
+  "edit-macos": {
+    label: macosLabel,
+    edits: true,
+    list: paths.labelsMacos,
+    machines: macScene,
+  },
 };
-
-function Toggle({ label, caption }: { label: string; caption: string }) {
-  return (
-    <div className="toggle-row">
-      <span className="stack-tight">
-        <span className="strong">{label}</span>
-        <span className="caption">{caption}</span>
-      </span>
-      <Switch value onValueChange={noop} accessibilityLabel={label} />
-    </div>
-  );
-}
 
 function Footer({ copy }: { copy: DialogCopy }) {
   return (
@@ -162,6 +167,7 @@ export function LabelDialog({ mode }: { mode: LabelDialogMode }) {
           error={copy.nameError}
         />
       )}
+      <PlatformField platform={label.platform} edits={copy.edits} />
       <div className="stack-tight">
         <div className="field-row">
           <TextField label="vCPU" value={String(label.vcpu)} />
@@ -182,25 +188,7 @@ export function LabelDialog({ mode }: { mode: LabelDialogMode }) {
         machines={copy.machines}
         boat={copy.noBoat !== true}
       />
-      <Toggle label="Your machines" caption="Jobs start here first" />
-      <Toggle
-        label="Boat"
-        caption="When your machines are busy, or none of them fits"
-      />
-      <RadioCardGroup label="When nothing fits">
-        <RadioCard
-          title="Wait"
-          body="Jobs stay queued until a machine or a Boat size fits."
-          checked={label.whenNothingFits === "wait"}
-          onPress={noop}
-        />
-        <RadioCard
-          title="Run on the largest Boat size"
-          body="Jobs run on the largest size of your Boat account."
-          checked={label.whenNothingFits === "largest-boat-size"}
-          onPress={noop}
-        />
-      </RadioCardGroup>
+      <LabelPlaces label={label} />
     </Dialog>
   );
 }

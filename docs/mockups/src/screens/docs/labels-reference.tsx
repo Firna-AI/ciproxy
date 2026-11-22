@@ -4,7 +4,9 @@
 // The disk of a label is the free disk of each job, and its VM disk adds the
 // image, as the answer to item 77 says. A running job holds its VM disk, as
 // design call 34 says, after the VM images and the host reserve, as the
-// answer to item 73 says. A label keeps its name, as design call 33 says.
+// answer to item 73 says. A label keeps its name, as design call 33 says,
+// and its platform. A macOS label runs on the Macs only, never on Boat, and a
+// Mac runs at most 2 job VMs at a time.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -20,8 +22,16 @@ import {
   slotSize,
   slotsFor,
 } from "../../fixtures/hardware.ts";
+import { macStudio } from "../../fixtures/macs.ts";
 import { boat } from "../../fixtures/machines.ts";
-import { labelNamed, labels, waitChoices } from "../../fixtures/settings.ts";
+import { macosVmLimit, platformName } from "../../fixtures/platform.ts";
+import {
+  labelNamed,
+  labels,
+  macosLabel,
+  macosLabels,
+  waitChoices,
+} from "../../fixtures/settings.ts";
 import { sizePhrase, sizeText } from "../../fixtures/sizes.ts";
 import { diskText, vmDiskBytes } from "../../fixtures/vm-disk.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
@@ -30,6 +40,7 @@ import { DocsH2, DocsTitle } from "./docs-parts.tsx";
 const toc: readonly TocItem[] = [
   { id: "default-labels", label: "Default labels" },
   { id: "slots", label: "Slots" },
+  { id: "macos-labels", label: "macOS labels" },
   { id: "custom-labels", label: "Custom labels" },
   { id: "where-jobs-run", label: "Where a job runs" },
 ];
@@ -53,12 +64,13 @@ function LabelTable() {
         <thead>
           <tr>
             <th scope="col">Label</th>
+            <th scope="col">Platform</th>
             <th scope="col">Size</th>
             <th scope="col">Slots</th>
           </tr>
         </thead>
         <tbody>
-          {labels.map((label) => (
+          {[...labels, ...macosLabels].map((label) => (
             <tr key={label.name}>
               <td>
                 <span className="row-wrap">
@@ -66,6 +78,7 @@ function LabelTable() {
                   {label.name === "ciproxy" ? <Tag>Default</Tag> : null}
                 </span>
               </td>
+              <td>{platformName[label.platform]}</td>
               <td>{sizeText(label)}</td>
               <td className="num">{slotsFor(label)}</td>
             </tr>
@@ -90,11 +103,12 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
       />
       <div className="docs-flow">
         <p>
-          Each job starts in a fresh VM of the size of its label: on your
-          machines first, and on Boat when they are full.
+          Each job starts in a fresh VM of the platform and size of its label:
+          on your machines first, and on Boat when they are full. A job of a
+          macOS label runs on your Macs only.
         </p>
         <DocsH2 id="default-labels">Default labels</DocsH2>
-        <p>Every workspace starts with these labels.</p>
+        <p>Every workspace starts with these Linux and macOS labels.</p>
         <LabelTable />
         <p>
           Like the disk of a GitHub-hosted runner, the disk of a label is the
@@ -131,16 +145,44 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
           {unbroken(`${ax42.memoryGb} GB`)} has{" "}
           {unbroken(`${machineSlots(ax42)} slots`)}.
         </p>
+        <DocsH2 id="macos-labels">macOS labels</DocsH2>
+        <p>
+          A job of a macOS label, such as{" "}
+          <span className="inline-code">{macosLabel.name}</span>, runs in a
+          fresh macOS VM on one of your Macs. The image holds Xcode and the
+          tools of the GitHub runner image for{" "}
+          <span className="inline-code">macos-latest</span>.
+        </p>
+        <ul className="docs-list">
+          <li>
+            A macOS label runs on your Macs only. Its jobs never run on Boat, so
+            they wait for a free Mac.
+          </li>
+          <li>
+            A Mac uses the same slots as a Linux machine, but it runs at most{" "}
+            {macosVmLimit} job VMs at a time, because Apple allows at most{" "}
+            {macosVmLimit} macOS VMs on one Mac. A Mac Studio with{" "}
+            {unbroken(`${macStudio.threads} cores`)} and{" "}
+            {unbroken(`${macStudio.memoryGb} GB`)} has{" "}
+            {unbroken(`${machineSlots(macStudio)} slots`)}, and it runs{" "}
+            {macosVmLimit} jobs at a time.
+          </li>
+          <li>
+            A Linux label never runs on a Mac, and a macOS label never runs on a
+            Linux machine.
+          </li>
+        </ul>
         <DocsH2 id="custom-labels">Custom labels</DocsH2>
         <p>
-          Add a label with its own size in <strong>Settings</strong>, under{" "}
-          <strong>Labels</strong>. Each label runs on your machines, on Boat, or
-          on both.
+          Add a label with its own platform and size in{" "}
+          <strong>Settings</strong>, under <strong>Labels</strong>. Each Linux
+          label runs on your machines, on Boat, or on both.
         </p>
         <p>
-          A label name follows the rules of GitHub for runner labels, and it
-          never changes. To rename a label, add a new one, move your workflows
-          to it, and delete the old one.
+          A label name follows the rules of GitHub for runner labels. The name
+          and the platform of a label never change. To rename a label or change
+          its platform, add a new one, move your workflows to it, and delete the
+          old one.
         </p>
         <Notice tone="info" title="Sizes larger than your machines">
           A job whose size fits none of your machines runs on Boat only. When no

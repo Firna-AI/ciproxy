@@ -1,8 +1,9 @@
-// The one install command that connects a Linux machine to the workspace,
-// shared by setup and Add machine, and the lines that follow it: the wait for
-// the machine, the machine that connected, a machine without KVM, a machine
-// whose disk holds fewer jobs than its slots, and the command after Revoke
-// token. The command is one line: the install script of get.ciproxy.dev
+// The one install command that connects a Linux machine or a Mac to the
+// workspace, shared by setup and Add machine, and the lines that follow it:
+// the wait for the machine, the machine that connected, a machine that cannot
+// start VMs, a machine whose disk holds fewer jobs than its slots, and the
+// command after Revoke token. The same command installs the agent on both
+// platforms. The command is one line: the install script of get.ciproxy.dev
 // installs the agent, then runs it with the arguments after "--", as design
 // call 30 says. A machine that connected gets its first job image before it
 // takes a job. Every page that shows such a machine says so, and no text
@@ -18,6 +19,7 @@ import {
   machineSlots,
   type Hardware,
 } from "../fixtures/hardware.ts";
+import { macosVmLimit, minimumMacos } from "../fixtures/platform.ts";
 import { defaultLabelJobs, labelNamed } from "../fixtures/settings.ts";
 import { diskText, vmDiskBytes } from "../fixtures/vm-disk.ts";
 import { Action, LinkAction } from "./actions.tsx";
@@ -49,11 +51,13 @@ export function InstallCommand({
       <CodeBlock label="On the machine" lines={[installCommand]} />
       <div className="install-note">
         <p className="caption">
-          The token adds any number of machines for one hour. A machine needs
-          x64 Linux with systemd, {unbroken("cgroup v2")}, and KVM, on Debian,
-          Ubuntu, Fedora, RHEL, Rocky Linux, or AlmaLinux. It also needs{" "}
+          The token adds any number of machines for one hour. A Linux machine
+          needs x64 Linux with systemd, {unbroken("cgroup v2")}, and KVM, on
+          Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or AlmaLinux. It also needs{" "}
           {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
-          {unbroken("250 GB")} of disk or more.
+          {unbroken("250 GB")} of disk or more. A Mac needs Apple Silicon,{" "}
+          {unbroken(minimumMacos)} or later, {unbroken("16 GB")} of memory, and{" "}
+          {unbroken("500 GB")} of disk or more.
         </p>
         {revokeTo ? (
           <LinkAction to={revokeTo} size="sm" tone="ghost">
@@ -111,6 +115,8 @@ export function ConnectedMachine({
   preparing?: boolean;
 }) {
   const { bySlots, atOnce } = defaultLabelJobs(hardware);
+  const mac = hardware.platform === "macos";
+  const slots = machineSlots(hardware);
   return (
     <div className="connected-machine">
       <CircleCheck size={18} className="icon-ok" />
@@ -121,11 +127,16 @@ export function ConnectedMachine({
         <p className="caption">
           {dotJoin(
             hardwareSize(hardware),
-            unbroken("KVM ready"),
-            unbroken(`${machineSlots(hardware)} slots`),
+            unbroken(mac ? "Virtualization ready" : "KVM ready"),
+            unbroken(`${slots} ${slots === 1 ? "slot" : "slots"}`),
           )}
         </p>
-        {atOnce < bySlots ? (
+        {mac ? (
+          <p className="caption">
+            It runs the jobs of macOS labels, at most {macosVmLimit} at a time.
+          </p>
+        ) : null}
+        {!mac && atOnce < bySlots ? (
           <p className="caption">
             Its disk holds {atOnce} jobs of ciproxy at a time.
           </p>
@@ -186,18 +197,27 @@ export function DiskLimitNotice({
   );
 }
 
-/** A machine that connected without KVM: it gets no slots until it has KVM. */
-export function NoKvmNotice({
+/**
+ * A machine that connected but cannot start VMs: it gets no slots until it
+ * can. A Linux machine needs KVM. A Mac needs a macOS that is not older than
+ * the macOS of the job image, because a macOS VM cannot run a newer macOS
+ * than its host.
+ */
+export function NoVirtualizationNotice({
   name,
+  mac = false,
   actions,
 }: {
   name: string;
+  /** The machine is a Mac whose macOS is older than the job image. */
+  mac?: boolean;
   actions?: ReactNode;
 }) {
   return (
     <Notice tone="danger" title={`${name} cannot start VMs`} actions={actions}>
-      ciproxy runs each job in its own VM, which needs KVM. Turn on
-      virtualization for this machine, then run the command again.
+      {mac
+        ? `Its macOS is older than the macOS of the job image. Update the Mac to ${minimumMacos} or later, then run the command again.`
+        : "ciproxy runs each job in its own VM, which needs KVM. Turn on virtualization for this machine, then run the command again."}
     </Notice>
   );
 }

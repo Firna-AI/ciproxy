@@ -94,7 +94,11 @@ export type TierFeature = {
 
 /** One record for each feature, in the order of the tier lists. */
 export const features: Readonly<Record<FeatureKey, TierFeature>> = {
-  ownMachines: { name: "Own Linux machines", from: "free", launch: true },
+  ownMachines: {
+    name: "Own Linux machines and Macs",
+    from: "free",
+    launch: true,
+  },
   boat: { name: "Boat overflow", from: "free", launch: true },
   cache: { name: "Transparent cache", from: "free", launch: true },
   warmRunners: { name: "Warm runners", from: "free", launch: true },

@@ -1,6 +1,9 @@
-// One own machine: its slots and warm runners, health, cache, and the monthly
-// cost that the savings report uses. A machine without KVM connects with no
-// slots, so it cannot run jobs, and the page names the fix. A machine without
+// One own machine: its platform, slots and warm runners, health, cache, and
+// the monthly cost that the savings report uses. A machine that cannot start
+// VMs connects with no slots, so it cannot run jobs, and the page names the
+// fix: KVM on a Linux machine, a newer macOS on a Mac. A Mac runs at most 2
+// job VMs at a time, so its free slots past that limit take no job, and a Mac
+// with room for 1 slot says why. A machine without
 // room for a slot says why too. A machine whose disk holds fewer jobs than
 // its slots says so, as design call 34 says. After Clear cache, or a drain
 // that waits for the machine to connect again, a notice says so. A part of
@@ -28,8 +31,10 @@ import { dotJoin, monthly } from "../../fixtures/format.ts";
 import { hardwareSize, slotSize } from "../../fixtures/hardware.ts";
 import type { Machine } from "../../fixtures/machines.ts";
 import type { Role } from "../../fixtures/members.ts";
+import { macosVmLimit, platformName } from "../../fixtures/platform.ts";
 import { defaultLabelJobs } from "../../fixtures/settings.ts";
 import { sizePhrase } from "../../fixtures/sizes.ts";
+import { ax42OneSlotJobs, macSlotJobs } from "../../fixtures/slots.ts";
 import { MachineCache } from "./machine-cache.tsx";
 import { MachineHealth } from "./machine-health.tsx";
 import { MachineNotice, type NoticeState } from "./machine-notices.tsx";
@@ -37,9 +42,14 @@ import { machineScene, type MachineState } from "./machine-scenes.tsx";
 import { MachineSlots } from "./machine-slots.tsx";
 import "./machines.css";
 
-/** A fourth machine passes the three machines of Team. */
+/** A fourth machine, also a Mac, passes the three machines of Team. */
 function overMachines(state: MachineState): boolean {
-  return state === "disk-limit" || state === "no-room" || state === "preparing";
+  return (
+    state === "disk-limit" ||
+    state === "no-room" ||
+    state === "preparing" ||
+    state.startsWith("mac")
+  );
 }
 
 /** The notice that leads the page, or null for a state without one. */
@@ -54,6 +64,7 @@ function noticeOf(state: MachineState): NoticeState | null {
     case "clear-cache-unknown":
     case "clear-docker-unknown":
     case "clear-both-unknown":
+    case "mac":
       return null;
     default:
       return state;
@@ -65,7 +76,11 @@ function HeaderActions({ state }: { state: MachineState }) {
   if (state === "draining" || state === "saved-offline") {
     return <Action>Stop draining</Action>;
   }
-  if (state === "no-slots" || state === "no-room") {
+  if (
+    state === "no-slots" ||
+    state === "no-room" ||
+    state === "mac-no-virtualization"
+  ) {
     return <Action tone="danger">Remove</Action>;
   }
   return (
@@ -108,7 +123,12 @@ export function MachineDetailScreen({
         crumbs={[{ label: "Machines", to: paths.machines }]}
         title={machine.name}
         status={<MachineStatusLabel status={machine.status} />}
-        subtitle={dotJoin(hardware.cpu, hardwareSize(hardware), hardware.disk)}
+        subtitle={dotJoin(
+          platformName[hardware.platform],
+          hardware.cpu,
+          hardwareSize(hardware),
+          hardware.disk,
+        )}
         actions={admin ? <HeaderActions state={state} /> : undefined}
       />
       {notice === null ? null : (
@@ -121,12 +141,7 @@ export function MachineDetailScreen({
         >
           <div className="stack">
             <SlotsBody machine={machine} />
-            {noSlots ? null : (
-              <p className="caption">
-                {machine.slots.length} slots of {sizePhrase(slotSize)}. A larger
-                VM size takes several slots.
-              </p>
-            )}
+            {noSlots ? null : <SlotsCaption machine={machine} />}
             <Quantity
               label="Warm runners"
               value={machine.warmTarget}
@@ -162,6 +177,20 @@ export function MachineDetailScreen({
   );
 }
 
+/** The slots, their size, and on a Mac the limit of its VMs. */
+function SlotsCaption({ machine }: { machine: Machine }) {
+  const count = machine.slots.length;
+  const slots = `${count} ${count === 1 ? "slot" : "slots"}`;
+  const mac = machine.hardware.platform === "macos";
+  return (
+    <p className="caption">
+      {slots} of {sizePhrase(slotSize)}
+      {mac ? `, and at most ${macosVmLimit} VMs at once` : ""}. A larger VM size
+      takes several slots.
+    </p>
+  );
+}
+
 /** The slot bar and what each slot runs, or why the machine shows none. */
 function SlotsBody({ machine }: { machine: Machine }) {
   if (machine.status === "offline") {
@@ -174,10 +203,13 @@ function SlotsBody({ machine }: { machine: Machine }) {
       <p className="small muted">Slots take jobs when the machine is ready.</p>
     );
   }
+  const mac = machine.hardware.platform === "macos";
   if (machine.slots.length === 0) {
     return (
       <p className="small muted">
-        No slots. Jobs run on your other machines and on Boat.
+        {mac
+          ? "No slots. Jobs of macOS labels wait until a Mac has a free slot."
+          : "No slots. Jobs run on your other machines and on Boat."}
       </p>
     );
   }
@@ -187,6 +219,8 @@ function SlotsBody({ machine }: { machine: Machine }) {
       <MachineSlots
         slots={machine.slots}
         usable={defaultLabelJobs(machine.hardware).atOnce}
+        jobs={mac ? macSlotJobs : ax42OneSlotJobs}
+        vmLimit={mac ? macosVmLimit : undefined}
       />
     </>
   );

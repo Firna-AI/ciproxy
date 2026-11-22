@@ -1,6 +1,7 @@
-// The notices of the machine page: a drain, a lost contact, a machine
-// without KVM, a machine without room for a slot, a machine whose disk holds
-// fewer jobs than its slots, and a machine that gets its first job image.
+// The notices of the machine page: a drain, a lost contact, a machine that
+// cannot start VMs, a machine without room for a slot, a machine whose disk
+// holds fewer jobs than its slots, a Mac with room for 1 job only, and a
+// machine that gets its first job image.
 // Each names what happens to the jobs, and the fix when one exists; only an
 // Admin gets the install command of a fix.
 // After Clear cache, or a change that the machine gets when it connects
@@ -11,10 +12,12 @@ import { Notice } from "../../components/feedback.tsx";
 import {
   DiskLimitNotice,
   ImageNotice,
-  NoKvmNotice,
+  NoVirtualizationNotice,
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
+import { slotLimitOf } from "../../fixtures/hardware.ts";
 import { offlineFor, type Machine } from "../../fixtures/machines.ts";
+import { macosVmLimit } from "../../fixtures/platform.ts";
 
 /** The states of the machine page that lead with a notice. */
 export type NoticeState =
@@ -25,7 +28,26 @@ export type NoticeState =
   | "clear-requested"
   | "saved-offline"
   | "no-room"
-  | "preparing";
+  | "preparing"
+  | "mac-one-slot"
+  | "mac-no-virtualization";
+
+/** A Mac whose threads or memory leave room for fewer than 2 slots. */
+function MacSlotNotice({ machine }: { machine: Machine }) {
+  const slots = machine.slots.length;
+  const unit = slots === 1 ? "job" : "jobs";
+  const memory = slotLimitOf(machine.hardware) === "memory";
+  return (
+    <Notice
+      tone="info"
+      title={`${machine.name} runs ${slots} ${unit} at a time`}
+    >
+      Its {memory ? "memory leaves" : "cores leave"} room for {slots}{" "}
+      {slots === 1 ? "slot" : "slots"} after the host reserve. A Mac with more{" "}
+      {memory ? "memory" : "cores"} runs up to {macosVmLimit} jobs at a time.
+    </Notice>
+  );
+}
 
 function DrainingNotice({ machine }: { machine: Machine }) {
   const finishing = machine.slots.filter((slot) => slot === "busy").length;
@@ -82,7 +104,11 @@ export function MachineNotice({
         </Notice>
       );
     case "no-slots":
-      return <NoKvmNotice name={machine.name} actions={fix} />;
+      return <NoVirtualizationNotice name={machine.name} actions={fix} />;
+    case "mac-no-virtualization":
+      return <NoVirtualizationNotice name={machine.name} mac actions={fix} />;
+    case "mac-one-slot":
+      return <MacSlotNotice machine={machine} />;
     case "disk-limit":
       return (
         <DiskLimitNotice name={machine.name} hardware={machine.hardware} />

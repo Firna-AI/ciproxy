@@ -1,12 +1,15 @@
 ---
 title: Add a machine
-description: Connect a Linux machine to your workspace with one command.
+description: >-
+  Connect a Linux machine or a Mac to your workspace with one command.
 ---
 
 ciproxy runs your jobs on your own machines first. Each machine runs the
 open-source agent, which starts a fresh VM for each job.
 
 ## What the machine needs
+
+A Linux machine needs:
 
 - x64 Linux with systemd, cgroup v2, and KVM.
 - A supported distribution: Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
@@ -25,6 +28,38 @@ example with RAID0 or one LVM volume. Its jobs, its machine cache, and its
 Docker disks are disposable.
 :::
 
+## Add a Mac
+
+A Mac runs the jobs of macOS labels, each in a fresh macOS VM with Xcode. A
+Mac needs:
+
+<!-- The macOS version and the disk are placeholders until the macOS image
+is settled. -->
+
+- A Mac with Apple Silicon, M1 or later.
+- macOS 26.7.2 or later. A macOS VM cannot run a newer macOS than its Mac,
+  so the Mac needs the macOS of the job image.
+- 16 GB of memory and 500 GB of disk or more.
+- Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The Mac
+  opens no inbound port.
+
+A Mac uses the same slots as a Linux machine, but it runs at most 2 jobs at
+a time, because Apple allows at most 2 macOS VMs on one Mac. A Mac with
+16 GB of memory has room for 1 slot, so it runs 1 job at a time. Jobs of a
+macOS label never run on Boat. They wait for a free Mac. A Mac counts as one
+machine of your plan, as a Linux machine does.
+
+Run the same install command in Terminal on the Mac. The agent runs as a
+launchd service, and it keeps the Mac awake, so the Mac needs no sleep
+setting. In **System Settings**, under **Energy**, turn on **Start up
+automatically after a power failure**.
+
+:::caution[FileVault stops jobs after a restart]
+With FileVault on, macOS starts no service after a restart until a person
+logs in. So the Mac takes no jobs until someone logs in. To check, open
+**System Settings**, then **Privacy & Security**, and find **FileVault**.
+:::
+
 ## Run the install command
 
 Only an Admin of the workspace sees the install command.
@@ -37,12 +72,12 @@ Only an Admin of the workspace sees the install command.
    curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
    ```
 
-3. Run the command on the machine. It installs the agent, prepares the
-   machine, and connects it to your workspace.
+3. Run the command on the machine, in Terminal on a Mac. It installs the
+   agent, prepares the machine, and connects it to your workspace.
 4. Keep the page open. It shows that it waits for the machine. Then it
-   shows the host name of the machine and what the agent reported: threads,
-   memory, KVM, and slots. A new machine first downloads the job image and
-   takes jobs when it is ready.
+   shows the host name of the machine and what the agent reported: threads
+   or cores, memory, virtualization, and slots. A new machine first
+   downloads the job image and takes jobs when it is ready.
 
 The install token works for one hour. Within that hour, it adds any number
 of machines, so you can run the same command on each of them. To end the
@@ -56,6 +91,9 @@ command does on the machine.
 
 - **No KVM:** the machine connects, but it cannot start VMs, so it gets no
   slots. Turn on virtualization for the machine, then run the command again.
+- **A Mac with an older macOS:** the Mac connects, but it cannot start VMs,
+  so it gets no slots. Update the Mac to macOS 26.7.2 or later, then run the
+  command again.
 - **Too little CPU or memory:** a machine without room for one slot after
   the host reserve connects and gets no slots. ciproxy says why.
 - **Too little disk:** each job also holds disk, so a machine can run fewer

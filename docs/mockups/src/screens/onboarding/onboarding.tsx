@@ -3,7 +3,8 @@
 // the open step. The Boat step can be skipped: it then shows a dash and a
 // link to Settings under Overflow, and it does not count as done. A machine
 // that connected gets its first job image before it takes a job. Setup goes
-// on meanwhile, and the machine step and the first job name the image.
+// on meanwhile, and the machine step and the first job name the image. The
+// same command connects a Mac, which runs the jobs of macOS labels.
 
 import { Check, Minus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -28,6 +29,7 @@ export const onboardingStates = [
   "machine-preparing",
   "machine-connected",
   "machine-no-kvm",
+  "machine-mac",
   "boat",
   "boat-invalid",
   "boat-connect-failed",
@@ -61,7 +63,7 @@ const steps: readonly {
   {
     key: "machine",
     title: "Add a machine",
-    todo: "Run one command on a Linux machine.",
+    todo: "Run one command on a Linux machine or a Mac.",
     done: `${setupMachine} · 6 slots`,
   },
   {
@@ -86,6 +88,7 @@ const openStep: Record<OnboardingState, StepKey> = {
   "machine-preparing": "machine",
   "machine-connected": "machine",
   "machine-no-kvm": "machine",
+  "machine-mac": "machine",
   boat: "boat",
   "boat-invalid": "boat",
   "boat-connect-failed": "boat",

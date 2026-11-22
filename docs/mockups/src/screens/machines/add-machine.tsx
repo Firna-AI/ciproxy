@@ -4,7 +4,8 @@
 // hetzner-ax42-4 shows that state. The fourth machine office-mini-1 runs jobs,
 // and it reports fewer jobs at a time than its slots, because of its disk.
 // After Revoke token, the command adds no machine, and a new command is one
-// click away. The Admin role alone adds a machine, as the answer to item 50
+// click away. In a what-if, mac-studio-1 connects with the same command and
+// runs the jobs of macOS labels. The Admin role alone adds a machine, as the answer to item 50
 // says.
 
 import type { Viewport } from "@mokly/mokly";
@@ -20,6 +21,7 @@ import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
+import { macStudioMachine } from "../../fixtures/macs.ts";
 import { officeMini } from "../../fixtures/machines.ts";
 import { preparingAx42 } from "../../fixtures/new-machine.ts";
 import { workspace } from "../../fixtures/org.ts";
@@ -30,13 +32,28 @@ export const addMachineStates = [
   "preparing",
   "connected",
   "revoked",
+  "mac-connected",
 ] as const;
 export type AddMachineState = (typeof addMachineStates)[number];
 
+/** The machine of each state that joined. */
+const joined = {
+  preparing: preparingAx42,
+  connected: officeMini,
+  "mac-connected": macStudioMachine,
+} as const;
+
+/** The Machines list that shows the machine that joined. */
+const joinedList = {
+  preparing: paths.machinesPreparing,
+  connected: paths.machinesOverLimit,
+  "mac-connected": paths.machinesMacs,
+} as const;
+
 /** The machine that joined, and the Machines list that shows it. */
-function JoinedMachine({ state }: { state: "preparing" | "connected" }) {
+function JoinedMachine({ state }: { state: keyof typeof joined }) {
   const preparing = state === "preparing";
-  const machine = preparing ? preparingAx42 : officeMini;
+  const machine = joined[state];
   return (
     <>
       <ConnectedMachine
@@ -45,10 +62,7 @@ function JoinedMachine({ state }: { state: "preparing" | "connected" }) {
         preparing={preparing}
       />
       <div className="row">
-        <LinkAction
-          to={preparing ? paths.machinesPreparing : paths.machinesOverLimit}
-          tone="primary"
-        >
+        <LinkAction to={joinedList[state]} tone="primary">
           Open Machines
         </LinkAction>
       </div>
@@ -61,8 +75,8 @@ function AddMachineBody({ state }: { state: AddMachineState }) {
   return (
     <>
       <p className="small">
-        Run this command on the new machine. It installs the ciproxy agent and
-        connects the machine to {workspace.name}.
+        Run this command on the new Linux machine or Mac. It installs the
+        ciproxy agent and connects the machine to {workspace.name}.
       </p>
       <InstallCommand revokeTo={paths.addMachineRevoked} />
       {state === "waiting" ? (
@@ -87,7 +101,7 @@ export function AddMachineScreen({
       tier="team"
       active="machines"
       banner={
-        state === "connected" || state === "preparing"
+        state !== "waiting" && state !== "revoked"
           ? usageBanner("over-machines", "other")
           : undefined
       }
