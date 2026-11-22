@@ -122,6 +122,18 @@ machine and where each job runs.
   starts runners of the new size.
 - A job that runs during the change keeps its VM.
 
+## The label list
+
+- The list of labels in Settings, under Labels, shows the Linux labels
+  first, then the macOS labels.
+- Each platform lists its labels from the smallest size to the largest: by
+  vCPU, then memory, then free job disk, then name.
+- So a label can move in the list when the customer edits its size.
+- **Decision:** the list orders the labels by platform and size. Rejected:
+  name order, because tier names such as `ciproxy-medium` and
+  `ciproxy-large` do not sort by size. Rejected: the order in which the
+  labels were made, because it needs a stored order.
+
 ## Platform
 
 - Each label has one platform: Linux or macOS.
