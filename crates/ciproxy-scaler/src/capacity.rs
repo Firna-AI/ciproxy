@@ -9,14 +9,12 @@ use crate::snapshot::{Label, Machine};
 pub(crate) struct Usage {
     slots: u64,
     disk_bytes: u64,
+    vms: u64,
 }
 
 impl Usage {
     pub(crate) fn for_machine(machine: &Machine) -> Self {
-        let mut result = Self {
-            slots: 0,
-            disk_bytes: 0,
-        };
+        let mut result = Self::default();
         for runner in &machine.runners {
             result.add(runner.size);
         }
@@ -26,22 +24,32 @@ impl Usage {
     pub(crate) fn add(&mut self, size: VmSize) {
         self.slots = self.slots.saturating_add(Slots::for_vm(size).0);
         self.disk_bytes = self.disk_bytes.saturating_add(size.disk_bytes);
+        self.vms = self.vms.saturating_add(1);
     }
 
     pub(crate) fn remove(&mut self, size: VmSize) {
         self.slots = self.slots.saturating_sub(Slots::for_vm(size).0);
         self.disk_bytes = self.disk_bytes.saturating_sub(size.disk_bytes);
+        self.vms = self.vms.saturating_sub(1);
     }
 
     pub(crate) fn add_usage(&mut self, other: Self) {
         self.slots = self.slots.saturating_add(other.slots);
         self.disk_bytes = self.disk_bytes.saturating_add(other.disk_bytes);
+        self.vms = self.vms.saturating_add(other.vms);
     }
 
     pub(crate) fn fits(self, machine: &Machine, size: VmSize) -> bool {
         let Some(leased_bytes) = machine.docker_leased_bytes else {
             return false;
         };
+        if machine
+            .platform
+            .vm_limit()
+            .is_some_and(|limit| self.vms >= limit)
+        {
+            return false;
+        }
         Resources {
             slots: Slots(machine.capacity.0.saturating_sub(self.slots)),
             job_disk_bytes: machine
@@ -63,6 +71,8 @@ pub(crate) fn eligible(machine: &Machine, label: &Label, sizing: RootSizing) -> 
             }),
     };
     label.destinations.own_machines
+        && machine.platform == label.platform
+        && machine.platform.vm_limit() != Some(0)
         && machine.connected
         && !machine.draining
         && machine

@@ -18,6 +18,7 @@ use uuid::Uuid;
 
 use super::fixture::Fixture;
 use super::overflow_ports::{Factory, Ports};
+use ciproxy_protocol::platform::Platform;
 
 pub(super) fn service(fixture: &mut Fixture) -> Arc<Ports> {
     let ports = Ports::new();
@@ -77,6 +78,7 @@ pub(super) async fn start(fixture: &Fixture) {
                 label_id: label.id,
                 scale_set_id: set.id,
                 action: StartRunner {
+                    platform: Platform::LinuxX64,
                     target: RegistrationTarget {
                         organization_id: OrganizationId(fixture.organization.id.to_string()),
                         label_id: label.id.to_string(),

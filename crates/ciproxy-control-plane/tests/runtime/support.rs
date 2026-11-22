@@ -1,5 +1,6 @@
 //! Isolated real PostgreSQL records for hosted lifecycle integration.
 
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -71,6 +72,7 @@ impl Fixture {
             })
             .unwrap();
         let label = Label {
+            platform: Platform::LinuxX64,
             id: Uuid::new_v4(),
             name: "ciproxy".to_owned(),
             size: VmSize {
@@ -100,7 +102,8 @@ impl Fixture {
                     processor: "x64".to_owned(),
                     hardware_threads: 8,
                     memory_bytes: 32_000_000_000,
-                    kvm_available: true,
+                    platform: Platform::LinuxX64,
+                    virtualization: Virtualization::Available,
                     slots: 3,
                     warm_runners: 0,
                     draining: true,

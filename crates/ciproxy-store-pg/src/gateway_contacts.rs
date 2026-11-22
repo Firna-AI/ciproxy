@@ -9,6 +9,7 @@ use uuid::Uuid;
 use crate::error::QueryResultExt;
 use crate::machine_observation::{MachineObservation, observed_disks};
 use crate::machines::replace_disks;
+use crate::platform_text::platform_text;
 
 pub(crate) fn lock_machine(
     connection: &mut PgConnection,
@@ -52,6 +53,15 @@ pub(crate) fn write_contact(
         && session(connection, workspace_id, machine_id)? != Some(contact.session_id)
     {
         return Err(Error::Conflict);
+    }
+    let platform = machines::table
+        .filter(machines::workspace_id.eq(workspace_id))
+        .find(machine_id)
+        .select(machines::platform)
+        .first::<String>(connection)
+        .store()?;
+    if platform != platform_text(contact.report.hardware.platform) {
+        return Err(Error::InvalidValue);
     }
     let observed = MachineObservation::from_contact(contact);
     diesel::update(

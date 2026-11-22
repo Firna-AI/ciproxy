@@ -105,6 +105,9 @@ pub trait GatewayStore: TokenStore + Send + Sync {
     /// Authenticate the install hash and insert the machine, report, and credential atomically.
     fn register_machine(&self, registration: &Registration) -> Result<bool>;
     /// Authenticate and replace the current session without changing desired settings.
+    ///
+    /// Return [`Error::InvalidValue`](crate::error::Error::InvalidValue) when the report's platform differs from
+    /// the platform saved at registration.
     fn connect_machine(
         &self,
         workspace_id: Uuid,
@@ -113,6 +116,8 @@ pub trait GatewayStore: TokenStore + Send + Sync {
         contact: &Contact,
     ) -> Result<Option<Machine>>;
     /// Replace the latest report only for the active, unremoved connection.
+    ///
+    /// Return [`Error::InvalidValue`](crate::error::Error::InvalidValue) when the report's platform changed.
     fn record_contact(&self, workspace_id: Uuid, machine_id: Uuid, contact: &Contact)
     -> Result<()>;
     /// Record contact from a lifecycle message without replacing the last full report.

@@ -144,7 +144,7 @@ pub(crate) async fn update(
         .into_iter()
         .find(|label| label.id == path.label_id)
         .ok_or(Error::NotFound)?;
-    if previous.name != input.name {
+    if previous.name != input.name || previous.platform != input.platform {
         return Err(Error::Conflict);
     }
     let label = label_views::stored(path.label_id, input)?;

@@ -47,7 +47,10 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
         .machines(WORKSPACE)
         .unwrap()
         .remove(0);
-    assert_eq!((machine.kvm_available, machine.slots), (false, 0));
+    assert_eq!(
+        (machine.virtualization, machine.slots),
+        (Virtualization::KvmUnavailable, 0)
+    );
     first.disconnect().await;
 
     fixture.advance_to(3599);

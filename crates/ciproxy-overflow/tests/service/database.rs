@@ -15,6 +15,7 @@ use diesel::prelude::*;
 use url::Url;
 
 use super::fixtures::id;
+use ciproxy_protocol::platform::Platform;
 
 pub(super) struct Database {
     pub(super) store: Arc<dyn Store>,
@@ -54,6 +55,7 @@ impl Database {
             .create_label(
                 id(workspace),
                 &Label {
+                    platform: Platform::LinuxX64,
                     id: id(workspace + 3),
                     name: "ciproxy".to_owned(),
                     size: VmSize {

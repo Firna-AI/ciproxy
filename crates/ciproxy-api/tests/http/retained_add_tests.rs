@@ -54,7 +54,7 @@ async fn retained_add_reinstall_saves_new_label_bindings_before_active_even_afte
                 &fixture.path("/labels"),
                 Some(json!({
                     "name": "during-removal", "vcpus": 2, "memory_gb": 8,
-                    "disk_gb": 20, "allow_machines": true, "allow_boat": true,
+                    "disk_gb": 20, "platform":"linux_x64", "allow_machines": true, "allow_boat": true,
                     "when_nothing_fits": "wait"
                 })),
             )
