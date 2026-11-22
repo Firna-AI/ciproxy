@@ -55,7 +55,10 @@ export const termsSections: readonly LegalSection[] = [
       "A paid plan move has a stored quote. Its review shows the new monthly total, today's prorated amount, and later billing dates. Each new review needs your confirmation. The quote keeps the amounts and proration time for a retry of that move.",
       "You can cancel in the Stripe customer portal or choose Move to Free. The paid plan and add-ons remain until the paid period ends. You can undo cancellation before then. While Stripe retries a failed payment, the paid plan remains active.",
       "After the final failed retry, the subscription ends and the workspace moves to Free. Jobs keep running on all its machines, including above Free's soft limits. A plan change controls the history window shown in the dashboard. The privacy policy states the storage limits.",
-      "Payments are not refunded, except where the law requires a refund. When a change lowers the monthly total, Stripe keeps the prorated difference as a credit for a later invoice. If the law where you live gives you a right to withdraw from a purchase, email legal@ciproxy.dev within the withdrawal period. Where the law allows, you then pay for the service that you used before you withdrew. If you think a charge is wrong, email legal@ciproxy.dev before you dispute it with your bank. We announce a price change in the dashboard at least 30 days before it applies to your plan, and you can cancel before then.",
+      "Payments are not refunded, except where the law requires a refund. When a change lowers the monthly total, Stripe keeps the prorated difference as a credit for a later invoice. If you think a charge is wrong, email legal@ciproxy.dev before you dispute it with your bank.",
+      "If you are a consumer, you can withdraw from a paid plan within 14 days after the day of the purchase, without giving a reason. To withdraw, tell us of your decision with a clear statement before the period ends, for example by email to legal@ciproxy.dev or by post to our registered office. You can use the model form below, but you do not have to. We refund your payment within 14 days after you tell us, to the card that you paid with. If you asked for the plan to start during the withdrawal period, you pay an amount in proportion to the service that you used before you withdrew.",
+      "Model withdrawal form: To Firna Ltd, 26 John Hogan V C Road, Manchester, M40 7QU, United Kingdom, legal@ciproxy.dev. I give notice that I withdraw from my contract for the following service. Then give the plan, the date of the order, your name, your address, and the date.",
+      "We tell you about a price change for your plan at least 30 days before it applies, by email to the billing address that you gave Stripe. You can cancel before it applies.",
     ],
   },
   {
@@ -129,7 +132,8 @@ export const termsSections: readonly LegalSection[] = [
     id: "changes",
     title: "Changes to these terms",
     paragraphs: [
-      "Each change gives these terms a new version, which we publish on this page with a new effective date. A changed version applies from your next sign-in. A sign-in lasts 30 days, so a change applies within 30 days while you keep using ciproxy. You accept the new version when you sign in with GitHub. A change does not alter the price of a billing period that has already started. If you do not accept a change, you can stop using ciproxy at any time, and a cancelled plan ends at the end of its paid period.",
+      "Each change gives these terms a new version, which we publish on this page with a new effective date. A changed version applies from your next sign-in, and you accept it when you sign in with GitHub. A sign-in lasts at most 30 days. Until your next sign-in, the version that you accepted last keeps applying, also while your jobs run.",
+      "A price change follows Plans and payment instead. A change does not alter the price of a billing period that has already started. If you do not accept a change, you can stop using ciproxy at any time, and a cancelled plan ends at the end of its paid period.",
     ],
   },
   {

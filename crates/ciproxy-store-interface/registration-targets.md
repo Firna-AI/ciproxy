@@ -58,6 +58,9 @@ writers together so older writers cannot create more uncaptured runners.
 Rollback removes the new column and its captured values. Roll back the
 runtime first. The older runtime ignores the additive Boat JSON field.
 Keep a database backup when the captured history must survive rollback.
+Delete that backup within 14 days, as
+[Delete manual database backups](../../deploy/operations.md#delete-manual-database-backups)
+says.
 
 [Runtime validation](../ciproxy-control-plane/binding-validation.md) gives
 the operator commands. No JIT configuration enters these records.

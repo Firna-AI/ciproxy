@@ -1,6 +1,6 @@
 # A site search focus test fails on main
 
-- **Severity:** Medium. **Effort:** Small. **Confidence:** Medium.
+- **Severity:** Medium. **Effort:** Small. **Confidence:** High.
   **Harder later:** No.
 - **Kind:** Outside the scope.
 - **Added:** 2026-11-22, from the branch `docs/legal-pages-firna`, which
@@ -38,9 +38,10 @@
   - That merge added macOS text to the docs pages Overview, Add a machine,
     Quickstart, Agent install options, Labels and VM sizes, and Plans and
     starts.
-  - Suspected source: that text changed the results of the query `runs-on`,
-    so the last result is no longer the heading "How a job runs" of
-    `/docs/`.
+  - Source: that text changed the results of the query `runs-on`. A replay
+    in Chrome on 22 November 2026 showed that ArrowUp now selects
+    `/docs/reference/labels/#default-labels`, not the heading "How a job
+    runs" of `/docs/`.
 - **Impact if no action:** The site browser tests fail for every branch, so
   a real regression of the search focus can hide behind this failure.
 - **Root question:** How does the test open a heading of the current page
