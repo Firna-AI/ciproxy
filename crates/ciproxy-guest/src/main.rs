@@ -13,7 +13,7 @@ async fn main() -> ExitCode {
     match application.run(Cli::parse()).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            error!(%error, "guest stopped");
+            error!(%error, cause = %error.diagnosis(), "guest stopped");
             ExitCode::FAILURE
         }
     }
