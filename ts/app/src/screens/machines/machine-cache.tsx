@@ -30,13 +30,23 @@ import {
 } from "../../view/machines-cache.ts";
 import { cacheCopy, failureCopy } from "../../view/machines-copy.ts";
 import { failureText } from "../../view/machines-outcome.ts";
+import { isMac } from "../../view/platform.ts";
 import { Meter, UnknownMeter, UnknownValue } from "./machine-figures.tsx";
 
-/** The figures of a stored report: each part measured, or Unknown. */
-function CacheFigures({ cache }: { cache: CacheView }) {
+/**
+ * The figures of a stored report: each part measured, or Unknown. A Mac has
+ * no Docker disks, because a macOS VM runs no Docker, so it shows no row.
+ */
+function CacheFigures({
+  cache,
+  showDocker,
+}: {
+  cache: CacheView;
+  showDocker: boolean;
+}) {
   const figures = cache.machine_cache;
   const docker = cache.docker_disks;
-  const note = unknownNote(cache);
+  const note = unknownNote(cache, showDocker);
   return (
     <>
       {figures.status === "measured" ? (
@@ -56,13 +66,15 @@ function CacheFigures({ cache }: { cache: CacheView }) {
             <UnknownValue />
           )}
         </DetailRow>
-        <DetailRow label={cacheCopy.docker}>
-          {docker.status === "measured" ? (
-            <Text style={text.small}>{dockerUse(docker)}</Text>
-          ) : (
-            <UnknownValue />
-          )}
-        </DetailRow>
+        {showDocker ? (
+          <DetailRow label={cacheCopy.docker}>
+            {docker.status === "measured" ? (
+              <Text style={text.small}>{dockerUse(docker)}</Text>
+            ) : (
+              <UnknownValue />
+            )}
+          </DetailRow>
+        ) : null}
       </View>
       {note === null ? null : (
         <Text style={[text.caption, styles.note]}>{note}</Text>
@@ -92,7 +104,7 @@ export function CachePanel({
       {cache === null ? (
         <Text style={text.small}>{cacheCopy.unreported}</Text>
       ) : (
-        <CacheFigures cache={cache} />
+        <CacheFigures cache={cache} showDocker={!isMac(machine)} />
       )}
     </Panel>
   );

@@ -48,6 +48,15 @@ addresses.
   History of Jobs.
 - The agent version says whether it is the newest release only from a fresh
   report, and only when ciproxy could read the newest release.
+- A machine is a Linux machine or a Mac. The list and the page name the
+  platform, and a Mac names its cores. Health shows Virtualization for both:
+  KVM on Linux, and Virtualization.framework on a Mac. A machine that cannot
+  start VMs gets no slots, and its notice names the fix for the reason that
+  the API gives.
+- A Mac runs at most `vm_limit` job VMs at once, 2 today. Its slots caption
+  says so, and while it runs that many VMs, each free slot says that the Mac
+  runs its 2 VMs. A Mac with fewer slots than the limit says why. A Mac has
+  no Docker disks, so its page shows no Docker disks row.
 - Cache shows the count of repositories with a Docker disk on the machine
   and the space of these disks, from the last report, also while the machine
   is offline. A report of no Docker disks shows 0, and a machine with no

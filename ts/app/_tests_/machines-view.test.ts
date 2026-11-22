@@ -21,8 +21,16 @@ import { cache, nbsp, slot, summary } from "./machines-fixtures.ts";
 test("a machine shows one state: offline, no slots, draining, preparing, then healthy", () => {
   const cases: [string, Parameters<typeof machine>[0], string][] = [
     ["offline and draining", { state: "offline", draining: true }, "offline"],
-    ["no KVM with reported slots", { kvm: false, slots: 6 }, "no-slots"],
-    ["no KVM while preparing", { state: "preparing", kvm: false }, "no-slots"],
+    [
+      "no KVM with reported slots",
+      { kvm: false, virtualization: "kvm_unavailable", slots: 6 },
+      "no-slots",
+    ],
+    [
+      "no KVM while preparing",
+      { state: "preparing", kvm: false, virtualization: "kvm_unavailable" },
+      "no-slots",
+    ],
     ["KVM without room for a slot", { slots: 0 }, "no-slots"],
     ["draining", { draining: true }, "draining"],
     [
@@ -53,7 +61,10 @@ test("the slots column counts busy and warm slots, and never invents free ones",
     slotCaption(machine({ state: "preparing", occupancy: [slot(0, "free")] })),
     "Getting the job image",
   );
-  assert.equal(slotCaption(machine({ kvm: false })), "No slots");
+  assert.equal(
+    slotCaption(machine({ kvm: false, virtualization: "kvm_unavailable" })),
+    "No slots",
+  );
   assert.equal(
     slotCaption(machine({ slots: 6, occupancy: [] })),
     `6${nbsp}slots`,
@@ -103,7 +114,13 @@ test("the figures count live slots, unique warm runners, and measured cache rest
       occupancy: [slot(0, "job"), slot(1, "warm")],
       cache: cache("1", "3"),
     }),
-    machine({ id: "d", hostname: "forge-d", kvm: false, slots: 6 }),
+    machine({
+      id: "d",
+      hostname: "forge-d",
+      kvm: false,
+      virtualization: "kvm_unavailable",
+      slots: 6,
+    }),
     machine({
       id: "e",
       hostname: "forge-e",
@@ -198,7 +215,10 @@ test("the jobs of ciproxy at a time show only when the API knows them", () => {
     null,
   );
   assert.equal(concurrentJobs(machine({ offline: true })), null);
-  assert.equal(concurrentJobs(machine({ kvm: false })), null);
+  assert.equal(
+    concurrentJobs(machine({ kvm: false, virtualization: "kvm_unavailable" })),
+    null,
+  );
   for (const draining of [false, true]) {
     const preparing = { state: "preparing" as const, draining };
     assert.equal(

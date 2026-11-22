@@ -23,18 +23,20 @@ import {
   gigabytes,
   unbroken,
 } from "./machines-format.ts";
+import { canStartVms, isMac, platformName } from "./platform.ts";
 
 export type MachineStatus = keyof typeof statusWords;
 
 /**
  * Offline first, then a machine that cannot run jobs, then a drain, then a
- * machine that gets its first job image. A machine without KVM gets no slots,
- * as the agent doc says. A drained machine takes no new job either way, and
+ * machine that gets its first job image. A machine that cannot start job VMs
+ * gets no slots, as the agent doc says: a Linux machine without KVM, or a Mac
+ * without the virtualization that its job image needs. A drained machine takes no new job either way, and
  * the drain is the customer's own action, so it shows over the image wait.
  */
 export function machineStatus(machine: MachineView): MachineStatus {
   if (machine.state === "offline") return "offline";
-  if (!machine.kvm || machine.slots === 0) return "no-slots";
+  if (!canStartVms(machine) || machine.slots === 0) return "no-slots";
   if (machine.draining) return "draining";
   if (machine.state === "preparing") return "preparing";
   return "healthy";
@@ -102,10 +104,19 @@ export function slotCaption(machine: MachineView): string {
   );
 }
 
-/** "16 threads · 64 GB", the line beside a machine name. */
+/**
+ * "Linux · 16 threads · 64 GB", the line beside a machine name. Apple Silicon
+ * runs one thread on each core, so a Mac names its cores.
+ */
 export function hardwareText(machine: MachineView): string {
+  return dotJoin(platformName[machine.platform], machineSize(machine));
+}
+
+/** "16 threads · 64 GB", or "16 cores · 64 GB" on a Mac. */
+export function machineSize(machine: MachineView): string {
+  const unit = isMac(machine) ? "cores" : "threads";
   return dotJoin(
-    unbroken(`${machine.threads} threads`),
+    unbroken(`${machine.threads} ${unit}`),
     unbroken(`${gigabytes(machine.memory_bytes)} GB`),
   );
 }

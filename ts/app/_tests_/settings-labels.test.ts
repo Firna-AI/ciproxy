@@ -109,7 +109,7 @@ test("an edit sends the saved name unchanged with the new size", () => {
   const draft = { ...editDraft(saved), disk: "40" };
   assert.deepEqual(checkDraft(draft), {
     ok: true,
-    input: { ...saved, disk_gb: 40 },
+    input: { ...saved, platform: "linux_x64", disk_gb: 40 },
   });
 });
 

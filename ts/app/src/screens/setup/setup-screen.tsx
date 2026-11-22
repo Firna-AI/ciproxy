@@ -16,6 +16,7 @@ import {
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import { boatProgress } from "../../view/boat.ts";
+import { canStartVms } from "../../view/platform.ts";
 import { setupModel } from "../../view/setup-steps.ts";
 import {
   WorkspacePageView,
@@ -36,8 +37,7 @@ function Setup({ context }: { context: WorkspaceContext }) {
     return store.watch();
   }, [store]);
   const waiting =
-    snapshot.status === "ready" &&
-    !snapshot.machines.some((machine) => machine.kvm);
+    snapshot.status === "ready" && !snapshot.machines.some(canStartVms);
   useEffect(() => {
     if (waiting) setSawWaiting(true);
   }, [waiting]);

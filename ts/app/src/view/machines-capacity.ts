@@ -7,7 +7,8 @@
 import type { MachineView } from "../api/schema.ts";
 import { addCopy, slotCopy } from "./machines-copy.ts";
 import { dotJoin, gigabytes, unbroken } from "./machines-format.ts";
-import { slotsLive } from "./machines.ts";
+import { machineSize, slotsLive } from "./machines.ts";
+import { defaultLabelName, isMac } from "./platform.ts";
 
 /**
  * The jobs of the label ciproxy that the machine runs at a time, by its slots
@@ -54,17 +55,26 @@ export function diskLimit(machine: MachineView): DiskLimit | null {
  */
 export function joinedFits(machine: MachineView): string | null {
   const limit = diskLimit(machine);
-  if (limit !== null) return addCopy.diskHolds(limit.jobs);
+  const label = defaultLabelName(machine);
+  if (limit !== null) return addCopy.diskHolds(limit.jobs, label);
   const jobs = concurrentJobs(machine);
-  return jobs === null ? null : slotCopy.fits(jobs);
+  return jobs === null ? null : slotCopy.fits(jobs, label);
 }
 
-/** "16 threads · 64 GB · KVM ready · 6 slots": what a new machine reported. */
+/**
+ * "16 threads · 64 GB · KVM ready · 6 slots": what a new machine reported. A
+ * Mac names its cores and its virtualization.
+ */
 export function connectedFacts(machine: MachineView): string {
   return dotJoin(
-    unbroken(`${machine.threads} threads`),
-    unbroken(`${gigabytes(machine.memory_bytes)} GB`),
-    unbroken("KVM ready"),
+    machineSize(machine),
+    unbroken(isMac(machine) ? "Virtualization ready" : "KVM ready"),
     slotCopy.unreported(machine.slots),
   );
+}
+
+/** The line of a Mac that just joined: it runs macOS jobs, at most 2. */
+export function macJobsLine(machine: MachineView): string | null {
+  const vmLimit = machine.vm_limit ?? null;
+  return isMac(machine) && vmLimit !== null ? addCopy.macJobs(vmLimit) : null;
 }

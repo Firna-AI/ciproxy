@@ -13,7 +13,14 @@ export function labelInput(value: unknown): Schemas["LabelInput"] | undefined {
     allow_machines,
     allow_boat,
     when_nothing_fits,
+    platform,
   } = value;
+  if (
+    platform !== undefined &&
+    platform !== "linux_x64" &&
+    platform !== "macos_arm64"
+  )
+    return undefined;
   if (
     typeof name !== "string" ||
     typeof vcpus !== "number" ||
@@ -28,6 +35,7 @@ export function labelInput(value: unknown): Schemas["LabelInput"] | undefined {
   )
     return undefined;
   return {
+    ...(platform === undefined ? {} : { platform }),
     name,
     vcpus,
     memory_gb,

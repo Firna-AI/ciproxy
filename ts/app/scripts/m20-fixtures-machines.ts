@@ -182,6 +182,7 @@ export function fixtureMachines(): Machine[] {
       id: machineIds.noKvm,
       hostname: "lab-no-kvm",
       kvm: false,
+      virtualization: "kvm_unavailable",
       slots: 0,
       concurrent_default_jobs: "0",
       default_jobs_by_slots: "0",
