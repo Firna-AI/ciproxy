@@ -167,7 +167,7 @@ async fn whole_answer_to_a_range_request_starts_the_file_again() {
 async fn refused_answer_ends_the_command_and_keeps_the_partial_file() {
     let cases = [
         (Reply::Status(403), Error::ImageStatus { status: 403 }),
-        (Reply::Shifted, Error::ImageAnswer),
+        (Reply::Status(503), Error::ImageStatus { status: 503 }),
     ];
     for (reply, expected) in cases {
         let folder = Folder::new();
@@ -182,6 +182,22 @@ async fn refused_answer_ends_the_command_and_keeps_the_partial_file() {
         assert_eq!(read(&partial), &BODY[..5], "{reply:?}");
         assert!(sidecar.is_file(), "{reply:?}");
         assert!(!archive.exists(), "{reply:?}");
+    }
+}
+
+#[tokio::test]
+async fn range_answer_that_cannot_continue_starts_again_without_range() {
+    for reply in [Reply::Shifted, Reply::Status(416)] {
+        let folder = Folder::new();
+        let archive = folder.archive("macos-1");
+        let server = RangeServer::start(BODY, vec![Reply::Break(5), reply, Reply::Serve]).await;
+        download(3)
+            .fetch(&image("macos-1", BODY, &server), &archive)
+            .await
+            .unwrap();
+        assert_eq!(read(&archive), BODY, "{reply:?}");
+        let expected = vec![None, Some("bytes=5-".to_owned()), None];
+        assert_eq!(server.ranges(), expected, "{reply:?}");
     }
 }
 

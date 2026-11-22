@@ -216,7 +216,9 @@ metadata files, and `macos-content.sha256`.
    the command and keeps the partial file. A later `FetchImage` with the
    same sidecar values hashes the bytes on disk and continues them. Other
    values, or a file longer than the image, start again from zero, and so
-   does a `200` answer to a `Range` request. A download removes the partial
+   does a `200` answer to a `Range` request. A `206` from another start, or
+   a `416`, empties the file, and the retry asks for the whole archive
+   without `Range`. A download removes the partial
    files of other images. One download runs at a time, so a second
    `FetchImage` for the same image waits and then finds the image known.
    After the byte count and the SHA-256 match, the partial file becomes

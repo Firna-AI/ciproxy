@@ -182,6 +182,8 @@ Mac boot the macOS image.
 - An HTTP error status, such as the answer to an expired URL, fails the
   download command and keeps the bytes. The next download command brings a
   fresh URL.
+- When the host cannot continue the bytes, for example because it does not
+  serve the requested range, the agent starts the download again from zero.
 - **Decision:** the agent continues with HTTP range requests, and the
   download URL keeps the 2-hour expiry of the machine image URL. Rejected:
   a URL valid for 12 hours, because a leaked URL to the image with Xcode

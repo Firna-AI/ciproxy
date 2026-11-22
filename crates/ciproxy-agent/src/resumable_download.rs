@@ -5,6 +5,8 @@
 //! names the image ID, the SHA-256, and the byte size that the bytes belong
 //! to. A later command for the same image continues the partial file with a
 //! `Range` request. Inside one command, a broken stream retries a few times.
+//! A `Range` answer that cannot continue the file empties it, and the retry
+//! asks for the whole archive.
 //! An HTTP error status ends the command and keeps the partial file, because
 //! the next command brings a fresh URL. After the size and the SHA-256 match,
 //! the partial file becomes `NAME.tar`.
@@ -120,8 +122,13 @@ impl ResumableDownload {
             Ok(response) => response,
             Err(error) => return Ok(broken(error, "send the image request")),
         };
-        if read_answer(&response, offset)? == Answer::Whole {
-            partial.restart().await?;
+        match read_answer(&response, offset)? {
+            Answer::Whole => partial.restart().await?,
+            Answer::Rest => {}
+            Answer::Unusable => {
+                partial.restart().await?;
+                return Ok(Transfer::Broken(Error::ImageAnswer));
+            }
         }
         let mut stream = response.bytes_stream();
         while let Some(chunk) = stream.next().await {
