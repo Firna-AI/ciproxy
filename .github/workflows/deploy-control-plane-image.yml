@@ -39,7 +39,7 @@ jobs:
                   token = json.load(response)["value"]
               payload = token.split(".")[1]
               claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
-              expected = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
+              expected = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main"
               revision = claims.get("job_workflow_sha", "")
               if claims.get("job_workflow_ref") != expected or not re.fullmatch("[0-9a-f]{40}", revision):
                   raise ValueError("Untrusted image workflow revision")

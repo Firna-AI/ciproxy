@@ -11,10 +11,10 @@ import tempfile
 from deploy.tests.promotion_support import ROOT
 
 
-TRUSTED = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
+TRUSTED = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main"
 UNTRUSTED = {
-    "former main binding": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main",
-    "unrelated reusable workflow": "Firna-AI/ciproxy/.github/workflows/other.yml@refs/heads/calummoore/ci-proxy-load-balancer",
+    "former preview branch binding": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer",
+    "unrelated reusable workflow": "Firna-AI/ciproxy/.github/workflows/other.yml@refs/heads/main",
     "unrelated reusable branch": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/untrusted",
 }
 SOURCE_SHA = "c" * 40

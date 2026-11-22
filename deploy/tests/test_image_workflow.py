@@ -20,7 +20,7 @@ class ImageWorkflowTests(unittest.TestCase):
         cls.documents = security.workflows()
         cls.providers = security.providers()
 
-    def test_only_primary_reusable_image_jobs_satisfy_real_provider_conditions(self):
+    def test_only_reusable_image_jobs_on_main_satisfy_real_provider_conditions(self):
         workload = self.documents["deploy-main-preview.yml"]["jobs"]["workloads"]
         ordinary = security.claims(workload)
         self.assertNotIn("job_workflow_ref", ordinary)
@@ -36,7 +36,7 @@ class ImageWorkflowTests(unittest.TestCase):
         self.assertEqual(len(privileged), 2)
         for job_name, job, _, _ in privileged:
             for name, provider in self.providers.items():
-                with self.subTest(identity=name, job=job_name, scenario="trusted primary workflow"):
+                with self.subTest(identity=name, job=job_name, scenario="trusted workflow on main"):
                     self.assertTrue(security.admits(provider, security.claims(job, security.TRUSTED)))
         build = next(item for item in security.jobs(self.documents) if any(
             "control_plane_image.py build" in step.get("run", "") for step in item[1].get("steps", [])))
@@ -48,11 +48,11 @@ class ImageWorkflowTests(unittest.TestCase):
                 self.assertFalse(security.admits(provider, security.claims(build[1], build[2]),
                                                   oidc=permissions.get("id-token") == "write"))
 
-    def test_primary_tools_use_the_reusable_jobs_own_revision_without_token_output(self):
+    def test_main_image_workflow_uses_its_own_tools_revision_without_token_output(self):
         privileged = security.image_jobs(self.documents)
         self.assertEqual(len(privileged), 2)
         for name, _, origin, _ in privileged:
-            with self.subTest(job=name, scenario="preview calls primary workflow"):
+            with self.subTest(job=name, scenario="preview calls image workflow on main"):
                 self.assertEqual(origin, security.TRUSTED)
         for _, job, _, _ in privileged:
             for executable in job.get("steps", []):
@@ -72,7 +72,7 @@ class ImageWorkflowTests(unittest.TestCase):
             environment = {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://fixture.invalid/id?request=1",
                            "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "fixture-request-credential",
                            "GITHUB_SHA": security.SOURCE_SHA}
-            scenarios = [("trusted primary workflow", security.TRUSTED, security.TOOLS_SHA, 0)]
+            scenarios = [("trusted workflow on main", security.TRUSTED, security.TOOLS_SHA, 0)]
             scenarios.extend((scenario, reference, security.TOOLS_SHA, 1)
                              for scenario, reference in security.UNTRUSTED.items())
             scenarios.append(("invalid tools revision", security.TRUSTED, "not-a-commit", 1))
