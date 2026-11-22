@@ -68,9 +68,9 @@
   - `terms-changes-unattended-workspaces.md`: the same acceptance rule. The
     record of C also gives that item proof of the version that binds a
     workspace.
-  - The terms require the authority to accept for the customer, but a
-    Viewer can lack it. The answer to this item also says whose sign-in
-    binds the customer.
+  - `terms-acceptance-parties.md`: the same sentence. That item decides
+    whose acceptance binds the customer, which no option here decides.
+    Answer both together.
   - `site-and-app-publication.md` makes the App public. The fix should land
     before that step.
 - **Recommendation:** B, with the sign-in links inside the dashboard, or with

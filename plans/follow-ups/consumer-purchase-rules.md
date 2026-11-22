@@ -20,7 +20,9 @@
   - The terms accept customers in any country and keep the mandatory
     consumer protection of the law where a consumer lives.
   - The terms give consumers the 14-day withdrawal right, with the model
-    instructions and a model form.
+    instructions and a model form. They also say that the checkout asks for
+    no early-start request, so a withdrawal gets a full refund. A checkout
+    with that request needs a new terms version without that sentence.
   - A paid plan starts at once when Stripe confirms the payment.
   - ciproxy sends no email, and the repository sets no text for the Stripe
     receipt.
@@ -34,6 +36,16 @@
   - Since 19 June 2026, Article 11a of Directive 2011/83/EU needs a
     withdrawal function in the online interface for EU consumers. The
     dashboard has none.
+  - Regulation 13(1) needs the withdrawal information before the purchase.
+    Stripe Checkout and the dashboard review neither show nor link it. The
+    dashboard links the terms only on the sign-in page, which the GitHub
+    setup return skips. If that does not count, regulation 31(3) adds 12
+    months to the withdrawal period.
+  - Regulation 14(4) and (5) need words about payment on the button that
+    places a paid order. The button that charges the saved card for a paid
+    move says "Move to" and the plan name
+    (`ts/app/src/view/billing-checkout.ts`, near line 110). Without those
+    words, a consumer is not bound by that order.
 - **Impact if no action:** A consumer can withdraw late or owe nothing, and
   a regulator can act on the missing steps.
 - **Root question:** How does ciproxy meet the consumer rules for distance

@@ -49,9 +49,12 @@
 - **Wider fix:** B. It ties every change to its publication date, so it still
   holds when the sign-in paths change.
 - **Previous examples:** None found.
-- **Related:** `terms-notice-on-every-sign-in.md`: the same acceptance rule.
-  Its option C records the accepted version, which gives proof of the
-  version that binds a workspace.
+- **Related:**
+  - `terms-notice-on-every-sign-in.md`: the same acceptance rule. Its option
+    C records the accepted version, which gives proof of the version that
+    binds a workspace.
+  - `terms-acceptance-parties.md`: whose sign-in binds the customer. Its
+    option E uses option B here.
 - **Recommendation:** C. Paid workspaces, which have the most at stake, get a
   direct notice, and the price change rule already uses the same email.
 - **Action:** ask the user, because every option except A changes the

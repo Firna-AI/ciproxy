@@ -119,9 +119,12 @@ Rules for the legal pages:
 - Both texts are approved. Each change to a text is a new version, which
   needs the owner's approval. Set the effective date of its page to the
   day that the new version goes live.
-- When a text tells a person how to use a legal right, give each channel
-  or detail as a help, not as a condition. Add no condition that the law
-  does not set.
+- When a text states a legal right or tells a person how to use it, give
+  each channel or detail as a help, not as a condition. Add no condition
+  that the law does not set, such as where the person lives.
+- Take each provider role and each transfer safeguard from the current
+  data processing agreement or privacy policy of that provider. Name the
+  document, its date, and its section in a comment beside the sentence.
 - The data retention of the privacy policy shows its text first. The table
   of the decided limits and the job history of each plan come after it.
   The limits come from `src/data/legal.ts`.
