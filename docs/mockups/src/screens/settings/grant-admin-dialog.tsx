@@ -41,8 +41,10 @@ export function GrantAdminDialog({ person }: { person: Member }) {
       </p>
       <p className="small">
         An Admin also accepts new versions of the ciproxy{" "}
-        <TextLink to={paths.terms}>Terms</TextLink> for the customer that holds
-        this workspace.
+        <TextLink to={paths.terms} newTab>
+          Terms
+        </TextLink>{" "}
+        for the customer that holds this workspace.
       </p>
     </Dialog>
   );

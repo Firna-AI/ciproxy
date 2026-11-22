@@ -35,7 +35,7 @@
   - The same branch touched three docs that already passed the target:
     - `docs/protocol/billing.md`: 251 lines before the branch, 261 after.
       The branch added the business-use requirement to "Checkout".
-    - `docs/protocol/workspaces.md`: 259 lines before, 261 after. The
+    - `docs/protocol/workspaces.md`: 259 lines before, 263 after. The
       branch added a rule for linked installation entries and repointed
       links.
     - `docs/protocol/agent.md`: 268 lines before, 269 after. The branch
@@ -63,12 +63,12 @@
       near line 76 and `docs/protocol/metering.md` near line 99.
     - `workspaces.md`: move "Inactive organizations" (59 lines) into a new
       `docs/protocol/workspaces-inactive.md`. `workspaces.md` then has
-      about 205 lines. Update the links to
+      about 207 lines. Update the links to
       `workspaces.md#inactive-organizations` in
       `docs/protocol/app-removal.md` near line 67 and
       `docs/protocol/metering.md` near line 91. Update the links to
       `#inactive-organizations` inside `workspaces.md`, near lines 23, 35,
-      and 109.
+      and 111.
     - `agent.md`: move "Platforms" (30 lines) and "The virtualization
       check" (24 lines) into a new `docs/protocol/agent-platforms.md`.
       `agent.md` then has about 218 lines. Update the links to
@@ -91,7 +91,7 @@
     - Update the "Related docs" of each split doc and of its new page.
   - **B.** Move other sections, which have more inbound links: "Checkout"
     of `billing.md` (62 lines, 6 inbound links), "Add an organization" of
-    `workspaces.md` (97 lines with its subsections, 6 inbound links), and
+    `workspaces.md` (99 lines with its subsections, 6 inbound links), and
     "Drain and remove" of `agent.md` (42 lines, 12 inbound links). Effort:
     Medium.
 - **Left out:** Change nothing, because it fails the goal of the length

@@ -1,3 +1,6 @@
+import assert from "node:assert/strict";
+
+import { siteLinks } from "../src/view/page-model.ts";
 import { visible } from "./browser-fixture.ts";
 import {
   capture,
@@ -91,6 +94,17 @@ export function settingsCases(origin: string, output: string): M20Case[] {
             exact: true,
           }),
         );
+        const termsLine = within(dialog).getByText(
+          "An Admin also accepts new versions of the ciproxy Terms for the customer that holds this workspace.",
+          { exact: true },
+        );
+        await visible(termsLine);
+        const terms = termsLine.getByRole("link", {
+          name: "Terms",
+          exact: true,
+        });
+        assert.equal(await terms.getAttribute("href"), siteLinks.terms);
+        assert.equal(await terms.getAttribute("target"), "_blank");
         await capture(page, width, output, "member-admin-trust-dialog-open");
         await dialogCancel(page, title);
         await selectRole(page, "Rowan Hale", "admin");

@@ -89,8 +89,10 @@ workspace and takes one out, and when an organization is inactive.
 - ciproxy serves GitHub organizations only.
 - When a person installs the app on a personal account, ciproxy makes no
   workspace for it.
-- The page that GitHub then returns to says that ciproxy works with
-  organizations only.
+- [The terms notice](terms-acceptance.md#the-terms-notice) states the steps
+  between the return from GitHub and the sign-in that continues the setup.
+- After that sign-in, the dashboard shows a page that says that ciproxy
+  works with organizations only.
 - The page offers to install the app on an organization, and it links to
   the GitHub settings that remove the app from the personal account.
 - **Decision:** a personal account gets this page and no workspace.

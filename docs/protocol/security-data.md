@@ -56,7 +56,8 @@ sign-in, access, GitHub permissions, and keys.
 - ciproxy keeps its operational logs, also the request logs of its sites
   and its hosted service, for 30 days.
 - The database keeps its 14 most recent daily backups.
-- So a deleted record leaves the daily backups within 14 days.
+- So a deleted record leaves the daily backups when the database has taken
+  14 daily backups after the deletion. That is normally within 14 days.
 - An operator deletes each manual backup of the database within 14 days, as
   [Delete manual database backups](../../deploy/operations.md#delete-manual-database-backups)
   says.

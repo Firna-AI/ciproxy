@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { pages, workspaceHomeHref } from "../src/routing/pages.ts";
 import { storageKeys } from "../src/state/storage.ts";
+import { siteLinks } from "../src/view/page-model.ts";
 import type { Page } from "./browser-driver.ts";
 import {
   control,
@@ -36,18 +37,30 @@ async function explicitWorkspaceStays(
 
 /**
  * A sign-in link inside the dashboard opens the terms step. It shows the terms
- * notice, and its Continue with GitHub starts the GitHub sign-in.
+ * notice with its links to the Terms and the Privacy policy, and its Continue
+ * with GitHub starts the GitHub sign-in.
  */
 async function passTermsStep(page: Page, origin: string): Promise<void> {
   await page.waitForURL(origin + pages.termsStep);
   await visible(
     page.getByRole("heading", { name: "Sign in to continue", exact: true }),
   );
-  await visible(
-    page.getByText(
-      "By signing in, you agree to the ciproxy Terms and Privacy policy.",
-      { exact: true },
-    ),
+  const notice = page.getByText(
+    "By signing in, you agree to the ciproxy Terms and Privacy policy.",
+    { exact: true },
+  );
+  await visible(notice);
+  assert.equal(
+    await notice
+      .getByRole("link", { name: "Terms", exact: true })
+      .getAttribute("href"),
+    siteLinks.terms,
+  );
+  assert.equal(
+    await notice
+      .getByRole("link", { name: "Privacy policy", exact: true })
+      .getAttribute("href"),
+    siteLinks.privacy,
   );
   await page
     .getByRole("link", { name: "Continue with GitHub", exact: true })

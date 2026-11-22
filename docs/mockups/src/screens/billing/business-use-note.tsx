@@ -8,7 +8,10 @@ export function BusinessUseNote() {
   return (
     <p className="caption">
       Paid plans are for business use only, as the ciproxy{" "}
-      <TextLink to={paths.terms}>Terms</TextLink> say.
+      <TextLink to={paths.terms} newTab>
+        Terms
+      </TextLink>{" "}
+      say.
     </p>
   );
 }
