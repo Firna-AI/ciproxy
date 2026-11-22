@@ -20,9 +20,11 @@ USER = "runner"
 
 def steps(password):
     return [
-        # The tile's label is not the control. A double-click on the gear
-        # icon above it opens Options.
-        ("options", r"^Options$", [("double_click_above", r"^Options$", 70)], 300),
+        # The tile's label is not the control. A click on the gear icon above
+        # it selects the tile, and Continue appears under it.
+        ("options", r"^Options$",
+         [("double_click_above", r"^Options$", 70), ("wait", r"^Continue\.?$", 30),
+          ("click", r"^Continue\.?$")], 300),
         ("user", r"Select a user",
          [("click", rf"^{USER}$"), ("click", r"^Next$")], 900),
         ("password", r"Enter.*[Pp]assword|^Password$",
