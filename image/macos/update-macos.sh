@@ -11,6 +11,10 @@ target=${1:?Usage: update-macos.sh VERSION-BUILD USER_NAME}
 user_name=${2:?}
 target_version=${target%-*}
 target_build=${target##*-}
+# The download asks for the password too, so read it once and give it to
+# each command. The password file has no final newline.
+IFS= read -r password || true
+[[ -n $password ]] || { echo "no password on stdin" >&2; exit 1; }
 current=$(sw_vers -buildVersion)
 if [[ $current == "$target_build" ]]; then
     echo "macOS already runs $target_version ($target_build)"
@@ -26,11 +30,10 @@ if [[ -z $label ]]; then
     exit 1
 fi
 echo "Downloading $label"
-softwareupdate --download "$label"
-# The install checks the volume owner's password with this SSH session still
-# open. A detached install failed to authenticate. The restart then closes
-# the session, so the host sees SSH exit 255 and waits for the target build.
+printf '%s\n' "$password" | softwareupdate --download "$label"
+# The restart closes this SSH session, so the host sees SSH exit 255 and
+# waits for the target build.
 echo "Installing $label from $current. The guest restarts."
-softwareupdate --install "$label" --agree-to-license --restart \
+printf '%s\n' "$password" | softwareupdate --install "$label" --agree-to-license --restart \
     --user "$user_name" --stdinpass
 exit 10
