@@ -3,7 +3,8 @@
 //! The generic composition in `application.rs` builds the controller, the
 //! daemon, and the CLI actions. It gets each part that depends on the
 //! operating system from the native [`Platform`]. Linux gives the systemd,
-//! Firecracker, XFS, ext4, and nftables adapters.
+//! Firecracker, XFS, ext4, and nftables adapters. macOS gives adapters that
+//! return [`Error::PlatformUnsupported`](crate::error::Error) for now.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -23,9 +24,13 @@ use crate::workload_space::WorkloadSpace;
 
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
 
 #[cfg(target_os = "linux")]
 pub(crate) use linux::LinuxPlatform as NativePlatform;
+#[cfg(target_os = "macos")]
+pub(crate) use macos::MacPlatform as NativePlatform;
 
 /// The facts that the machine parts need after the identity loads.
 pub(crate) struct MachineInput<'a> {
