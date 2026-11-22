@@ -83,19 +83,31 @@ handle drops or when the process exits.
 
 ### User context
 
-Run VMs in a process of a normal user, not as root. The test Mac showed
-two failures as root:
+Run VMs in the login session of a normal user: a LaunchAgent in the
+`gui/<uid>` domain of a user who is logged in at the console. Workstream A
+tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
 
-- A test binary that runs with `sudo` fails at `start` with `VZErrorDomain`
-  error -9, "Unable to access security information".
-- A root helper under a launchd system job starts and runs a VM, but
-  `pause` and then `save` stop the VM with `VZErrorDomain` error 1,
-  "Internal Virtualization error".
+| Process | Start and run | Save and restore |
+| --- | --- | --- |
+| `gui/<uid>`, the user's login session | Pass | Pass |
+| LaunchDaemon with `UserName` | Pass | `save` stops the VM |
+| LaunchDaemon as root | Pass | `save` stops the VM |
+| Root under `sudo` | Fails | Not reached |
+| `user/<uid>` background domain | `launchctl bootstrap` fails | Not reached |
 
-The same calls pass in a process of a normal user. Apple documents only
-that a saved state is encrypted with a key that is tied to the host. The
-likely cause is that the framework needs the security session of a user,
-for example a keychain. This is not proven.
+- In `gui/<uid>`, the save took 3 s and wrote 1.7 GB for 8 GB of memory.
+  The state restored into an APFS clone at another path and ran 6 s later.
+  A vsock connect after the restore passed.
+- In a LaunchDaemon, also with `UserName`, `pause` and then `save` stop the
+  VM with `VZErrorDomain` error 1, "Internal Virtualization error".
+- Under `sudo`, `start` fails with `VZErrorDomain` error -9, "Unable to
+  access security information".
+- In `user/<uid>`, `launchctl bootstrap` fails with error 5, "Input/output
+  error".
+
+Apple documents only that a saved state is encrypted with a key that is
+tied to the host. The likely cause of the failures is that the framework
+needs the security session of a logged-in user. This is not proven.
 
 ### Private VNC
 
