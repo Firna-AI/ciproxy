@@ -469,9 +469,9 @@ Depends on: decisions 1, 2, and 3.
 
 Depends on: none.
 
-- [ ] Hold at most one release for each platform in `Config` and
+- [x] Hold at most one release for each platform in `Config` and
       `MachineRuntime`, and offer each machine the release of its platform.
-- [ ] Test that a Mac gets the macOS image and a Linux machine the Linux
+- [x] Test that a Mac gets the macOS image and a Linux machine the Linux
       image, and that a machine without a release of its platform gets
       nothing.
 
