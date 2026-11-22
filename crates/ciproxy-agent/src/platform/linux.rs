@@ -28,7 +28,7 @@ use crate::updates::AgentUpdates;
 use crate::vm_files::LinuxVmFiles;
 use crate::vm_root::{LinuxRootFiles, ReflinkRoot};
 use crate::vms::LinuxVms;
-use crate::vsock::LinuxGuests;
+use crate::vsock::GuestChannels;
 use crate::workload_space::WorkloadSpace;
 
 use super::{Machine, MachineInput, Platform, UninstallParts};
@@ -127,7 +127,11 @@ impl Platform for LinuxPlatform {
         let (guest_tx, guests) = mpsc::channel(256);
         let commands = &self.commands;
         let layout = &self.layout;
-        let guest_channels = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
+        let guest_channels = Arc::new(GuestChannels::new(
+            layout.clone(),
+            commands.clone(),
+            guest_tx,
+        ));
         let vms: Arc<dyn Vms> = Arc::new(LinuxVms {
             tools: prepared.services.tools,
             layout: layout.clone(),

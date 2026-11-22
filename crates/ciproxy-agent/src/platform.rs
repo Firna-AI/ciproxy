@@ -29,8 +29,21 @@ mod macos;
 
 #[cfg(target_os = "linux")]
 pub(crate) use linux::LinuxPlatform as NativePlatform;
+
+/// The platform of this machine and of its job VMs. The agent refuses a
+/// runner or an image of another platform.
+#[cfg(target_os = "linux")]
+pub(crate) const NATIVE: ciproxy_protocol::platform::Platform =
+    ciproxy_protocol::platform::Platform::LinuxX64;
+#[cfg(target_os = "macos")]
+pub(crate) const NATIVE: ciproxy_protocol::platform::Platform =
+    ciproxy_protocol::platform::Platform::MacosArm64;
 #[cfg(target_os = "macos")]
 pub(crate) use macos::MacPlatform as NativePlatform;
+#[cfg(target_os = "macos")]
+pub(crate) use macos::prepare_host;
+#[cfg(target_os = "macos")]
+pub(crate) use macos::vm_helper::run as run_vm_helper;
 
 /// The facts that the machine parts need after the identity loads.
 pub(crate) struct MachineInput<'a> {

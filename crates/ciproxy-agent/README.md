@@ -2,6 +2,8 @@
 
 The Apache-2.0 agent runs on the x64 Linux machines of a customer.
 It runs one GitHub Actions runner in each fresh Firecracker VM.
+On an Apple Silicon Mac, it runs each runner in a fresh macOS VM.
+The [macOS host guide](macos-host.md) gives the parts that differ on a Mac.
 It depends only on `ciproxy-protocol` inside this workspace.
 It contains no hosted implementation or embedded credential.
 
@@ -207,7 +209,7 @@ The default gate does not compile them because it leaves their feature off.
 Run this command after changing these files or their dependencies:
 
 - `tests/root_disk_regression.rs` uses path includes for `src/error.rs`,
-  `src/process.rs`, and `src/vm_root.rs`.
+  `src/process.rs`, `src/unit_state.rs`, and `src/vm_root.rs`.
 - `tests/storage_regression.rs` uses path includes for `src/budget_file.rs`,
   `src/error.rs`, `src/host_system.rs`, `src/image_space.rs`,
   `src/sparse_copy.rs`, and `src/storage_sizing.rs`.

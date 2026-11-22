@@ -19,6 +19,8 @@ mod cache_admin;
 mod error;
 #[path = "../src/process.rs"]
 mod process;
+#[path = "../src/unit_state.rs"]
+mod unit_state;
 
 #[tokio::test]
 async fn interrupted_cache_data_migration_reclaims_both_layouts_before_acknowledgement() {
