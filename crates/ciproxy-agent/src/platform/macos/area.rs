@@ -82,19 +82,14 @@ pub(crate) fn prepare(requested_bytes: Option<u64>) -> Result<AreaRecord> {
     )?;
     add_fstab_line(&record.volume_uuid)?;
     mount(&record)?;
+    // Spotlight does not manage a `nobrowse` volume under /private/var, so
+    // `mdutil -i off` fails there with "unknown indexing state". The marker
+    // file keeps Spotlight off the volume if it ever looks.
+    std::fs::write(Path::new(AREA).join(".metadata_never_index"), b"")
+        .context("keep Spotlight off the area volume")?;
     let real = real_area();
-    let real = real.to_string_lossy();
-    for (program, args) in [
-        ("mdutil", ["-i", "off", real.as_ref()]),
-        ("tmutil", ["addexclusion", "-v", real.as_ref()]),
-    ] {
-        if let Some(error) = run_checked(program, &args) {
-            tracing::warn!(
-                program,
-                error,
-                "the area volume keeps its default indexing or backup"
-            );
-        }
+    if let Some(error) = run_checked("tmutil", &["addexclusion", "-v", &real.to_string_lossy()]) {
+        tracing::warn!(error, "Time Machine can back up the area volume");
     }
     Ok(record)
 }

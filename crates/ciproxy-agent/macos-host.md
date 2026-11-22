@@ -163,8 +163,10 @@ named `ciproxy`, in the container of the data volume.
 - Install runs `diskutil apfs addVolume CONTAINER APFS ciproxy -quota
 BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
   line `UUID=UUID /var/db/ciproxy/area apfs rw,nobrowse`, and mounts the
-  volume there. It turns off Spotlight (`mdutil -i off`) and Time Machine
-  (`tmutil addexclusion -v`) on the volume.
+  volume there. It writes `.metadata_never_index` at the volume root,
+  because Spotlight does not manage a `nobrowse` volume and `mdutil -i off`
+  fails there. It excludes the volume from Time Machine
+  (`tmutil addexclusion -v`).
 - Daemon start mounts the recorded volume when it is not mounted. Install
   and uninstall act only on the volume with the recorded UUID and the name
   `ciproxy`.
