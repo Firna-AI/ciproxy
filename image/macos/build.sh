@@ -3,7 +3,7 @@
 # Build the macOS job image on an Apple Silicon Mac. Run from the repository
 # root: bash image/macos/build.sh WORK_DIR [PHASE...]. With no phase, every
 # phase runs in order. The README of this folder explains each phase.
-set -euo pipefail
+set -Eeuo pipefail
 
 definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repository=$(cd "$definition/../.." && pwd)
@@ -19,6 +19,8 @@ phases=("$@")
 [[ ${#phases[@]} -gt 0 ]] || phases=(fetch tools install setup recovery configure provision
     facts package)
 trap 'vm_stop' EXIT
+phase=start
+trap 'echo "build.sh: phase $phase failed at line $LINENO (exit $?)" >&2' ERR
 
 phase_fetch() {
     bash "$definition/fetch.sh" "$work_dir"
