@@ -35,6 +35,9 @@ The pure parts build on every platform:
   | `machine-identifier.bin` | `VZMacMachineIdentifier.dataRepresentation` |
   | `mac-address.txt` | The MAC address of the NAT device |
 
+- `check_files()` fails with the first missing file of a complete bundle.
+  `check_image_files()` checks only the disk, the auxiliary storage, and
+  the hardware model. A released image has only these three files.
 - `Identity` is the MAC address and the machine identifier of a VM. A saved
   state restores only into a VM with the same identity.
 - `VmSettings` gives the CPU count, the memory size, and an optional
@@ -49,8 +52,12 @@ The macOS parts build only for `target_os = "macos"`:
 - `install(bundle, image, settings, disk_bytes, progress)` creates a new
   bundle and installs macOS into it.
 - `clone_bundle(source, target, identity)` clones a bundle with
-  `clonefile(2)` and writes the given identity. Use `Identity::fresh()` for
-  a VM without a saved state.
+  `clonefile(2)` and writes the given identity. The source needs only the
+  three files of `check_image_files()`, so a released image is a valid
+  source. The clone always gets the given identity, also when the source
+  has one. Use `Identity::fresh()` for a VM without a saved state. The
+  steps before and after `clonefile` build on every platform, so their
+  tests run on Linux with a plain copy.
 - `Vm::new(bundle, settings)` makes a VM with one NAT virtio network device
   with the bundle's MAC address, one virtio block disk, entropy, a memory
   balloon, one virtio socket device, a keyboard, and a trackpad.
