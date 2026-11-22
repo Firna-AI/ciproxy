@@ -19,6 +19,7 @@ from screen_driver import Screen, run_steps
 USER = "runner"
 # OCR can read the button with a full stop.
 CONTINUE = r"^Continue\.?$"
+AGREE = r"^Agree\.?$"
 
 
 def steps(password):
@@ -46,22 +47,25 @@ def steps(password):
          [("click", r"Other Sign-In Options"), ("sleep", 1), ("press", "down"),
           ("press", "down"), ("press", "return"), ("sleep", 2), ("click", CONTINUE),
           ("wait", r"^Skip$", 60), ("click", r"^Skip$")], 300),
+        # A dialog repeats the page's buttons over the greyed page. The dialog
+        # sits above the page's bottom buttons, so its button is the topmost.
         ("terms", r"Terms and Conditions",
-         [("click", r"^Agree$"), ("sleep", 2), ("wait", r"^Agree$", 30), ("click", r"^Agree$")],
-         180),
+         [("click", AGREE), ("wait", r"I ?have read and agree", 30),
+          ("click", AGREE, False)], 180),
         ("age", r"Age Range|age range", [("click", r"^Adult"), ("click", CONTINUE)], 120),
         ("location", r"Location Services",
-         [("click", r"Enable Location Services"), ("click", CONTINUE),
-          ("wait", r"Don.t Use", 30), ("click", r"Don.t Use")], 180),
+         [("uncheck", r"Location Services on this Mac"), ("click", CONTINUE),
+          ("wait", r"Don.t Use", 30), ("click", r"Don.t Use", False)], 180),
         ("time zone", r"Time Zone", [("click", CONTINUE)], 120),
         ("analytics", r"^Analytics$",
-         [("click", r"Share Mac Analytics"), ("click", CONTINUE)], 180),
+         [("uncheck", r"Share Mac Analytics"), ("click", CONTINUE)], 180),
         ("screen time", r"^Screen Time$", [("click", r"Set Up Later")], 120),
-        ("filevault", r"FileVault", [("click", r"^Not Now$"), ("click", CONTINUE)], 180),
+        ("filevault", r"FileVault",
+         [("click", r"^Not Now$"), ("sleep", 2), ("click", CONTINUE, False)], 180),
         ("look", r"Choose Your Look", [("click", CONTINUE)], 120),
         ("updates", r"Update Mac Automatically|Software Update|Keep Your Mac Up to Date",
          [("click", r"Only Download Automatically"), ("click", CONTINUE)], 120),
-        ("welcome", r"Get Started|Welcome to Mac", [("click", r"Get Started|^Continue$")], 600),
+        ("welcome", r"Get Started|Welcome to Mac", [("click", r"Get Started|^Continue\.?$")], 600),
     ]
 
 
