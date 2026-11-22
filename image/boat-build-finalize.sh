@@ -14,7 +14,7 @@ bash "$cleanup"
 rm -rf /opt/ciproxy-build /tmp/ciproxy-image
 rm -f /tmp/ciproxy-native-build.tar.gz /tmp/ciproxy-native-refresh.tar.gz \
     /tmp/ciproxy-prepare.sh /tmp/ciproxy-refresh.sh \
-    /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-worker.dll \
-    /tmp/ciproxy-guest /tmp/ciproxy-cache-sidecar
+    /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-guest /tmp/ciproxy-cache-sidecar
+rm -rf /tmp/ciproxy-worker
 rm -f -- "$cleanup" "${BASH_SOURCE[0]}"
 printf 'Native build files removed. Runtime image and restart manifest remain.\n'
