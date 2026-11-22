@@ -14,11 +14,21 @@ ssh_options=(-i "$ssh_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/de
 make_secrets() {
     mkdir -p "$secrets"
     chmod 700 "$secrets"
-    if [[ ! -f "$secrets/password" ]]; then
-        (umask 077; LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 20 > "$secrets/password")
-        (umask 077; LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 8 > "$secrets/vnc-password")
-        ssh-keygen -q -t ed25519 -N '' -C ciproxy-image-build -f "$ssh_key"
+    if [[ -s "$secrets/password" && -s "$secrets/vnc-password" && -f "$ssh_key.pub" ]]; then
+        return 0
     fi
+    rm -f "$secrets/password" "$secrets/vnc-password" "$ssh_key" "$ssh_key.pub"
+    # VNC authentication uses at most 8 characters of a password.
+    python3 - "$secrets" <<'PY'
+import os, pathlib, secrets, string, sys
+folder = pathlib.Path(sys.argv[1])
+alphabet = string.ascii_letters + string.digits
+for name, length in (("password", 20), ("vnc-password", 8)):
+    path = folder / name
+    with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as output:
+        output.write("".join(secrets.choice(alphabet) for _ in range(length)))
+PY
+    ssh-keygen -q -t ed25519 -N '' -C ciproxy-image-build -f "$ssh_key"
 }
 
 # Start the VM in the background. With "recovery", start macOS Recovery.
