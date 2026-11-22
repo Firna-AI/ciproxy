@@ -138,6 +138,22 @@ class Screen:
                     return
         self.fail(f"{expected!r} did not appear after clicks on {pattern!r}")
 
+    def click_word(self, word, last=False):
+        """Click one word in a text item. OCR can merge words, such as the
+        menu bar's "Utilities Window", so the click goes to the word's share
+        of the item's width, by its character position."""
+        expression = re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
+        matches = [item for item in self.items if expression.search(item["text"])]
+        if not matches:
+            self.fail(f"no text holds the word {word!r}")
+        item = sorted(matches, key=lambda found: found["y"])[-1 if last else 0]
+        text = item["text"]
+        found = expression.search(text)
+        middle = (found.start() + found.end()) / 2 / len(text)
+        x = item["x"] - item["width"] / 2 + item["width"] * middle
+        self.vnc.click(x, item["y"])
+        time.sleep(1)
+
     def double_click_above(self, pattern, offset):
         """Double-click the icon above a label, such as a startup disk."""
         matches = self.find(pattern)

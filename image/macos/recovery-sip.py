@@ -59,7 +59,9 @@ def reach_recovery(screen, password, timeout=900):
 def open_terminal(screen):
     """A click on the menu item does nothing, but the keys work. Terminal is
     the third item of the Utilities menu."""
-    screen.click(r"^Utilities$", False)
+    # OCR merges the menu bar, such as "Utilities Window", so the click
+    # goes to the word. The Command key does not reach the guest over VNC.
+    screen.click_word("Utilities")
     screen.wait(r"Startup Security Utility", 30)
     for _ in range(3):
         screen.press("down")
