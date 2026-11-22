@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use tokio::time::{Instant, sleep};
+use tokio::time::{Instant, sleep, timeout};
 
 use super::vm_control::VmPhase;
 use super::vm_control_client::{ControlFailure, VmControlClient};
@@ -58,20 +58,20 @@ pub(crate) async fn wait_for_helper(
 ) -> Result<()> {
     let client = folders.client(local_id);
     let exit = folders.exit_file(local_id);
-    let deadline = Instant::now() + wait;
-    loop {
-        match client.phase().await {
-            Ok(_) => return Ok(()),
-            Err(ControlFailure::HelperGone | ControlFailure::TimedOut) if !exit.exists() => {}
-            Err(failure) => return Err(failure.into()),
+    let answered = async {
+        loop {
+            match client.phase().await {
+                Ok(_) => return Ok(()),
+                Err(ControlFailure::HelperGone | ControlFailure::TimedOut) if !exit.exists() => {}
+                Err(failure) => return Err(Error::from(failure)),
+            }
+            sleep(HELPER_POLL).await;
         }
-        if Instant::now() >= deadline {
-            return Err(Error::VmHelper {
-                reason: "the VM helper did not answer on its control socket".to_owned(),
-            });
-        }
-        sleep(HELPER_POLL).await;
-    }
+    };
+    // One deadline for the whole wait, also when a request is in flight.
+    timeout(wait, answered).await.map_err(|_| Error::VmHelper {
+        reason: "the VM helper did not answer on its control socket".to_owned(),
+    })?
 }
 
 /// The helper's `ExitTimeOut` of 30 s, then SIGKILL, and a margin.

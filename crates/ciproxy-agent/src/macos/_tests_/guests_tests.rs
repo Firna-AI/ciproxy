@@ -88,17 +88,19 @@ async fn a_new_helper_is_awaited_until_its_socket_answers() {
     helper.abort();
 }
 
-#[tokio::test]
+/// Paused time: a retry would move the clock by the poll interval, so a
+/// clock that stays still proves that the wait did not retry.
+#[tokio::test(start_paused = true)]
 async fn a_helper_that_already_ended_fails_the_wait_at_once() {
     let (_area, folders) = helper_area();
     let id = HELPER;
     std::fs::write(folders.exit_file(id), br#"{"reason":"failure"}"#).expect("exit file");
 
-    let started = Instant::now();
+    let started = tokio::time::Instant::now();
     let result = wait_for_helper(&folders, id, Duration::from_secs(10)).await;
 
     assert!(matches!(result, Err(Error::Disconnected)), "{result:?}");
-    assert!(started.elapsed() < Duration::from_secs(1));
+    assert_eq!(tokio::time::Instant::now(), started);
 }
 
 #[tokio::test]
@@ -136,4 +138,26 @@ async fn a_stop_waits_until_the_helper_no_longer_answers() {
     wait_for_helper_end(&folders, HELPER, Duration::from_secs(1))
         .await
         .expect("a refused socket: the helper ended");
+}
+
+/// A helper that accepts but never answers ends the wait at its deadline,
+/// not after the longer limit of one state request.
+#[tokio::test]
+async fn one_deadline_covers_a_request_in_flight() {
+    let (_area, folders) = helper_area();
+    let listener = bind(&folders.client(HELPER).socket).expect("bind");
+    let silent = tokio::spawn(async move {
+        let mut held = Vec::new();
+        loop {
+            let (stream, _) = listener.accept().await.expect("accept");
+            held.push(stream);
+        }
+    });
+
+    let started = Instant::now();
+    let result = wait_for_helper(&folders, HELPER, Duration::from_millis(300)).await;
+
+    assert!(matches!(result, Err(Error::VmHelper { .. })), "{result:?}");
+    assert!(started.elapsed() < Duration::from_secs(5));
+    silent.abort();
 }
