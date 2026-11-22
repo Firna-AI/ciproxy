@@ -67,7 +67,8 @@ limit in the upstream scripts. The token stays out of the image.
    keeps one copy of each archive as `xcode/<XCODE_XIP_NAME>`. When
    `inputs/xcode` has no archive, `fetch.sh` downloads that copy with the
    read-only keys of the [R2 env files](#the-r2-env-files), then checks
-   `XCODE_SHA256`. `XCODE_DIR` names a local folder with the archive instead,
+   `XCODE_SHA256`. When only some of the keys are set, it names the missing
+   ones. `XCODE_DIR` names a local folder with the archive instead,
    and it wins over the bucket. Without either, only the test image can be
    built. The archive stays out of the repository and out of the public
    image. `GUEST_DIR` names the folder that `package-guest.sh` builds: the
@@ -208,8 +209,7 @@ the first with `--if-none-match` on `aws s3api put-object`. The scripts set
 `AWS_REQUEST_CHECKSUM_CALCULATION` and `AWS_RESPONSE_CHECKSUM_VALIDATION`
 to `when_required`, as Cloudflare advises for R2 with AWS CLI 2.23.0 or
 later. `r2.sh` gives the R2 keys to each `aws` process in its own
-environment only. A temporary AWS config file for each call sets the region
-`auto` and the part size, so your AWS config and profile stay unchanged.
+environment only, and it leaves your AWS config and profile unchanged.
 
 ### The R2 env files
 
@@ -226,8 +226,9 @@ The R2 keys live only in env files on the build Mac. Each file holds
 
 Source the publish file before `publish.sh`. Source the Xcode file before
 `fetch.sh` or `build.sh`. Keep each file at mode 600 in a folder with mode
-700. Keep the files out of the repository. Never print a file, and never
-run a script that sources one with `bash -x`.
+700. Keep the files out of the repository. Never print a file, and do not
+source one in a shell with `set -x`. A `bash -x` trace of `publish.sh` or
+`fetch.sh` shows no key.
 
 ## Checks
 
@@ -236,6 +237,13 @@ preparation offline. `python3 image/macos/check-archive.py` checks the
 archive writer and checker against the agent's member list.
 `python3 image/macos/check-r2.py` runs `publish.sh` and the Xcode download
 of `fetch.sh` against a fake `aws` on `PATH`. It checks the upload order,
-the refusals, and that no key reaches the output or the `aws` arguments.
-It needs bash and `shasum`, and runs on Linux too. Lint the scripts with
-`shellcheck -x image/macos/*.sh` and `bash -n`.
+the refusals, and that no key reaches the output, a trace, or the `aws`
+arguments. It needs bash and `shasum`, and runs on Linux too. Lint the R2
+scripts from the repository root:
+
+```sh
+shellcheck image/macos/publish.sh image/macos/fetch.sh image/macos/r2.sh
+for script in publish fetch r2; do bash -n "image/macos/$script.sh"; done
+```
+
+`image/macos/.shellcheckrc` makes shellcheck follow the sourced files.

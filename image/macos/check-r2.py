@@ -6,120 +6,23 @@ A fake `aws` on PATH records each call and keeps the bucket in a folder.
 Needs bash and shasum.
 """
 
-import hashlib
+import importlib.util
 import io
 import json
-import os
 import pathlib
 import shutil
-import subprocess
-import sys
 import tarfile
-import tempfile
 import unittest
 import zipfile
 
 HERE = pathlib.Path(__file__).resolve().parent
-ACCOUNT = "785233830ca9dfa2eb7c3561dd52f675"
-KEY_ID = "fake-key-id-4f1c9a"
-SECRET = "fake-secret-7d2e6b0c"
+spec = importlib.util.spec_from_file_location("r2_fake", HERE / "r2_fake.py")
+r2_fake = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(r2_fake)
+FakeR2, sha256, KEY_ID, SECRET = r2_fake.FakeR2, r2_fake.sha256, r2_fake.KEY_ID, r2_fake.SECRET
 IMAGE_ID = "macos26-arm64-check-v1"
 PINS = dict(line.split("=", 1) for line in (HERE / "pins.env").read_text().splitlines()
             if line and not line.startswith("#"))
-
-FAKE_AWS = r'''
-import json, os, pathlib, shutil, sys
-argv = sys.argv[1:]
-if argv == ["--version"]:
-    print("aws-cli/2.31.0 Python/3.13.7 Darwin/25.0.0 source/arm64")
-    sys.exit(0)
-config = os.environ.get("AWS_CONFIG_FILE", "")
-env = {name: os.environ.get(name) for name in (
-    "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_PROFILE", "AWS_SESSION_TOKEN",
-    "AWS_REQUEST_CHECKSUM_CALCULATION", "AWS_RESPONSE_CHECKSUM_VALIDATION")}
-with open(os.environ["FAKE_AWS_LOG"], "a") as log:
-    log.write(json.dumps({"argv": argv, "env": env, "config_file": config,
-                          "config": pathlib.Path(config).read_text()}) + "\n")
-root = pathlib.Path(os.environ["FAKE_R2"])
-args = argv[4:]
-value = lambda flag: args[args.index(flag) + 1]
-def path(url):
-    return root / url.removeprefix("s3://")
-if args[:2] == ["s3api", "head-object"]:
-    target = root / value("--bucket") / value("--key")
-    if not target.exists():
-        print("An error occurred (404) when calling the HeadObject operation: Not Found",
-              file=sys.stderr)
-        sys.exit(254)
-    print(target.stat().st_size if "--query" in args else "{}")
-elif args[:2] == ["s3api", "put-object"]:
-    target = root / value("--bucket") / value("--key")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(value("--body"), target)
-elif args[:2] == ["s3", "cp"]:
-    source, destination = args[2:4]
-    source = path(source) if source.startswith("s3://") else pathlib.Path(source)
-    destination = path(destination) if destination.startswith("s3://") else pathlib.Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source, destination)
-else:
-    sys.exit(f"fake aws: unknown call {argv}")
-'''
-
-
-def sha256(data):
-    return hashlib.sha256(data).hexdigest()
-
-
-class FakeR2(unittest.TestCase):
-    def setUp(self):
-        self.root = pathlib.Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, self.root)
-        self.bucket = self.root / "r2"
-        self.log = self.root / "aws.log"
-        tools = self.root / "bin"
-        tools.mkdir()
-        (tools / "aws").write_text(f"#!{sys.executable} -I\n{FAKE_AWS}")
-        (tools / "aws").chmod(0o755)
-        (tools / "curl").write_text("#!/bin/sh\necho 'fake curl: no network' >&2\nexit 1\n")
-        (tools / "curl").chmod(0o755)
-        self.env = {"PATH": f"{tools}:{os.environ['PATH']}", "HOME": str(self.root),
-                    "TMPDIR": str(self.root), "FAKE_AWS_LOG": str(self.log),
-                    "FAKE_R2": str(self.bucket), "AWS_PROFILE": "personal",
-                    "AWS_SESSION_TOKEN": "user-session", "R2_ACCOUNT_ID": ACCOUNT}
-
-    def run_script(self, *command, keys=()):
-        env = dict(self.env)
-        for name in keys:
-            env[name] = SECRET if "SECRET" in name else KEY_ID
-        return subprocess.run(["bash", *map(str, command)], env=env, capture_output=True,
-                              text=True)
-
-    def calls(self):
-        if not self.log.exists():
-            return []
-        return [json.loads(line) for line in self.log.read_text().splitlines()]
-
-    def assert_no_key(self, result):
-        """The keys reach aws only in its environment, never the output or argv."""
-        arguments = [" ".join(call["argv"]) for call in self.calls()]
-        for text in (result.stdout, result.stderr, *arguments):
-            self.assertNotIn(SECRET, text)
-            self.assertNotIn(KEY_ID, text)
-
-    def assert_r2_call(self, call, key_id, secret):
-        self.assertEqual(call["argv"][:4], ["--endpoint-url",
-                                            f"https://{ACCOUNT}.r2.cloudflarestorage.com",
-                                            "--region", "auto"])
-        self.assertEqual(call["env"], {
-            "AWS_ACCESS_KEY_ID": key_id, "AWS_SECRET_ACCESS_KEY": secret,
-            "AWS_PROFILE": None, "AWS_SESSION_TOKEN": None,
-            "AWS_REQUEST_CHECKSUM_CALCULATION": "when_required",
-            "AWS_RESPONSE_CHECKSUM_VALIDATION": "when_required"})
-        self.assertIn("multipart_chunksize = 134217728", call["config"])
-        self.assertFalse(pathlib.Path(call["config_file"]).exists())
-
-
 PUBLISH_KEYS = ("R2_PUBLISH_ACCESS_KEY_ID", "R2_PUBLISH_SECRET_ACCESS_KEY")
 SMALL_FILES = ["downloads.json", "SHA256SUMS", "measurement.json", "software-report.json",
                "upstream-software.json", "size-report.txt"]
@@ -143,15 +46,17 @@ class Publish(FakeR2):
             "".join(f"{sha256(data)}  {name}\n" for name, data in files.items()))
         return folder
 
-    def publish(self, *arguments):
-        return self.run_script(HERE / "publish.sh", *arguments, keys=PUBLISH_KEYS)
+    def publish(self, *arguments, env=None, trace=False):
+        return self.run_script(HERE / "publish.sh", *arguments, keys=PUBLISH_KEYS, env=env,
+                               trace=trace)
 
     def writes(self):
         return [call["argv"][4:] for call in self.calls()
                 if call["argv"][4:6] in (["s3", "cp"], ["s3api", "put-object"])]
 
     def test_uploads_the_archive_then_small_files_then_the_manifest(self):
-        result = self.publish(self.artifacts())
+        # A bash -x trace shows no key either.
+        result = self.publish(self.artifacts(), trace=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.splitlines()[-1],
                          f"MACOS_IMAGE_MANIFEST_PATH=releases/{IMAGE_ID}/manifest.json")
@@ -182,6 +87,34 @@ class Publish(FakeR2):
         self.assertIn("manifest.json exists", result.stderr)
         self.assertEqual(self.writes(), [])
         self.assert_no_key(result)
+
+    def test_stops_when_the_release_check_fails_with_another_error(self):
+        forbidden = "An error occurred (403) when calling the HeadObject operation: Forbidden"
+        result = self.publish(self.artifacts(), env={"FAKE_AWS_HEAD_ERROR": forbidden})
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(f"Could not check s3://ciproxy-macos-images/releases/{IMAGE_ID}/manifest.json",
+                      result.stderr)
+        self.assertEqual(self.writes(), [])
+
+    def test_keeps_the_manifest_of_a_publish_that_wrote_it_first(self):
+        key = f"releases/{IMAGE_ID}/manifest.json"
+        result = self.publish(self.artifacts(),
+                              env={"FAKE_AWS_OTHER_MANIFEST": f"ciproxy-macos-images/{key}"})
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("When another publish wrote it first, the release exists.", result.stderr)
+        self.assertEqual((self.bucket / "ciproxy-macos-images" / key).read_text(),
+                         "other publisher")
+
+    def test_refuses_an_aws_cli_older_than_the_conditional_write_release(self):
+        empty = self.root / "empty"
+        empty.mkdir()
+        for version, refused in [("1.33.0", True), ("2.17.33", True), ("2.17.34", False),
+                                 ("2.100.0", False)]:
+            with self.subTest(version=version):
+                result = self.publish(empty, env={"FAKE_AWS_VERSION": version})
+                self.assertEqual("Install version 2.17.34 or later" in result.stderr, refused,
+                                 result.stderr)
+                self.assertEqual("has no macos.tar" in result.stderr, not refused, result.stderr)
 
     def test_refuses_a_test_image_without_the_flag(self):
         result = self.publish(self.artifacts(test_image=True))
@@ -249,14 +182,17 @@ class FetchXcode(FakeR2):
         self.object = self.bucket / "ciproxy-xcode" / "xcode" / PINS["XCODE_XIP_NAME"]
         self.object.parent.mkdir(parents=True)
         self.object.write_bytes(self.xcode)
+        self.archive = self.work / "inputs" / "xcode" / PINS["XCODE_XIP_NAME"]
 
-    def fetch(self, keys):
-        return self.run_script(self.definition / "fetch.sh", self.work, keys=keys)
+    def fetch(self, keys, env=None, trace=False):
+        return self.run_script(self.definition / "fetch.sh", self.work, keys=keys, env=env,
+                               trace=trace)
 
     def test_downloads_the_private_xcode_copy_with_the_read_keys(self):
-        result = self.fetch(XCODE_KEYS)
+        # A bash -x trace shows no key either.
+        result = self.fetch(XCODE_KEYS, trace=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        archive = self.work / "inputs" / "xcode" / PINS["XCODE_XIP_NAME"]
+        archive = self.archive
         self.assertEqual([call["argv"][4:] for call in self.calls()], [[
             "s3", "cp", f"s3://ciproxy-xcode/xcode/{PINS['XCODE_XIP_NAME']}", f"{archive}.part"]])
         self.assert_r2_call(self.calls()[0], KEY_ID, SECRET)
@@ -269,6 +205,34 @@ class FetchXcode(FakeR2):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.calls(), [])
         self.assertIn("No Xcode archive: only the test image can be built.", result.stdout)
+        self.assertIn("Or source the R2 Xcode env file", result.stdout)
+
+    def test_names_the_missing_key_when_only_some_are_set(self):
+        result = self.fetch(("R2_XCODE_ACCESS_KEY_ID",))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls(), [])
+        self.assertIn("The R2 Xcode download also needs R2_XCODE_SECRET_ACCESS_KEY.", result.stderr)
+        self.assert_no_key(result)
+
+    def test_prefers_the_local_xcode_folder_over_the_bucket(self):
+        folder = self.root / "xcode"
+        folder.mkdir()
+        (folder / PINS["XCODE_XIP_NAME"]).write_bytes(self.xcode)
+        result = self.fetch(XCODE_KEYS, env={"XCODE_DIR": str(folder)})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls(), [])
+        self.assertEqual(self.archive.read_bytes(), self.xcode)
+
+    def test_downloads_again_after_a_bad_download(self):
+        self.object.write_bytes(b"broken download")
+        result = self.fetch(XCODE_KEYS)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.archive.exists(), False)
+        self.object.write_bytes(self.xcode)
+        result = self.fetch(XCODE_KEYS)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.calls()), 2)
+        self.assertEqual(self.archive.read_bytes(), self.xcode)
 
 
 if __name__ == "__main__":

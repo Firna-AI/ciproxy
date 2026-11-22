@@ -6,7 +6,6 @@
 # A release folder is immutable, and manifest.json goes up last, so a folder
 # with a manifest is complete.
 set -euo pipefail
-set +x
 
 definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$definition/r2.sh"

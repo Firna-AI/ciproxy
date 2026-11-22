@@ -121,7 +121,8 @@ phase_provision() {
 phase_provision_check() {
     [[ -f "$work_dir/inputs/xcode/$XCODE_XIP_NAME" ]] || {
         echo "No Xcode archive in $work_dir/inputs/xcode. The guest stays as it is." >&2
-        echo "Set XCODE_DIR or the R2 Xcode keys and run the fetch phase, or build the test image." >&2
+        echo "Set XCODE_DIR or source the R2 Xcode env file, as image/macos/README.md says." >&2
+        echo "Then run the fetch phase, or build the test image." >&2
         return 1
     }
 }

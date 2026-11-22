@@ -13,7 +13,8 @@
   `image/check-boat-run.py`, `image/check-docker-attach.py`,
   `image/check-export.py`, `image/check-kernel-metadata.py`,
   `image/check-network-probe.py`, `image/check-runner-environment.py`,
-  `image/check-template.py`, and `image/macos/check-r2.py`.
+  `image/check-template.py`, `image/macos/check-template.py`,
+  `image/macos/check-archive.py`, and `image/macos/check-r2.py`.
 - **Reason:** A new gate phase is a new gate, and the always-on rules
   reserve that choice for the user.
 

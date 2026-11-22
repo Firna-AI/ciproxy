@@ -3,22 +3,31 @@
 # Shell helpers that run the AWS CLI v2 against Cloudflare R2. Source this file.
 # The R2 keys reach only the environment of each aws process. A temporary AWS
 # config file for each call sets the part size, so the user's AWS config stays
-# unchanged. Do not trace a script that sources this file: a trace prints keys.
+# unchanged. No line here expands a key under a trace: the presence tests use
+# ${name:+set}, and r2_aws turns the trace off in its own subshell.
 
 R2_PART_BYTES=$((128 * 1024 * 1024))
 # The first AWS CLI v2 release with --if-none-match on s3api put-object.
 R2_AWS_MIN_VERSION=2.17.34
 
+# r2_missing VARIABLE...: print the names of the variables that are empty.
+r2_missing() {
+    local name missing=()
+    for name in "$@"; do
+        [[ -n ${!name:+set} ]] || missing+=("$name")
+    done
+    echo "${missing[*]:-}"
+}
+
 # r2_require VARIABLE...: stop unless R2_ACCOUNT_ID, each named variable, and
 # a new enough AWS CLI v2 are present.
 r2_require() {
-    local name
-    for name in R2_ACCOUNT_ID "$@"; do
-        if [[ -z ${!name:-} ]]; then
-            echo "Set $name. Source the R2 env file of the build Mac first." >&2
-            return 1
-        fi
-    done
+    local missing
+    missing=$(r2_missing R2_ACCOUNT_ID "$@")
+    if [[ -n $missing ]]; then
+        echo "Set $missing. Source the R2 env file of the build Mac first." >&2
+        return 1
+    fi
     r2_require_aws
 }
 
@@ -58,6 +67,7 @@ r2_aws() {
     local key_id_variable=$1 secret_variable=$2
     shift 2
     (
+        set +x
         config=$(mktemp "${TMPDIR:-/tmp}/ciproxy-r2-aws.XXXXXX")
         trap 'rm -f "$config"' EXIT
         printf '[default]\ns3 =\n    preferred_transfer_client = classic\n    multipart_threshold = %s\n    multipart_chunksize = %s\n' \
