@@ -29,13 +29,13 @@ SMALL_FILES = ["downloads.json", "SHA256SUMS", "measurement.json", "software-rep
 
 
 class Publish(FakeR2):
-    def artifacts(self, test_image=False, size_delta=0):
+    def artifacts(self, test_image=False, size_delta=0, image_id=IMAGE_ID):
         folder = self.root / "artifacts"
         folder.mkdir()
         tar = b"macos archive" * 1000
         files = {"macos.tar": tar, "measurement.json": b"{}", "software-report.json": b"{}",
                  "upstream-software.json": b"{}", "size-report.txt": b"macos.tar: 13000\n",
-                 "manifest.json": json.dumps({"image_id": IMAGE_ID,
+                 "manifest.json": json.dumps({"image_id": image_id,
                                               "test_image": test_image}).encode(),
                  "downloads.json": json.dumps({"macos": {
                      "file": "macos.tar", "sha256": sha256(tar),
@@ -115,6 +115,24 @@ class Publish(FakeR2):
                 self.assertEqual("Install version 2.17.34 or later" in result.stderr, refused,
                                  result.stderr)
                 self.assertEqual("has no macos.tar" in result.stderr, not refused, result.stderr)
+
+    def test_refuses_an_image_id_that_cannot_name_a_folder(self):
+        for image_id in ["", "../x"]:
+            with self.subTest(image_id=image_id):
+                folder = self.artifacts(image_id=image_id)
+                result = self.publish(folder)
+                shutil.rmtree(folder)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("manifest.json has no valid image_id", result.stderr)
+                self.assertEqual(self.calls(), [])
+
+    def test_names_a_missing_publish_key(self):
+        result = self.run_script(HERE / "publish.sh", self.artifacts(),
+                                 keys=("R2_PUBLISH_ACCESS_KEY_ID",))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Set R2_PUBLISH_SECRET_ACCESS_KEY.", result.stderr)
+        self.assertEqual(self.calls(), [])
+        self.assert_no_key(result)
 
     def test_refuses_a_test_image_without_the_flag(self):
         result = self.publish(self.artifacts(test_image=True))
@@ -199,6 +217,18 @@ class FetchXcode(FakeR2):
         self.assertEqual(archive.read_bytes(), self.xcode)
         self.assertIn(f"{archive}: OK", result.stdout)
         self.assert_no_key(result)
+        result = self.fetch(XCODE_KEYS)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_downloads_with_any_aws_cli_and_warns_on_one_that_is_not_v2(self):
+        for version, warns in [("2.15.0", False), ("1.33.0", True)]:
+            with self.subTest(version=version):
+                self.archive.unlink(missing_ok=True)
+                result = self.fetch(XCODE_KEYS, env={"FAKE_AWS_VERSION": version})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(self.archive.read_bytes(), self.xcode)
+                self.assertEqual(f"Warning: the AWS CLI is {version}." in result.stderr, warns)
 
     def test_keeps_the_message_without_keys_or_folder(self):
         result = self.fetch(())

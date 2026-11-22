@@ -28,7 +28,9 @@ if argv == ["--version"]:
 config = os.environ.get("AWS_CONFIG_FILE", "")
 env = {name: os.environ.get(name) for name in (
     "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_PROFILE", "AWS_SESSION_TOKEN",
-    "AWS_REQUEST_CHECKSUM_CALCULATION", "AWS_RESPONSE_CHECKSUM_VALIDATION")}
+    "AWS_REQUEST_CHECKSUM_CALCULATION", "AWS_RESPONSE_CHECKSUM_VALIDATION",
+    "R2_PUBLISH_ACCESS_KEY_ID", "R2_PUBLISH_SECRET_ACCESS_KEY", "R2_XCODE_ACCESS_KEY_ID",
+    "R2_XCODE_SECRET_ACCESS_KEY")}
 with open(os.environ["FAKE_AWS_LOG"], "a") as log:
     log.write(json.dumps({"argv": argv, "env": env, "config_file": config,
                           "config": pathlib.Path(config).read_text()}) + "\n")
@@ -129,6 +131,9 @@ class FakeR2(unittest.TestCase):
             "AWS_ACCESS_KEY_ID": key_id, "AWS_SECRET_ACCESS_KEY": secret,
             "AWS_PROFILE": None, "AWS_SESSION_TOKEN": None,
             "AWS_REQUEST_CHECKSUM_CALCULATION": "when_required",
-            "AWS_RESPONSE_CHECKSUM_VALIDATION": "when_required"})
+            "AWS_RESPONSE_CHECKSUM_VALIDATION": "when_required",
+            # Only r2_aws hands the keys on, under the AWS names.
+            "R2_PUBLISH_ACCESS_KEY_ID": None, "R2_PUBLISH_SECRET_ACCESS_KEY": None,
+            "R2_XCODE_ACCESS_KEY_ID": None, "R2_XCODE_SECRET_ACCESS_KEY": None})
         self.assertIn("multipart_chunksize = 134217728", call["config"])
         self.assertFalse(pathlib.Path(call["config_file"]).exists())

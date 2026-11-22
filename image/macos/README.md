@@ -51,9 +51,11 @@ Packer when the host has less than `MIN_FREE_GB` free, 15 GB by default.
 Run from the repository root:
 
 ```sh
-source ~/ws-i/secrets/r2-xcode-read.env
-GUEST_DIR=/path/to/guest \
-  bash image/macos/build.sh "$PWD/.context/macos-image-build"
+(
+  source ~/ws-i/secrets/r2-xcode-read.env
+  GUEST_DIR=/path/to/guest \
+    bash image/macos/build.sh "$PWD/.context/macos-image-build"
+)
 ```
 
 Each step below is a phase of `build.sh`: `fetch`, `tools`, `install`,
@@ -177,16 +179,19 @@ private R2 bucket `ciproxy-macos-images`, under `releases/<image_id>/`.
 Run it from the repository root after the `package` phase:
 
 ```sh
-source ~/ws-i/secrets/r2-publish.env
-bash image/macos/publish.sh "$PWD/.context/macos-image-build/artifacts"
+(
+  source ~/ws-i/secrets/r2-publish.env
+  bash image/macos/publish.sh "$PWD/.context/macos-image-build/artifacts"
+)
 ```
 
 The script reads `R2_ACCOUNT_ID`, `R2_PUBLISH_ACCESS_KEY_ID`, and
 `R2_PUBLISH_SECRET_ACCESS_KEY`. It does these steps in order:
 
-1. It reads `image_id` from `manifest.json`. It refuses a manifest with
-   `"test_image": true`. Give `--test-image` before the folder to publish a
-   test image.
+1. It reads `image_id` from `manifest.json`. It refuses an `image_id` that
+   is empty or that holds a character other than a letter, a digit, `.`,
+   `_`, `+`, or `-`. It refuses a manifest with `"test_image": true`. Give
+   `--test-image` before the folder to publish a test image.
 2. It checks `SHA256SUMS` in the artifact folder.
 3. It stops when `releases/<image_id>/manifest.json` exists. A release
    folder is immutable, so a new build needs a new image ID.
@@ -202,10 +207,13 @@ The script reads `R2_ACCOUNT_ID`, `R2_PUBLISH_ACCESS_KEY_ID`, and
 
 To ship the release, set `MACOS_IMAGE_MANIFEST_PATH` to that value in the
 GitHub environment, first `main-preview`, then `production`. Then deploy
-that environment.
+that environment. The control plane offers the release only when that
+environment also has `MACOS_IMAGE_URL_PREFIX` and the R2 read key
+`R2_IMAGES_KEY`.
 
-The scripts need the AWS CLI v2, version 2.17.34 or later. That release is
-the first with `--if-none-match` on `aws s3api put-object`. The scripts set
+The scripts use the AWS CLI v2. `publish.sh` needs version 2.17.34 or
+later, the first release with `--if-none-match` on `aws s3api put-object`.
+`fetch.sh` warns on a CLI that is not v2 and continues. The scripts set
 `AWS_REQUEST_CHECKSUM_CALCULATION` and `AWS_RESPONSE_CHECKSUM_VALIDATION`
 to `when_required`, as Cloudflare advises for R2 with AWS CLI 2.23.0 or
 later. `r2.sh` gives the R2 keys to each `aws` process in its own
@@ -225,10 +233,13 @@ The R2 keys live only in env files on the build Mac. Each file holds
   `ciproxy-xcode` only.
 
 Source the publish file before `publish.sh`. Source the Xcode file before
-`fetch.sh` or `build.sh`. Keep each file at mode 600 in a folder with mode
-700. Keep the files out of the repository. Never print a file, and do not
-source one in a shell with `set -x`. A `bash -x` trace of `publish.sh` or
-`fetch.sh` shows no key.
+`fetch.sh` or `build.sh`. Source each file in a subshell, as the commands
+above do, so that the later commands of your shell do not get the keys.
+The scripts remove the export flag of the keys, so that only `aws` gets
+them. Of the phases of `build.sh`, only `fetch` gets the Xcode keys. Keep
+each file at mode 600 in a folder with mode 700. Keep the files out of the
+repository. Never print a file, and do not source one in a shell with
+`set -x`. A `bash -x` trace of `publish.sh` or `fetch.sh` shows no key.
 
 ## Checks
 

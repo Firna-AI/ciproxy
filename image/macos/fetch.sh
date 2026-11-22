@@ -63,7 +63,8 @@ if [[ ! -f "$xcode_xip" && -n "${XCODE_DIR:-}" ]]; then
     [[ -f "$source_xip" ]] || source_xip="$XCODE_DIR/Xcode_${XCODE_VERSION}_Universal.xip"
     cp -c "$source_xip" "$xcode_xip"
 elif [[ ! -f "$xcode_xip" && -z $missing_keys ]]; then
-    r2_require_aws
+    # No minimum version: aws s3 cp works on any AWS CLI v2.
+    r2_require_aws ""
     r2_aws R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY s3 cp \
         "s3://ciproxy-xcode/xcode/$XCODE_XIP_NAME" "$xcode_xip.part"
     # A bad download keeps the .part name, so the next run downloads again.

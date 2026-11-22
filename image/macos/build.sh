@@ -15,6 +15,9 @@ work_dir=$(mkdir -p "${1:?Usage: image/macos/build.sh WORK_DIR [PHASE...]}" && c
 shift
 vm_tool="$work_dir/tools/ciproxy-image-vm"
 source "$definition/build-lib.sh"
+# The R2 keys of a sourced env file reach no phase but fetch.
+export -n R2_PUBLISH_ACCESS_KEY_ID R2_PUBLISH_SECRET_ACCESS_KEY \
+    R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
 phases=("$@")
 [[ ${#phases[@]} -gt 0 ]] || phases=(fetch tools install setup recovery configure provision
     facts package)
@@ -23,7 +26,11 @@ phase=start
 trap 'echo "build.sh: phase $phase failed at line $LINENO (exit $?)" >&2' ERR
 
 phase_fetch() {
-    bash "$definition/fetch.sh" "$work_dir"
+    # Only fetch.sh gets the R2 Xcode keys.
+    (
+        export R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
+        bash "$definition/fetch.sh" "$work_dir"
+    )
 }
 
 phase_tools() {

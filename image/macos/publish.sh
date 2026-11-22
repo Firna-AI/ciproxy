@@ -11,6 +11,8 @@ definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$definition/r2.sh"
 usage="Usage: image/macos/publish.sh [--test-image] ARTIFACT_DIR"
 bucket=ciproxy-macos-images
+# The first AWS CLI v2 release with --if-none-match on s3api put-object.
+aws_min_version=2.17.34
 small_files=(downloads.json SHA256SUMS measurement.json software-report.json
     upstream-software.json size-report.txt)
 
@@ -33,6 +35,7 @@ publish_aws() {
 }
 
 r2_require R2_PUBLISH_ACCESS_KEY_ID R2_PUBLISH_SECRET_ACCESS_KEY
+r2_require_aws "$aws_min_version"
 for file in macos.tar "${small_files[@]}" manifest.json; do
     [[ -f $file ]] || fail "$artifacts has no $file. Run package.sh first."
 done

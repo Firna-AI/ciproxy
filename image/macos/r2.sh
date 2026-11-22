@@ -1,14 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # shellcheck shell=bash
 # Shell helpers that run the AWS CLI v2 against Cloudflare R2. Source this file.
-# The R2 keys reach only the environment of each aws process. A temporary AWS
+# Sourcing it removes the export flag of the R2 key variables, so the keys reach
+# only the environment of each aws process. A temporary AWS
 # config file for each call sets the part size, so the user's AWS config stays
 # unchanged. No line here expands a key under a trace: the presence tests use
 # ${name:+set}, and r2_aws turns the trace off in its own subshell.
 
+export -n R2_PUBLISH_ACCESS_KEY_ID R2_PUBLISH_SECRET_ACCESS_KEY \
+    R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
+
 R2_PART_BYTES=$((128 * 1024 * 1024))
-# The first AWS CLI v2 release with --if-none-match on s3api put-object.
-R2_AWS_MIN_VERSION=2.17.34
 
 # r2_missing VARIABLE...: print the names of the variables that are empty.
 r2_missing() {
@@ -19,8 +21,8 @@ r2_missing() {
     echo "${missing[*]:-}"
 }
 
-# r2_require VARIABLE...: stop unless R2_ACCOUNT_ID, each named variable, and
-# a new enough AWS CLI v2 are present.
+# r2_require VARIABLE...: stop unless R2_ACCOUNT_ID and each named variable
+# are set.
 r2_require() {
     local missing
     missing=$(r2_missing R2_ACCOUNT_ID "$@")
@@ -28,20 +30,25 @@ r2_require() {
         echo "Set $missing. Source the R2 env file of the build Mac first." >&2
         return 1
     fi
-    r2_require_aws
 }
 
+# r2_require_aws [MINIMUM]: stop unless aws runs. With MINIMUM, also stop
+# unless it is AWS CLI v2 at MINIMUM or later. Without it, warn on a CLI that
+# is not v2 and continue.
 r2_require_aws() {
-    local version
+    local minimum=${1:-} version
     if ! version=$(aws --version 2>&1); then
-        echo "Install the AWS CLI v2, version $R2_AWS_MIN_VERSION or later." >&2
+        echo "Install the AWS CLI v2${minimum:+, version $minimum or later}." >&2
         return 1
     fi
     version=${version#aws-cli/}
     version=${version%% *}
-    if ! r2_version_at_least "$version" "$R2_AWS_MIN_VERSION"; then
-        echo "The AWS CLI is $version. Install version $R2_AWS_MIN_VERSION or later of v2." >&2
+    if [[ -n $minimum ]] && ! r2_version_at_least "$version" "$minimum"; then
+        echo "The AWS CLI is $version. Install version $minimum or later of v2." >&2
         return 1
+    fi
+    if [[ -z $minimum && $version != 2.* ]]; then
+        echo "Warning: the AWS CLI is $version. The R2 scripts expect the AWS CLI v2." >&2
     fi
 }
 
