@@ -60,6 +60,15 @@ its own VM helper, as each Linux VM runs in its own systemd unit.
   the label and its slots reserve.
 - The VM helper listens on `area/vms/LOCAL_ID/control.sock`. The socket has
   mode `0600`, and its folder has mode `0700`, both owned by root.
+- `launchctl bootstrap` returns before the helper binds this socket. So a
+  start waits up to 60 s until the helper answers on it, and only then
+  attaches the guest bridge. The bridge reads a missing socket with no
+  `exit.json` as a VM that is gone. A helper that already wrote
+  `exit.json` fails the start at once.
+- `launchctl bootout` can return before the helper process ends. So a stop
+  waits up to 40 s until the helper no longer answers on its socket, and
+  only then frees the seat. A new VM on that seat has the same MAC address
+  and machine identifier, so it must not start while the old VM runs.
 - When the VM stops, the VM helper writes `exit.json` with a rename, then
   exits. SIGTERM makes the VM helper stop the VM at once, as a
   `systemctl stop` of a Firecracker unit does.

@@ -45,7 +45,15 @@ pub(crate) async fn run(local_id: &str) -> Result<()> {
     let settings = spec.settings();
     let listener = bind(&folders.client(local_id).socket).context("bind the control socket")?;
     let mut terminate = signal(SignalKind::terminate()).context("watch SIGTERM")?;
-    let vm = Arc::new(start(&spec, &settings, &folder).await?);
+    let vm = match start(&spec, &settings, &folder).await {
+        Ok(vm) => Arc::new(vm),
+        Err(error) => {
+            // The agent's start wait reads `exit.json`, so it fails at once.
+            write_exit(&folder, StopReason::Failure)?;
+            let _ = std::fs::remove_file(folders.client(local_id).socket);
+            return Err(error);
+        }
+    };
     let control = Arc::new(HelperVm {
         vm: vm.clone(),
         folder: folder.clone(),
