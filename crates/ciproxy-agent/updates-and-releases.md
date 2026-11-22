@@ -30,6 +30,47 @@ request write access. Its tags must trigger the archive workflow.
 The release server needs access to the private release assets.
 It uses binary `ciproxy-agent` and tag prefix `ciproxy-agent-v`.
 
+## When a shared library moves
+
+The agent uses three shared libraries from other `futex-ai` repositories:
+`cli-updater`, `cli-release-interface`, and `internal-error`. The root
+`Cargo.toml` pins each of them to a Git commit in `[workspace.dependencies]`.
+A shared library moves when its pin changes to another commit.
+
+Release-plz does not see such a move. The move changes no file of the
+agent, the cache sidecar, or the protocol crate, and the libraries keep
+their version across commits. A version increase alone does not release
+either:
+
+- `release-plz.toml` sets `release_always = false`. So release-plz creates
+  no tag and no release for a merge that does not come from a
+  `release-plz-` branch.
+- It also sets `changelog_update = false`. So release-plz opens no version
+  pull request for a version change alone.
+- Until the tag of the new version exists, release-plz opens no version
+  pull request for later changes either.
+
+So raise the agent version by hand when a shared library moves, and release
+that version by hand:
+
+1. In the pull request that moves the pin, raise `version` under
+   `[workspace.package]` in the root `Cargo.toml`.
+2. In the same pull request, update `Cargo.lock` and
+   `ts/api/generated/openapi.json` to the new version.
+   `cargo build --workspace` updates the lock file, and
+   `npm --prefix ts run api:generate` updates the OpenAPI file.
+3. After the pull request merges, push the tag `ciproxy-agent-vVERSION` on
+   its merge commit on `main`. The push of that commit to `main` ran the
+   gate job of the release workflow. The tag push starts only the package
+   jobs. The package jobs fail when the tag does not match the agent
+   version.
+4. Create a draft GitHub release for that tag before the package jobs end.
+   The `publish` job then uploads the archives to that release and
+   publishes it.
+
+[Release channels](../../deploy/release-server.md#release-channels) says
+which environment serves a pre-release.
+
 ## Release targets
 
 Each release has these archives, in the form of

@@ -55,4 +55,7 @@
   records the same class for the site calculation tests.
 - **Recommendation:** A, with B for the checks that need root.
 - **Action:** ask the user, because a new gate phase or CI job is a new
-  gate.
+  gate. No gate check comes now, because a new gate needs the user's
+  explicit approval. The orchestrator agent of
+  `conductor/ciproxy-boat-start-ready-deadline` made this call on 22
+  November 2026, under the user's delegation of that day.
