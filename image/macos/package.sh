@@ -7,6 +7,8 @@
 # sparse bundle/disk.img and write each zero block as a hole.
 set -euo pipefail
 
+definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
 artifacts=$(cd "${1:?Usage: image/macos/package.sh ARTIFACT_DIR}" && pwd)
 cd "$artifacts"
 command -v zstd >/dev/null || { echo "zstd is missing. Install it, for example with Homebrew." >&2; exit 1; }
@@ -16,7 +18,9 @@ zstd -T0 -10 --force --quiet bundle/disk.img -o bundle/disk.img.zst
 zstd -T0 --test --quiet bundle/disk.img.zst
 shasum -a 256 bundle/disk.img bundle/disk.img.zst "${vm_files[@]}" "${reports[@]}" \
     > macos-content.sha256
-tar -cf macos.tar bundle/disk.img.zst "${vm_files[@]}" "${reports[@]}" macos-content.sha256
+# The agent accepts only plain regular members. bsdtar writes sparse members
+# and extended attributes, so a script writes and checks the archive.
+python3 "$definition/macos_archive.py" pack macos.tar --folder .
 python3 - <<'PY'
 import hashlib, json, pathlib
 path = pathlib.Path("macos.tar")

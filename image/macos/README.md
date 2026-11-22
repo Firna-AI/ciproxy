@@ -134,6 +134,14 @@ writes `macos.tar`, which is not compressed as a whole, with these members:
 - `macos-content.sha256`, with the SHA-256 of the extracted `disk.img`, of
   `disk.img.zst`, and of each other member.
 
+`macos_archive.py` writes `macos.tar` with plain regular members, owner 0,
+in PAX format. macOS `tar` writes sparse files, such as `aux.img`, as GNU
+sparse members, which the agent refuses. The script then reads the raw
+headers. It fails on a member that is not a regular file, on PAX keys other
+than `size`, `path`, and `mtime`, and on a path outside `MEMBERS` in
+`crates/ciproxy-agent/src/macos/image_bundle.rs`. It reads that list from
+the agent's source, so the two sides cannot drift.
+
 `downloads.json` gives the SHA-256 and byte size of `macos.tar`, and
 `SHA256SUMS` covers every artifact. To install, check the size and SHA-256
 of `macos.tar`, and extract it. Decompress `bundle/disk.img.zst` to a sparse
@@ -146,4 +154,5 @@ version. Refuse an older host.
 ## Checks
 
 `python3 image/macos/check-template.py` checks the template and toolset
-preparation offline.
+preparation offline. `python3 image/macos/check-archive.py` checks the
+archive writer and checker against the agent's member list.
