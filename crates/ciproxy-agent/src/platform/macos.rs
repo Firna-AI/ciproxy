@@ -22,6 +22,7 @@ use super::{Machine, MachineInput, Platform, UninstallParts};
 
 mod area;
 mod cache;
+mod guard;
 mod host;
 mod images;
 mod isolation;
@@ -126,6 +127,7 @@ impl Platform for MacPlatform {
             events,
         ));
         let launchd: Arc<dyn Launchd> = Arc::new(Launchctl);
+        let (guard_launchd, guard_folders) = (launchd.clone(), folders.clone());
         let vms: Arc<dyn Vms> = Arc::new(MacVms {
             seats: Arc::new(SeatStates::new(folders.clone(), launchd.clone())),
             folders,
@@ -141,7 +143,10 @@ impl Platform for MacPlatform {
             cache: Arc::new(NoMachineCache),
             vms,
             guests,
-            tasks: Box::new(stay_awake()),
+            tasks: Box::new((
+                stay_awake(),
+                guard::spawn(self.isolation.clone(), guard_launchd, guard_folders),
+            )),
         })
     }
 

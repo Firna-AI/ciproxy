@@ -51,7 +51,7 @@ impl Preparation for MacPreparation {
         for folder in ["images", "vms", "seats"] {
             private_directory(&Path::new(AREA).join(folder))?;
         }
-        self.isolation.ensure().await.map_err(|error| {
+        self.isolation.ensure().await.map(drop).map_err(|error| {
             stage_error(
                 error,
                 "pf rules",

@@ -90,3 +90,12 @@ fn loaded_rules_match_only_the_snapshot_after_the_load() {
     ));
     assert!(!same_rules("", ""));
 }
+
+#[test]
+fn only_guests_inside_the_ruled_subnet_pass_the_check() {
+    let network = network();
+    assert!(network.contains(Ipv4Addr::new(192, 168, 64, 2)));
+    assert!(network.contains(Ipv4Addr::new(192, 168, 64, 254)));
+    assert!(!network.contains(Ipv4Addr::new(192, 168, 65, 2)));
+    assert!(!network.contains(Ipv4Addr::new(10, 0, 0, 2)));
+}

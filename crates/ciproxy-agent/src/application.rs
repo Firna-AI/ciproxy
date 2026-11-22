@@ -37,15 +37,30 @@ use crate::workload_space::{MachineWorkloadSpace, WorkloadSpace};
 pub(crate) async fn main() -> Result<()> {
     let cli = Cli::parse();
     let directives = std::env::var("RUST_LOG").unwrap_or_default();
-    subscriber(BoxMakeWriter::new(std::io::stderr), &directives)
+    let action = cli.action();
+    subscriber(log_writer(&action), &directives)
         .try_init()
         .context("initialize safe JSON logging")?;
-    let action = cli.action();
     #[cfg(target_os = "macos")]
     if let Action::VmRun { local_id } = &action {
         return crate::platform::run_vm_helper(local_id).await;
     }
     execute(NativePlatform::new(), action).await
+}
+
+/// On a Mac, the launchd jobs write the log file themselves, so the log
+/// follows a rotation. Interactive commands and Linux use standard error.
+fn log_writer(action: &Action) -> BoxMakeWriter {
+    #[cfg(target_os = "macos")]
+    if matches!(action, Action::Run | Action::VmRun { .. })
+        && let Ok(log) = crate::macos::log_file::ReopeningLog::open(std::path::Path::new(
+            crate::macos::paths::LOG,
+        ))
+    {
+        return BoxMakeWriter::new(move || crate::macos::log_file::LogWriter(log.clone()));
+    }
+    let _ = action;
+    BoxMakeWriter::new(std::io::stderr)
 }
 
 async fn execute<P: Platform>(platform: P, action: Action) -> Result<()> {

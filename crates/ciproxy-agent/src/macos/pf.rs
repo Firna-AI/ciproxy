@@ -42,6 +42,12 @@ impl VmNetwork {
             })
     }
 
+    /// Whether a guest address is inside the subnet that the rules cover.
+    pub(crate) fn contains(&self, address: Ipv4Addr) -> bool {
+        let mask = u32::MAX << (32 - u32::from(self.prefix));
+        u32::from(address) & mask == u32::from(self.gateway) & mask
+    }
+
     pub(crate) fn subnet(&self) -> String {
         let mask = u32::MAX << (32 - u32::from(self.prefix));
         let network = Ipv4Addr::from(u32::from(self.gateway) & mask);

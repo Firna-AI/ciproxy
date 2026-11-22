@@ -100,8 +100,9 @@ fn string(value: &str) -> String {
     format!("<string>{escaped}</string>")
 }
 
-/// Rotate the log at 10 MB and keep 5 old files. launchd keeps the file
-/// open, so a job writes to the rotated file until it restarts.
+/// Rotate the log at 10 MB and keep 5 old files, with no signal. The agent
+/// and its VM helpers open the log again after a rotation. launchd keeps
+/// its own descriptor only for early output, such as a panic.
 pub(crate) fn newsyslog_conf() -> String {
     format!("# ciproxy agent logs\n{LOG}\troot:wheel\t600\t5\t10240\t*\tNJ\n")
 }

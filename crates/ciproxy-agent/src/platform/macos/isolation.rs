@@ -22,7 +22,8 @@ const VMNET_SETTINGS: &str = "/Library/Preferences/SystemConfiguration/com.apple
 pub(crate) trait Isolation: Send + Sync {
     /// Turn pf on and load the rules when they are missing or changed.
     /// A start fails when this fails, so no guest runs without the rules.
-    async fn ensure(&self) -> Result<()>;
+    /// Return the vmnet network that the loaded rules cover.
+    async fn ensure(&self) -> Result<VmNetwork>;
     /// Flush the anchor and give the pf reference back.
     async fn remove(&self) -> Result<()>;
 }
@@ -31,8 +32,8 @@ pub(crate) struct PfIsolation {
     pub(crate) machine_cache: bool,
     /// The pf reference token, kept across agent restarts.
     pub(crate) token_file: PathBuf,
-    /// pf's own form of the rules just after the last load.
-    snapshot: Mutex<Option<String>>,
+    /// pf's own form of the rules just after the last load, and their network.
+    snapshot: Mutex<Option<(String, VmNetwork)>>,
 }
 
 impl PfIsolation {
@@ -47,7 +48,7 @@ impl PfIsolation {
 
 #[async_trait]
 impl Isolation for PfIsolation {
-    async fn ensure(&self) -> Result<()> {
+    async fn ensure(&self) -> Result<VmNetwork> {
         let mut snapshot = self.snapshot.lock().await;
         if !enabled(&pfctl_text(&pfctl::info(), None).await?) {
             let output = pfctl_text(&pfctl::enable(), None).await?;
@@ -55,11 +56,10 @@ impl Isolation for PfIsolation {
             atomic_private_write(&self.token_file, token.to_string().as_bytes())?;
         }
         let shown = pfctl_text(&pfctl::show(), None).await?;
-        if snapshot
-            .as_deref()
-            .is_some_and(|expected| same_rules(expected, &shown))
+        if let Some((expected, network)) = snapshot.as_ref()
+            && same_rules(expected, &shown)
         {
-            return Ok(());
+            return Ok(network.clone());
         }
         let network = vmnet_network().await;
         let text = rules(&network, self.machine_cache);
@@ -69,8 +69,8 @@ impl Isolation for PfIsolation {
             return Err(pf_error("load the guest isolation rules"));
         }
         tracing::info!(subnet = %network.subnet(), bridge = %network.bridge, "pf rules loaded");
-        *snapshot = Some(shown);
-        Ok(())
+        *snapshot = Some((shown, network.clone()));
+        Ok(network)
     }
 
     async fn remove(&self) -> Result<()> {

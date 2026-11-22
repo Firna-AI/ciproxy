@@ -23,6 +23,7 @@ mod vm_control_tests;
 mod vm_control_socket_tests;
 
 pub(crate) mod launchd;
+pub(crate) mod log_file;
 pub(crate) mod paths;
 
 #[cfg(test)]
