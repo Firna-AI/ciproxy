@@ -117,6 +117,7 @@ data, or a log. This is the same rule as on Linux.
 | `/var/db/ciproxy/pf-token`                       | The pf reference token     |
 | `/var/db/ciproxy/vms/`                           | VM helper launchd files    |
 | `/var/db/ciproxy/area`                           | Mount of the area volume   |
+| `/etc/ciproxy-agent/environment`                 | Settings, mode `0600`      |
 | `/var/log/ciproxy/agent.log`                     | Agent and VM helper logs   |
 | `/etc/newsyslog.d/ciproxy.conf`                  | Log rotation               |
 
@@ -139,6 +140,13 @@ data, or a log. This is the same rule as on Linux.
   `launchctl kickstart -k system/dev.ciproxy.agent`.
 - Stop runs `launchctl bootout system/dev.ciproxy.agent`. VM helpers are
   other launchd jobs, so they keep running.
+- launchd has no environment file. So the job runs `/bin/sh`, which
+  loads `/etc/ciproxy-agent/environment` with `set -a` when the file
+  exists, then replaces itself with the agent. The keys are the same as on
+  Linux.
+- The agent runs `caffeinate -i -w PID` while it runs, so the Mac does not
+  go into idle sleep. A sleeping Mac takes no jobs, and its VMs pause. The
+  agent does not change the power settings of the Mac.
 
 ## Storage
 
@@ -332,9 +340,6 @@ runs a macOS VM. The start fails, and the core reports it.
 ## Open work
 
 - Saved-state builds and restores, as designed above.
-- The agent does not read `/etc/ciproxy-agent/environment` on macOS yet.
-  launchd has no environment file.
-- A power assertion against idle sleep while the agent runs.
 - The pf check runs before each start, not in each report cycle, and the
   agent does not check the bridge membership of a VM yet.
 - After a log rotation, a job writes to the rotated file until it

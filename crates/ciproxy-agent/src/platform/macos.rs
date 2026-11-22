@@ -129,7 +129,7 @@ impl Platform for MacPlatform {
             cache: Arc::new(NoMachineCache),
             vms,
             guests,
-            tasks: Box::new(()),
+            tasks: Box::new(stay_awake()),
         })
     }
 
@@ -164,6 +164,23 @@ impl Platform for MacPlatform {
             store: parts.store,
             agent: parts.agent,
         })
+    }
+}
+
+/// Keep the Mac out of idle sleep while this process runs. A sleeping Mac
+/// takes no jobs, and its VMs pause. `caffeinate` ends with the agent, and
+/// dropping the child ends it too. A failure only logs a warning.
+fn stay_awake() -> Option<tokio::process::Child> {
+    let child = tokio::process::Command::new("caffeinate")
+        .args(["-i", "-w", &std::process::id().to_string()])
+        .kill_on_drop(true)
+        .spawn();
+    match child {
+        Ok(child) => Some(child),
+        Err(error) => {
+            tracing::warn!(%error, "the Mac can sleep while the agent runs");
+            None
+        }
     }
 }
 

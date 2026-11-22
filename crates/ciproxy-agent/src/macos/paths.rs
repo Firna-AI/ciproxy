@@ -9,7 +9,8 @@ pub(crate) const BINARY_FOLDER: &str = "/usr/local/bin";
 pub(crate) const CONTROL: &str = "/var/db/ciproxy";
 /// The mount point of the agent's own APFS volume.
 pub(crate) const AREA: &str = "/var/db/ciproxy/area";
-/// Settings that `run` reads itself, because launchd has no environment file.
+/// Root-only settings. launchd has no environment file, so the agent job
+/// loads this file through `/bin/sh`.
 pub(crate) const ENVIRONMENT: &str = "/etc/ciproxy-agent/environment";
 /// The log folder, mode `0700`. The logs hold no secret, but only root reads them.
 pub(crate) const LOG_FOLDER: &str = "/var/log/ciproxy";

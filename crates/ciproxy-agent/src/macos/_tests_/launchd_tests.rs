@@ -10,7 +10,7 @@ fn the_agent_restarts_only_after_a_failure() {
     let plist = agent_plist();
     assert!(plist.contains("<key>Label</key>\n  <string>dev.ciproxy.agent</string>"));
     assert!(plist.contains(
-        "<array><string>/usr/local/bin/ciproxy-agent</string><string>run</string></array>"
+        "<array><string>/bin/sh</string><string>-c</string><string>if [ -f /etc/ciproxy-agent/environment ]; then set -a; . /etc/ciproxy-agent/environment; set +a; fi; exec /usr/local/bin/ciproxy-agent run</string></array>"
     ));
     assert!(plist.contains("<dict><key>SuccessfulExit</key><false/></dict>"));
     assert!(plist.contains("<key>ThrottleInterval</key>\n  <integer>5</integer>"));

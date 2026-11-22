@@ -1,6 +1,8 @@
 //! launchd files and `launchctl` arguments for the agent and its VM helpers.
 
-use super::paths::{AGENT_LABEL, AGENT_PLIST, BINARY, LOG, local_id_of_label, vm_label, vm_plist};
+use super::paths::{
+    AGENT_LABEL, AGENT_PLIST, BINARY, ENVIRONMENT, LOG, local_id_of_label, vm_label, vm_plist,
+};
 
 /// How launchd restarts a job.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -21,10 +23,17 @@ struct Job<'a> {
 }
 
 /// The agent daemon in `/Library/LaunchDaemons`. It starts at boot.
+///
+/// launchd has no environment file, so `/bin/sh` loads the root-only
+/// settings file, as systemd's `EnvironmentFile` does on Linux. The shell
+/// then replaces itself with the agent.
 pub(crate) fn agent_plist() -> String {
+    let start = format!(
+        "if [ -f {ENVIRONMENT} ]; then set -a; . {ENVIRONMENT}; set +a; fi; exec {BINARY} run"
+    );
     render(&Job {
         label: AGENT_LABEL,
-        arguments: &[BINARY, "run"],
+        arguments: &["/bin/sh", "-c", &start],
         keep_alive: KeepAlive::OnFailure,
         exit_timeout: 30,
     })
