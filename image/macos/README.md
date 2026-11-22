@@ -104,11 +104,13 @@ Run it after the `configure` phase. For a small test disk, run the opt-in
 the update's leftovers and the guest's Recovery container, shrinks the main
 APFS container, and cuts `disk.img` to `DISK_BYTES`. Then it starts the
 guest once, which proves that the disk boots, and repairs the partition map.
-It changes nothing when the used space does not fit with a 2 GB margin. It needs no Xcode archive. It installs
-the stock runner and the guest from `GUEST_DIR`, turns on auto-login, reads
-the guest's facts, removes the build state, and packages the guest in the
-release form. The manifest has `"test_image": true`, and the image ID is
-`TEST_IMAGE_ID` of the pins. The image has no Xcode and no upstream toolset, so it is only
+It changes nothing when the used space does not fit with a 2 GB margin.
+
+The `test-image` phase needs no Xcode archive. It installs the stock runner
+and the guest from `GUEST_DIR`, turns on auto-login, reads the guest's
+facts, removes the build state, and packages the guest in the release form.
+The manifest has `"test_image": true`, and the image ID is `TEST_IMAGE_ID`
+of the pins. The image has no Xcode and no upstream toolset, so it is only
 for tests. The cleanup removes the build's SSH key, so copy the VM folder
 first when you want to run more phases on it.
 
