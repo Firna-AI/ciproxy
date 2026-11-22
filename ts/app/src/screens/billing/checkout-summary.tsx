@@ -1,9 +1,11 @@
 // The summary of a review: the priced choice, the monthly total, what Stripe
-// charges today, and the button that pays for exactly this review. While a
-// read runs, the summary says which. When a payment cannot start, it says why
-// and offers what recovers it, with no button that pays, so nothing can pay
-// for a choice that the page does not show. After the API refused a quote,
-// Review again reads a new review, and only the next click on its button pays.
+// charges today, and the button that pays for exactly this review. A summary
+// with that button says that paid plans are for business use only, as the
+// terms say. While a read runs, the summary says which. When a payment cannot
+// start, it says why and offers what recovers it, with no button that pays,
+// so nothing can pay for a choice that the page does not show. After the API
+// refused a quote, Review again reads a new review, and only the next click
+// on its button pays.
 
 import { StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
@@ -11,6 +13,7 @@ import { Link } from "expo-router";
 import { ActionButton, ActionLink } from "../../components/actions.tsx";
 import { DetailList, DetailRow } from "../../components/detail-list.tsx";
 import { ExternalIcon } from "../../components/icons.tsx";
+import { InlineLink } from "../../components/inline-link.tsx";
 import { Panel } from "../../components/panel.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import { text } from "../../components/text.ts";
@@ -18,6 +21,7 @@ import type {
   SummaryAction,
   SummaryState,
 } from "../../view/billing-checkout-summary.ts";
+import { siteLinks } from "../../view/page-model.ts";
 
 function Recover({
   action,
@@ -143,7 +147,13 @@ export function CheckoutSummary({
             </DetailRow>
           ))}
         </DetailList>
-        <Text style={text.caption}>{model.note}</Text>
+        <View style={styles.tight}>
+          <Text style={text.caption}>{model.note}</Text>
+          <Text style={text.caption}>
+            Paid plans are for business use only, as the ciproxy{" "}
+            <InlineLink label="Terms" href={siteLinks.terms} newTab /> say.
+          </Text>
+        </View>
         <ActionButton
           label={model.submit}
           tone="primary"

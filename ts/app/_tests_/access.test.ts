@@ -14,6 +14,7 @@ import {
   noRolePage,
   personalAccountPage,
   signInPage,
+  termsStepPage,
 } from "../src/view/access.ts";
 import { accountMenu, navItems, workspaceMenu } from "../src/view/shell.ts";
 import {
@@ -210,6 +211,19 @@ test("access actions use server URLs and the exact claim permission", () => {
   );
   assert.match(removed.title, /northstar-labs/);
   assert.match(removed.notice?.title ?? "", /6 December/);
+});
+
+test("the terms step leaves for a GitHub sign-in that resumes the pending setup", () => {
+  assert.deepEqual(termsStepPage().actions, [
+    {
+      kind: "leave",
+      label: "Continue with GitHub",
+      href: "/api/auth/github?resume=setup",
+      tone: "primary",
+      icon: null,
+      newTab: false,
+    },
+  ]);
 });
 
 test("claim failures give recovery without inventing an ownership cause", () => {

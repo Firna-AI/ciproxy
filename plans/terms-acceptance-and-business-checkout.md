@@ -156,6 +156,16 @@ Each design call below is my call of 22 November 2026.
   and the states of sign-in, the install page, and the terms step move into
   child folders. Reason: a sixth screen on that page breaks the limit of
   five screens.
+- **The GitHub mark.** My call, from the screens: the dashboard's
+  "Continue with GitHub" button follows its "Sign in with GitHub" button,
+  with no GitHub mark, so both pages look the same. Both buttons differ
+  from their mockups, which show the mark, and the sign-in button has done
+  so since it was added. Reason: the sign-in page is outside the five
+  calls. `plans/follow-ups/sign-in-button-github-mark.md` asks the user.
+- **Links out of a dialog or a review.** My call, from the screens: the
+  Terms links of the grant dialog and of the checkout review open a new
+  tab. The terms notice opens the terms in the same tab, as before. Reason:
+  the dialog and the review keep their place and their work.
 
 Contract owners:
 
@@ -236,13 +246,15 @@ mockups show them. It needs only the copy of the mockups, so it runs beside
 Milestone 2. Until Milestone 4, Continue on the terms step gives a plain
 sign-in, because the API ignores the `resume` value.
 
-- [ ] Add the `/continue` page, with the terms notice of the sign-in page
+- [x] Add the `/continue` page, with the terms notice of the sign-in page
       from one shared part and a button that opens
       `/api/auth/github?resume=setup`.
-- [ ] Add the terms line to the dialog that grants the Admin role.
-- [ ] Add the business-use line to the checkout review.
-- [ ] Update the dashboard README and the guides of these pages.
-- [ ] Run the typecheck, the lint, the export, and the Node tests.
+- [x] Add the terms line to the dialog that grants the Admin role.
+- [x] Add the business-use line to the checkout review.
+- [x] Update the dashboard README and the guides of these pages.
+- [x] Run the typecheck, the lint, the export, and the Node tests.
+
+Evidence: `.context/terms-acceptance-and-business-checkout/m3/`.
 
 ## Milestone 4: The setup return and the sign-in links pass the terms step
 
