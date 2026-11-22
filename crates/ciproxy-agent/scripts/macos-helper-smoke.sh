@@ -38,8 +38,20 @@ folder="${control}/area/vms/${id}"
 plist="${control}/vms/${id}.plist"
 log="/tmp/ciproxy-helper-${id}.log"
 
-cleanup() {
+# bootout can return once it has sent SIGTERM. Wait until launchd has
+# unloaded the job: the helper's exit timeout of 30 s and a margin.
+stop_helper() {
   launchctl bootout "system/${label}" 2>/dev/null || true
+  for _ in $(seq 1 160); do
+    launchctl print "system/${label}" >/dev/null 2>&1 || return 0
+    sleep 0.25
+  done
+  echo "FAIL: the helper job did not unload" >&2
+  return 1
+}
+
+cleanup() {
+  stop_helper || true
   rm -rf "${folder}" "${plist}"
   rmdir "${control}/area/vms" "${control}/area" "${control}/vms" "${control}" \
     2>/dev/null || true
@@ -137,7 +149,7 @@ else
   python3 "${client}" "${socket}" wait 60 >"${waiter_output}" 2>&1 &
   waiter=$!
   sleep 1
-  launchctl bootout "system/${label}" || true
+  stop_helper
   wait "${waiter}" || true
   echo "wait during the host stop: $(cat "${waiter_output}")"
   rm -f "${waiter_output}"
@@ -150,3 +162,9 @@ echo "exit.json: $(cat "${folder}/exit.json" 2>/dev/null || echo missing)"
 echo "helper log (last lines):"
 tail -n 20 "${log}" || true
 rm -f "${log}"
+stop_helper
+if launchctl list | grep -q "${label}"; then
+  echo "FAIL: the helper job is still loaded" >&2
+  exit 1
+fi
+echo "helper job unloaded"

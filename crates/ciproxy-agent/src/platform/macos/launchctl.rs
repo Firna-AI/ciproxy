@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use tokio::process::Command;
+use tokio::time::{Duration, Instant, sleep};
 
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::macos::launchd::{launchctl, loaded_ids};
@@ -18,6 +19,9 @@ pub(crate) trait Launchd: Send + Sync {
     async fn loaded_vms(&self) -> Result<Vec<String>>;
 }
 
+/// The helper's `ExitTimeOut` of 30 s, then SIGKILL, and a margin.
+const UNLOAD_WAIT: Duration = Duration::from_secs(40);
+
 pub(crate) struct Launchctl;
 
 #[async_trait]
@@ -26,9 +30,29 @@ impl Launchd for Launchctl {
         run(&launchctl::bootstrap_vm(local_id)).await.map(drop)
     }
 
+    /// `launchctl bootout` can return once it has sent SIGTERM. launchd
+    /// keeps the job until the helper has stopped its VM and exited. So
+    /// wait until the job is gone, up to the exit timeout and a margin.
+    /// A later start then never sees a stale job.
     async fn bootout_vm(&self, local_id: &str) -> Result<()> {
-        if self.loaded(local_id).await? {
-            run(&launchctl::bootout_vm(local_id)).await?;
+        if !self.loaded(local_id).await? {
+            return Ok(());
+        }
+        if let Err(error) = run(&launchctl::bootout_vm(local_id)).await {
+            // The job can end between the check and the bootout.
+            if self.loaded(local_id).await? {
+                return Err(error);
+            }
+        }
+        let deadline = Instant::now() + UNLOAD_WAIT;
+        while self.loaded(local_id).await? {
+            if Instant::now() >= deadline {
+                tracing::warn!(local_id, "the VM helper job did not unload");
+                return Err(Error::HostCommand {
+                    program: "launchctl".to_owned(),
+                });
+            }
+            sleep(Duration::from_millis(250)).await;
         }
         Ok(())
     }
