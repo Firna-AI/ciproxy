@@ -1,5 +1,6 @@
-//! Resolve one pinned published image through authenticated Cloud CDN reads.
+//! Resolve one pinned published image release through signed reads.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -11,7 +12,7 @@ use ciproxy_protocol::secret::Secret;
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::error::{ErrorResultExt, Result};
+use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_signing::ImageSigning;
 
 /// Current published release facts, with no guessed root dimensions.
@@ -29,18 +30,25 @@ pub trait ImageReleases: Send + Sync {
     async fn current(&self) -> Result<ImageRelease>;
 }
 
-/// CDN URLs use the existing mounted key and selected immutable release path.
-pub struct CdnReleases {
+/// Reads one pinned release of one platform under a URL prefix.
+///
+/// The Linux release uses the CDN key and the `firecracker` artifact. The
+/// macOS release uses a presigned R2 URL and the `macos` artifact.
+pub struct SignedReleases {
     /// Redirect-disabled hosted HTTP client.
     pub http: Client,
-    /// Existing public /images URL prefix.
+    /// URL prefix of the release store, such as the public /images prefix.
     pub prefix: String,
     /// One immutable relative manifest path from operator configuration.
     pub manifest_path: String,
-    /// Selected CDN signing key.
+    /// Signs each read of a release file.
     pub signing: Arc<dyn ImageSigning>,
     /// Trusted receipt time for bounded URL signatures.
     pub clock: Arc<dyn Runtime>,
+    /// The platform of the VMs that start from this release.
+    pub platform: Platform,
+    /// The key of the downloaded artifact in `downloads.json`.
+    pub artifact: &'static str,
 }
 
 #[derive(Deserialize)]
@@ -49,57 +57,60 @@ struct Manifest {
     root_disk_bytes: u64,
 }
 #[derive(Deserialize)]
-struct Downloads {
-    firecracker: Artifact,
-}
-#[derive(Deserialize)]
 struct Artifact {
     file: String,
     sha256: String,
     size_bytes: u64,
 }
 
-impl CdnReleases {
-    async fn read<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T> {
-        let url = format!(
+impl SignedReleases {
+    fn url(&self, path: &str) -> String {
+        format!(
             "{}/{}",
             self.prefix.trim_end_matches('/'),
             path.trim_start_matches('/')
-        );
-        let signed = self.signing.sign(&url, self.clock.now())?;
-        self.http
+        )
+    }
+
+    async fn read<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T> {
+        let signed = self.signing.sign(&self.url(path), self.clock.now())?;
+        let response = self
+            .http
             .get(signed.expose_secret())
             .send()
             .await
-            .internal()?
-            .error_for_status()
-            .internal()?
-            .json()
-            .await
-            .internal()
+            .internal()?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(Error::ReleaseStatus(status.as_u16()));
+        }
+        response.json().await.internal()
     }
 }
 
 #[async_trait]
-impl ImageReleases for CdnReleases {
+impl ImageReleases for SignedReleases {
     async fn current(&self) -> Result<ImageRelease> {
         let manifest: Manifest = self.read(&self.manifest_path).await?;
         let directory = self
             .manifest_path
             .rsplit_once('/')
             .map_or("", |(directory, _)| directory);
-        let downloads: Downloads = self.read(&format!("{directory}/downloads.json")).await?;
+        // Other keys stay unread, so one bad entry cannot hide this artifact.
+        let mut downloads: HashMap<String, serde_json::Value> =
+            self.read(&format!("{directory}/downloads.json")).await?;
+        let artifact: Artifact = serde_json::from_value(
+            downloads
+                .remove(self.artifact)
+                .ok_or(Error::MissingArtifact(self.artifact))?,
+        )
+        .internal()?;
         let download = ImageDownload {
             image_id: manifest.image_id,
-            platform: Platform::LinuxX64,
-            download_url: Secret::new(format!(
-                "{}/{}/{}",
-                self.prefix.trim_end_matches('/'),
-                directory,
-                downloads.firecracker.file
-            )),
-            sha256: downloads.firecracker.sha256,
-            size_bytes: downloads.firecracker.size_bytes,
+            platform: self.platform,
+            download_url: Secret::new(self.url(&format!("{directory}/{}", artifact.file))),
+            sha256: artifact.sha256,
+            size_bytes: artifact.size_bytes,
             root_disk_bytes: manifest.root_disk_bytes,
         };
         Ok(ImageRelease {

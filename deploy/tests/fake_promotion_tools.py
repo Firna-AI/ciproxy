@@ -87,6 +87,7 @@ elif tool == "terraform":
                 "allowed_zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
                 "release_secret": "fake-release-token", "runtime_repository": "example.invalid/runtime",
                 "boat_shared_snapshot_secret": "fake-boat-shared-snapshot",
+                "r2_images_secret": "fake-r2-images",
                 "hosts": {"releases": "downloads.invalid", "dashboard": "app.invalid"},
                 "buckets": {"site": "site-bucket", "dashboard": "app-bucket"},
                 "control_plane_account": "runtime@example.invalid", "sql_connection": "test:eu:sql",
@@ -109,6 +110,12 @@ elif tool == "gcloud" and args[:3] == ["secrets", "versions", "access"]:
             print(f"ERROR: (gcloud.secrets.versions.access) {error}: fixture failure", file=sys.stderr)
             sys.exit(1)
         print(os.environ.get("FAKE_BOAT_SNAPSHOT", "fixture-boat-share-code"))
+    elif "--secret=fake-r2-images" in args:
+        error = os.environ.get("FAKE_R2_ERROR")
+        if error:
+            print(f"ERROR: (gcloud.secrets.versions.access) {error}: fixture failure", file=sys.stderr)
+            sys.exit(1)
+        print(os.environ.get("FAKE_R2_KEY", '{"access_key_id": "fixture-id", "secret_access_key": "fixture-key"}'))
     else:
         print("fake-token")
 elif (tool == "kubectl" and args[:1] == ["apply"]
@@ -117,6 +124,9 @@ elif (tool == "kubectl" and args[:1] == ["apply"]
         print(json.dumps(record["manifest"]), file=sys.stderr)
         sys.exit(1)
     print(os.environ.get("FAKE_BOAT_REVISION", "41"))
+elif (tool == "kubectl" and args[:1] == ["apply"]
+      and record["manifest"].get("metadata", {}).get("name") == "r2-images"):
+    print(os.environ.get("FAKE_R2_REVISION", "51"))
 elif tool == "kubectl" and args[:2] == ["get", "serviceaccount"]:
     print(os.environ.get("FAKE_KSA_UID", "22222222-2222-4222-8222-222222222222" if "--namespace=ciproxy-production" in args else "11111111-1111-4111-8111-111111111111"))
 elif tool == "kubectl" and args[:2] == ["get", "service"]:

@@ -13,6 +13,7 @@ output "deployment" {
     hosts                       = local.hosts
     release_secret              = google_secret_manager_secret.release.secret_id
     boat_shared_snapshot_secret = google_secret_manager_secret.boat_shared_snapshot.secret_id
+    r2_images_secret            = google_secret_manager_secret.r2_images.secret_id
     control_plane_account       = local.control_account
     sql_instance                = google_sql_database_instance.main.name
     sql_connection              = google_sql_database_instance.main.connection_name

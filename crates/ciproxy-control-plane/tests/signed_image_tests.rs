@@ -7,10 +7,11 @@ use axum::Router;
 use axum::extract::OriginalUri;
 use axum::http::StatusCode;
 use axum::routing::get;
-use ciproxy_control_plane::image_release::{CdnReleases, ImageReleases};
+use ciproxy_control_plane::image_release::{ImageReleases, SignedReleases};
 use ciproxy_control_plane::image_signing::CdnSigning;
 use ciproxy_gateway::logging;
 use ciproxy_github::runtime::RuntimeMock;
+use ciproxy_protocol::platform::Platform;
 use tokio::net::TcpListener;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use unimock::{MockFn, Unimock, matching};
@@ -46,7 +47,7 @@ async fn signed_manifest_and_bundle_metadata_reads_keep_credentials_out_of_trace
     let server = tokio::spawn(async move {
         axum::serve(listener, routes).await.unwrap();
     });
-    let releases = CdnReleases {
+    let releases = SignedReleases {
         http: reqwest::Client::builder()
             .http1_only()
             .redirect(reqwest::redirect::Policy::none())
@@ -64,6 +65,8 @@ async fn signed_manifest_and_bundle_metadata_reads_keep_credentials_out_of_trace
                     .unwrap(),
             ),
         )),
+        platform: Platform::LinuxX64,
+        artifact: "firecracker",
     };
     let release = releases.current().await.unwrap();
     assert_eq!(release.root_disk_bytes, 62_008_590_336);
