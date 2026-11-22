@@ -114,6 +114,24 @@ pub enum Error {
     /// The image checksum or byte count does not match.
     #[error("[agent] the image checksum or byte count does not match")]
     ImageVerification,
+    /// The image host answered with an HTTP error status, for example `403`
+    /// for an expired download URL.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS image download returns it.")
+    )]
+    #[error("[agent/images] the image host answered with HTTP status {status}")]
+    ImageStatus {
+        /// The HTTP status code of the answer.
+        status: u16,
+    },
+    /// The image host sent an answer that does not continue the download.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS image download returns it.")
+    )]
+    #[error("[agent/images] the image host sent an answer that does not continue the download")]
+    ImageAnswer,
     /// The image bundle must contain the released regular files only.
     #[error("[agent] the image bundle has an invalid released file layout")]
     ImageLayout,
