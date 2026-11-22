@@ -163,7 +163,10 @@ if [[ -n "${guest_binary}" ]]; then
   fi
   echo "connect after $(($(date +%s) - started)) s"
 
-  # Save, then restore from a clone at another path, as a seat does.
+  # Save, then restore from a clone at another path, as a seat does. The
+  # client has closed its stream. The guest needs a moment to return to
+  # accept: a pause with a connection still open stopped the VM.
+  sleep 1
   saved_at=$(date +%s)
   echo "save: $(control_call "${id}" save)"
   echo "save took $(($(date +%s) - saved_at)) s"

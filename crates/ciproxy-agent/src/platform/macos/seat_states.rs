@@ -35,6 +35,8 @@ use crate::persistence::{atomic_private_write, private_directory};
 
 /// A cold boot reached SSH in 8 s on the test Mac. This leaves room.
 const GUEST_WAIT: Duration = Duration::from_secs(180);
+/// The time between the close of the guest stream and the pause.
+const CLOSE_SETTLE: Duration = Duration::from_secs(1);
 
 /// The image and settings that one build saves.
 #[derive(Clone, Debug)]
@@ -162,29 +164,39 @@ impl SeatStates {
     }
 
     /// The guest is ready when its first frame on vsock is a `Hello`. The
-    /// connection then closes with nothing sent, so no runner starts.
+    /// connection then closes with nothing sent, so no runner starts. A
+    /// refused connect or a dead first stream retries until the deadline.
+    /// The guest needs a moment after the close to return to `accept`: a
+    /// pause with a connection still open stopped the VM on the test Mac.
     async fn wait_for_hello(&self, local_id: &str) -> Result<()> {
         let client = self.folders.client(local_id);
         let deadline = Instant::now() + GUEST_WAIT;
-        let stream = loop {
-            match client.connect(GUEST_PORT).await {
-                Ok(stream) => break stream,
-                Err(ControlFailure::Refused(ControlError::GuestNotListening))
-                    if Instant::now() < deadline =>
-                {
-                    sleep(Duration::from_secs(1)).await;
+        loop {
+            let error = match client.connect(GUEST_PORT).await {
+                Ok(stream) => {
+                    let mut socket = framed(stream);
+                    let first = timeout(Duration::from_secs(30), socket.receive()).await;
+                    drop(socket);
+                    match first {
+                        Ok(Ok(GuestToAgent::Hello { .. })) => {
+                            sleep(CLOSE_SETTLE).await;
+                            return Ok(());
+                        }
+                        Ok(Ok(_)) => return Err(Error::GuestMismatch),
+                        Ok(Err(error)) => error,
+                        Err(_) => Error::Disconnected,
+                    }
                 }
+                Err(ControlFailure::Refused(ControlError::GuestNotListening)) => {
+                    Error::Disconnected
+                }
+                Err(ControlFailure::Io(error)) => Error::from(ControlFailure::Io(error)),
                 Err(failure) => return Err(failure.into()),
+            };
+            if Instant::now() >= deadline {
+                return Err(error);
             }
-        };
-        let mut socket = framed(stream);
-        let first = timeout(Duration::from_secs(30), socket.receive())
-            .await
-            .map_err(|_| Error::Disconnected)??;
-        if matches!(first, GuestToAgent::Hello { .. }) {
-            Ok(())
-        } else {
-            Err(Error::GuestMismatch)
+            sleep(Duration::from_secs(1)).await;
         }
     }
 }

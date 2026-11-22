@@ -62,19 +62,30 @@ def main():
     path, command = sys.argv[1], sys.argv[2]
     if command == "connect":
         answer, fds = request(path, f"CONNECT {sys.argv[3]}", True, 30)
-        print(answer)
-        if answer == "OK":
-            if len(fds) != 1:
-                raise SystemExit("OK without exactly one fd")
-            guest = socket.socket(fileno=fds[0])
-            guest.settimeout(30)
-            line = b""
+        if answer != "OK":
+            print(answer)
+            return
+        if len(fds) != 1:
+            raise SystemExit("OK without exactly one fd")
+        # After a restore, the first stream can be dead. Report OK only
+        # after the guest's first line, so a caller retries a dead stream.
+        guest = socket.socket(fileno=fds[0])
+        guest.settimeout(30)
+        line = b""
+        try:
             while not line.endswith(b"\n"):
                 chunk = guest.recv(4096)
                 if not chunk:
                     break
                 line += chunk
-            print("guest message type:", json.loads(line).get("type", "unknown"))
+            kind = json.loads(line).get("type", "unknown")
+        except (OSError, ValueError):
+            print("ERR dead-stream")
+            sys.exit(1)
+        finally:
+            guest.close()
+        print("OK")
+        print("guest message type:", kind)
         return
     timeout = 300
     if command == "wait":
