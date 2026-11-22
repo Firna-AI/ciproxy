@@ -33,11 +33,11 @@ Docker disks are disposable.
 A Mac runs the jobs of macOS labels, each in a fresh macOS VM with Xcode. A
 Mac needs:
 
-<!-- The macOS version and the disk are placeholders until the macOS image
-is settled. -->
+<!-- The disk is a placeholder until the size of the macOS image is
+measured. -->
 
 - A Mac with Apple Silicon, M1 or later.
-- macOS 26.7.2 or later. A macOS VM cannot run a newer macOS than its Mac,
+- macOS 26.7.3 or later. A macOS VM cannot run a newer macOS than its Mac,
   so the Mac needs the macOS of the job image.
 - 16 GB of memory and 512 GB of disk or more.
 - Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The Mac
@@ -93,7 +93,7 @@ command does on the machine.
 - **No KVM:** the machine connects, but it cannot start VMs, so it gets no
   slots. Turn on virtualization for the machine, then run the command again.
 - **A Mac with an older macOS:** the Mac connects, but it cannot start VMs,
-  so it gets no slots. Update the Mac to macOS 26.7.2 or later, then run the
+  so it gets no slots. Update the Mac to macOS 26.7.3 or later, then run the
   command again.
 - **Too little CPU or memory:** a machine without room for one slot after
   the host reserve connects and gets no slots. ciproxy says why.

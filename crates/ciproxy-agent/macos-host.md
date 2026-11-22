@@ -338,7 +338,7 @@ first of:
   no call for `VZVirtualMachine.isSupported` yet.
 - `entitlement_missing` when `codesign` shows no
   `com.apple.security.virtualization` for the running binary.
-- `operating_system_too_old` when the Mac's macOS is older than 26.7.2 or
+- `operating_system_too_old` when the Mac's macOS is older than 26.7.3 or
   than the `minimum_host_macos` of the newest image.
 - `available` otherwise.
 
@@ -348,7 +348,7 @@ Seats follow `Slots::for_machine` with P's rule, then
 ## Install
 
 1. Refuse a user other than root, a processor other than arm64, and a
-   macOS older than 26.7.2, the macOS of the planned image. The message
+   macOS older than 26.7.3, the macOS of the macOS image. The message
    names the minimum, the current version, and the repair.
 2. Create the control folder, the area volume, and the area folders. Load
    the pf rules.

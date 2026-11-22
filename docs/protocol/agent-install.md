@@ -123,12 +123,18 @@ command, and the wait for the first image.
   [macOS image](agent-images.md#the-macos-image) or later.
 - `install` refuses a Mac with an older macOS, with a message that names
   the version that the Mac needs.
-- The planned minimum is macOS 26.7.2. The pinned GitHub runner image
-  `macos-26-arm64/20261117.0516`, which `macos-latest` names now, runs
-  macOS 26.7.2. The build installs Apple's newest full restore image,
-  macOS 26.6.2, and then updates the guest to macOS 26.7.2.
-- The minimum stays a planned value until the user chooses the options of
-  the image build.
+- The minimum is macOS 26.7.3 (25G342), the macOS of the macOS image. The
+  build installs Apple's newest full restore image, macOS 26.6.2, and then
+  updates the guest to macOS 26.7.3.
+- The pinned GitHub runner image `macos-26-arm64/20261117.0516`, which
+  `macos-latest` names now, runs macOS 26.7.2. Software Update offers no
+  26.7.2 now, only 26.7.3 in the macOS 26 line.
+- **Decision:** the macOS image runs macOS 26.7.3 (25G342), so a Mac needs
+  macOS 26.7.3 or later. Reason: Software Update offers no 26.7.2, and a
+  build can reach only the update that Apple offers. The user chose this
+  on 22 November 2026. Rejected: a pin of the macOS 26 line alone, with the
+  reached build in the manifest, because builds would then differ without
+  a change of the pin.
 - When a Mac cannot run the image that it has, its
   [virtualization check](agent.md#the-virtualization-check) reports
   `operating_system_too_old`.

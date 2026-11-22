@@ -44,10 +44,10 @@ fn the_sum_file_refuses_gaps_repeats_and_bad_digests() {
 #[test]
 fn the_manifest_gives_the_minimum_host() {
     let manifest: Manifest = serde_json::from_str(
-        r#"{"minimum_host_macos":"26.7.2","free_job_bytes":107374182400,"build":"25G332"}"#,
+        r#"{"minimum_host_macos":"26.7.3","free_job_bytes":107374182400,"build":"25G342"}"#,
     )
     .expect("manifest");
-    assert_eq!(manifest.minimum_host_macos, "26.7.2");
+    assert_eq!(manifest.minimum_host_macos, "26.7.3");
     assert_eq!(manifest.free_job_bytes, 100 << 30);
 }
 
@@ -55,7 +55,7 @@ fn image(id: &str) -> IndexedImage {
     IndexedImage {
         image_id: ImageId(id.to_owned()),
         root_disk_bytes: 200 << 30,
-        minimum_host_macos: "26.7.2".to_owned(),
+        minimum_host_macos: "26.7.3".to_owned(),
         free_job_bytes: 100 << 30,
     }
 }

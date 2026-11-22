@@ -18,7 +18,6 @@ export const macosVmLimit = 2;
 
 /**
  * The oldest macOS that a Mac runs: the macOS of the job image, because a
- * macOS VM cannot run a newer macOS than its host. A placeholder until the
- * image build is settled.
+ * macOS VM cannot run a newer macOS than its host.
  */
-export const minimumMacos = "macOS 26.7.2";
+export const minimumMacos = "macOS 26.7.3";
