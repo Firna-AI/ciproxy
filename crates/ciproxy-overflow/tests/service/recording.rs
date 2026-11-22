@@ -72,6 +72,16 @@ impl OverflowStore for RecordingStore {
     fn overflow_token_workspace(&self, hash: &TokenHash) -> Result<Option<Uuid>> {
         self.inner.overflow_token_workspace(hash)
     }
+
+    fn accept_end(
+        &self,
+        workspace_id: Uuid,
+        hash: &TokenHash,
+        runner_id: Uuid,
+        at: DateTime<Utc>,
+    ) -> Result<Option<StartRecord>> {
+        self.inner.accept_end(workspace_id, hash, runner_id, at)
+    }
 }
 
 impl RecordingSession {
@@ -167,15 +177,6 @@ impl OverflowSession for RecordingSession {
         self.inner.save_start(record)?;
         self.record(record);
         Ok(())
-    }
-
-    fn accept_end(
-        &mut self,
-        hash: &TokenHash,
-        runner: Uuid,
-        at: DateTime<Utc>,
-    ) -> Result<Option<StartRecord>> {
-        self.inner.accept_end(hash, runner, at)
     }
 
     fn collect(&mut self, before: DateTime<Utc>) -> Result<()> {

@@ -129,6 +129,8 @@ impl Harness {
         pending.phase = StartPhase::Unsent;
         pending.dispatch = None;
         pending.sandbox = None;
+        pending.reported_at = None;
+        pending.ends_at = None;
         assert!(
             session
                 .save_pending(&pending, &EncryptedLaunch(vec![17]), &digest(token))

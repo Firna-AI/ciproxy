@@ -56,7 +56,7 @@
     cursors, since migration
     `crates/ciproxy-schema/migrations/202611061300_scale_job_metering`.
     Each runner takes one job, as `docs/protocol/agent.md:157` and
-    `docs/protocol/overflow.md:90` say. So one identity for each runner is
+    `docs/protocol/overflow.md:100` say. So one identity for each runner is
     possible.
   - Each reversal is computed again from the saved facts with the current
     calculation code, in `runtime.rs` and `boat.rs`.

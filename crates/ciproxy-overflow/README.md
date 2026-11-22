@@ -118,8 +118,10 @@ The service records `Writing` before any file transfer.
 An unconfirmed or interrupted write enters deletion before any replacement.
 
 An end report derives workspace authority from its token digest.
-The store accepts it once for its one live runner.
+The store accepts it once for its one live runner, before the delivery ends.
+It saves that claim without the workspace lock, so busy work cannot drop it.
 There is no independent token timeout before the sandbox ends.
+`report_end` succeeds after the claim, also when its lock wait or delete fails.
 The service persists deletion before calling Boat.
 The pinned adapter confirms each deletion with the ID of its target sandbox.
 Cleanup retries failed deletion and inspects known IDs omitted from inventory.
@@ -286,6 +288,7 @@ These commands contact Boat or Cloud KMS and can incur charges.
 ### Related Docs
 
 - [Overflow](../../docs/protocol/overflow.md) defines the required behavior.
+- [Sandbox end](../../docs/protocol/overflow-sandbox-end.md) defines cleanup.
 - [Labels](../../docs/protocol/labels.md) defines size policy.
 - [Job routing](../../docs/protocol/job-routing.md) defines runner placement.
 - [Security](../../docs/protocol/security.md#key-custody) defines key custody.

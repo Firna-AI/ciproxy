@@ -209,7 +209,8 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [Image guide](../../image/README.md) defines both packaging targets.
 - [Protocol crate](../ciproxy-protocol/README.md) owns the JSON message types.
 - [Agent protocol](../../docs/protocol/agent.md) defines job VMs and images.
-- [Overflow protocol](../../docs/protocol/overflow.md) defines sandbox cleanup.
+- [Sandbox end](../../docs/protocol/overflow-sandbox-end.md) defines the exit
+  report and sandbox cleanup.
 - [Architecture](../../docs/architecture.md) defines the open-source boundary.
 
 [shutdown]: https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/FAQ.md#how-can-i-gracefully-reboot-the-guest-how-can-i-gracefully-poweroff-the-guest

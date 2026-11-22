@@ -31,7 +31,12 @@ Account observations keep typed catalogs, retry times, and refusal state.
 Runner input stays encrypted until launch or cleanup ends its use.
 Callback lookup derives the workspace from a token digest.
 A transactional claim accepts one report for one live runner.
+It accepts no report after the delivery ends.
+The claim takes no workspace session, so busy work cannot drop a report.
 There is no independent expiry before that runner ends.
+Each delivery save keeps the first saved `reported_at` and `ends_at`.
+No save moves the phase back from `Deleting` or `Ended`.
+These save rules also hold for a save from an older copy of the delivery.
 Old keys stay while uncertain creates or live sandboxes reference them.
 Per-month runtime observations keep incomplete costs explicit.
 Each delivery separates its saved start-fee bound from a confirmed fee.

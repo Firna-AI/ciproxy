@@ -67,7 +67,7 @@
     webhook also names a `sender`, the owner or member who caused the event,
     by a numeric ID only, at `crates/ciproxy-github/src/app/webhook.rs:63-67`
     and `:80`. A suspension saves no person and no day.
-    `docs/protocol/app-removal.md:98` asks for a notice that names the
+    `docs/protocol/app-removal.md:116` asks for a notice that names the
     organization and links to GitHub, and the product meets it.
   - `docs/protocol/security.md:253-254` keeps the record of a person only
     while the person has a role or an open request for access. The person
