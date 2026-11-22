@@ -38,6 +38,8 @@ ciproxy-vz = { path = "../ciproxy-vz" }
 libc = "0.2.191"
 
 [dev-dependencies]
+# The pure `VmSettings` check of the macOS VM helper runs in Linux tests.
+ciproxy-vz = { path = "../ciproxy-vz" }
 tokio = { version = "1.54.1", features = ["test-util"] }
 log = "0.4.35"
 unimock = "0.6.8"

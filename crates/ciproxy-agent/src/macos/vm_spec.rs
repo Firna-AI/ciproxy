@@ -60,13 +60,19 @@ impl VmSpec {
         Ok(())
     }
 
-    /// The memory of the VM: `memory_bytes` rounded down to a whole MiB.
+    /// The settings of the VM. No VM has a display.
     ///
     /// A label gives memory in decimal GB, such as 8,000,000,000 bytes, but
-    /// Virtualization.framework needs whole MiB. The rounding goes down, so
-    /// the VM never uses more than the label and its slot reserve.
-    pub(crate) fn vm_memory_bytes(&self) -> u64 {
-        self.memory_bytes - self.memory_bytes % MIB
+    /// Virtualization.framework needs whole MiB. So the memory rounds down
+    /// to a whole MiB, and the VM never uses more than the label and its
+    /// slot reserve.
+    #[cfg(any(target_os = "macos", test))]
+    pub(crate) fn settings(&self) -> ciproxy_vz::VmSettings {
+        ciproxy_vz::VmSettings {
+            cpus: self.cpus,
+            memory_bytes: self.memory_bytes - self.memory_bytes % MIB,
+            display: None,
+        }
     }
 }
 

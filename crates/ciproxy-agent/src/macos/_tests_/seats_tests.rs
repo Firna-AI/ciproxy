@@ -177,13 +177,30 @@ fn the_exit_file_uses_the_control_words() {
 }
 
 #[test]
-fn the_vm_memory_rounds_a_decimal_label_down_to_a_whole_mib() {
+fn the_vm_settings_round_a_decimal_label_down_to_a_whole_mib() {
     const MIB: u64 = 1024 * 1024;
+    let limits = ciproxy_vz::Limits {
+        min_cpus: 1,
+        max_cpus: 16,
+        min_memory_bytes: MIB,
+        max_memory_bytes: 64 << 30,
+    };
     let label = VmSpec {
         memory_bytes: 8_000_000_000,
         ..spec()
     };
-    assert_eq!(label.vm_memory_bytes(), 7_629 * MIB);
-    assert!(label.vm_memory_bytes() <= label.memory_bytes);
-    assert_eq!(spec().vm_memory_bytes(), 8 << 30);
+    let settings = label.settings();
+    assert_eq!(settings.memory_bytes, 7_629 * MIB);
+    assert_eq!(settings.cpus, label.cpus);
+    assert_eq!(settings.display, None);
+    settings.check(limits).unwrap();
+    assert!(
+        ciproxy_vz::VmSettings {
+            memory_bytes: label.memory_bytes,
+            ..settings
+        }
+        .check(limits)
+        .is_err()
+    );
+    assert_eq!(spec().settings().memory_bytes, 8 << 30);
 }
