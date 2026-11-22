@@ -41,14 +41,14 @@ fn keep_going_runs_later_phases_and_returns_failure() {
     let failure_status = ExitStatus::from_raw(1 << 8);
     let commands = Unimock::new((
         CommandRunMock
-            .some_call(matching!((CommandSpec { program, args })
+            .some_call(matching!((CommandSpec { program, args, .. })
                 if program == "cargo" && args.first().is_some_and(|arg| arg == "fmt")))
             .returns(Err(Error::CommandFailed {
                 program: "cargo".to_owned(),
                 status: failure_status,
             })),
         CommandRunMock
-            .some_call(matching!((CommandSpec { program, args })
+            .some_call(matching!((CommandSpec { program, args, .. })
                 if program == "cargo" && args.first().is_some_and(|arg| arg == "clippy")))
             .returns(Ok(())),
     ));
@@ -78,7 +78,7 @@ fn heading_fragment_without_a_heading_warns_and_runs_markdownlint() {
     ));
     let commands = Unimock::new(
         CommandRunMock
-            .some_call(matching!((CommandSpec { program, args })
+            .some_call(matching!((CommandSpec { program, args, .. })
                 if program == "npm" && args.iter().any(|arg| arg == "markdownlint-cli2")))
             .returns(Ok(()))
             .once(),
