@@ -191,12 +191,14 @@ BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
 - **Check:** the quota syntax, and that the fstab line mounts the volume at
   boot before the agent starts.
 
-| Path in the area      | Use                                         |
-| --------------------- | ------------------------------------------- |
-| `images/index.json`   | The published images and the newest one     |
-| `images/NAME/bundle/` | A checked image bundle                      |
-| `vms/LOCAL_ID/`       | The VM bundle clone, `vm.json`, socket      |
-| `seats/N/identity/`   | The seat identity, in the `ciproxy-vz` form |
+| Path in the area               | Use                                         |
+| ------------------------------ | ------------------------------------------- |
+| `images/index.json`            | The published images and the newest one     |
+| `images/NAME/bundle/`          | A checked image bundle                      |
+| `images/NAME.tar.partial`      | The bytes of a download so far              |
+| `images/NAME.tar.partial.json` | The image ID, SHA-256, and size of them     |
+| `vms/LOCAL_ID/`                | The VM bundle clone, `vm.json`, socket      |
+| `seats/N/identity/`            | The seat identity, in the `ciproxy-vz` form |
 
 `NAME` is the hex SHA-256 of the image ID, so an ID never names a path.
 
@@ -206,8 +208,23 @@ I owns the image format. One `macos.tar` holds `bundle/disk.img.zst`,
 `bundle/aux.img`, `bundle/hardware-model.bin`, `manifest.json`, three other
 metadata files, and `macos-content.sha256`.
 
-1. The download streams to `images/NAME.tar`. The agent checks its byte
-   count and SHA-256 against the `ImageDownload`.
+1. The download streams to `images/NAME.tar.partial`. Its sidecar
+   `images/NAME.tar.partial.json` holds the image ID, the SHA-256, and the
+   byte size of the `ImageDownload`. A broken stream retries with
+   `Range: bytes=LENGTH-` three times, 5 s apart, and each new byte resets
+   the count. A `5xx` or a `429` retries in the same way. A `429` waits for
+   the seconds of its `Retry-After` header instead, at most 60 s. Another
+   HTTP error status, such as `403` for an expired URL, ends the command
+   and keeps the partial file. A later `FetchImage` with the
+   same sidecar values hashes the bytes on disk and continues them. Other
+   values, or a file longer than the image, start again from zero, and so
+   does a `200` answer to a `Range` request. A `206` from another start, or
+   a `416`, empties the file, and the retry asks for the whole archive
+   without `Range`. A download removes the partial
+   files of other images. One download runs at a time, so a second
+   `FetchImage` for the same image waits and then finds the image known.
+   After the byte count and the SHA-256 match, the partial file becomes
+   `images/NAME.tar`. A mismatch deletes the partial file and its sidecar.
 2. Extraction refuses links, other paths, and duplicate members. It
    decompresses the disk and writes each all-zero 1 MiB block as a hole. It
    hashes each file as it writes it, so the content check needs no second
@@ -436,6 +453,10 @@ Seats follow `Slots::for_machine` with P's rule, then
   launchd file and folder.
 - Daemon start stops each loaded helper with no record and removes each VM
   launchd file and folder with no record. Unreadable state keeps them all.
+- Daemon start keeps each partial download whose sidecar decodes and whose
+  file is not longer than its image. It removes every other partial file
+  and sidecar, each checked `images/NAME.tar` that waits for extraction,
+  and each `.pending` part.
 - After a reboot, no VM helper runs, so every recorded VM ends as above.
   With FileVault on, macOS starts no daemon until a person logs in once.
 
