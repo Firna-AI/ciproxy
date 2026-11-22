@@ -51,6 +51,10 @@ its own VM helper, as each Linux VM runs in its own systemd unit.
 - The VM helper reads `area/vms/LOCAL_ID/vm.json`. This file holds no
   secret: the bundle path, the CPU count, the memory size, the seat, and
   the start kind. The helper refuses an inconsistent file.
+- The memory size in `vm.json` is the label size in decimal bytes, such as
+  8,000,000,000 for 8 GB. Virtualization.framework needs whole MiB, so the
+  helper rounds it down to a whole MiB. The VM never uses more memory than
+  the label and its slots reserve.
 - The VM helper listens on `area/vms/LOCAL_ID/control.sock`. The socket has
   mode `0600`, and its folder has mode `0700`, both owned by root.
 - When the VM stops, the VM helper writes `exit.json` with a rename, then

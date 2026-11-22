@@ -175,3 +175,15 @@ fn the_exit_file_uses_the_control_words() {
     );
     assert_eq!(serde_json::from_str::<VmExit>(&text).expect("decode"), exit);
 }
+
+#[test]
+fn the_vm_memory_rounds_a_decimal_label_down_to_a_whole_mib() {
+    const MIB: u64 = 1024 * 1024;
+    let label = VmSpec {
+        memory_bytes: 8_000_000_000,
+        ..spec()
+    };
+    assert_eq!(label.vm_memory_bytes(), 7_629 * MIB);
+    assert!(label.vm_memory_bytes() <= label.memory_bytes);
+    assert_eq!(spec().vm_memory_bytes(), 8 << 30);
+}

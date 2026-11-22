@@ -12,6 +12,9 @@ use super::vm_control::StopReason;
 
 pub(crate) const VM_SPEC_FORMAT: u32 = 1;
 
+/// Virtualization.framework needs the memory of a VM in whole MiB.
+const MIB: u64 = 1024 * 1024;
+
 /// The VM that one helper creates.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -55,6 +58,15 @@ impl VmSpec {
             return Err(SpecError::SavedState);
         }
         Ok(())
+    }
+
+    /// The memory of the VM: `memory_bytes` rounded down to a whole MiB.
+    ///
+    /// A label gives memory in decimal GB, such as 8,000,000,000 bytes, but
+    /// Virtualization.framework needs whole MiB. The rounding goes down, so
+    /// the VM never uses more than the label and its slot reserve.
+    pub(crate) fn vm_memory_bytes(&self) -> u64 {
+        self.memory_bytes - self.memory_bytes % MIB
     }
 }
 

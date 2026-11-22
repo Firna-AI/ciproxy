@@ -44,7 +44,7 @@ pub(crate) async fn run(local_id: &str) -> Result<()> {
     spec.check().map_err(|error| helper(&error.to_string()))?;
     let settings = VmSettings {
         cpus: spec.cpus,
-        memory_bytes: spec.memory_bytes,
+        memory_bytes: spec.vm_memory_bytes(),
         display: None,
     };
     let listener = bind(&folders.client(local_id).socket).context("bind the control socket")?;
