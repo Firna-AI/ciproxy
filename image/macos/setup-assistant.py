@@ -52,19 +52,25 @@ def steps(password):
         ("terms", r"Terms and Conditions",
          [("click", AGREE), ("wait", r"I ?have read and agree", 30),
           ("click", AGREE, False)], 180),
-        ("age", r"Age Range|age range", [("click", r"^Adult"), ("click", CONTINUE)], 120),
-        ("location", r"Location Services",
+        # OCR reads "Adult" badly. It is the row after "Child" and "Teen", and
+        # a click on it leaves the screen.
+        ("age", r"^Age Range$", [("row_after", r"^Child$", r"^Teen$")], 120),
+        # The box is clear by default. The checkbox action clicks only a
+        # checked box.
+        ("location", r"^Enable Location Services$",
          [("uncheck", r"Location Services on this Mac"), ("click", CONTINUE),
           ("wait", r"Don.t Use", 30), ("click", r"Don.t Use", False)], 180),
         ("time zone", r"Time Zone", [("click", CONTINUE)], 120),
         ("analytics", r"^Analytics$",
          [("uncheck", r"Share Mac Analytics"), ("click", CONTINUE)], 180),
         ("screen time", r"^Screen Time$", [("click", r"Set Up Later")], 120),
-        ("filevault", r"FileVault",
+        # The dialog "Mac Data Will Not Be Securely Encrypted" has the only
+        # Continue of this screen.
+        ("filevault", r"Ready for FileVault",
          [("click", r"^Not Now$"), ("sleep", 2), ("click", CONTINUE, False)], 180),
         ("look", r"Choose Your Look", [("click", CONTINUE)], 120),
-        ("updates", r"Update Mac Automatically|Software Update|Keep Your Mac Up to Date",
-         [("click", r"Only Download Automatically"), ("click", CONTINUE)], 120),
+        ("updates", r"Update Mac Automatically",
+         [("click", r"Only Download Automatically")], 120),
         ("welcome", r"Get Started|Welcome to Mac", [("click", r"Get Started|^Continue\.?$")], 600),
     ]
 

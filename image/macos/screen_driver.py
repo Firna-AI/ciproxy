@@ -115,6 +115,16 @@ class Screen:
                 return x - 4
         return None
 
+    def row_after(self, first, second):
+        """Click the row after two rows, at the same spacing. For a row whose
+        text OCR reads badly, such as "Adult" after "Child" and "Teen"."""
+        above, below = self.find(first), self.find(second)
+        if not above or not below:
+            self.fail(f"no rows match {first!r} and {second!r}")
+        top, middle = above[0], below[0]
+        self.vnc.click(middle["x"], 2 * middle["y"] - top["y"])
+        time.sleep(1)
+
     def type(self, text):
         self.vnc.type(text)
 
@@ -136,6 +146,8 @@ def run_action(screen, action, values):
         screen.click(*values)
     elif action == "uncheck":
         screen.uncheck(*values)
+    elif action == "row_after":
+        screen.row_after(*values)
     elif action == "select":
         screen.select(*values)
     elif action == "type":
@@ -162,8 +174,8 @@ def leave(screen, name, expected, last, timeout, retry_after=30):
         screen.read()
         if not screen.find(expected):
             return
-        if last[0] in ("click", "press") and time.monotonic() >= retry:
-            if last[0] == "press" or screen.find(last[1]):
+        if last[0] in ("click", "press", "row_after") and time.monotonic() >= retry:
+            if last[0] != "click" or screen.find(last[1]):
                 run_action(screen, last[0], last[1:])
             retry = time.monotonic() + retry_after
         time.sleep(2)
