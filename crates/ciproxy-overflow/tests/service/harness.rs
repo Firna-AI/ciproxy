@@ -26,6 +26,7 @@ pub(super) enum Runtime {
     Connect,
     Recover,
     Read,
+    ExitReport,
     Authority,
     Start,
 }

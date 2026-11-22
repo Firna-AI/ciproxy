@@ -26,6 +26,7 @@ pub(super) struct Capture {
     pub(super) fail_on_key_open: Option<usize>,
     pub(super) key_open_effect: Option<(usize, Box<dyn FnOnce() + Send>)>,
     pub(super) dispatch_effect: Option<Box<dyn FnOnce() + Send>>,
+    pub(super) lock_effect: Option<Box<dyn FnOnce() + Send>>,
     pub(super) disable_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) suspend_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) limit_on_launch_seal: Option<(i64, Arc<dyn Store>)>,
@@ -66,6 +67,10 @@ impl OverflowStore for RecordingStore {
     }
 
     fn lock_overflow(&self, workspace_id: Uuid) -> Result<Box<dyn OverflowSession>> {
+        let effect = self.capture.lock().unwrap().lock_effect.take();
+        if let Some(effect) = effect {
+            effect();
+        }
         Ok(self.wrap(self.inner.lock_overflow(workspace_id)?))
     }
 

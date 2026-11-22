@@ -74,11 +74,14 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
             .unwrap(),
         Some(account.key)
     );
+    let stale = record.clone();
     record.phase = StartPhase::Ended;
     record.ends_at = Some(at() + Duration::hours(6));
     {
         let mut session = database.store.lock_overflow(workspace_id).unwrap();
         session.save_start(&record).unwrap();
+        session.save_start(&stale).unwrap();
+        assert_eq!(session.snapshot().unwrap().starts, vec![record.clone()]);
         assert_eq!(
             database
                 .store
@@ -89,7 +92,8 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
                     at() + Duration::hours(7)
                 )
                 .unwrap(),
-            None
+            None,
+            "an ended delivery must reject its unused exit token"
         );
         session.collect(at() - Duration::days(90)).unwrap();
         assert_eq!(session.snapshot().unwrap().accounts, []);

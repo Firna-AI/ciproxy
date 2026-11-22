@@ -233,17 +233,32 @@ async fn callback_saves_exit_while_workspace_lock_remains_held() {
 }
 
 #[tokio::test]
-async fn callback_accepts_exit_when_provider_delete_fails() {
-    let harness = Harness::new(false, false).await;
+async fn callback_returns_503_for_claim_failure_and_204_for_delete_failure() {
+    let mut harness = Harness::new(false, false).await;
     harness.queued();
     harness.runtime.settled_tick().await.unwrap();
     let workspace = harness.fixture.workspace;
-    let store = &harness.fixture.store;
+    let store = harness.fixture.store.clone();
     let inputs = harness.ports.inputs.lock().unwrap().clone();
     let token = inputs[0]["exit_report_token"].as_str().unwrap();
     let runner = inputs[0]["configure"]["runner_id"].as_str().unwrap();
     let router = boat_callback::router(harness.service.clone());
     let reported_at = *harness.ports.now.lock().unwrap();
+    let before = store.boat_runtime_snapshot(workspace).unwrap().starts;
+
+    harness.fixture.reject_boat_exit_claims();
+    assert_eq!(
+        post_exit(&router, token, runner).await,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "a failed durable claim must return HTTP 503"
+    );
+    assert_eq!(
+        store.boat_runtime_snapshot(workspace).unwrap().starts,
+        before
+    );
+    assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
+    harness.fixture.allow_boat_exit_claims();
+
     harness.ports.delete_fail.store(true, Ordering::SeqCst);
 
     assert_eq!(

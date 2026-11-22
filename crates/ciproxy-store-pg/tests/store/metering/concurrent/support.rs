@@ -28,6 +28,21 @@ struct Blocking {
     blocked: bool,
 }
 
+impl TaggedStore {
+    /// Get the dedicated connection of an open workspace session on this store.
+    pub(in crate::store) fn workspace_session_pid(&self, observer: &mut PgConnection) -> i32 {
+        diesel::sql_query(
+            "SELECT pid FROM pg_stat_activity
+             WHERE datname = current_database() AND pid <> $1
+               AND application_name = (SELECT application_name FROM pg_stat_activity WHERE pid = $1)",
+        )
+        .bind::<sql_types::Integer, _>(self.pid)
+        .get_result::<Backend>(observer)
+        .unwrap()
+        .pid
+    }
+}
+
 pub(in crate::store) fn tagged_store(database_url: &str) -> TaggedStore {
     let tag = format!("metering-operation-{}", Uuid::new_v4());
     let mut url = Url::parse(database_url).unwrap();
