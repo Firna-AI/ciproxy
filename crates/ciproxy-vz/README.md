@@ -83,7 +83,9 @@ handle drops or when the process exits.
 
 ### User context
 
-Run VMs in the login session of a normal user: a LaunchAgent in the
+A LaunchDaemon, as root or with `UserName`, can start, run, and stop VMs,
+and can connect to their vsock ports. Only a process in the login session
+of a normal user can save and restore a VM: a LaunchAgent in the
 `gui/<uid>` domain of a user who is logged in at the console. Workstream A
 tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
 
@@ -91,6 +93,7 @@ tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
 | --- | --- | --- |
 | `gui/<uid>`, the user's login session | Pass | Pass |
 | LaunchDaemon with `UserName` | Pass | `save` stops the VM |
+| LaunchDaemon with `UserName` and `SessionCreate` | Pass | `save` stops the VM |
 | LaunchDaemon as root | Pass | `save` stops the VM |
 | Root under `sudo` | Fails | Not reached |
 | `user/<uid>` background domain | `launchctl bootstrap` fails | Not reached |
@@ -98,8 +101,9 @@ tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
 - In `gui/<uid>`, the save took 3 s and wrote 1.7 GB for 8 GB of memory.
   The state restored into an APFS clone at another path and ran 6 s later.
   A vsock connect after the restore passed.
-- In a LaunchDaemon, also with `UserName`, `pause` and then `save` stop the
-  VM with `VZErrorDomain` error 1, "Internal Virtualization error".
+- In a LaunchDaemon, also with `UserName` and with `SessionCreate`, `pause`
+  and then `save` stop the VM with `VZErrorDomain` error 1, "Internal
+  Virtualization error". The vsock connect passes there.
 - Under `sudo`, `start` fails with `VZErrorDomain` error -9, "Unable to
   access security information".
 - In `user/<uid>`, `launchctl bootstrap` fails with error 5, "Input/output
