@@ -45,8 +45,24 @@ pub(crate) fn parse_image_id(value: &str) -> std::result::Result<String, String>
     }
 }
 
+/// Refuse an archive inside the images folder: recovery removes each
+/// `.tar` file there, so the import would delete its own source. Stage the
+/// archive elsewhere on the area volume to keep the APFS clone.
+pub(crate) fn check_source(archive: &Path, images: &Path) -> Result<()> {
+    let archive = std::fs::canonicalize(archive).context("find the image archive")?;
+    let images = std::fs::canonicalize(images).context("find the images folder")?;
+    if archive.starts_with(&images) {
+        return Err(Error::Preparation {
+            component: "image archive",
+            repair: "Move the archive out of the images folder, for example to /var/db/ciproxy/area/macos.tar. Then rerun import-image.",
+        });
+    }
+    Ok(())
+}
+
 /// Copy `source` to `target` with mode `0600`, then check the size and the
-/// SHA-256 of the copy. On a failed check, remove the copy.
+/// SHA-256 of the copy. On a failed check, remove the copy. Root runs the
+/// command, so the copy also gets root as its owner.
 ///
 /// On macOS, `std::fs::copy` makes an APFS clone when both paths are on
 /// the same volume, and a full copy when they are not.
@@ -56,14 +72,21 @@ pub(crate) fn copy_checked(source: &Path, target: &Path, sha256: &str) -> Result
         .len();
     remove_file(target)?;
     let result = copy_and_check(source, target, expected, sha256);
-    if result.is_err() {
-        remove_file(target)?;
+    if result.is_err()
+        && let Err(error) = remove_file(target)
+    {
+        tracing::warn!(%error, "the next import or daemon start removes the copy");
     }
     result
 }
 
 fn copy_and_check(source: &Path, target: &Path, expected: u64, sha256: &str) -> Result<()> {
     let copied = std::fs::copy(source, target).context("copy the image archive")?;
+    // A clone and a copy keep the owner of the source. Root owns the copy,
+    // as it owns every other file in the images folder.
+    if rustix::process::geteuid().is_root() {
+        std::os::unix::fs::chown(target, Some(0), Some(0)).context("own the image archive")?;
+    }
     std::fs::set_permissions(target, std::fs::Permissions::from_mode(0o600))
         .context("restrict the image archive")?;
     let (bytes, digest) = digest(target)?;

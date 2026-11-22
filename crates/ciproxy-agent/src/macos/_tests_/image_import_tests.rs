@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 
 use super::image_extract::extract;
-use super::image_import::{copy_checked, parse_image_id, parse_sha256};
+use super::image_import::{check_source, copy_checked, parse_image_id, parse_sha256};
 use crate::error::Error;
 
 const ROOT: u64 = 3 * 1024 * 1024;
@@ -124,6 +124,24 @@ fn a_wrong_digest_removes_the_copy_and_keeps_the_source() {
     assert!(matches!(result, Err(Error::ImageVerification)));
     assert!(!target.exists());
     assert_eq!(std::fs::read(&source).expect("read"), b"archive bytes");
+}
+
+#[test]
+fn an_archive_inside_the_images_folder_is_refused() {
+    let folder = Folder::new();
+    let images = folder.path().join("images");
+    std::fs::create_dir(&images).expect("images");
+    write(&images.join("macos.tar"), b"archive bytes");
+    write(&folder.path().join("macos.tar"), b"archive bytes");
+    let inside = folder.path().join("images/../images/macos.tar");
+    assert!(matches!(
+        check_source(&inside, &images),
+        Err(Error::Preparation {
+            component: "image archive",
+            ..
+        })
+    ));
+    check_source(&folder.path().join("macos.tar"), &images).expect("outside");
 }
 
 #[test]

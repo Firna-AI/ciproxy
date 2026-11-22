@@ -12,7 +12,7 @@ use super::{MacPlatform, area};
 use crate::boundaries::Images;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::macos::image_bundle::folder_name;
-use crate::macos::image_import::{ImageImport, copy_checked};
+use crate::macos::image_import::{ImageImport, check_source, copy_checked};
 use crate::macos::paths::CONTROL;
 use crate::platform::Platform;
 use crate::runtime_ownership::{CliRuntimeWaitNotice, FileRuntimeClaims, RuntimeClaims};
@@ -33,17 +33,20 @@ pub(crate) async fn import_image(request: ImageImport) -> Result<()> {
         tracing::warn!(%error, "the runtime lock is not free");
         Error::Preparation {
             component: "runtime lock",
-            repair: "Stop the agent daemon with `launchctl bootout system/dev.ciproxy.agent`. Then rerun import-image.",
+            repair: "Stop the agent daemon with `launchctl bootout system/dev.ciproxy.agent`, and check that root can write /var/db/ciproxy/images.lock. Then rerun import-image.",
         }
     })?;
     let images = platform.images.clone();
+    let archive = images.archive(&request.image_id);
+    if let Some(folder) = archive.parent() {
+        check_source(&request.archive, folder)?;
+    }
     images.recover()?;
     if images.known(&request.image_id) {
         println!("image {} is already published", request.image_id.0);
         return Ok(());
     }
     println!("copying and checking the archive; a large archive takes some minutes");
-    let archive = images.archive(&request.image_id);
     let (source, target, sha256) = (
         request.archive.clone(),
         archive.clone(),

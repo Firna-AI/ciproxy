@@ -215,12 +215,16 @@ sudo /usr/local/bin/ciproxy-agent import-image --archive PATH \
 1. Run it as root after `prepare-host` and before `install`. It needs the
    area volume, and it takes the runtime lock, so it refuses to run while
    the daemon runs. The daemon then loads the image when it starts.
-2. It copies the archive to `images/NAME.tar`. The copy is an APFS clone
-   when the archive is on the area volume, and a full copy when it is not.
+2. It copies the archive to `images/NAME.tar`, owned by root with mode
+   `0600`. The copy is an APFS clone when the archive is on the area
+   volume, and a full copy when it is not. Stage the archive at the area
+   root, such as `/var/db/ciproxy/area/macos.tar`. The command refuses an
+   archive in `images/`, because recovery removes each `.tar` file there.
 3. It checks the byte count and the SHA-256 of the copy, not of the
    source, so a later change of the source cannot reach extraction.
-4. Then it runs the same steps 2 to 4 as a download. A failed import
-   leaves no archive and no pending folder.
+4. Then it runs the same steps 2 to 4 as a download. A failed check or
+   extraction removes the copy and the pending folder. When the command
+   is stopped, the next import or daemon start removes them.
 
 An image ID that the index already lists is not imported again.
 
