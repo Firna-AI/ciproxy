@@ -325,15 +325,17 @@ The five items close, and the other items stay true after the change. No
 item names a fixture or a smoke of Milestone 5, so this milestone runs beside
 it.
 
-- [ ] Delete `plans/follow-ups/terms-notice-on-every-sign-in.md`,
+- [x] Delete `plans/follow-ups/terms-notice-on-every-sign-in.md`,
       `plans/follow-ups/terms-acceptance-parties.md`,
       `plans/follow-ups/privacy-retention-requirements.md`,
       `plans/follow-ups/terms-changes-unattended-workspaces.md`, and
       `plans/follow-ups/consumer-purchase-rules.md`.
-- [ ] Record in `plans/follow-ups/taxes-after-launch.md` that the decision
+- [x] Record in `plans/follow-ups/taxes-after-launch.md` that the decision
       of 4 November 2026 stays in force, and keep the item open.
-- [ ] Update each other follow-up item that names a changed section, file,
+- [x] Update each other follow-up item that names a changed section, file,
       or decision.
+
+Evidence: `.context/terms-acceptance-and-business-checkout/m6/`.
 
 ## Milestone 7: Verification, commit, review, and pull request
 

@@ -24,8 +24,8 @@
   - **Keyset page:** a page of rows in a fixed order, with an opaque
     continuation that names where the next page starts.
   - **Retained job:** a job whose metadata ciproxy still keeps. ciproxy
-    keeps it for 90 days on every tier, also on Free, as
-    `docs/protocol/security.md:246` says.
+    keeps it for 90 days on every tier, also on Free, as "Data retention"
+    in `docs/protocol/security-data.md` says.
 - **Background:**
   - `GET /api/workspaces/{id}/jobs/history` takes `search`, `place`,
     `from`, and `until`. `JobsHistoryPage` at `wire/jobs.rs:248` returns

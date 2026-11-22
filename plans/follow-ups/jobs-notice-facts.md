@@ -69,9 +69,10 @@
     and `:80`. A suspension saves no person and no day.
     `docs/protocol/app-removal.md:98` asks for a notice that names the
     organization and links to GitHub, and the product meets it.
-  - `docs/protocol/security.md:253-254` keeps the record of a person only
-    while the person has a role or an open request for access. The person
-    who suspended the App can have no role in the workspace.
+  - "Data retention" in `docs/protocol/security-data.md` keeps the record
+    of a person only while the person has a role or an open request for
+    access. The person who suspended the App can have no role in the
+    workspace.
   - Refusal: `SandboxStartRefusal` of the `sandbox-interface` crate, which
     the root `Cargo.toml` pins, gives a typed reason with a temporary, a
     plan, or a billing refusal. A temporary reason is, for example, a start
@@ -161,10 +162,11 @@
     API gives an address of the Boat account, which needs a source first.
     The kind of the size choice is saved at the preparation, as in D. B
     must resolve one condition first: the person can have no role in the
-    workspace, and `docs/protocol/security.md:253-254` keeps the record of
-    a person only while a role or an open request exists. The work spans
-    the GitHub installation state, the overflow state, the start record,
-    the wire, the generated types, the app, and the mockups. Effort: Large.
+    workspace, and "Data retention" in `docs/protocol/security-data.md`
+    keeps the record of a person only while a role or an open request
+    exists. The work spans the GitHub installation state, the overflow
+    state, the start record, the wire, the generated types, the app, and the
+    mockups. Effort: Large.
   - **C.** Save only the `StartReason` of the Boat start, so the job page
     can name the largest-size fallback, and accept the current-contract
     copy for the other facts. Risk: the start reason is the intent of the

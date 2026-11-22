@@ -32,7 +32,8 @@
     payment, the Plans page opens no second checkout, because no page asks
     for a second payment while the first one confirms. A checkout that
     does not finish offers to try again, at `:121-124`. When the bank asks
-    to confirm a charge, the Stripe payment page opens, at `:161`.
+    to confirm a charge, the Stripe payment page opens, as
+    "Changing tiers" in the same doc says.
   - `POST /checkout` answers `open` with the hosted Checkout URL. A paid
     change, through `POST /billing/change` or `PUT /billing/add-ons`,
     answers `payment_required` with the hosted invoice URL of the latest

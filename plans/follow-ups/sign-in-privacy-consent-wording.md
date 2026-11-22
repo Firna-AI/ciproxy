@@ -5,14 +5,20 @@
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-22, from the branch `docs/legal-pages-firna`, a problem
   outside the scope that the checks of review findings 2 and 3 found.
-- **Location:** `ts/app/src/screens/sign-in.tsx`, near line 29.
-  `docs/mockups/src/screens/auth/sign-in.tsx`, near line 51.
+- **Location:** `ts/app/src/components/terms-notice.tsx`, near line 11.
+  `docs/mockups/src/screens/auth/terms-notice.tsx`, near line 11.
 - **Reason:** The sign-in screen and its mockup are outside the legal text
   change.
 
 - **Background:**
-  - The footer of the dashboard sign-in page says "By signing in, you agree
-    to the ciproxy Terms and Privacy policy".
+  - The terms notice says "By signing in, you agree to the ciproxy Terms
+    and Privacy policy".
+  - Since 22 November 2026, one shared part holds the notice: `TermsNotice`
+    in `ts/app/src/components/terms-notice.tsx` for the dashboard, and in
+    `docs/mockups/src/screens/auth/terms-notice.tsx` for the mockups. The
+    sign-in page and the terms step at `/continue` both show it in their
+    footer. The terms step is the page before each GitHub sign-in that does
+    not start on the sign-in page.
   - The privacy policy is a notice. It relies on the contract, legitimate
     interests, and legal obligations, not on consent.
 - **Problem:** "Agree to the Privacy policy" reads as consent, which the

@@ -23,6 +23,10 @@
     with both workspaces, and the original expiry stayed.
   - The two-tab variant did not run. In it, one callback tab closes before
     it receives its response.
+  - Since 22 November 2026, the `reauthorization_url` of the session is the
+    terms step at `/continue`. So Check again on a page whose sign-in has
+    no workspace opens that page first. Its "Continue with GitHub" button
+    starts the GitHub sign-in. The one-tab run above came before this step.
   - The install-binding probes did not run. They need a GitHub App user
     token of the person who starts the install and a fresh App JWT. The
     private credential file names them `github_user_token`,
@@ -30,9 +34,11 @@
     `installation_proof_file`.
 - **Task:**
   1. Run the two-tab variant as the "Repeated GitHub authorization"
-     section says. Close one callback tab before it receives its response.
-     Check again from the other tab. Confirm that the original 30-day
-     expiry stays in effect.
+     section says. Where the probe follows the `reauthorization_url` or
+     selects Check again, select Continue with GitHub on the terms step.
+     Close one callback tab before it receives its response. Check again
+     from the other tab. Confirm that the original 30-day expiry stays in
+     effect.
   2. Run the install-binding probe once as an organization owner. Then
      run it as a member whose install needs the approval of an owner.
   3. Record the results, the build identity, and pass or fail under

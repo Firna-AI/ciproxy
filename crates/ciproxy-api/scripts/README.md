@@ -26,7 +26,10 @@ credential exists in this workspace, so these steps remain operator work.
 1. Sign in through `/api/auth/github`.
 2. Save that cookie as `previous_session_cookie` in the private file.
 3. Install the App on a test organization, or wait for its owner to approve.
-4. Follow the session response's `reauthorization_url` as top-level navigation.
+   The setup return opens the terms step at `/continue`. Select Continue with
+   GitHub there.
+4. Follow the session response's `reauthorization_url`, the terms step at
+   `/continue`, as top-level navigation, and select Continue with GitHub.
    Record whether GitHub shows another consent page.
 5. Save the returned current cookie and CSRF token in the private file.
 6. Run the script again. It compares the first and current expiry times.
