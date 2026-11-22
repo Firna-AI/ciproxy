@@ -1,8 +1,9 @@
 //! New starts and restarts use immutable create and launch identities.
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time;
 
+use chrono::{DateTime, Duration, Utc};
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::crypto::SecretPurpose;
 use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock};
@@ -23,6 +24,8 @@ async fn paid_start_sends_private_input_and_persists_identity_before_launch() {
     let file_events = events.clone();
     let prepare_events = events.clone();
     let launch_events = events.clone();
+    let clock_slot = Arc::new(OnceLock::<Arc<Mutex<DateTime<Utc>>>>::new());
+    let launch_clock = clock_slot.clone();
     let backend = capabilities(Unimock::new((
         BoatAccountApiMock::account
             .some_call(matching!())
@@ -89,15 +92,17 @@ async fn paid_start_sends_private_input_and_persists_identity_before_launch() {
             .some_call(matching!(_, _))
             .answers_arc(Arc::new(move |_, _, _| {
                 launch_events.lock().unwrap().push("launch");
+                *launch_clock.get().unwrap().lock().unwrap() += Duration::minutes(3);
                 Ok(())
             })),
     )));
     let harness = Harness::new(backend, (), Runtime::Start);
+    clock_slot.set(harness.now.clone()).unwrap();
     let outcome = harness.service.start(id(1), request()).await.unwrap();
     assert!(matches!(outcome, StartOutcome::Started(_)), "{outcome:?}");
     assert_eq!(
         harness.start(id(11)).launched_at,
-        Some("2026-11-05T12:00:00Z".parse().unwrap())
+        Some("2026-11-05T12:03:00Z".parse().unwrap())
     );
     let state = harness.state.lock().unwrap();
     assert_eq!(

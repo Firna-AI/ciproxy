@@ -75,10 +75,31 @@ archives and publishes the release.
 
 Two cases change this route:
 
-- When release-plz writes its own version pull request, it closes an open
-  `release-plz-` pull request that has commits from a person. Then merge
-  the release-plz version pull request instead. Its release also holds the
-  moved pin, because release-plz writes that pull request from `main`.
+- When release-plz writes its own version pull request, it can take over
+  the hand pull request from the `release-plz-` branch. It looks for
+  commits from a person in the hand pull request. It skips the first
+  commit, and it ignores logins that end in `[bot]`. So it takes over in
+  one of two ways:
+  - When no commit from a person follows the first commit, release-plz
+    rewrites the hand pull request in place with its own version commit.
+  - Otherwise, release-plz closes the hand pull request and opens a new
+    version pull request.
+
+  The version pull request that remains holds the moved pin, because the
+  pin is already on `main`. It does not hold the regeneration of
+  `ts/api/generated/openapi.json`. So the `api-types` phase of the required
+  `Repository gate` check fails on it. Then do these steps:
+
+  1. Run `npm --prefix ts run api:generate` on the branch of that pull
+     request.
+  2. Commit the changed generated files and push them.
+  3. Merge the pull request soon after its gate passes.
+
+  Release-plz can update that pull request again after each later merge to
+  `main`. It counts the regeneration commit as a commit from a person. So
+  that update closes the pull request and opens a new one without the
+  regeneration. Then do the same steps on the new pull request.
+
 - When the gate fails on the merge commit, no release follows. Release-plz
   releases the version when a rerun of that workflow run passes, or when a
   later merge from a `release-plz-` branch passes the gate.

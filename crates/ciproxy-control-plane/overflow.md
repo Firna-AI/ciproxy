@@ -47,9 +47,10 @@ The routing snapshot of a workspace also holds the saved Boat account,
 deliveries, registration identities, and runner states. The common snapshot
 builder turns these records into Boat supply, if a Boat service is
 configured. So the pure scaler sees all accepted Boat supply, also while
-Boat is unavailable. It starts no second runner for that demand before the
+Boat is unavailable. The
 [ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
-of the first runner.
+and the [scaler rules](../ciproxy-scaler/README.md#what-this-crate-does) say
+when the scaler starts another runner for demand that this supply covers.
 The scaler applies own machines first, the
 [overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait), and
 the Boat size rules. The runtime executes each Boat start through the

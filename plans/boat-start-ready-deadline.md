@@ -165,7 +165,7 @@ Depends on: 1, 2, 3
 - [x] Commit with Conventional Commits and push the branch.
 - [x] Open a draft pull request into `main`. Its description starts with
       "Depends on #116".
-- [ ] Review the complete local diff with the `implementation-review`
+- [x] Review the complete local diff with the `implementation-review`
       skill after the push. While #116 is open, the base is
       `origin/fix/boat-exit-report-claim-first`. Report the findings, then
       apply the fix rule: fix the `fix now` findings, record follow-up
