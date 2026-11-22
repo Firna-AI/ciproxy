@@ -116,6 +116,14 @@ impl MachineRuntime {
         if protected_ready {
             return Ok(());
         }
+        if state == RunnerState::Stopped
+            && matches!(
+                runner.runner.state,
+                RunnerState::Starting | RunnerState::Ready
+            )
+        {
+            self.remove_unused_registration(&input, runner)?;
+        }
         let input = self.load(workspace_id).await?;
         for job in &input.jobs {
             self.route_job(&input, job).await?;

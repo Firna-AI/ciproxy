@@ -14,6 +14,7 @@ use crate::snapshot::{NothingFits, RunnerState, Snapshot};
 use super::fixtures::{
     allocated, boat, boat_size, large, own, queued, runner, sandbox, small, snapshot, warm,
 };
+use ciproxy_protocol::platform::Platform;
 
 fn fallback_snapshot() -> Snapshot {
     let mut state = snapshot();
@@ -131,7 +132,8 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
     assert_eq!(actions[0], retire_fallback());
     assert_eq!(
         actions[1],
-        Action::StartRunner(StartRunner {
+        Action::StartRunner(Box::new(StartRunner {
+            platform: Platform::LinuxX64,
             target: state.labels[1].targets[0].clone(),
             organization_id: state.organizations[0].clone(),
             label: state.labels[1].name.clone(),
@@ -142,7 +144,7 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
             },
             destination: Destination::Boat(BoatSizeId("large".into())),
             reason: StartReason::LargestBoatSize,
-        })
+        }))
     );
 }
 
@@ -192,7 +194,8 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
     state.boat.largest_size = Some(BoatSizeId("fitting".into()));
     assert_eq!(
         decide(&state),
-        vec![Action::StartRunner(StartRunner {
+        vec![Action::StartRunner(Box::new(StartRunner {
+            platform: Platform::LinuxX64,
             target: state.labels[0].targets[0].clone(),
             organization_id: state.organizations[0].clone(),
             label: state.labels[0].name.clone(),
@@ -200,7 +203,7 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
             size: fitting,
             destination: Destination::Boat(BoatSizeId("fitting".into())),
             reason: StartReason::NoEligibleMachine,
-        })]
+        }))]
     );
 }
 

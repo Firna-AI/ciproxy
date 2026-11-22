@@ -2,7 +2,7 @@
 
 use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::registrations::RegistrationRetirement;
-use ciproxy_store_interface::own_runners::OwnRunner;
+use ciproxy_store_interface::own_runners::{OwnRunner, RoutingSnapshot};
 use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::runtime_results::{BoatRunnerResult, OwnRunnerGuard, OwnRunnerResult};
 use ciproxy_store_interface::scale_sets::RegistrationTarget;
@@ -105,6 +105,35 @@ impl MachineRuntime {
                 .await?;
         }
         Ok(())
+    }
+
+    /// Remove the JIT registration of a runner that exited before it took a job.
+    ///
+    /// GitHub keeps an unused JIT registration as an offline runner.
+    pub(crate) fn remove_unused_registration(
+        &self,
+        input: &RoutingSnapshot,
+        runner: &OwnRunner,
+    ) -> Result<()> {
+        let Some(github_id) = runner.runner.github_id else {
+            return Ok(());
+        };
+        let Some(scale_set_github_id) = runner.registration_scale_set_id.or_else(|| {
+            input
+                .scale_sets
+                .iter()
+                .find(|set| set.id == runner.runner.scale_set_id)
+                .map(|set| set.github_id)
+        }) else {
+            return Ok(());
+        };
+        let target = RegistrationTarget {
+            organization_id: runner.runner.organization_id,
+            label_id: runner.runner.label_id,
+            scale_set_id: runner.runner.scale_set_id,
+            github_id: scale_set_github_id,
+        };
+        self.cleanup_late_registration(input.workspace_id, runner.runner.id, target, github_id)
     }
 
     /// A late JIT identity must remain owned even when its original start lost authority.

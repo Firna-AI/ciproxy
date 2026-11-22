@@ -32,11 +32,13 @@ export function machine(overrides: Partial<MachineView> = {}): MachineView {
     monthly_cost_cents: null,
     occupancy: [],
     offline: state === "offline",
+    platform: "linux_x64",
     processor: "Fixture CPU",
     selected_image_disk_bytes: "40000000000",
     slots: 6,
     state,
     threads: 12,
+    virtualization: "available",
     warm_runners: 1,
     ...overrides,
   } satisfies MachineView;

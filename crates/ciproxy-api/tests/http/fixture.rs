@@ -19,10 +19,8 @@ use ciproxy_gateway::gateway::{Gateway, MachineGateway};
 use ciproxy_github::app::{AppService, GitHubApp};
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_store_interface::dashboard::records::{Membership, Role};
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::scale_sets::ScaleSet;
-use ciproxy_store_interface::vm_size::VmSize;
 use ciproxy_store_interface::workspaces::Workspace;
 use serde_json::Value;
 use tower::ServiceExt;
@@ -30,7 +28,7 @@ use unimock::Unimock;
 use url::Url;
 use uuid::Uuid;
 
-use super::database::Database;
+use super::database::{Database, default_label};
 use super::fixture_io::{CallbackOutcome, callback, cookie, oauth_state};
 use super::ports::{Factory, Identity, Remote};
 use super::runtime_inputs::{Events, Inputs, Releases};
@@ -151,18 +149,7 @@ impl Fixture {
             .lock()
             .unwrap()
             .push(organization.clone());
-        let label = Label {
-            id: Uuid::new_v4(),
-            name: "ciproxy".to_owned(),
-            size: VmSize {
-                vcpus: 2,
-                memory_gb: 8,
-                disk_gb: 20,
-            },
-            allow_machines: true,
-            allow_boat: true,
-            when_nothing_fits: WhenNothingFits::Wait,
-        };
+        let label = default_label();
         database.store.create_label(workspace, &label).unwrap();
         database
             .store

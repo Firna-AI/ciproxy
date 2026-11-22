@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::authentication::hash;
 use crate::boundary::{AgentEvents, Authorization, Clock, Entropy};
 use crate::connections::Connections;
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::error::{Error, ErrorResultExt, Result, contact_result};
 use crate::types::{
     Delivery, Handshake, IssuedToken, MachineAction, MachineView, Presence, Session,
 };
@@ -133,17 +133,16 @@ impl MachineGateway for Gateway {
             AgentMessage::Report { report } => {
                 let _operation = self.operation()?;
                 self.require_current(session)?;
-                self.store
-                    .record_contact(
-                        session.workspace_id,
-                        session.machine_id,
-                        &Contact {
-                            session_id: session.id,
-                            report,
-                            at: self.clock.now(),
-                        },
-                    )
-                    .internal()
+                let contact = self.store.record_contact(
+                    session.workspace_id,
+                    session.machine_id,
+                    &Contact {
+                        session_id: session.id,
+                        report,
+                        at: self.clock.now(),
+                    },
+                );
+                contact_result(contact)
             }
             AgentMessage::Register { .. } | AgentMessage::Hello { .. } => {
                 Err(Error::UnexpectedMessage)

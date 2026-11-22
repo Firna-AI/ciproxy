@@ -19,9 +19,9 @@ impl MachineRuntime {
         match action {
             Action::StartRunner(start) => {
                 if matches!(start.destination, Destination::Boat(_)) {
-                    self.start_boat(input, start).await
+                    self.start_boat(input, *start).await
                 } else {
-                    self.start(input, start).await
+                    self.start(input, *start).await
                 }
             }
             Action::StopRunner { runner_id, .. } => {

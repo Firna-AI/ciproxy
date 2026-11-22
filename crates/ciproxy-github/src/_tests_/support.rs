@@ -1,5 +1,6 @@
 //! Literal service fixtures and mock composition without external IO.
 
+use ciproxy_protocol::platform::Platform;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -40,23 +41,28 @@ pub(super) fn organization() -> Organization {
 
 pub(super) fn labels() -> Vec<Label> {
     [
-        (2, "ciproxy", 2, 8, 20),
-        (3, "ciproxy-4vcpu", 4, 16, 20),
-        (4, "ciproxy-8vcpu", 8, 32, 60),
+        (2, "ciproxy", Platform::LinuxX64, 2, 8, 20),
+        (3, "ciproxy-4vcpu", Platform::LinuxX64, 4, 16, 20),
+        (4, "ciproxy-8vcpu", Platform::LinuxX64, 8, 32, 60),
+        (5, "ciproxy-macos", Platform::MacosArm64, 2, 8, 20),
+        (6, "ciproxy-macos-4vcpu", Platform::MacosArm64, 4, 16, 20),
     ]
     .into_iter()
-    .map(|(identity, name, vcpus, memory_gb, disk_gb)| Label {
-        id: id(identity),
-        name: name.to_owned(),
-        size: VmSize {
-            vcpus,
-            memory_gb,
-            disk_gb,
+    .map(
+        |(identity, name, platform, vcpus, memory_gb, disk_gb)| Label {
+            id: id(identity),
+            name: name.to_owned(),
+            platform,
+            size: VmSize {
+                vcpus,
+                memory_gb,
+                disk_gb,
+            },
+            allow_machines: true,
+            allow_boat: platform == Platform::LinuxX64,
+            when_nothing_fits: WhenNothingFits::Wait,
         },
-        allow_machines: true,
-        allow_boat: true,
-        when_nothing_fits: WhenNothingFits::Wait,
-    })
+    )
     .collect()
 }
 

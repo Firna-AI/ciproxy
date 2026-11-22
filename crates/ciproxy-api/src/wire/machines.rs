@@ -1,6 +1,7 @@
 //! Own-machine views, health, cache facts, and Admin controls.
 
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_store_interface::gateway;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -24,8 +25,14 @@ pub struct MachineView {
     pub threads: i32,
     /// Installed memory in bytes.
     pub memory_bytes: String,
-    /// Whether KVM can start job VMs.
+    /// Platform reported at registration: Linux x64 or macOS on Apple Silicon.
+    pub platform: Platform,
+    /// Whether the machine can start job VMs, or why it cannot.
+    pub virtualization: Virtualization,
+    /// Deprecated: whether `virtualization` is `available`. Read `virtualization`.
     pub kvm: bool,
+    /// Most job VMs that may run at once, absent when only slots and disk limit them.
+    pub vm_limit: Option<u32>,
     /// Reported CPU and memory slot capacity.
     pub slots: i32,
     /// Full root disk of this machine's selected image, absent when unknown.

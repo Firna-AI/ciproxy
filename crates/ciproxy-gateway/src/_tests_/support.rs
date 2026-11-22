@@ -1,5 +1,6 @@
 //! Fixed machine data and gateway composition without ambient input.
 
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -27,7 +28,8 @@ pub(super) fn snapshot() -> MachineSnapshot {
             processor: "x64".into(),
             hardware_threads: 4,
             memory_bytes: 16_000_000_000,
-            kvm_available: true,
+            platform: Platform::LinuxX64,
+            virtualization: Virtualization::Available,
             slots: 1,
             warm_runners: 2,
             draining: false,

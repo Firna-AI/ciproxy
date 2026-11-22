@@ -12,7 +12,7 @@ pub(crate) fn place_boat(
     job: &WaitingJob,
     label: &Label,
 ) -> bool {
-    if !label.destinations.boat || !available(&snapshot.boat, snapshot) {
+    if !label.allows_boat() || !available(&snapshot.boat, snapshot) {
         return false;
     }
     let sizes = SizePolicy::for_label(snapshot, label);
