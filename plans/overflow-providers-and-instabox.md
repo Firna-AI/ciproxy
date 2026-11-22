@@ -276,7 +276,9 @@ My calls, 22 November 2026:
 - Each instabox create sends `secrets` as an empty list, no `envSecrets`
   and no `directSecrets`, and `vault` as false. Reason:
   [Key custody](../docs/protocol/security.md#key-custody) lets a sandbox
-  hold only the token that reports the end of its runner.
+  hold only the token that reports the end of its runner. The Free-plan
+  spike found that the `instabox-mcp` program in a sandbox can create
+  sandboxes and run commands in other sandboxes when a key is present.
 - Each instabox create sends `failFast`. Reason: a typed refusal then
   proves that no sandbox started, as `SandboxLifecycle` requires.
 - The marks go in instabox `metadata`, and the orphan cleanup lists by a
@@ -434,6 +436,10 @@ A spike on a paid instabox workspace confirms the mechanisms before the
 adapter work. It needs a paid instabox workspace and a workspace API key
 from the user. It saves its evidence under
 `.context/overflow-providers-and-instabox/spike/`.
+
+Free-plan run, 22 November 2026:
+`.context/overflow-providers-and-instabox/spike/RESULTS.md`. The other checks
+need a paid instabox plan.
 
 - [ ] Check that the instabox terms allow ciproxy to run GitHub runners in
       the instabox workspace of a customer. If they do not, stop and give
