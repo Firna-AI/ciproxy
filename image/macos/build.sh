@@ -83,29 +83,35 @@ phase_provision() {
     phase_provision_check
     vm_running || vm_start
     wait_ssh 600
-    local template host port=8765 server
+    local template port=8765 server tunnel guard status=0
     template=$(python3 "$definition/prepare-template.py" "$work_dir/upstream" \
         --template "$RUNNER_IMAGES_TEMPLATE" --xcode-links "$XCODE_LINKS" \
         --xcode-xip "$XCODE_XIP_NAME" --xcode-sha256 "$XCODE_SHA256")
-    host=$(host_address)
-    # The guest downloads the Xcode archives from the host, in place of
-    # upstream's storage account. Only the VM network reaches this address.
-    python3 -m http.server "$port" --bind "$host" --directory "$work_dir/inputs/xcode" \
+    # The guest downloads the Xcode archive in place of upstream's storage
+    # account. The host serves it on its loopback address, and a reverse SSH
+    # tunnel that the host opens brings it to the guest's 127.0.0.1. So the
+    # agent's pf rules, which block guests from the host, do not matter.
+    python3 -m http.server "$port" --bind 127.0.0.1 --directory "$work_dir/inputs/xcode" \
         > "$run_dir/xcode-server.log" 2>&1 &
     server=$!
+    xcode_tunnel "$port" &
+    tunnel=$!
+    space_guard &
+    guard=$!
     export PACKER_PLUGIN_PATH="$work_dir/packer-plugins" PACKER_CACHE_DIR="$work_dir/packer-cache"
+    # Secrets go through the environment, not the command line.
     PKR_VAR_vm_password=$(cat "$secrets/password")
-    export PKR_VAR_vm_password
-    local status=0
+    PKR_VAR_github_api_pat=${GITHUB_API_PAT:-}
+    export PKR_VAR_vm_password PKR_VAR_github_api_pat
     (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false \
         -var "source_vm_name=$(guest_ip 5)" -var "build_id=$IMAGE_ID" \
-        -var "vm_username=$guest_user" -var "github_api_pat=${GITHUB_API_PAT:-}" \
-        -var "xcode_install_storage_url=http://$host:$port/" -var "xcode_install_sas=build" \
+        -var "vm_username=$guest_user" \
+        -var "xcode_install_storage_url=http://127.0.0.1:$port/" -var "xcode_install_sas=build" \
         -var "ciproxy_inputs=$work_dir/inputs" -var "ciproxy_definition=$definition" \
         -var "ciproxy_runner_sha256=$RUNNER_SHA256" "$(basename "$template")") \
         2>&1 | tee "$run_dir/packer.log" || status=$?
-    kill "$server" 2>/dev/null || true
-    unset PKR_VAR_vm_password
+    stop_helpers "$server" "$tunnel" "$guard"
+    unset PKR_VAR_vm_password PKR_VAR_github_api_pat
     return "$status"
 }
 
@@ -188,10 +194,9 @@ phase_test_image() {
         > "$artifacts/software-report.json"
     guest_ssh 'sudo bash /tmp/ciproxy/clean-image.sh && sudo shutdown -h now' || true
     vm_wait_stopped 300
-    python3 "$definition/compact.py" "$bundle/disk.img" "$artifacts/bundle/disk.img"
-    cp "$bundle/aux.img" "$bundle/hardware-model.bin" "$artifacts/bundle/"
+    bundle_artifacts "$artifacts"
     python3 "$definition/write-manifest.py" "$artifacts" --test-image \
-        --guest-binary "$work_dir/inputs/guest/ciproxy-guest" --source-disk "$bundle/disk.img"
+        --guest-binary "$work_dir/inputs/guest/ciproxy-guest"
     bash "$definition/package.sh" "$artifacts"
 }
 
@@ -209,10 +214,9 @@ phase_package() {
     vm_running && { guest_ssh 'sudo shutdown -h now' || true; vm_wait_stopped 300; }
     local artifacts="$work_dir/artifacts"
     mkdir -p "$artifacts/bundle"
-    python3 "$definition/compact.py" "$bundle/disk.img" "$artifacts/bundle/disk.img"
-    cp "$bundle/aux.img" "$bundle/hardware-model.bin" "$artifacts/bundle/"
+    bundle_artifacts "$artifacts"
     python3 "$definition/write-manifest.py" "$artifacts" \
-        --guest-binary "$work_dir/inputs/guest/ciproxy-guest" --source-disk "$bundle/disk.img"
+        --guest-binary "$work_dir/inputs/guest/ciproxy-guest"
     bash "$definition/package.sh" "$artifacts"
 }
 

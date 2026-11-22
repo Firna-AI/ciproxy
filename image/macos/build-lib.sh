@@ -110,11 +110,6 @@ wait_ssh() {
     return 1
 }
 
-# The host address on the VM network, from the guest's default route.
-host_address() {
-    guest_ssh "route -n get default | awk '/gateway:/ {print \$2}'"
-}
-
 # Wait until the guest runs the given macOS build. A macOS update restarts
 # the guest one or more times. When a restart ends the VM's run, start it
 # again.
@@ -137,4 +132,51 @@ wait_for_build() {
     echo "the guest did not reach build $target in $timeout s; last seen: $seen" >&2
     guest_ssh 'sw_vers; uptime' >&2 2>/dev/null || true
     return 1
+}
+
+# Put the VM files into ARTIFACTS/bundle as APFS clones, which take no space
+# until one side changes. The archive compresses the disk from the clone.
+bundle_artifacts() {
+    local artifacts=$1 file
+    mkdir -p "$artifacts/bundle"
+    for file in disk.img aux.img hardware-model.bin; do
+        rm -f "$artifacts/bundle/$file"
+        cp -c "$bundle/$file" "$artifacts/bundle/$file"
+    done
+}
+
+
+# Keep a reverse tunnel from the guest's 127.0.0.1:PORT to the host's. The
+# upstream recipe restarts the guest, so the tunnel opens again after each
+# restart.
+xcode_tunnel() {
+    local port=$1
+    while true; do
+        ssh "${ssh_options[@]}" -N -o ExitOnForwardFailure=yes \
+            -R "$port:127.0.0.1:$port" "$guest_user@$(guest_ip 5 || true)" 2>/dev/null || true
+        sleep 5
+    done
+}
+
+# Stop the provision when the host runs short of space, before the host or
+# the VM fails. MIN_FREE_GB sets the limit, 15 GB by default.
+space_guard() {
+    local limit=$(( ${MIN_FREE_GB:-15} * 1000000 )) free
+    while true; do
+        free=$(df -k "$work_dir" | awk 'NR == 2 {print $4}')
+        if (( free * 1024 / 1000 < limit )); then
+            echo "only $(( free / 1000000 )) GB free on the host; stopping the provision" >&2
+            pkill -f "$work_dir/inputs/packer build" || true
+            return
+        fi
+        sleep 30
+    done
+}
+
+stop_helpers() {
+    local pid
+    for pid in "$@"; do
+        pkill -P "$pid" 2>/dev/null || true
+        kill "$pid" 2>/dev/null || true
+    done
 }

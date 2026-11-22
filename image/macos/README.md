@@ -44,8 +44,11 @@ version or later. It needs the repository's Rust toolchain, `zstd`, `curl`,
 Python 3, and the Xcode command line tools, which supply `swiftc` for the
 screen reader. The VM tool is the crate
 [ciproxy-image-vm](../../crates/ciproxy-image-vm), over `ciproxy-vz`.
-The VM disk is sparse. Keep free space for the VM disk, the compact copy,
-and the archive. Run from the repository root:
+The VM disk is sparse, so it takes the space that the guest writes. The
+packaging clones the VM files and compresses the disk straight into the
+archive, so it needs free space for the archive only. `provision` stops
+Packer when the host has less than `MIN_FREE_GB` free, 15 GB by default.
+Run from the repository root:
 
 ```sh
 XCODE_DIR=/path/to/xcode GUEST_DIR=/path/to/guest \
@@ -87,8 +90,13 @@ limit in the upstream scripts. The token stays out of the image.
    It appends three ciproxy steps: `install-runner.sh` puts the runner in
    `/opt/actions-runner`, the guest's `install.sh` adds the guest and its
    launchd service, and `clean-image.sh` removes the build state. The host
-   serves the Xcode archive to the guest over HTTP, in place of upstream's
-   storage account. The upstream tests and software report run as upstream.
+   serves the Xcode archive on its loopback address, in place of upstream's
+   storage account. A reverse SSH tunnel, which the host opens again after
+   each guest restart, brings it to the guest's `127.0.0.1`. So the agent's
+   pf rules, which block guests from the host, do not stop the build. Set
+   `GITHUB_API_PAT` to a token without rights for a higher GitHub API rate
+   limit. It reaches Packer through the environment, not the command line.
+   The upstream tests and software report run as upstream.
 8. `guest-facts.sh` reads the macOS version, the used and free bytes of the
    data volume, SIP, and Xcode. Then the guest turns off, and the build
    packages it.
@@ -118,13 +126,13 @@ first when you want to run more phases on it.
 
 ## Packaging
 
-`compact.py` copies the VM disk to a sparse file. Holes and zero blocks stay
-unallocated. `write-manifest.py` writes `measurement.json`, `manifest.json`,
+The VM files go into `artifacts/bundle` as APFS clones. `write-manifest.py`
+writes `measurement.json`, `manifest.json`,
 and `size-report.txt`. The manifest has the form of the Linux manifest:
 `image_id`, `inputs`, `root_disk_bytes`, `guest_sha256`, and
 `measurements`. It adds `platform` and `minimum_host_macos`.
-`package.sh` compresses the disk with zstd into `bundle/disk.img.zst`. It
-writes `macos.tar`, which is not compressed as a whole, with these members:
+`package.sh` writes `macos.tar`, which is not compressed as a whole, with
+these members:
 
 - `bundle/disk.img.zst`, `bundle/aux.img`, and `bundle/hardware-model.bin`,
   the files that `ciproxy-vz` reads. The agent writes the machine identifier
@@ -135,8 +143,12 @@ writes `macos.tar`, which is not compressed as a whole, with these members:
   `disk.img.zst`, and of each other member.
 
 `macos_archive.py` writes `macos.tar` with plain regular members, owner 0,
-in PAX format. macOS `tar` writes sparse files, such as `aux.img`, as GNU
-sparse members, which the agent refuses. The script then reads the raw
+in PAX format. It compresses the disk with zstd straight into the member
+`bundle/disk.img.zst`, and fills in that member's fixed-width PAX size at
+the end. It writes `macos-content.sha256` from the hashes of the same pass,
+and decompresses the disk member once more to compare it with that sum.
+macOS `tar` writes sparse files, such as `aux.img`, as GNU sparse members,
+which the agent refuses. The script then reads the raw
 headers. It fails on a member that is not a regular file, on PAX keys other
 than `size`, `path`, and `mtime`, and on a path outside `MEMBERS` in
 `crates/ciproxy-agent/src/macos/image_bundle.rs`. It reads that list from

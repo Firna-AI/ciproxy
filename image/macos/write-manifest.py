@@ -41,8 +41,6 @@ def main():
     parser.add_argument("--guest-binary", type=pathlib.Path, required=True)
     parser.add_argument("--test-image", action="store_true",
                         help="a test image without Xcode and the upstream toolset")
-    parser.add_argument("--source-disk", type=pathlib.Path,
-                        help="the build disk before compaction, for the size report")
     args = parser.parse_args()
     definition = pathlib.Path(__file__).resolve().parent
     pins = dict(line.split("=", 1) for line in (definition / "pins.env").read_text().splitlines()
@@ -62,8 +60,6 @@ def main():
         "free_job_bytes": guest["free_job_bytes"],
         "artifacts": {name: sizes(args.artifacts / name) for name in VM_FILES},
     }
-    if args.source_disk:
-        measurement["build_disk"] = sizes(args.source_disk)
     (args.artifacts / "measurement.json").write_text(json.dumps(measurement, indent=2) + "\n")
     manifest = {"image_id": os.environ.get("IMAGE_RELEASE_ID", pins["IMAGE_ID"]),
                 "platform": "macos", "inputs": pins,
@@ -80,10 +76,7 @@ def main():
              f"guest data volume used: {gigabytes(guest['data_volume_used_bytes'])}",
              f"free job space in the image: {gigabytes(guest['free_job_bytes'])}",
              f"disk.img logical: {gigabytes(disk.stat().st_size)}",
-             f"disk.img allocated after compaction: {gigabytes(disk.stat().st_blocks * 512)}"]
-    if args.source_disk:
-        lines.append("build disk allocated before compaction: "
-                     f"{gigabytes(measurement['build_disk']['allocated_bytes'])}")
+             f"disk.img allocated: {gigabytes(disk.stat().st_blocks * 512)}"]
     (args.artifacts / "size-report.txt").write_text("\n".join(lines) + "\n")
 
 
