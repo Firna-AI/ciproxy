@@ -44,29 +44,44 @@ either:
 
 - `release-plz.toml` sets `release_always = false`. So release-plz creates
   no tag and no release for a merge that does not come from a
-  `release-plz-` branch.
+  `release-plz-` branch. That prefix is the default of `pr_branch_prefix`,
+  which `release-plz.toml` does not set.
 - It also sets `changelog_update = false`. So release-plz opens no version
   pull request for a version change alone.
 - Until the tag of the new version exists, release-plz opens no version
   pull request for later changes either.
 
-So raise the agent version by hand when a shared library moves, and release
-that version by hand:
+So raise the agent version by hand when a shared library moves. Raise it in
+a separate pull request from a `release-plz-` branch, so that the gated
+`version` job releases it:
 
-1. In the pull request that moves the pin, raise `version` under
-   `[workspace.package]` in the root `Cargo.toml`.
-2. In the same pull request, update `Cargo.lock` and
-   `ts/api/generated/openapi.json` to the new version.
-   `cargo build --workspace` updates the lock file, and
-   `npm --prefix ts run api:generate` updates the OpenAPI file.
-3. After the pull request merges, push the tag `ciproxy-agent-vVERSION` on
-   its merge commit on `main`. The push of that commit to `main` ran the
-   gate job of the release workflow. The tag push starts only the package
-   jobs. The package jobs fail when the tag does not match the agent
-   version.
-4. Create a draft GitHub release for that tag before the package jobs end.
-   The `publish` job then uploads the archives to that release and
-   publishes it.
+1. Move the pin in its own pull request.
+2. After that pull request merges, create a branch from `main` whose name
+   starts with `release-plz-`. Release-plz tags the last commit of this
+   branch when GitHub merges it with a merge commit. So the branch must
+   hold the moved pin.
+3. On that branch, raise `version` under `[workspace.package]` in the root
+   `Cargo.toml`.
+4. Run `cargo build --workspace` to update `Cargo.lock`. Run
+   `npm --prefix ts run api:generate` to update
+   `ts/api/generated/openapi.json`.
+5. Open a pull request from that branch with only these changes. Merge it.
+
+After the merge, the `version` job runs only after the gate job passes on
+the merge commit. Because the merge comes from a `release-plz-` branch,
+release-plz then creates the tag `ciproxy-agent-vVERSION` and a draft
+release. The tag starts the package jobs. The `publish` job then uploads the
+archives and publishes the release.
+
+Two cases change this route:
+
+- When release-plz writes its own version pull request, it closes an open
+  `release-plz-` pull request that has commits from a person. Then merge
+  the release-plz version pull request instead. Its release also holds the
+  moved pin, because release-plz writes that pull request from `main`.
+- When the gate fails on the merge commit, no release follows. Release-plz
+  releases the version when a rerun of that workflow run passes, or when a
+  later merge from a `release-plz-` branch passes the gate.
 
 [Release channels](../../deploy/release-server.md#release-channels) says
 which environment serves a pre-release.

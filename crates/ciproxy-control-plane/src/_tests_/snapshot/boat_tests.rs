@@ -3,11 +3,13 @@
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::resources::VmSize;
-use ciproxy_scaler::actions::Action;
+use ciproxy_scaler::actions::{Action, StopReason};
+use ciproxy_scaler::boat::SandboxId;
 use ciproxy_scaler::decision::decide;
 use ciproxy_scaler::snapshot::RunnerState;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners;
@@ -95,6 +97,44 @@ fn boat_job_evidence_takes_priority_over_saved_busy_state() {
     assert_eq!(
         snapshot.sandboxes[0].runner.as_ref().unwrap().runner.state,
         RunnerState::Running(JobId(Uuid::from_u128(21).to_string()))
+    );
+}
+
+#[test]
+fn boat_ready_deadline_starts_at_launch_not_dispatch() {
+    let mut input = accepted();
+    let start = &mut input.overflow.starts[0];
+    start.sandbox = Some(KnownSandbox::observed(
+        "bx_23456789".to_owned(),
+        at(),
+        21600,
+    ));
+    start.launched_at = Some("2026-11-05T12:03:00Z".parse().unwrap());
+    let deletions_at = |now: &str| {
+        let snapshot = build(
+            &input,
+            &[input.organizations[0].id],
+            now.parse().unwrap(),
+            RootSizing::default(),
+        );
+        decide(&snapshot)
+            .into_iter()
+            .filter(|action| matches!(action, Action::DeleteSandbox { .. }))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        [
+            deletions_at("2026-11-05T12:10:00Z"),
+            deletions_at("2026-11-05T12:13:00Z"),
+        ],
+        [
+            vec![],
+            vec![Action::DeleteSandbox {
+                sandbox_id: SandboxId("bx_23456789".to_owned()),
+                reason: StopReason::ReadyDeadlinePassed,
+            }],
+        ],
+        "sandbox deletions at dispatch plus 10 minutes and launch plus 10 minutes"
     );
 }
 

@@ -145,13 +145,22 @@ impl OverflowService {
                 .launcher()
                 .launch(sandbox, record.delivery_id)
                 .await?;
-            record.mark_launched(self.dependencies.clock.now());
-            let changed = record.clone();
-            session
-                .call(move |session| session.save_start(&changed))
-                .await?;
+            self.save_confirmed_launch(session, record).await?;
         }
         Ok(StartOutcome::Started(record.clone()))
+    }
+
+    /// Save a confirmed guest launch at the current clock time.
+    pub(super) async fn save_confirmed_launch(
+        &self,
+        session: &Session,
+        record: &mut StartRecord,
+    ) -> Result<()> {
+        record.mark_launched(self.dependencies.clock.now());
+        let saved = record.clone();
+        session
+            .call(move |session| session.save_start(&saved))
+            .await
     }
 
     async fn confirm_write(

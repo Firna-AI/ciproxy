@@ -1,8 +1,8 @@
 # Boat start ready deadline
 
-Status: Active. On branch `conductor/ciproxy-boat-start-ready-deadline`, no
-pull request yet. The pull request that completes the work deletes this
-plan, as the `plans` skill says.
+Status: Active. [PR #123](https://github.com/Firna-AI/ciproxy/pull/123) is
+open. The pull request that completes the work deletes this plan, as the
+`plans` skill says.
 
 A Boat start can fail after its launch and send no exit report. Then the
 control plane counts its runner as ready, a waiting job claims it, and
@@ -87,9 +87,12 @@ The calls below are the orchestrator's design calls, made on 2026-11-22.
 - The step for option A of `agent-release-git-sources.md` goes into
   `crates/ciproxy-agent/updates-and-releases.md`. Reason: the agent README
   sends release readers to that guide.
-- The hand tag of such a release goes on the merge commit on `main`.
-  Reason: the push of that commit to `main` runs the gate job of the
-  release workflow, and a tag push does not.
+- The hand release of option A goes through a short pull request from a
+  `release-plz-` branch, so that the gated `version` job creates the tag
+  and the draft release. Reason: a tag run of the release workflow runs no
+  gate, so a hand tag can publish a commit that never passed the gate. This
+  call replaced, on the same day, the first call to push a hand tag on the
+  merge commit, after finding 1 of review round 1.
 - This change also deletes `plans/follow-ups/boat-start-report-credential-scope.md`.
   Reason: its only subject is the text of option A in the readiness item,
   which this change deletes with option A rejected.
@@ -157,9 +160,10 @@ deadline. The `docs implementor` does this work.
 Depends on: 1, 2, 3
 
 - [x] Delete `plans/follow-ups/boat-launched-runner-readiness.md`.
-- [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
-- [ ] Commit with Conventional Commits and push the branch.
-- [ ] Open a draft pull request into `main`. Its description starts with
+- [x] Run the targeted tests and the complete gate named in `AGENTS.md`.
+      The reports are in `.context/boat-start-ready-deadline/reports/`.
+- [x] Commit with Conventional Commits and push the branch.
+- [x] Open a draft pull request into `main`. Its description starts with
       "Depends on #116".
 - [ ] Review the complete local diff with the `implementation-review`
       skill after the push. While #116 is open, the base is

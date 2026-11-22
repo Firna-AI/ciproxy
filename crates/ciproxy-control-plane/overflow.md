@@ -150,10 +150,11 @@ gives the requirements.
 | 401    | The token is missing, wrong, already used, or for another runner, or its delivery already ended.      |
 | 503    | The request failed before it saved the report.                                                        |
 
-Without a report, the runtime still deletes the sandbox of a launched runner
-that has taken no job by the
-[ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
-of that runner. Boat ends each sandbox at its lifetime at the latest.
+[The ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
+and
+[After an App removal](../../docs/protocol/overflow-sandbox-end.md#after-an-app-removal)
+say what happens to the sandbox of a launched runner with no report and no
+job. Boat ends each sandbox at its lifetime at the latest.
 
 ## Live smoke checks
 

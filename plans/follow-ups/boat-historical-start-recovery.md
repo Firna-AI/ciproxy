@@ -36,5 +36,9 @@
 - **Wider fix:** A.
 - **Previous examples:** The repair of delivery
   `07a57f60-3ea3-4a04-8f07-1a1add1e17bf` on 17 November 2026.
+- **Related:** `plans/follow-ups/boat-uncertain-create-holds-job.md`, the
+  same cause: a `Creating` start without a sandbox stays pending. That item
+  frees the waiting job of such a start without an operator. This item adds
+  the operator command that ends a start that Boat proves it never created.
 - **Recommendation:** A.
 - **Action:** fix after merge, apply A, as the user chose with answer 121 C.

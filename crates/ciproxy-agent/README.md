@@ -175,8 +175,8 @@ The hosted runtime does not guess an image or job-disk size.
 ### Agent updates and releases
 
 The [updates and releases guide](updates-and-releases.md) gives the
-hourly updater, public package format, glibc release checks, and the release
-by hand when a shared library moves.
+hourly updater, public package format, glibc release checks, and the version
+raise by hand when a shared library moves.
 
 ## Quick Start
 
