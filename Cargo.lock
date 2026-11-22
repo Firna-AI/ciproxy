@@ -713,7 +713,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-image-vm"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ciproxy-vz",
  "clap",
