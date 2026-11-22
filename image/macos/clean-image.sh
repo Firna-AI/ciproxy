@@ -13,6 +13,7 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 EOF
 rm -f "$home/.ssh/authorized_keys" /var/root/.ssh/authorized_keys
+rm -f /etc/ssh/sshd_config.d/050-ciproxy-build.conf
 rm -rf "$home/Library/Caches/XcodeInstall" "$home/bootstrap" /tmp/ciproxy
 rm -f "$home/.bash_history" "$home/.zsh_history" /var/root/.bash_history
 rm -rf "$home/.bash_sessions" "$home/.zsh_sessions"

@@ -9,7 +9,7 @@ ssh_key="$secrets/id_ed25519"
 guest_user=runner
 
 ssh_options=(-i "$ssh_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-    -o LogLevel=ERROR -o ConnectTimeout=5 -o ServerAliveInterval=15)
+    -o LogLevel=ERROR -o ConnectTimeout=5 -o ServerAliveInterval=15 -o BatchMode=yes)
 
 make_secrets() {
     mkdir -p "$secrets"

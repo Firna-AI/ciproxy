@@ -86,6 +86,9 @@ phase_provision() {
     # Also in configure-guest.sh. A guest that an older build configured lacks
     # these folders, which the upstream recipe expects.
     guest_ssh 'sudo mkdir -p /usr/local/bin /usr/local/share'
+    # The upstream configure-ssh.sh makes ~/.ssh writable for everyone, and
+    # sshd then ignores the build's key. clean-image.sh removes this setting.
+    guest_ssh 'echo "StrictModes no" | sudo tee /etc/ssh/sshd_config.d/050-ciproxy-build.conf >/dev/null'
     local template port=8765 ssh_port=2222 server tunnel guard status=0
     template=$(python3 "$definition/prepare-template.py" "$work_dir/upstream" \
         --template "$RUNNER_IMAGES_TEMPLATE" --xcode-links "$XCODE_LINKS" \
