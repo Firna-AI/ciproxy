@@ -35,6 +35,7 @@ zstd = "0.14.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 ciproxy-vz = { path = "../ciproxy-vz" }
+libc = "0.2.191"
 
 [dev-dependencies]
 tokio = { version = "1.54.1", features = ["test-util"] }

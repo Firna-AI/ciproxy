@@ -470,6 +470,7 @@ dependencies = [
  "getrandom 0.4.3",
  "hex",
  "internal-error 0.1.0 (git+https://github.com/futex-ai/internal-error?rev=d7b94d766bf2844aa0b4a801fd21c465543e8a58)",
+ "libc",
  "log",
  "reqwest",
  "rustix",
