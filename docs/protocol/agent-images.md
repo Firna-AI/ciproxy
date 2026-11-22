@@ -187,6 +187,32 @@ Mac boot the macOS image.
   a new Mac would wait hours. Rejected: a customer image, because custom
   images come later. Reason: the user has approval to distribute the image
   with Xcode, and chose this on 21 November 2026.
+- Unlike a download of the machine image, the agent continues a broken
+  download of the macOS image from the bytes that it has. It keeps these
+  bytes across download commands and agent restarts while the release ID,
+  the SHA-256, and the byte size stay the same.
+- The agent checks the byte count and the SHA-256 of the whole file at the
+  end. A failed check deletes the bytes, and the next download starts from
+  zero.
+- A server error status or a rate limit answer does not end the download
+  command. The agent asks again a few times, after the wait that a rate
+  limit answer names, but at most 60 s.
+- **Decision:** the agent asks again after a server error or a rate limit
+  answer in the same download command. Rejected: each HTTP error status
+  ends the command, because the next command then hashes up to 60 GB again.
+  Reason: the parent workspace chose this with the user's authority on 23
+  November 2026.
+- Another HTTP error status, such as the answer to an expired URL, fails
+  the download command and keeps the bytes. The next download command
+  brings a fresh URL.
+- When the host cannot continue the bytes, for example because it does not
+  serve the requested range, the agent starts the download again from zero.
+- **Decision:** the agent continues with HTTP range requests, and the
+  download URL keeps the 2-hour expiry of the machine image URL. Rejected:
+  a URL valid for 12 hours, because a leaked URL to the image with Xcode
+  then stays valid longer. Rejected: an image in parts with a SHA-256 for
+  each part, because it changes the image form and the publish step.
+  Reason: the user chose this on 23 November 2026.
 - The macOS image holds the VM disk and the platform files that
   Virtualization.framework needs to start it.
 - The macOS image has no Boat snapshot, because a macOS job never runs on

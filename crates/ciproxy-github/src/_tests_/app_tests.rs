@@ -34,16 +34,16 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .some_call(matching!("ciproxy", 47, None, _))
             .returns(Ok(53)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-4vcpu", 47, None, _))
+            .some_call(matching!("ciproxy-medium", 47, None, _))
             .returns(Ok(59)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-8vcpu", 47, None, _))
+            .some_call(matching!("ciproxy-large", 47, None, _))
             .returns(Ok(61)),
         ScaleSetApiMock::ensure
             .some_call(matching!("ciproxy-macos", 47, None, _))
             .returns(Ok(67)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-macos-4vcpu", 47, None, _))
+            .some_call(matching!("ciproxy-macos-medium", 47, None, _))
             .returns(Ok(71)),
     )));
     let _keep_api = api.clone();

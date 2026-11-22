@@ -17,6 +17,10 @@ Organizations tab.
 - Labels lists each label with its platform and size, where its jobs run
   now, and the jobs of the last 30 days, as the API gives them. A count that
   the API does not know says so.
+- The list shows the Linux labels first, then the macOS labels, each from
+  the smallest size to the largest, as
+  [The label list](../../../../../docs/protocol/labels.md#the-label-list)
+  says. The dashboard sorts the labels itself.
 - A label has a platform, Linux or macOS, which Add label asks for and Edit
   shows read-only, as it shows the name. A macOS label runs on the Macs
   only: its dialog has no switches and no "When nothing fits", and it always
