@@ -5,11 +5,11 @@
 //! they have no caller outside their tests.
 #![allow(dead_code)]
 
-mod fd_passing;
-mod guests;
-mod vm_control;
-mod vm_control_client;
-mod vm_control_server;
+pub(crate) mod fd_passing;
+pub(crate) mod guests;
+pub(crate) mod vm_control;
+pub(crate) mod vm_control_client;
+pub(crate) mod vm_control_server;
 
 #[cfg(test)]
 #[path = "_tests_/vm_control_tests.rs"]
@@ -19,27 +19,27 @@ mod vm_control_tests;
 #[path = "_tests_/vm_control_socket_tests.rs"]
 mod vm_control_socket_tests;
 
-mod launchd;
-mod paths;
+pub(crate) mod launchd;
+pub(crate) mod paths;
 
 #[cfg(test)]
 #[path = "_tests_/launchd_tests.rs"]
 mod launchd_tests;
 
-mod pf;
+pub(crate) mod pf;
 
 #[cfg(test)]
 #[path = "_tests_/pf_tests.rs"]
 mod pf_tests;
 
-mod seats;
-mod vm_spec;
+pub(crate) mod seats;
+pub(crate) mod vm_spec;
 
 #[cfg(test)]
 #[path = "_tests_/seats_tests.rs"]
 mod seats_tests;
 
-mod hardware;
+pub(crate) mod hardware;
 
 #[cfg(test)]
 #[path = "_tests_/hardware_tests.rs"]

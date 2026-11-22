@@ -40,7 +40,12 @@ pub(crate) async fn main() -> Result<()> {
     subscriber(BoxMakeWriter::new(std::io::stderr), &directives)
         .try_init()
         .context("initialize safe JSON logging")?;
-    execute(NativePlatform::new(), cli.action()).await
+    let action = cli.action();
+    #[cfg(target_os = "macos")]
+    if let Action::VmRun { local_id } = &action {
+        return crate::platform::run_vm_helper(local_id).await;
+    }
+    execute(NativePlatform::new(), action).await
 }
 
 async fn execute<P: Platform>(platform: P, action: Action) -> Result<()> {

@@ -18,6 +18,7 @@ use crate::workload_space::WorkloadSpace;
 use super::{Machine, MachineInput, Platform, UninstallParts};
 
 mod unsupported;
+pub(crate) mod vm_helper;
 
 use unsupported::{
     UnsupportedCache, UnsupportedHost, UnsupportedImages, UnsupportedPreparation,

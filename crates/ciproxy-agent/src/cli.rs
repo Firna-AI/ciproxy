@@ -27,6 +27,13 @@ enum Command {
     Run,
     /// Finish running jobs, discard their VMs, and remove the agent.
     Uninstall,
+    /// Run one job VM. The agent starts this command in its own launchd job.
+    #[cfg(target_os = "macos")]
+    #[command(hide = true)]
+    VmRun {
+        /// The local ID of the VM.
+        local_id: String,
+    },
 }
 
 pub(crate) enum Action {
@@ -36,6 +43,10 @@ pub(crate) enum Action {
     },
     Run,
     Uninstall,
+    #[cfg(target_os = "macos")]
+    VmRun {
+        local_id: String,
+    },
 }
 
 impl Cli {
@@ -46,6 +57,8 @@ impl Cli {
                 agent_url,
             },
             Some(Command::Uninstall) => Action::Uninstall,
+            #[cfg(target_os = "macos")]
+            Some(Command::VmRun { local_id }) => Action::VmRun { local_id },
             _ => Action::Run,
         }
     }

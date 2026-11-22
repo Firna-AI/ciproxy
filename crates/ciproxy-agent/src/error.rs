@@ -39,6 +39,16 @@ pub enum Error {
         /// The oldest macOS release that runs the macOS image.
         minimum: String,
     },
+    /// A VM helper cannot run its VM.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS VM helper returns it.")
+    )]
+    #[error("[agent/vm] {reason}")]
+    VmHelper {
+        /// Why the helper stopped.
+        reason: String,
+    },
     /// This platform does not support the named agent part yet.
     #[cfg_attr(
         target_os = "linux",
