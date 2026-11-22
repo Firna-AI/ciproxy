@@ -83,6 +83,9 @@ phase_provision() {
     phase_provision_check
     vm_running || vm_start
     wait_ssh 600
+    # Also in configure-guest.sh. A guest that an older build configured lacks
+    # these folders, which the upstream recipe expects.
+    guest_ssh 'sudo mkdir -p /usr/local/bin /usr/local/share'
     local template port=8765 ssh_port=2222 server tunnel guard status=0
     template=$(python3 "$definition/prepare-template.py" "$work_dir/upstream" \
         --template "$RUNNER_IMAGES_TEMPLATE" --xcode-links "$XCODE_LINKS" \

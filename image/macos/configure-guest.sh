@@ -20,6 +20,8 @@ if [[ $zone != */GMT || $(date +%Z) != GMT ]]; then
 fi
 echo "time zone: $zone"
 pmset -a sleep 0 displaysleep 0 disksleep 0
+# GitHub's base image has these folders, and the upstream recipe expects them.
+mkdir -p /usr/local/bin /usr/local/share
 # Remote Login stays on after a restart.
 launchctl enable system/com.openssh.sshd
 csrutil status
