@@ -66,9 +66,10 @@ Its deps file would leave the runtime out of the runner.
 
 The script stops when the patched build lowers a package, adds a package
 that the runner lacks, or changes the files of a raised package. It stops
-when the runtimes differ. It also stops when the overlay does not raise
-each package that `prepare-source.py` pins to the pinned version. It then
-compares the file version of each raised assembly with the deps file.
+when the runtimes differ. It also stops when a package that
+`prepare-source.py` pins is below its pinned version in the overlay deps
+file. It then compares the file version of each raised assembly with the
+deps file.
 
 `install-worker.sh RUNNER_DIR OVERLAY_DIR` installs the overlay in the
 image. It needs no Python, and it runs on the Bash 3.2 of macOS. It stops

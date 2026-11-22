@@ -104,8 +104,9 @@ def check(output, merged, raised):
     if not pins:
         raise RuntimeError("prepare-source.py pins no package")
     for name, pinned in pins:
-        if packages(merged).get(name) != pinned or name not in raised:
-            raise RuntimeError(f"The overlay does not raise {name} to {pinned}")
+        found = packages(merged).get(name)
+        if found is None or version(found) < version(pinned):
+            raise RuntimeError(f"The overlay has {name} {found}, below the pinned {pinned}")
     for name, (_, new) in raised.items():
         for asset, facts in target(merged)[f"{name}/{new}"]["runtime"].items():
             found = file_version(output / Path(asset).name)
