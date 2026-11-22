@@ -5,8 +5,14 @@ runs on own machines.
 
 ## Terms
 
-- **own machine:** an x64 Linux computer of the customer that runs the
-  agent.
+- **own machine:** an x64 Linux computer or an Apple Silicon Mac of the
+  customer that runs the agent.
+- **Mac:** an own machine with Apple Silicon that runs macOS.
+- **platform:** the operating system and the processor architecture of a
+  machine, a label, an image, or a job VM. ciproxy supports Linux x64 and
+  macOS arm64.
+- **virtualization check:** the check of the agent that its machine can
+  start job VMs.
 - **agent:** the open-source program on an own machine.
 - **job VM:** the VM on an own machine in which one job runs.
 - **image:** the job image. Job VMs boot its machine image, and
@@ -23,6 +29,60 @@ runs on own machines.
   Rejected: "node", because some readers think of Kubernetes. Rejected:
   "server", because it reads oddly for a Mac mini on a desk.
 
+## Platforms
+
+- Each own machine has one platform: Linux x64 or macOS arm64.
+- The agent reports the platform of its machine with the hardware, in the
+  registration, the hello, and each report.
+- The platform of a machine never changes. A new install of the operating
+  system registers a new machine, as
+  [Machine identity](#machine-identity) says.
+- On Linux x64, each job VM is a Firecracker VM over KVM, and it runs
+  Linux.
+- On a Mac, each job VM is a macOS VM over Apple's Virtualization.framework,
+  and it runs macOS.
+- A machine runs only the jobs of the [labels](labels.md#platform) of its
+  platform.
+- **Decision:** a Mac runs only macOS jobs. Rejected: Linux arm64 jobs on
+  Macs, because a workflow that needs Xcode still could not run. Rejected
+  for now: both.
+- Apple's licence and Virtualization.framework allow at most 2 macOS VMs at
+  a time on one Mac.
+- So a Mac runs at most 2 job VMs at a time, warm runners included, also
+  when its [slots](job-routing.md#slots) hold more.
+- A third start fails at once with "The number of virtual machines exceeds
+  the limit".
+- The agent starts no third VM, and the control plane asks for none.
+- The agent refuses a runner or an image whose platform differs from the
+  platform of its machine. It reports the failure `platform_mismatch`.
+- **Decision:** the start of a runner and the download of an image name
+  their platform. Reason: a wrong platform then fails with a clear cause,
+  and no job of the wrong platform reaches the runner.
+
+## The virtualization check
+
+- The agent checks at each report that its machine can start job VMs.
+- On Linux, the check opens `/dev/kvm`.
+- On a Mac, the check has three parts:
+  - Virtualization.framework reports that the Mac supports VMs.
+  - The agent binary has the entitlement
+    `com.apple.security.virtualization` in its signature.
+  - The macOS release of the Mac can run the
+    [macOS image](agent-images.md#the-macos-image).
+- The report gives the result: `available`, or the cause of the failure.
+
+| Cause | Platform | Fix that the dashboard names |
+| --- | --- | --- |
+| `kvm_unavailable` | Linux | Turn on virtualization, then run the command again. |
+| `framework_unsupported` | macOS | Install the agent on the Mac itself, not in a VM. |
+| `entitlement_missing` | macOS | Install the agent again from the download site. |
+| `operating_system_too_old` | macOS | Update macOS. |
+
+- **Decision:** one virtualization result with a cause replaces the KVM
+  check. Rejected: a KVM field and a separate Mac field, because the
+  dashboard and the slot rule would need a case for each platform. Reason:
+  each cause has its own fix.
+
 ## Install
 
 - One command installs the agent and connects the own machine to a
@@ -32,7 +92,8 @@ runs on own machines.
 - Until the machine connects, the dashboard shows that it waits for the
   machine.
 - Then the dashboard shows the host name of the machine and what the agent
-  reported: threads, memory, KVM, and [slots](job-routing.md#slots).
+  reported: the platform, threads, memory, the virtualization check, and
+  [slots](job-routing.md#slots).
 - After the install, the agent downloads and extracts its first image.
 - The machine takes no job until it reports its selected image, as
   [Own machines first](job-routing.md#own-machines-first) says.
@@ -45,14 +106,15 @@ runs on own machines.
 - No text about this wait promises a time.
 - **Decision:** the text about this wait promises no time. Rejected: an
   expected time, because a slow link makes the large first download long.
-- A machine without KVM connects, but it cannot start a job VM, so it gets
-  no slots.
+- A machine whose virtualization check fails connects, but it cannot start
+  a job VM, so it gets no slots.
 - The dashboard then says that the machine cannot start VMs, and it names
-  the fix: turn on virtualization, then run the command again.
+  the fix of the cause, as
+  [The virtualization check](#the-virtualization-check) says.
 - A machine without room for one slot after the
   [host reserve](job-routing.md#slots) connects and gets no slots.
 - The dashboard says why such a machine has no slots, as it does for a
-  machine without KVM.
+  machine whose virtualization check fails.
 - A machine can run fewer jobs of the label `ciproxy` at a time than its
   slots hold, because each job also holds disk, as
   [Disk](job-routing-capacity.md#disk) says.
@@ -94,14 +156,20 @@ runs on own machines.
   [label](labels.md#terms) of its runner.
 - Each job VM gets one writable root disk.
 - Its root includes the image and at least the free disk of its label.
-- The root also includes the ext4 metadata and 1% root reserve allowance.
-- The agent reflinks the image and grows only the private job copy before
-  boot. It keeps the base image unchanged.
+- On Linux, the root also includes the ext4 metadata and 1% root reserve
+  allowance.
+- On Linux, the agent reflinks the image and grows only the private job
+  copy before boot. It keeps the base image unchanged.
+- On a Mac, the agent makes an APFS clone of the image disk and grows only
+  the clone before boot. It keeps the base image unchanged.
+- An APFS clone takes almost no time and no space at first. The spike made
+  a clone in 1 ms.
 - The actual total allocation must hold the image. An insufficient total
   keeps the existing capacity error.
-- Docker shares the root disk's free space and its cached Docker images,
+- On Linux, Docker shares the root disk's free space and its cached Docker images,
   unless a sticky [Docker disk](cache.md#docker-disks) attaches under the
   cache rules. Docker then keeps its data on that disk.
+- A macOS job VM has no Docker and no Docker disk.
 - **Decision:** each job runs in a fresh VM. Rejected: a VM that runs
   several jobs, because a job must not read the secrets or the files of
   another job.
@@ -124,12 +192,13 @@ runs on own machines.
 
 ## Health
 
-- The machine page shows the processor, threads, memory, and disks that the
-  agent reported.
-- The machine page shows these health checks: last contact, KVM, free disk,
-  and agent version.
-- While a machine is offline, KVM, free disk, and agent version show the
-  values of the last contact, marked as old.
+- The machine page shows the platform, processor, threads, memory, and
+  disks that the agent reported.
+- The machine page shows these health checks: last contact,
+  virtualization, free disk, and agent version.
+- The virtualization check shows "Ready" or "Not available" with its cause.
+- While a machine is offline, virtualization, free disk, and agent version
+  show the values of the last contact, marked as old.
 - The page then says to check that the machine is on and can reach the
   control plane.
 - The machine page also shows each slot with its job or its warm runner.
