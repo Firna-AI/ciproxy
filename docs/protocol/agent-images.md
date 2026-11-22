@@ -175,22 +175,20 @@ Mac boot the macOS image.
   Virtualization.framework needs to start it.
 - The macOS image has no Boat snapshot, because a macOS job never runs on
   Boat, as [Overflow runners](overflow.md#overflow-runners) says.
-- The image disk is built at the smallest size that holds the full image,
-  as the machine image root is.
+- The image disk has a fixed logical size, now planned at 200 GB. It holds
+  free space for the jobs inside its APFS container.
 - Each release supplies the logical bytes of its disk, as the machine image
   does.
-- The agent makes an APFS clone of the image disk for each job VM. It grows
-  the clone by the free disk of the label and the filesystem allowance.
-- The clone is sparse, so its growth takes no space until the job writes.
-- At boot, the guest grows the APFS container of the VM disk to the whole
-  disk, before the runner starts.
-- **Decision:** a macOS job VM gets the free disk of its label as on Linux,
-  from a small image disk that the agent grows. Rejected: a fixed image
-  disk with free space inside, because the label disk would then depend on
-  the image, and scheduling would count the complete fixed disk for each
-  job VM.
-- The free disk of the label remains available to the unprivileged runner
-  at job start.
+- Each release also supplies the free bytes that the build measured in the
+  guest. This is the free disk of each macOS job VM.
+- The agent makes an APFS clone of the image disk for each job VM, and does
+  not grow it.
+- **Decision:** the macOS image disk is fixed, and the agent does not grow
+  it. Rejected: a small image disk that the agent grows for each label,
+  because the build must then delete the recovery container of the guest,
+  the guest must resize its container at each boot, and a saved VM state
+  then serves only one disk size. This is a proposal until the user
+  decides it.
 - A job VM starts from the newest macOS image that its Mac has, and a
   running job keeps its image.
 - The runner in the macOS image is always a version that GitHub still
