@@ -39,6 +39,7 @@ export function machine(overrides: Partial<MachineView> = {}): MachineView {
     state,
     threads: 12,
     virtualization: "available",
+    vm_limit: null,
     warm_runners: 1,
     ...overrides,
   } satisfies MachineView;

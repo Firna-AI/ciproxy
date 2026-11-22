@@ -238,7 +238,8 @@ pub(crate) async fn issue_token(
         id: token.id.to_string(),
         command: install_command::command(&state.config, &token.token)?,
         expires_at: token.expires_at,
-        requirements: "x64 Linux with KVM, 4 cores, 16 GB of memory, and at least 250 GB of disk."
+        requirements: "x64 Linux with KVM, 4 cores, 16 GB of memory, and 250 GB of disk, \
+            or a Mac with Apple Silicon, macOS 26.7.2 or later, and 16 GB of memory."
             .to_owned(),
     }))
 }
