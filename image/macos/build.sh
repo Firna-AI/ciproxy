@@ -64,7 +64,9 @@ phase_configure() {
     local status=0
     guest_ssh "sudo bash /tmp/update-macos.sh $MACOS_TARGET $guest_user" \
         < "$secrets/password" || status=$?
-    if [[ $status == 10 ]]; then
+    # 255: the restart closed the SSH session. 10: the install ended before
+    # the restart. Both wait for the target build.
+    if [[ $status == 10 || $status == 255 ]]; then
         wait_for_build "${MACOS_TARGET##*-}" 3600
         status=0
     fi

@@ -130,8 +130,9 @@ wait_for_build() {
             echo "the guest runs build $seen after $(( SECONDS - started )) s"
             return 0
         fi
+        (( (SECONDS - started) % 300 < 20 )) && echo "waiting for build $target; seen: $seen"
     done
     echo "the guest did not reach build $target in $timeout s; last seen: $seen" >&2
-    guest_ssh 'tail -n 30 /var/log/ciproxy-update.log' >&2 2>/dev/null || true
+    guest_ssh 'sw_vers; uptime' >&2 2>/dev/null || true
     return 1
 }

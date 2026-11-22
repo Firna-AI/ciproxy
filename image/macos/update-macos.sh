@@ -3,9 +3,8 @@
 # Update the guest to the pinned macOS build. Run as root over SSH, with the
 # password of USER_NAME on stdin. Apple Silicon needs a volume owner's
 # password for a system update. The guest restarts when the update applies.
-# Exit 0: the guest already runs the target. Exit 10: the install started in
-# the background and restarts the guest. /var/log/ciproxy-update.log has its
-# output.
+# Exit 0: the guest already runs the target. Exit 10: the install ended
+# without a restart yet. A restart ends the SSH session first (exit 255).
 set -euo pipefail
 
 target=${1:?Usage: update-macos.sh VERSION-BUILD USER_NAME}
@@ -28,15 +27,10 @@ if [[ -z $label ]]; then
 fi
 echo "Downloading $label"
 softwareupdate --download "$label"
-# The install restarts the guest, which ends this SSH session. So it runs
-# detached, and the host waits for the target build. The password file is
-# open in the install process, so its name can go after the start.
-password_file=$(mktemp /var/root/ciproxy-update.XXXXXX)
-chmod 600 "$password_file"
-cat > "$password_file"
+# The install checks the volume owner's password with this SSH session still
+# open. A detached install failed to authenticate. The restart then closes
+# the session, so the host sees SSH exit 255 and waits for the target build.
 echo "Installing $label from $current. The guest restarts."
-nohup softwareupdate --install "$label" --agree-to-license --restart \
-    --user "$user_name" --stdinpass < "$password_file" > /var/log/ciproxy-update.log 2>&1 &
-sleep 10
-rm -f "$password_file"
+softwareupdate --install "$label" --agree-to-license --restart \
+    --user "$user_name" --stdinpass
 exit 10
