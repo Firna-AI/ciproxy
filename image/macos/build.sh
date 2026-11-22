@@ -117,6 +117,30 @@ phase_provision_check() {
     }
 }
 
+# Auto-login of runner, as upstream's configure-autologin.sh sets it:
+# sysadminctl fails over SSH with SACSetAutoLoginPassword error 22. The host
+# encodes the password with upstream's kcpassword.py, because the guest has
+# no Python before the upstream recipe.
+enable_autologin() {
+    python3 - "$work_dir/upstream/images/macos/assets/bootstrap-provisioner" \
+        "$secrets/password" "$secrets/kcpassword" <<'PY'
+import pathlib, sys
+sys.path.insert(0, sys.argv[1])
+from kcpassword import encode_data
+password = pathlib.Path(sys.argv[2]).read_text().strip()
+pathlib.Path(sys.argv[3]).write_bytes(bytes(encode_data(password)))
+PY
+    chmod 600 "$secrets/kcpassword"
+    guest_scp /tmp/ciproxy/ "$secrets/kcpassword"
+    guest_ssh 'sudo install -m 600 -o root -g wheel /tmp/ciproxy/kcpassword /etc/kcpassword &&
+        rm -f /tmp/ciproxy/kcpassword &&
+        sudo defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser runner &&
+        sudo defaults write /Library/Preferences/com.apple.loginwindow \
+            autoLoginUserScreenLocked -bool false &&
+        [[ $(sudo defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser) == runner ]] &&
+        sudo test -s /etc/kcpassword && echo "auto-login of runner is on"'
+}
+
 # Shrink the configured guest to a disk of DISK_BYTES. Opt-in, for a small
 # test image. It removes the guest's Recovery container.
 phase_shrink() {
@@ -154,8 +178,7 @@ phase_test_image() {
     scp -q -r "${ssh_options[@]}" "$work_dir/inputs/guest" "$guest_user@$(guest_ip 5):/tmp/ciproxy/"
     guest_ssh "sudo RUNNER_SHA256=$RUNNER_SHA256 bash /tmp/ciproxy/install-runner.sh \
         /tmp/ciproxy/runner.tar.gz && cd /tmp/ciproxy/guest && sudo ./install.sh $IMAGE_RELEASE_ID"
-    guest_ssh 'read -r pw; sudo sysadminctl -autologin set -userName runner -password "$pw"' \
-        < "$secrets/password"
+    enable_autologin
     mkdir -p "$artifacts/bundle"
     guest_ssh 'bash -s' < "$definition/guest-facts.sh" > "$artifacts/guest-facts.json"
     cat "$artifacts/guest-facts.json"
