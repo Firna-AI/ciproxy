@@ -57,7 +57,7 @@ export function InstallCommand({
           {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
           {unbroken("250 GB")} of disk or more. A Mac needs Apple Silicon,{" "}
           {unbroken(minimumMacos)} or later, {unbroken("16 GB")} of memory, and{" "}
-          {unbroken("500 GB")} of disk or more.
+          {unbroken("512 GB")} of disk or more.
         </p>
         {revokeTo ? (
           <LinkAction to={revokeTo} size="sm" tone="ghost">

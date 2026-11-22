@@ -39,7 +39,7 @@ is settled. -->
 - A Mac with Apple Silicon, M1 or later.
 - macOS 26.7.2 or later. A macOS VM cannot run a newer macOS than its Mac,
   so the Mac needs the macOS of the job image.
-- 16 GB of memory and 500 GB of disk or more.
+- 16 GB of memory and 512 GB of disk or more.
 - Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The Mac
   opens no inbound port.
 
@@ -47,7 +47,8 @@ A Mac uses the same slots as a Linux machine, but it runs at most 2 jobs at
 a time, because Apple allows at most 2 macOS VMs on one Mac. A Mac with
 16 GB of memory has room for 1 slot, so it runs 1 job at a time. Jobs of a
 macOS label never run on Boat. They wait for a free Mac. A Mac counts as one
-machine of your plan, as a Linux machine does.
+machine of your plan, as a Linux machine does. Other apps that run macOS
+VMs on the Mac count against its limit of 2 VMs too.
 
 Run the same install command in Terminal on the Mac. The agent runs as a
 launchd service, and it keeps the Mac awake, so the Mac needs no sleep

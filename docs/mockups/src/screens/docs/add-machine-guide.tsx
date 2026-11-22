@@ -49,7 +49,7 @@ function MacNeeds() {
         than its Mac, so the Mac needs the macOS of the job image.
       </li>
       <li>
-        {unbroken("16 GB")} of memory and {unbroken("500 GB")} of disk or more.
+        {unbroken("16 GB")} of memory and {unbroken("512 GB")} of disk or more.
       </li>
       {network}
     </ul>
