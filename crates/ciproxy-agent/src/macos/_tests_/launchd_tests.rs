@@ -14,7 +14,11 @@ fn the_agent_restarts_only_after_a_failure() {
     ));
     assert!(plist.contains("<dict><key>SuccessfulExit</key><false/></dict>"));
     assert!(plist.contains("<key>ThrottleInterval</key>\n  <integer>5</integer>"));
-    assert!(plist.contains("<string>/var/log/ciproxy/launchd.log</string>"));
+    assert!(
+        plist.contains(
+            "<key>StandardErrorPath</key>\n  <string>/var/log/ciproxy/agent.log</string>"
+        )
+    );
     assert!(plist.ends_with("</dict>\n</plist>\n"));
 }
 
@@ -88,7 +92,6 @@ fn paths_stay_in_the_owned_folders() {
 fn logs_rotate_without_a_signal() {
     let conf = newsyslog_conf();
     assert!(conf.contains("/var/log/ciproxy/agent.log\troot:wheel\t600\t5\t10240\t*\tNJ\n"));
-    assert!(conf.contains("/var/log/ciproxy/launchd.log\t"));
 }
 
 #[test]

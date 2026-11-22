@@ -2,6 +2,8 @@
 
 The Apache-2.0 agent runs on the x64 Linux machines of a customer.
 It runs one GitHub Actions runner in each fresh Firecracker VM.
+On an Apple Silicon Mac, it runs each runner in a fresh macOS VM.
+The [macOS host guide](macos-host.md) gives the parts that differ on a Mac.
 It depends only on `ciproxy-protocol` inside this workspace.
 It contains no hosted implementation or embedded credential.
 

@@ -1,8 +1,6 @@
 //! launchd files and `launchctl` arguments for the agent and its VM helpers.
 
-use super::paths::{
-    AGENT_LABEL, AGENT_PLIST, BINARY, LAUNCHD_LOG, LOG, local_id_of_label, vm_label, vm_plist,
-};
+use super::paths::{AGENT_LABEL, AGENT_PLIST, BINARY, LOG, local_id_of_label, vm_label, vm_plist};
 
 /// How launchd restarts a job.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -75,8 +73,8 @@ fn render(job: &Job<'_>) -> String {
         "ExitTimeOut",
         &format!("<integer>{}</integer>", job.exit_timeout),
     );
-    entry(&mut text, "StandardOutPath", &string(LAUNCHD_LOG));
-    entry(&mut text, "StandardErrorPath", &string(LAUNCHD_LOG));
+    entry(&mut text, "StandardOutPath", &string(LOG));
+    entry(&mut text, "StandardErrorPath", &string(LOG));
     text.push_str("</dict>\n</plist>\n");
     text
 }
@@ -93,13 +91,10 @@ fn string(value: &str) -> String {
     format!("<string>{escaped}</string>")
 }
 
-/// Rotate both log files at 10 MB and keep 5 old files. The agent reopens
-/// its log file after a rotation. launchd keeps its file open, but it
-/// writes only early output there.
+/// Rotate the log at 10 MB and keep 5 old files. launchd keeps the file
+/// open, so a job writes to the rotated file until it restarts.
 pub(crate) fn newsyslog_conf() -> String {
-    format!(
-        "# ciproxy agent logs\n{LOG}\troot:wheel\t600\t5\t10240\t*\tNJ\n{LAUNCHD_LOG}\troot:wheel\t600\t5\t10240\t*\tNJ\n"
-    )
+    format!("# ciproxy agent logs\n{LOG}\troot:wheel\t600\t5\t10240\t*\tNJ\n")
 }
 
 /// Read the local IDs from `launchctl list`: PID, status, and label.

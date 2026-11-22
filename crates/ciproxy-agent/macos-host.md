@@ -1,9 +1,5 @@
 # The agent on a Mac
 
-Status: design for workstream A of macOS support. It is not built yet.
-Items marked **Check** need a test on the test Mac before the build uses
-them.
-
 The agent runs on an Apple Silicon Mac with macOS. It runs each GitHub
 Actions job in a fresh macOS VM, through Virtualization.framework and the
 `ciproxy-vz` crate. The core of the agent stays the same on Linux and on
@@ -11,26 +7,36 @@ macOS: identity, the gateway connection, reports, drain, removal, runner
 registrations, and the cache handoff. This page gives the parts that are
 different on a Mac.
 
+Items marked **Check** still need a run on a real Mac.
+[Open work](#open-work) lists the parts that are not built yet.
+
 ## Terms
 
-- **VM helper:** a `ciproxy-agent vm-run` process that owns one `ciproxy-vz`
-  VM. Each VM helper is its own launchd job.
+- **VM helper:** a `ciproxy-agent vm-run LOCAL_ID` process that owns one
+  `ciproxy-vz` VM. Each VM helper is its own launchd job.
 - **VM seat:** one of the 2 macOS VMs that Apple's licence allows at a time.
   A seat has the index 0 or 1. It is the `network_index` of a `VmRecord`.
   The plan calls it a slot. This page says seat, because a slot in
   `Resources` is a unit of CPU and memory.
 - **Seat identity:** the fixed MAC address and the fixed VZ machine
-  identifier of a seat. A saved state needs both to restore.
+  identifier of a seat.
 - **Saved state:** a paused VM of one seat, saved to disk with
   `Vm::save`, with the APFS clone of its disk and auxiliary storage.
 
+## Code
+
+The parts with no macOS-only dependency live in [`src/macos/`](src/macos/).
+They build on macOS and in the tests of every target, so the Linux gate
+tests them. The parts that use `ciproxy-vz`, `launchctl`, `pfctl`, or
+`diskutil` live in [`src/platform/macos/`](src/platform/macos.rs) and build
+only on macOS. The `rust-macos` gate phase type-checks and lints them.
+
 ## Processes
 
-| Process       | launchd label             | Lifetime                    |
-| ------------- | ------------------------- | --------------------------- |
-| Agent daemon  | `dev.ciproxy.agent`       | Always, restarts on failure |
-| VM helper     | `dev.ciproxy.vm.LOCAL_ID` | One VM, from start to stop  |
-| Machine cache | `dev.ciproxy.cache`       | Always, see Machine cache   |
+| Process      | launchd label             | Lifetime                    |
+| ------------ | ------------------------- | --------------------------- |
+| Agent daemon | `dev.ciproxy.agent`       | Always, restarts on failure |
+| VM helper    | `dev.ciproxy.vm.LOCAL_ID` | One VM, from start to stop  |
 
 A Virtualization.framework VM lives in the process that creates it.
 [Agent](../../docs/protocol/agent.md) says that running VMs survive an agent
@@ -43,14 +49,13 @@ its own VM helper, as each Linux VM runs in its own systemd unit.
   `/Library/LaunchDaemons`, so a reboot does not start it again.
 - The launchd file sets `RunAtLoad`, no `KeepAlive`, and `ExitTimeOut` 30.
 - The VM helper reads `area/vms/LOCAL_ID/vm.json`. This file holds no
-  secret: the bundle paths, the CPU count, the memory size, the seat, and
-  the start kind (cold or restore with the saved-state path).
+  secret: the bundle path, the CPU count, the memory size, the seat, and
+  the start kind. The helper refuses an inconsistent file.
 - The VM helper listens on `area/vms/LOCAL_ID/control.sock`. The socket has
-  mode `0600`, and its directory has mode `0700`, both owned by root.
-- When the VM stops, the VM helper writes `exit.json` with the
-  `ciproxy-vz` `StopReason`, then exits.
-- SIGTERM makes the VM helper stop the VM at once. This is the same as a
-  `systemctl stop` of a Firecracker unit.
+  mode `0600`, and its folder has mode `0700`, both owned by root.
+- When the VM stops, the VM helper writes `exit.json` with a rename, then
+  exits. SIGTERM makes the VM helper stop the VM at once, as a
+  `systemctl stop` of a Firecracker unit does.
 
 ### Control socket
 
@@ -72,28 +77,28 @@ helper after an update, so this protocol stays small.
 `SAVE` takes no path, so a request cannot make the helper write outside
 its VM folder. `ERR guest-not-listening` is the one retryable answer.
 
-The agent keeps one `WAIT` connection open for each VM. Its answer, or its
-end, tells the agent that the VM stopped. The backend then sends
-`RunnerExited` to the core, as L's `Vms` interface says.
-
 The vsock fd passes to the agent, so the runner registration never passes
-through the VM helper. V checks on the Mac that a `ciproxy-vz` vsock fd
-stays valid after `SCM_RIGHTS` and after the framework releases its
-connection object.
+through the VM helper. V checked on the Mac that a `ciproxy-vz` vsock fd
+stays valid after the framework releases its connection object.
+**Check:** the fd works in the agent after `SCM_RIGHTS`.
+[`macos-helper-smoke.sh`](scripts/macos-helper-smoke.sh) runs this check.
 
 ## Host-guest transport
 
-Agreed with G through the parent:
+Agreed with G:
 
 - `ciproxy-guest` listens on vsock port 5252 in the guest. The agent
   connects. The frames are newline-delimited JSON of `AgentToGuest` and
   `GuestToAgent`, with the 1 MiB limit on the agent side.
 - The registration is only in `ConfigureRunner`. The end is
   `RunnerExited`. The guest replays its state after a reconnect.
-- On macOS, `GuestTransport::connect` sends `CONNECT 5252` to the control
-  socket and takes the fd. A refused connect
-  (`GuestNotListening`) is retryable. The agent retries until the guest
-  listens. The rest of `guest_transport.rs` stays the same.
+- The guest bridge is shared with Linux. On macOS, its transport sends
+  `CONNECT 5252` to the control socket and frames the passed stream. A
+  refused connect gives `Error::Disconnected`, so the bridge retries after
+  one second until the guest listens.
+- The bridge asks the helper for its phase before each connect. A stopped
+  or absent helper ends the channel: `exit.json` gives the runner exit, and
+  no file means an absent VM.
 - When the runner ends, the guest runs `shutdown -h now`.
 - The guest has no Docker. The agent offers no Docker disk on macOS.
 
@@ -106,9 +111,10 @@ data, or a log. This is the same rule as on Linux.
 | ------------------------------------------------ | -------------------------- |
 | `/usr/local/bin/ciproxy-agent`                   | The signed agent binary    |
 | `/Library/LaunchDaemons/dev.ciproxy.agent.plist` | The agent daemon           |
-| `/etc/ciproxy-agent/environment`                 | Settings, mode `0600`      |
 | `/var/db/ciproxy`                                | Control state, mode `0700` |
 | `/var/db/ciproxy/state.json`                     | Identity and VMs, `0600`   |
+| `/var/db/ciproxy/area.json`                      | The area volume UUID       |
+| `/var/db/ciproxy/pf-token`                       | The pf reference token     |
 | `/var/db/ciproxy/vms/`                           | VM helper launchd files    |
 | `/var/db/ciproxy/area`                           | Mount of the area volume   |
 | `/var/log/ciproxy/agent.log`                     | Agent and VM helper logs   |
@@ -118,15 +124,12 @@ data, or a log. This is the same rule as on Linux.
 `/var/lib/ciproxy` on Linux. Install creates `/usr/local/bin` with mode
 `0755` when a fresh Mac does not have it.
 
-launchd has no environment file. On macOS, `run` reads
-`/etc/ciproxy-agent/environment` itself, with the same keys as Linux.
-
 ## The launchd daemon
 
-`/Library/LaunchDaemons/dev.ciproxy.agent.plist` sets these keys:
-`ProgramArguments` `/usr/local/bin/ciproxy-agent run`, `RunAtLoad`,
-`KeepAlive` with `SuccessfulExit` false, `ThrottleInterval` 5, and the log
-path for standard output and standard error.
+`/Library/LaunchDaemons/dev.ciproxy.agent.plist` runs
+`/usr/local/bin/ciproxy-agent run` with `RunAtLoad`, `KeepAlive` with
+`SuccessfulExit` false, and `ThrottleInterval` 5. Its output goes to
+`agent.log`.
 
 - `KeepAlive` with `SuccessfulExit` false restarts the agent after a
   failure, as `Restart=on-failure` does. A removed machine exits with 0
@@ -136,149 +139,149 @@ path for standard output and standard error.
   `launchctl kickstart -k system/dev.ciproxy.agent`.
 - Stop runs `launchctl bootout system/dev.ciproxy.agent`. VM helpers are
   other launchd jobs, so they keep running.
-- The agent holds a `PreventUserIdleSystemSleep` power assertion while it
-  runs. A sleeping Mac takes no jobs, and its VMs stop. The agent does not
-  change the power settings of the Mac.
 
 ## Storage
 
-The agent keeps images, VM bundles, saved states, and the machine cache on
-one APFS volume of its own, named `ciproxy`, in the container of the data
-volume. The volume mounts at `/var/db/ciproxy/area`.
+The agent keeps images and VM bundles on one APFS volume of its own,
+named `ciproxy`, in the container of the data volume.
 
-- The volume has a quota. So jobs and images cannot fill the disk of the
-  Mac. This replaces the XFS file of Linux.
+- The volume has a quota, so jobs and images cannot fill the disk of the
+  Mac. This replaces the XFS file of Linux. The default quota is three
+  quarters of the free container space, at least 150 GB.
+  `CIPROXY_AREA_BYTES` sets another size.
+- Install runs `diskutil apfs addVolume CONTAINER APFS ciproxy -quota
+BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
+  line `UUID=UUID /var/db/ciproxy/area apfs rw,nobrowse`, and mounts the
+  volume there. It turns off Spotlight (`mdutil -i off`) and Time Machine
+  (`tmutil addexclusion -v`) on the volume.
+- Daemon start mounts the recorded volume when it is not mounted. Install
+  and uninstall act only on the volume with the recorded UUID and the name
+  `ciproxy`.
 - APFS clones work inside the volume. A clone takes 1 ms and no space at
   first.
-- Install turns off Spotlight (`mdutil -i off`) and Time Machine
-  (`tmutil addexclusion`) on the volume.
-- `area.json` records the volume UUID. Install and uninstall act only on
-  the volume with that UUID and the name `ciproxy`.
-- **Check:** `diskutil apfs addVolume` with `-quota` and `-mountpoint`, and
-  an `/etc/fstab` line by UUID, mount the volume at boot before the agent.
-  If not, the agent waits for the mount and reports zero seats.
+- **Check:** the quota syntax, and that the fstab line mounts the volume at
+  boot before the agent starts.
 
-| Path in the area   | Use                                    |
-| ------------------ | -------------------------------------- |
-| `images/HASH/`     | Checked image bundles and downloads    |
-| `vms/LOCAL_ID/`    | The VM bundle clone, `vm.json`, socket |
-| `seats/N/current/` | The saved state of seat N              |
-| `seats/N/build/`   | A saved state while it is built        |
-| `cache/data`       | Machine cache data                     |
+| Path in the area      | Use                                         |
+| --------------------- | ------------------------------------------- |
+| `images/index.json`   | The published images and the newest one     |
+| `images/NAME/bundle/` | A checked image bundle                      |
+| `vms/LOCAL_ID/`       | The VM bundle clone, `vm.json`, socket      |
+| `seats/N/identity/`   | The seat identity, in the `ciproxy-vz` form |
 
-The image bundle holds the disk, the auxiliary storage, the hardware
-model, and the image metadata. I owns its format. The agent checks the
-size and SHA-256 before it publishes an image, as on Linux. The disk size
-of a job is the free space in the image disk. No root growth happens on
-macOS in the first version.
+`NAME` is the hex SHA-256 of the image ID, so an ID never names a path.
+
+### Image store
+
+I owns the image format. One `macos.tar` holds `bundle/disk.img.zst`,
+`bundle/aux.img`, `bundle/hardware-model.bin`, `manifest.json`, three other
+metadata files, and `macos-content.sha256`.
+
+1. The download streams to `images/NAME.tar`. The agent checks its byte
+   count and SHA-256 against the `ImageDownload`.
+2. Extraction refuses links, other paths, and duplicate members. It
+   decompresses the disk and writes each all-zero 1 MiB block as a hole. It
+   hashes each file as it writes it, so the content check needs no second
+   read of the disk. The disk must have the released root length.
+3. The agent checks `macos-content.sha256` and reads `minimum_host_macos`
+   and `free_job_bytes` from the manifest.
+4. A rename publishes `images/NAME/`. The index names it the newest image.
+   Each image that is neither the newest nor held is removed.
+
+### Job disk
+
+Cal's decision 17 is open. P and A recommend option (b): the image disk
+has a fixed size of 200 GB, and each VM holds the image's measured
+`free_job_bytes` in the disk accounting. So the agent passes no disk size,
+and one saved state per seat serves every label. The agent keeps
+`free_job_bytes` in its image index. The core uses it once P adds the field
+to the protocol.
 
 ## VM seats and saved states
 
-The agent creates the 2 seat identities at install and keeps them in
-`state.json`. Each MAC address is a locally administered address.
-`allocate` gives the lowest free seat. The agent counts each VM helper,
-also a saved-state build, against the limit of 2.
+`allocate` gives the lowest free seat. Each seat keeps a fixed identity in
+`seats/N/identity/`, made at its first use. A fresh MAC address for each
+job would use up the vmnet address pool, because a lease lasts up to one
+day on the host.
 
-A seat has a valid saved state when its `saved.json` names the newest
-image, the seat identity, and a save time less than 12 hours ago.
+Each job VM clones the newest image bundle with its seat identity into
+`vms/LOCAL_ID/bundle/` and boots cold.
 
-Build of a saved state, only when the seat is free and the machine is not
-draining:
+Saved states are designed but not built yet. A seat's saved state restores
+only for its own seat, image, MAC address, and agent version, and only for
+12 hours. [`seats.rs`](src/macos/seats.rs) holds this rule. The design:
 
-1. Clone the image bundle with the seat identity into `seats/N/build/`.
-2. Cold-start it in a VM helper. Wait for the guest `Hello`.
-3. Close the vsock connection. Pause and save the VM. Stop it.
-4. Write `saved.json`. Rename `build` to `current`.
+1. Build a saved state only when the seat is free and the machine is not
+   draining: clone the image, cold-start it, wait for the guest `Hello`,
+   close the vsock connection, pause, save, stop, and publish the folder
+   by rename.
+2. A start stops a running build on its seat. With a usable saved state,
+   it restores a clone of the saved bundle. Else it boots cold.
+3. A saved state restores only into a VM with the same CPU count and
+   memory size, so the record must also name them.
 
-A start for a job on a seat:
-
-1. If a build runs on the seat, stop it and delete `build`.
-2. With a valid saved state, clone `current` into `vms/LOCAL_ID/` and
-   restore from its state file. Else clone the image and boot cold.
-3. Connect to port 5252, then deliver `ConfigureRunner`.
-
-One saved state restores one VM at a time. A seat has its own saved state,
-so the 2 seats restore together. The agent uses the state again for the
-next job of the seat. **Check:** a restore works with the disk of a fresh
-APFS clone of the saved disk at another path.
-
-### Clock and address after a restore
-
-A restored guest has the clock of the save time. TLS and the runner need
-the correct time before the runner starts. **Check:** the guest clock after
-a restore from a state that is 1 hour old.
-
-If the guest clock is wrong, I propose to P and G: the agent sends its UTC
-time in each new connection, and the guest sets its clock before it starts
-the runner. The 12-hour limit keeps the step small.
-
-The guest keeps its DHCP address after a restore. The seat MAC is fixed,
-so the vmnet DHCP server gives the same address again. The 12-hour limit
-is less than the lease time. The agent uses vsock, not the guest address.
-It reads the address with `lease::lookup` only for logs. **Check:** the
-lease time in `/var/db/dhcpd_leases` and the address after an old restore.
+Facts from the test Mac: a restore from a 12-hour-old state gave the guest
+the host's UTC time within one second, because network time is on in the
+guest. So no clock message is needed. The guest kept its DHCP address, and
+the host renewed the lease of its MAC address at once. The guest lease
+time is 3600 s. Cold start to SSH took 7.95 s, save 1.72 s, and restore to
+SSH 2.36 s. A paused VM still counts toward the limit of 2.
 
 ## Network isolation
 
 The spike proved these pf rules. Without them, a guest reaches the host,
-the LAN, and the router.
+the LAN, and the router. [`pf.rs`](src/macos/pf.rs) builds them.
 
 - The agent loads its rules into the anchor `com.apple/ciproxy`.
   The main pf rules of macOS already load every `com.apple/*` anchor.
 - On guest traffic in on the vmnet bridge, the rules pass DHCP to the
-  host, DNS to the host, and TCP to the machine cache port on the host.
+  broadcast address and the gateway, and DNS to the gateway.
 - They block all other traffic to the host, to 10/8, 172.16/12,
-  192.168/16, 169.254/16, and 100.64/10, from guest to guest, and all IPv6.
-- They also block TCP to the machine cache port from all interfaces other
-  than `lo0` and the vmnet bridge.
-- The IPv4 rules also match the vmnet subnet as the source, with no
-  interface. The agent reads the subnet from the vmnet settings.
-- The agent turns pf on with `pfctl -E` and keeps the token in
-  `state.json`. Uninstall gives the token back with `pfctl -X`.
+  192.168/16, 169.254/16, 100.64/10, 127/8, multicast, and reserved
+  addresses, guest-to-guest traffic, and all IPv6 on the bridge.
+- They block TCP to the machine cache port, 7887, on every interface other
+  than `lo0`. A pass from the guests to the gateway on that port is added
+  when the machine cache runs on macOS.
+- The IPv4 rules match the vmnet subnet as the source, with no interface.
+  The agent reads the subnet from the vmnet settings, else it uses
+  192.168.64.0/24.
+- The agent turns pf on with `pfctl -E` when pf is off, and keeps the
+  token in `pf-token`. Uninstall gives the token back with `pfctl -X`.
 
 The rules stay in the kernel while the agent restarts. A reboot removes
-them. So the agent loads them at each start. Before each VM start or
-restore, it checks that pf is on and that the anchor holds the expected
-rules. If not, it loads them again. If that fails, the start fails.
-Each report cycle runs the same check. When it fails with VMs running, the
-agent stops those VMs, because their isolation is gone.
-
-After a VM starts, the agent checks that the VM's interface is a member of
-the bridge in the rules (`bridge100` in the spike). If not, it stops the
-VM. **Check:** the bridge name stays `bridge100` when another vmnet user
-runs.
-
+them. Before each VM start, the agent checks that pf is on and that the
+anchor shows the same rules as just after its own load. If not, it loads
+them again. If that fails, the start fails. Install loads them too.
 Uninstall flushes the anchor with `pfctl -a com.apple/ciproxy -F all`.
 
 ## Machine cache
 
-G builds the cache sidecar for macOS. The agent runs it as the launchd
-daemon `dev.ciproxy.cache` with a hidden system account `_ciproxycache`,
-on `area/cache/data`, as on Linux. The guest reaches it at
-`http://GATEWAY:7887`, where `GATEWAY` is the host address on the vmnet
-bridge. Until the cache runs, the agent reports the cache as unavailable,
-and jobs use the GitHub cache through the existing fallback.
+The machine cache does not run on macOS yet. `NoMachineCache` gives no
+cache session, so every job uses the GitHub cache through the existing
+GitHub-only decision. The report says that the cache is unavailable. The
+pf pass for the cache port and a launchd daemon for the cache sidecar come
+with the macOS cache sidecar of workstream G.
 
 ## Hardware report
 
-| Field            | Source                                |
-| ---------------- | ------------------------------------- |
-| `platform`       | `macos_arm64`                         |
-| `processor`      | `sysctl machdep.cpu.brand_string`     |
-| `threads`        | `sysctl hw.logicalcpu`                |
-| `memory_bytes`   | `sysctl hw.memsize`                   |
-| `virtualization` | See below                             |
-| `disks`          | The area volume: quota and free bytes |
+| Field            | Source                             |
+| ---------------- | ---------------------------------- |
+| `platform`       | `macos_arm64`                      |
+| `processor`      | `machdep.cpu.brand_string`         |
+| `threads`        | `hw.logicalcpu`                    |
+| `memory_bytes`   | `hw.memsize`                       |
+| `virtualization` | See below                          |
+| `disks`          | The area volume: capacity and free |
 
-The agent reads the values with `sysctlbyname`, with no subprocess.
-`virtualization` is:
+The agent reads the values with `sysctlbyname`. `virtualization` is the
+first of:
 
-- `framework_unsupported` when `VZVirtualMachine.isSupported` is false, or
-  the hardware model of the newest image is not supported.
-- `operating_system_too_old` when the macOS of the Mac is older than the
-  minimum host version of the newest image.
-- `entitlement_missing` when the binary does not have
-  `com.apple.security.virtualization`.
+- `framework_unsupported` when `kern.hv_support` is not 1. `ciproxy-vz` has
+  no call for `VZVirtualMachine.isSupported` yet.
+- `entitlement_missing` when `codesign` shows no
+  `com.apple.security.virtualization` for the running binary.
+- `operating_system_too_old` when the Mac's macOS is older than 26.7.2 or
+  than the `minimum_host_macos` of the newest image.
 - `available` otherwise.
 
 Seats follow `Slots::for_machine` with P's rule, then
@@ -287,49 +290,53 @@ Seats follow `Slots::for_machine` with P's rule, then
 ## Install
 
 1. Refuse a user other than root, a processor other than arm64, and a
-   macOS older than the minimum. The message names the minimum, the
-   current version, and the repair.
-2. Create `/usr/local/bin` when it is missing. Copy the binary to a staging
-   name, then rename it to `/usr/local/bin/ciproxy-agent`. A rename gives
-   a new file. macOS caches a code signature for each file, so a write
-   into a running signed binary makes the kernel stop it.
-3. Create or check the area volume. Load the pf rules.
-4. Register, write the launchd file, and start the daemon.
-
-The real minimum is the macOS of the image, because Virtualization.framework
-does not run a guest newer than the host. The image comes after
-registration. So install checks the minimum of the agent build. Then the
-report gives `operating_system_too_old` when a new image needs more.
+   macOS older than 26.7.2, the macOS of the planned image. The message
+   names the minimum, the current version, and the repair.
+2. Create the control folder, the area volume, and the area folders. Load
+   the pf rules.
+3. Register. Create `/usr/local/bin` when it is missing. Copy the binary to
+   a staging name, then rename it into place. A rename gives a new file.
+   macOS caches a code signature for each file, so a write into a signed
+   binary makes the kernel stop it.
+4. Write the log rotation and the launchd file, then load or restart the
+   daemon.
 
 ## Drain, update, and uninstall
 
-- Drain keeps the core rules. Also, the agent starts no saved-state build,
-  and it stops a running build.
-- The hourly update uses `cli-updater` with the target of the build,
-  `aarch64-apple-darwin` on a Mac. It installs by rename, then runs
+- Drain keeps the core rules.
+- The hourly update uses `cli-updater` with the target
+  `aarch64-apple-darwin`. The updater moves the old binary away and writes
+  the new one as a new file. Then the agent runs
   `launchctl kickstart -k system/dev.ciproxy.agent`. VM helpers keep the
   old binary until their VMs stop.
 - Uninstall stops the daemon and waits for the runtime lock, as on Linux.
-  It stops idle VMs and waits for job VMs. Then it stops builds, flushes
-  the pf anchor, gives back the pf token, deletes the area volume by UUID,
-  and removes the launchd files, the binary, the logs, and the state.
+  It stops idle VMs and waits for job VMs. Then it flushes the pf anchor,
+  gives back the pf token, deletes the area volume by UUID with its fstab
+  line, and removes the launchd files, the binary, the logs, and the state.
 
 ## Recovery after an agent restart
 
-At start, the agent compares `state.json`, the launchd jobs with the
-label prefix `dev.ciproxy.vm.`, and the area.
-
-- A recorded VM with a running VM helper: the agent connects to its control
-  socket and calls `reattach`. The guest replays its state.
-- A recorded VM with no VM helper: the VM stopped. The agent reads
-  `exit.json`, sends `RunnerExited`, and removes the bundle and the
-  launchd file.
-- A VM helper with no record: the agent stops it and removes its files.
-- A `vms/` folder with no record and no VM helper: the agent removes it.
-- A `seats/N/build/` folder: the agent removes it. A `current` folder that
-  fails its `saved.json` check: the agent removes it.
-- After a reboot, no VM helper runs. So every recorded VM stops as above.
+- A recorded VM with a running VM helper: the core calls `reattach`. The
+  bridge connects again, and the guest replays its state.
+- A recorded VM whose helper ended: the bridge reads `exit.json` and sends
+  `RunnerExited`. The core then stops the VM, which removes the helper's
+  launchd file and folder.
+- Daemon start stops each loaded helper with no record and removes each VM
+  launchd file and folder with no record. Unreadable state keeps them all.
+- After a reboot, no VM helper runs, so every recorded VM ends as above.
   With FileVault on, macOS starts no daemon until a person logs in once.
 
 A start that fails with `VirtualMachineLimit` means that another program
-runs a macOS VM. The agent reports a start failure and logs the reason.
+runs a macOS VM. The start fails, and the core reports it.
+
+## Open work
+
+- Saved-state builds and restores, as designed above.
+- The agent does not read `/etc/ciproxy-agent/environment` on macOS yet.
+  launchd has no environment file.
+- A power assertion against idle sleep while the agent runs.
+- The pf check runs before each start, not in each report cycle, and the
+  agent does not check the bridge membership of a VM yet.
+- After a log rotation, a job writes to the rotated file until it
+  restarts.
+- The machine cache on macOS.

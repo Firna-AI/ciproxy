@@ -13,10 +13,8 @@ pub(crate) const AREA: &str = "/var/db/ciproxy/area";
 pub(crate) const ENVIRONMENT: &str = "/etc/ciproxy-agent/environment";
 /// The log folder, mode `0700`. The logs hold no secret, but only root reads them.
 pub(crate) const LOG_FOLDER: &str = "/var/log/ciproxy";
-/// The agent and the VM helpers write their JSON logs here.
+/// launchd writes the JSON logs of the agent and the VM helpers here.
 pub(crate) const LOG: &str = "/var/log/ciproxy/agent.log";
-/// launchd writes only early output, such as a panic, here.
-pub(crate) const LAUNCHD_LOG: &str = "/var/log/ciproxy/launchd.log";
 pub(crate) const NEWSYSLOG: &str = "/etc/newsyslog.d/ciproxy.conf";
 
 pub(crate) const AGENT_LABEL: &str = "dev.ciproxy.agent";
