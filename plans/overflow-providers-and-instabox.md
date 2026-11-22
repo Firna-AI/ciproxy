@@ -188,7 +188,7 @@ sources, read on 22 November 2026. Research notes:
 
 | Contract function | instabox |
 | --- | --- |
-| Start a VM of at least a size, with one runner registration | `POST /v1/machines` from the account image in the stopped state, `PATCH /v1/machines/{id}` to an allowed size, and a start. Then `PUT /v1/machines/{id}/files` and `POST /v1/machines/{id}/exec` |
+| Start a VM of at least a size, with one runner registration | `POST /v1/machines` from the account image of the job's size, then `PUT /v1/machines/{id}/files` and `POST /v1/machines/{id}/exec` |
 | Bill by the second or finer | Runtime is billed by the second while the sandbox runs |
 | Report the state of each VM | `GET /v1/machines/{id}` and `GET /v1/operations/{id}` |
 | Stop and delete a VM | `DELETE /v1/machines/{id}` with `X-Confirm-Delete` and `Idempotency-Key` |
@@ -310,10 +310,17 @@ My calls, 22 November 2026:
 - The spend limit counts each builder sandbox. Reason:
   [Spend limit](../docs/protocol/overflow.md#spend-limit) counts each
   sandbox that ciproxy starts for the workspace.
-- Each job sandbox starts as a stopped create from the account image, a
-  resize to the job's size, and a start. When Milestone 3 shows that a
-  resize fails, the build saves one account image for each size. Reason: a
-  create from a snapshot fixes the size of the sandbox.
+- The build saves one account image for each allowed size. It forks the
+  builder at each size and saves each fork. Each job then creates from the
+  image of its size, with one start. When Milestone 3 shows that a fork
+  cannot set the size, each start uses a stopped create, a resize, and a
+  start instead. Reason: a create from a snapshot fixes the vCPU and
+  memory, and a resize for each job doubles the starts against the plan's
+  limit of starts a minute.
+- No placeholder file sizes a disk. A create from a snapshot gets at least
+  the logical `/data` size of the snapshot, and the launcher grows `/data`
+  online. Reason: instabox sizes a disk by its allocation, not by the bytes
+  in it. A file cannot change the vCPU or memory.
 - An instabox key needs the snapshot scopes `images:read`, `images:write`,
   and `images:delete`, beside the machine scopes. Reason: the build saves
   and deletes snapshots.
@@ -465,8 +472,9 @@ from the user. It saves its evidence under
       accepts a key with `workspace:admin`, for item 3.
 - [ ] Run a CPU-heavy build and a network-heavy job for 30 minutes each.
       Record whether an instabox abuse check pauses the sandbox.
-- [ ] From one account image, start two sizes with a stopped create and a
-      resize.
+- [ ] Fork the builder at two sizes, save a snapshot of each fork, and
+      create a sandbox from each snapshot. Also try a stopped create and a
+      resize, for the fallback.
 - [ ] Check that a key with the snapshot scopes can save and delete a
       snapshot, and that a key without them gets `403 missing_scope`.
 - [ ] Ask instabox whether ciproxy can publish an OAuth app, for item 3
@@ -646,7 +654,8 @@ each provider account that has no shared snapshot. The code is shared for
 every such provider. Mocks stand in for the provider in this milestone.
 
 - [ ] Add a store table for account images: the key, the image release, the
-      state, the snapshot, the builder sandbox, the failure, and the times.
+      size, the state, the snapshot, the builder sandbox, the failure, and
+      the times.
       Add its migration.
 - [ ] Start a build when a key is saved, when an image release is new, and
       when the snapshot of a ready image is gone.
@@ -679,9 +688,10 @@ ciproxy adds the instabox seams and registers instabox as a provider.
 - [ ] Add the connect checks that item 3 chooses. Waits for item 3.
 - [ ] Add the instabox build steps: a builder sandbox from the `ci`
       template, `image/instabox-build.sh` over exec, and the snapshot save.
-- [ ] Start each job sandbox as a stopped create from the account image, a
-      resize to the job's size, and a start. When Milestone 3 shows that a
-      resize fails, save one account image for each size instead.
+- [ ] Save one account image for each allowed size: fork the builder at
+      each size, and save each fork. Start each job from the image of its
+      size. When Milestone 3 shows that a fork cannot set the size, use a
+      stopped create, a resize, and a start instead.
 - [ ] Add the spend bound: the hourly price for the whole lifetime, no start
       fee, and the egress rule of item 4. Waits for item 4.
 - [ ] End a delivery whose sandbox instabox pauses with a
