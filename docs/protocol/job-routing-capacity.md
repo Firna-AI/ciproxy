@@ -32,16 +32,12 @@ the warm runners.
 - That root includes the image, the label's free job disk, and an allowance
   for the filesystem. On Linux, the allowance covers ext4 metadata growth
   and its 1% root reserve.
-- On a Mac, the root is an APFS clone of the fixed image disk. The clone
-  takes space only as the job writes, and it can grow by at most about the
-  free bytes of the image.
-- So each macOS job VM holds the measured free bytes of its image in the
-  job disk, whatever the free disk of its label.
-- **Decision:** a macOS job VM holds the free bytes of its image. Rejected:
-  the logical size of the image disk, because the shared blocks of a clone
-  take no space. Rejected: the written bytes of each clone, because the
-  host disk could then fill during a job. This is a proposal until the user
-  decides it.
+- On a Mac, the root is an APFS clone of the image disk. The clone takes
+  space only as the job writes, but scheduling still counts its complete
+  root.
+- **Decision:** a Mac counts the complete root as Linux does. Rejected: only
+  the written bytes of each clone, because a job could then find less free
+  disk than its label promises.
 - Scheduling uses the logical image root length from the same image release
   that the VM starts. Installed file bytes are not that length.
 - The agent reports the exact root length of each local image release.

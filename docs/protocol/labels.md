@@ -74,8 +74,6 @@ machine and where each job runs.
 - The VM root includes the image, the promised free disk, and the ext4
   allowance. Scheduling counts that complete root, as
   [Disk](job-routing.md#disk) says.
-- A macOS label follows other disk rules, as
-  [The disk of a macOS label](#the-disk-of-a-macos-label) says.
 - A label name follows the label rules of GitHub. When the customer saves a
   new label, ciproxy checks its name with GitHub, and the dialog shows the
   refusal of GitHub.
@@ -139,25 +137,6 @@ machine and where each job runs.
   by API bill 24 hours at minimum under Apple's licence, so per-minute
   macOS overflow is not possible. This holds from the MVP foundation plan
   of 3 November 2026.
-
-### The disk of a macOS label
-
-- These rules are planned, and they are a proposal until the user decides
-  them.
-- The free job disk of a macOS label is at most the measured free bytes of
-  the current [macOS image](agent-images.md#the-macos-image).
-- The dialog shows that limit, and it refuses a larger value.
-- Each macOS job VM gets all the free space of its image, which is at least
-  the free disk of its label.
-- Each macOS job VM holds the free bytes of its image in the job disk, as
-  [Disk](job-routing-capacity.md#disk) says.
-- When a new macOS image has less free space than a label, the jobs of the
-  label still get the free space of the new image. The dialog then shows
-  the label above the limit.
-- **Decision:** the disk of a macOS label is at most the free space of the
-  fixed image disk. Rejected: a disk that the agent grows for each label,
-  as [The macOS image](agent-images.md#the-macos-image) says. This is a
-  proposal until the user decides it.
 
 ## Own machines, Boat, or both
 
