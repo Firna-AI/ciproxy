@@ -81,6 +81,41 @@ the framework calls the completion blocks and the delegate there.
 A VM lives inside the process that made it. It stops when the last `Vm`
 handle drops or when the process exits.
 
+### User context
+
+A LaunchDaemon, as root or with `UserName`, can start, run, and stop VMs,
+and can connect to their vsock ports. Only a process in the login session
+of a normal user can save and restore a VM: a LaunchAgent in the
+`gui/<uid>` domain of a user who is logged in at the console. Workstream A
+tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
+
+| Process | Start and run | Save and restore |
+| --- | --- | --- |
+| `gui/<uid>`, the user's login session | Pass | Pass |
+| LaunchDaemon with `UserName` | Pass | `save` stops the VM |
+| LaunchDaemon with `UserName` and `SessionCreate` | Pass | `save` stops the VM |
+| LaunchDaemon as root | Pass | `save` stops the VM |
+| Root under `sudo` | Fails | Not reached |
+| `user/<uid>` background domain | `launchctl bootstrap` fails | Not reached |
+
+- In `gui/<uid>`, the save took 3 s and wrote 1.7 GB for 8 GB of memory.
+  The state restored into an APFS clone at another path and ran 6 s later.
+  A vsock connect after the restore passed.
+- In a LaunchDaemon, also with `UserName` and with `SessionCreate`, `pause`
+  and then `save` stop the VM with `VZErrorDomain` error 1, "Internal
+  Virtualization error". The vsock connect passes there.
+- In a LaunchDaemon as root, with no `UserName`, the vsock connect gave a
+  working stream. The stream passed to another process with `SCM_RIGHTS`.
+  Then `stop` and `stopped` worked.
+- Under `sudo`, `start` fails with `VZErrorDomain` error -9, "Unable to
+  access security information".
+- In `user/<uid>`, `launchctl bootstrap` fails with error 5, "Input/output
+  error".
+
+Apple documents only that a saved state is encrypted with a key that is
+tied to the host. The likely cause of the failures is that the framework
+needs the security session of a logged-in user. This is not proven.
+
 ### Private VNC
 
 The `private-vnc` feature adds `Vm::start_vnc(port, password)` over the
