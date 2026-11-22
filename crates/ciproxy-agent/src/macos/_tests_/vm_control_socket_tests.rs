@@ -38,7 +38,6 @@ async fn connect_passes_a_working_guest_stream() {
     let stream = std::os::unix::net::UnixStream::from(fd.expect("passed fd"));
     stream.set_nonblocking(true).expect("nonblocking");
     let mut stream = UnixStream::from_std(stream).expect("tokio stream");
-    let guest = std::os::unix::net::UnixStream::from(guest);
     guest.set_nonblocking(true).expect("nonblocking");
     let mut guest = UnixStream::from_std(guest).expect("tokio guest");
     stream.write_all(b"hello\n").await.expect("write");

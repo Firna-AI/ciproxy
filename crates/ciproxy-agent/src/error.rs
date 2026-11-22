@@ -18,6 +18,27 @@ pub enum Error {
     /// Run this command as root on x64 Linux.
     #[error("[agent] run this command as root on x64 Linux")]
     HostUnsupported,
+    /// Run this command as root on a Mac with Apple Silicon.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS host check returns it.")
+    )]
+    #[error("[agent] run this command as root on a Mac with Apple Silicon")]
+    MacHostUnsupported,
+    /// The Mac runs a macOS release that cannot run the macOS image.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS host check returns it.")
+    )]
+    #[error(
+        "[agent/host] ciproxy needs macOS {minimum} or later on this Mac. This Mac runs macOS {current}. Update macOS in System Settings, then run the install again."
+    )]
+    MacosVersion {
+        /// The macOS release of this Mac.
+        current: String,
+        /// The oldest macOS release that runs the macOS image.
+        minimum: String,
+    },
     /// This platform does not support the named agent part yet.
     #[cfg_attr(
         target_os = "linux",

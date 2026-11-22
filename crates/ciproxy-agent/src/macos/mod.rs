@@ -37,3 +37,9 @@ mod vm_spec;
 #[cfg(test)]
 #[path = "_tests_/seats_tests.rs"]
 mod seats_tests;
+
+mod hardware;
+
+#[cfg(test)]
+#[path = "_tests_/hardware_tests.rs"]
+mod hardware_tests;
