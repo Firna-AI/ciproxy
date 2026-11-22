@@ -27,6 +27,15 @@ enum Command {
     Run,
     /// Finish running jobs, discard their VMs, and remove the agent.
     Uninstall,
+    /// Prepare the Mac as install does, with no registration, and print the
+    /// hardware report. For host checks. Uninstall removes what it makes.
+    #[cfg(target_os = "macos")]
+    #[command(hide = true)]
+    PrepareHost {
+        /// Also install and load the launchd daemon.
+        #[arg(long)]
+        with_service: bool,
+    },
     /// Run one job VM. The agent starts this command in its own launchd job.
     #[cfg(target_os = "macos")]
     #[command(hide = true)]
@@ -47,6 +56,10 @@ pub(crate) enum Action {
     VmRun {
         local_id: String,
     },
+    #[cfg(target_os = "macos")]
+    PrepareHost {
+        with_service: bool,
+    },
 }
 
 impl Cli {
@@ -59,6 +72,8 @@ impl Cli {
             Some(Command::Uninstall) => Action::Uninstall,
             #[cfg(target_os = "macos")]
             Some(Command::VmRun { local_id }) => Action::VmRun { local_id },
+            #[cfg(target_os = "macos")]
+            Some(Command::PrepareHost { with_service }) => Action::PrepareHost { with_service },
             _ => Action::Run,
         }
     }

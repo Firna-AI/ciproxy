@@ -184,6 +184,32 @@ impl Platform for MacPlatform {
     }
 }
 
+/// `prepare-host`: run install's host preparation with no registration,
+/// then print the hardware report and the area record. With
+/// `with_service`, also install and load the launchd daemon. With no
+/// identity, that daemon exits at once, and launchd starts it again.
+pub(crate) async fn prepare_host(with_service: bool) -> Result<()> {
+    let platform = MacPlatform::new();
+    let host = platform.host();
+    host.require_root()?;
+    let (preparation, ()) = platform.prepare()?;
+    preparation.prepare().await?;
+    println!("host prepared: control folder, area volume, fstab line, and pf rules");
+    if let Some(record) = area::record()? {
+        println!(
+            "area volume: UUID {}, quota {} bytes",
+            record.volume_uuid, record.quota_bytes
+        );
+    }
+    let report = serde_json::to_string(&host.hardware()?).map_err(|_| Error::MacHostUnsupported)?;
+    println!("hardware report: {report}");
+    if with_service {
+        platform.service().install()?;
+        println!("launchd daemon dev.ciproxy.agent installed and loaded");
+    }
+    Ok(())
+}
+
 /// Keep the Mac out of idle sleep while this process runs. A sleeping Mac
 /// takes no jobs, and its VMs pause. `caffeinate` ends with the agent, and
 /// dropping the child ends it too. A failure only logs a warning.

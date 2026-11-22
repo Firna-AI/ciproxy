@@ -15,8 +15,11 @@ use crate::persistence::{atomic_private_write, private_directory};
 
 const NAME: &str = "ciproxy";
 const FSTAB: &str = "/etc/fstab";
-/// The smallest volume that holds one image, its download, and one job.
+/// The smallest default volume: one image, its download, and one job.
 const MINIMUM_BYTES: u64 = 150 * 1024 * 1024 * 1024;
+/// The smallest volume that `CIPROXY_AREA_BYTES` may set, for example for a
+/// host check with no image.
+const MINIMUM_SET_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -50,10 +53,11 @@ pub(crate) fn prepare(requested_bytes: Option<u64>) -> Result<AreaRecord> {
         .parse()
         .context("read the container free space")?;
     let quota = requested_bytes.unwrap_or(free / 4 * 3);
-    if quota < MINIMUM_BYTES || quota > free {
+    let minimum = requested_bytes.map_or(MINIMUM_BYTES, |_| MINIMUM_SET_BYTES);
+    if quota < minimum || quota > free {
         return Err(Error::Preparation {
             component: "area volume",
-            repair: "Free at least 200 GB on the startup disk, or set CIPROXY_AREA_BYTES to a smaller size of at least 150 GB. Then rerun install.",
+            repair: "Free at least 200 GB on the startup disk, or set CIPROXY_AREA_BYTES to a size that fits, of at least 20 GB. Then rerun install.",
         });
     }
     private_directory(Path::new(AREA))?;

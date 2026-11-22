@@ -42,8 +42,12 @@ pub(crate) async fn main() -> Result<()> {
         .try_init()
         .context("initialize safe JSON logging")?;
     #[cfg(target_os = "macos")]
-    if let Action::VmRun { local_id } = &action {
-        return crate::platform::run_vm_helper(local_id).await;
+    match &action {
+        Action::VmRun { local_id } => return crate::platform::run_vm_helper(local_id).await,
+        Action::PrepareHost { with_service } => {
+            return crate::platform::prepare_host(*with_service).await;
+        }
+        _ => {}
     }
     execute(NativePlatform::new(), action).await
 }

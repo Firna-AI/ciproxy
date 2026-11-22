@@ -54,7 +54,7 @@ pub(crate) fn configure(
         Action::Uninstall => ConfiguredAction::Uninstall,
         // `application::main` runs the VM helper before it configures an action.
         #[cfg(target_os = "macos")]
-        Action::VmRun { .. } => {
+        Action::VmRun { .. } | Action::PrepareHost { .. } => {
             return Err(crate::error::Error::VmHelper {
                 reason: "the VM helper has no machine endpoint".to_owned(),
             });

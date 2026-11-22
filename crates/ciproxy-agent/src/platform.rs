@@ -41,6 +41,8 @@ pub(crate) const NATIVE: ciproxy_protocol::platform::Platform =
 #[cfg(target_os = "macos")]
 pub(crate) use macos::MacPlatform as NativePlatform;
 #[cfg(target_os = "macos")]
+pub(crate) use macos::prepare_host;
+#[cfg(target_os = "macos")]
 pub(crate) use macos::vm_helper::run as run_vm_helper;
 
 /// The facts that the machine parts need after the identity loads.
