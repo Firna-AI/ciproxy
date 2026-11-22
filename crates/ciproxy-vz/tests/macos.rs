@@ -83,14 +83,19 @@ fn third_vm_fails_with_the_limit_error() {
         "{third:?}"
     );
     eprintln!("third start: {}", third.unwrap_err());
+    assert_eq!(vms[2].state(), VmState::Error);
 
     block_on(vms[1].pause()).unwrap();
     let while_paused = block_on(vms[2].start());
-    eprintln!("third start while one VM is paused: {while_paused:?}");
+    assert!(
+        matches!(while_paused, Err(Error::VirtualMachineLimit { .. })),
+        "a paused VM still counts: {while_paused:?}"
+    );
     for vm in &vms {
-        if vm.state() != VmState::Stopped {
-            block_on(vm.stop()).unwrap();
-        }
+        block_on(vm.stop()).unwrap();
+    }
+    for vm in &vms {
+        assert!(matches!(vm.state(), VmState::Stopped | VmState::Error));
     }
 }
 

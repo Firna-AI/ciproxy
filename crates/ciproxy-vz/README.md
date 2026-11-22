@@ -65,6 +65,9 @@ The macOS parts build only for `target_os = "macos"`:
   `Error::GuestNotListening`, which a caller retries.
 - A start beyond the licence limit of 2 active macOS VMs gives
   `Error::VirtualMachineLimit`. It is `VZErrorVirtualMachineLimitExceeded`.
+  A paused VM still counts. After the error, the VM is in `VmState::Error`.
+- `stop` does nothing, and succeeds, for a VM in `VmState::Stopped` or
+  `VmState::Error`, so a caller can always stop a VM that it gives up.
 
 The futures need no particular runtime, and they are `Send`.
 
