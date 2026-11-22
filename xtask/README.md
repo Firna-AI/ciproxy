@@ -22,12 +22,23 @@ The gate has these phases, in execution order:
 | `file-length` | The 300-line source limit |
 | `markdown` | Local Markdown links, then the pinned `markdownlint-cli2` |
 | `rust-clippy` | `cargo clippy --workspace --all-targets -- -D warnings` |
+| `rust-macos` | `cargo check`, then `cargo clippy` with all features, of the macOS crates for `aarch64-apple-darwin` |
 | `typescript` | `tokens:check`, `app:lint`, `app:typecheck`, `site:lint`, `site:typecheck`, `api:lint`, `api:typecheck` |
 | `api-types` | Validate generated OpenAPI with Redocly, regenerate TypeScript, then fail on a difference |
 | `rust-test` | `cargo test --workspace`, including doctests |
 | `mockups` | `npm --prefix ts run mockups:check` |
 | `site-build` | `npm --prefix ts run site:build` |
 | `app-export` | `npm --prefix ts run app:export` |
+
+The `rust-macos` phase checks the crates in `MACOS_CRATES` in
+[src/check/phases.rs](src/check/phases.rs) on any host.
+It needs the `aarch64-apple-darwin` standard library, which
+`rust-toolchain.toml` installs, and no Apple SDK, because it does not link.
+It sets `CC`, `CXX`, and `AR` for that target to the stub tools in
+[macos-stubs](macos-stubs).
+They only write their output files, so build scripts with C code pass.
+Add a crate to `MACOS_CRATES` when it gets macOS code.
+Give it `--lib --bins` while its tests do not build for macOS.
 
 Every TypeScript script in the table runs with `npm --prefix ts run`.
 `tokens:check` runs ESLint, strict typecheck, and the CSS builder unit test.

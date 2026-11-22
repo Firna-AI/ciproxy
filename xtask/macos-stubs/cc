@@ -1,0 +1,17 @@
+#!/bin/sh
+# A stub C and C++ compiler for the rust-macos type check on any host.
+# It writes an empty file for each -o output and compiles nothing. The
+# check never links, so build scripts only need their output files to exist.
+set -eu
+next_is_output=false
+for argument in "$@"; do
+  if [ "$next_is_output" = true ]; then
+    : > "$argument"
+    next_is_output=false
+    continue
+  fi
+  case $argument in
+    -o) next_is_output=true ;;
+    -o*) : > "${argument#-o}" ;;
+  esac
+done

@@ -1,0 +1,9 @@
+#!/bin/sh
+# A stub archiver for the rust-macos type check on any host.
+# It writes an empty archive for each .a argument and archives nothing.
+set -eu
+for argument in "$@"; do
+  case $argument in
+    *.a) printf '!<arch>\n' > "$argument" ;;
+  esac
+done
