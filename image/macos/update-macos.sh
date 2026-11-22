@@ -16,7 +16,7 @@ if [[ $current == "$target_build" ]]; then
     exit 0
 fi
 softwareupdate --list --all 2>&1 | tee /tmp/ciproxy-updates.txt
-# A label line looks like: "* Label: macOS Tahoe 26.7.2-25G332".
+# A label line looks like: "* Label: macOS Tahoe 26.7.3-25G342".
 label=$(sed -n 's/^\* Label: \(.*\)$/\1/p' /tmp/ciproxy-updates.txt |
     grep -F -- "$target_version-$target_build" | head -n 1 || true)
 if [[ -z $label ]]; then

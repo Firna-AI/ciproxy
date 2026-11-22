@@ -38,17 +38,22 @@ rm -rf "$work_dir/upstream"
 mkdir -p "$work_dir/upstream"
 tar -xzf "$inputs/runner-images.tar.gz" -C "$work_dir/upstream" --strip-components 1
 
-: "${XCODE_DIR:?Set XCODE_DIR to the folder with $XCODE_XIP_NAME}"
 : "${GUEST_DIR:?Set GUEST_DIR to the output folder of image/macos/package-guest.sh}"
+# Xcode is optional here: the test image has none, and the provision phase
+# stops when the archive is missing.
 mkdir -p "$inputs/xcode"
 # Apple names the download Xcode_VERSION_Universal.xip. The recipe asks for
 # the upstream name, so the copy takes that name.
-if [[ ! -f "$inputs/xcode/$XCODE_XIP_NAME" ]]; then
+if [[ ! -f "$inputs/xcode/$XCODE_XIP_NAME" && -n "${XCODE_DIR:-}" ]]; then
     source_xip="$XCODE_DIR/$XCODE_XIP_NAME"
     [[ -f "$source_xip" ]] || source_xip="$XCODE_DIR/Xcode_${XCODE_VERSION}_Universal.xip"
     cp -c "$source_xip" "$inputs/xcode/$XCODE_XIP_NAME"
 fi
-check "$XCODE_SHA256" "$inputs/xcode/$XCODE_XIP_NAME"
+if [[ -f "$inputs/xcode/$XCODE_XIP_NAME" ]]; then
+    check "$XCODE_SHA256" "$inputs/xcode/$XCODE_XIP_NAME"
+else
+    echo "No Xcode archive: only the test image can be built. Set XCODE_DIR for a release."
+fi
 [[ -x "$GUEST_DIR/install.sh" ]] || { echo "no install.sh in $GUEST_DIR" >&2; exit 1; }
 rm -rf "$inputs/guest"
 cp -R "$GUEST_DIR" "$inputs/guest"

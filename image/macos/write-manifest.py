@@ -39,6 +39,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifacts", type=pathlib.Path)
     parser.add_argument("--guest-binary", type=pathlib.Path, required=True)
+    parser.add_argument("--test-image", action="store_true",
+                        help="a test image without Xcode and the upstream toolset")
     parser.add_argument("--source-disk", type=pathlib.Path,
                         help="the build disk before compaction, for the size report")
     args = parser.parse_args()
@@ -69,6 +71,7 @@ def main():
                 "root_disk_bytes": measurement["root_disk_bytes"],
                 "free_job_bytes": measurement["free_job_bytes"],
                 "guest_sha256": sha256(args.guest_binary),
+                "test_image": args.test_image,
                 "measurements": measurement}
     (args.artifacts / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     lines = [f"image: {manifest['image_id']}",

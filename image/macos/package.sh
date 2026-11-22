@@ -9,6 +9,7 @@ set -euo pipefail
 
 artifacts=$(cd "${1:?Usage: image/macos/package.sh ARTIFACT_DIR}" && pwd)
 cd "$artifacts"
+command -v zstd >/dev/null || { echo "zstd is missing. Install it, for example with Homebrew." >&2; exit 1; }
 vm_files=(bundle/aux.img bundle/hardware-model.bin)
 reports=(upstream-software.json software-report.json measurement.json manifest.json)
 zstd -T0 -10 --force --quiet bundle/disk.img -o bundle/disk.img.zst

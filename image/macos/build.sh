@@ -74,6 +74,7 @@ phase_configure() {
 }
 
 phase_provision() {
+    phase_provision_check
     vm_running || vm_start
     wait_ssh 600
     local template host port=8765 server
@@ -102,6 +103,47 @@ phase_provision() {
     return "$status"
 }
 
+phase_provision_check() {
+    [[ -f "$work_dir/inputs/xcode/$XCODE_XIP_NAME" ]] || {
+        echo "No Xcode archive in $work_dir/inputs/xcode. The guest stays as it is." >&2
+        echo "Set XCODE_DIR and run the fetch phase, or build the test image." >&2
+        return 1
+    }
+}
+
+# A test image for the end-to-end test: the configured guest with the stock
+# runner, the guest service, and auto-login, without Xcode and the upstream
+# toolset. It has the release archive form and a manifest with test_image.
+phase_test_image() {
+    command -v zstd >/dev/null || { echo "zstd is missing. Install it first." >&2; return 1; }
+    vm_running || vm_start
+    wait_ssh 600
+    local artifacts="$work_dir/artifacts"
+    export IMAGE_RELEASE_ID="${IMAGE_RELEASE_ID:-$IMAGE_ID-test}"
+    guest_ssh 'rm -rf /tmp/ciproxy && mkdir -p /tmp/ciproxy'
+    guest_scp /tmp/ciproxy/ "$work_dir/inputs/runner.tar.gz" "$definition/install-runner.sh" \
+        "$definition/clean-image.sh"
+    scp -q -r "${ssh_options[@]}" "$work_dir/inputs/guest" "$guest_user@$(guest_ip 5):/tmp/ciproxy/"
+    guest_ssh "sudo RUNNER_SHA256=$RUNNER_SHA256 bash /tmp/ciproxy/install-runner.sh \
+        /tmp/ciproxy/runner.tar.gz && cd /tmp/ciproxy/guest && sudo ./install.sh $IMAGE_RELEASE_ID"
+    guest_ssh 'read -r pw; sudo sysadminctl -autologin set -userName runner -password "$pw"' \
+        < "$secrets/password"
+    mkdir -p "$artifacts/bundle"
+    guest_ssh 'bash -s' < "$definition/guest-facts.sh" > "$artifacts/guest-facts.json"
+    cat "$artifacts/guest-facts.json"
+    cp "$work_dir/inputs/upstream-software.json" "$artifacts/"
+    printf '{"test_image":true,"software":"%s"}\n' \
+        "macOS with the stock runner and the ciproxy guest, without Xcode and the toolset" \
+        > "$artifacts/software-report.json"
+    guest_ssh 'sudo bash /tmp/ciproxy/clean-image.sh && sudo shutdown -h now' || true
+    vm_wait_stopped 300
+    python3 "$definition/compact.py" "$bundle/disk.img" "$artifacts/bundle/disk.img"
+    cp "$bundle/aux.img" "$bundle/hardware-model.bin" "$artifacts/bundle/"
+    python3 "$definition/write-manifest.py" "$artifacts" --test-image \
+        --guest-binary "$work_dir/inputs/guest/ciproxy-guest" --source-disk "$bundle/disk.img"
+    bash "$definition/package.sh" "$artifacts"
+}
+
 phase_facts() {
     vm_running || vm_start
     wait_ssh 600
@@ -125,5 +167,5 @@ phase_package() {
 
 for phase in "${phases[@]}"; do
     printf '== phase %s\n' "$phase"
-    "phase_$phase"
+    "phase_${phase//-/_}"
 done

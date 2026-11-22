@@ -15,9 +15,11 @@ model for the pins, the manifest, and the checksums.
   `6ae22b7fe1e9897ad8220e69f154a603cbd4b0ab` of `actions/runner-images`.
   Its software inventory `internal.macos-26-arm64.json` is the reference.
   It runs macOS 26.7.2 (25G332) with Xcode 26.6 (17F113) as the default.
+  The image pins `MACOS_TARGET`, macOS 26.7.3 (25G342), because Software
+  Update offers no older 26.x update. It is one security update newer.
 - The restore image is macOS 26.6.2 (25G83). Apple publishes no newer full
   restore image for macOS 26, so the build updates the guest to the pinned
-  26.7.2 with Software Update. The build stops when Software Update does not
+  26.7.3 with Software Update. The build stops when Software Update does not
   offer that exact build.
 - The runner is the stock runner 2.338.2 for `osx-arm64`.
 - `XCODE_LINKS` selects the Xcode versions of the upstream toolset that the
@@ -93,6 +95,17 @@ limit in the upstream scripts. The token stays out of the image.
 
 The shipped image has no SSH key and accepts no SSH password. The auto-login
 file holds the password in a reversible form.
+
+## The test image
+
+`build.sh WORK_DIR test-image` packs a test image for the end-to-end test.
+Run it after the `configure` phase. It needs no Xcode archive. It installs
+the stock runner and the guest from `GUEST_DIR`, turns on auto-login, reads
+the guest's facts, removes the build state, and packages the guest in the
+release form. The manifest has `"test_image": true`, and the image ID ends
+in `-test`. The image has no Xcode and no upstream toolset, so it is only
+for tests. The cleanup removes the build's SSH key, so copy the VM folder
+first when you want to run more phases on it.
 
 ## Packaging
 

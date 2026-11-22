@@ -12,4 +12,4 @@ printf '"data_volume_used_bytes":%s,"free_job_bytes":%s,' \
     "$((used_kib * 1024))" "$((free_kib * 1024))"
 printf '"sip":"%s","xcode":"%s"}\n' \
     "$(csrutil status | sed 's/.*: //; s/\.$//')" \
-    "$(xcodebuild -version | tr '\n' ' ' | sed 's/ $//')"
+    "$( (xcodebuild -version 2>/dev/null || echo none) | tr '\n' ' ' | sed 's/ $//')"
