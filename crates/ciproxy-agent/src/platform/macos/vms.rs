@@ -24,7 +24,9 @@ use super::vm_files::{
 use crate::boundaries::Vms;
 use crate::cache_authority::CacheAuthority;
 use crate::error::{Error, Result};
-use crate::macos::guests::VmFolders;
+use crate::macos::guests::{
+    HELPER_EXIT_WAIT, HELPER_START_WAIT, VmFolders, wait_for_helper, wait_for_helper_end,
+};
 use crate::macos::seats::{SeatNeeds, StartKind, free_seat};
 use crate::macos::vm_spec::{VM_SPEC_FORMAT, VmSpec};
 use crate::persistence::private_directory;
@@ -86,6 +88,7 @@ impl Vms for MacVms {
             self.prepare(vm).await?;
             self.launchd.bootstrap_vm(&vm.local_id).await?;
         }
+        wait_for_helper(&self.folders, &vm.local_id, HELPER_START_WAIT).await?;
         self.guests.attach(vm, Some(config)).await
     }
 
@@ -102,6 +105,7 @@ impl Vms for MacVms {
             let _operation = self.operation.lock().await;
             self.guests.detach(vm).await?;
             self.launchd.bootout_vm(&vm.local_id).await?;
+            wait_for_helper_end(&self.folders, &vm.local_id, HELPER_EXIT_WAIT).await?;
             let restore_failed = self.folders.folder(&vm.local_id).join(RESTORE_FAILED);
             if restore_failed.exists() {
                 self.seats.discard(vm.network_index)?;

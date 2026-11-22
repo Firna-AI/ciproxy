@@ -52,7 +52,7 @@ const results: readonly PageHits[] = [
         heading: "Default labels",
         fragment: "default-labels",
         before: "",
-        after: ": ciproxy-8vcpu",
+        after: ": ciproxy-large",
       },
     ],
   },

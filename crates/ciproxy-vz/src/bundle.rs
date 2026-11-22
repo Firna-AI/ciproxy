@@ -11,6 +11,8 @@
 //! | `mac-address.txt` | The MAC address of the NAT device, one line |
 //!
 //! The disk and the auxiliary storage belong together. A clone copies both.
+//! A released image has only the disk, the auxiliary storage, and the
+//! hardware model. Each clone gets its own identity files.
 
 use std::fs::OpenOptions;
 use std::io::ErrorKind;
@@ -149,23 +151,30 @@ impl Bundle {
 
     /// Fail with the first missing file of a complete bundle.
     pub fn check_files(&self) -> Result<()> {
-        for path in [
-            self.disk(),
-            self.auxiliary_storage(),
-            self.hardware_model(),
-            self.machine_identifier(),
-            self.mac_address(),
-        ] {
-            if !path.is_file() {
-                return Err(io(
-                    "find a bundle file",
-                    &path,
-                    std::io::Error::from(ErrorKind::NotFound),
-                ));
-            }
-        }
-        Ok(())
+        self.check_image_files()?;
+        check_present([self.machine_identifier(), self.mac_address()])
     }
+
+    /// Fail with the first missing file that a clone takes from its source:
+    /// the disk, the auxiliary storage, or the hardware model. A clone gets
+    /// its own identity, so its source needs no identity files. A released
+    /// image has none.
+    pub fn check_image_files(&self) -> Result<()> {
+        check_present([self.disk(), self.auxiliary_storage(), self.hardware_model()])
+    }
+}
+
+fn check_present<const N: usize>(paths: [PathBuf; N]) -> Result<()> {
+    for path in paths {
+        if !path.is_file() {
+            return Err(io(
+                "find a bundle file",
+                &path,
+                std::io::Error::from(ErrorKind::NotFound),
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn read_data(path: &Path) -> Result<Vec<u8>> {

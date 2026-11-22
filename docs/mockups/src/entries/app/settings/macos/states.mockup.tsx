@@ -13,7 +13,7 @@ export const labels = defineScreen({
   slug: "labels",
   title: "Labels with a macOS label",
   description:
-    "A what-if of 18 November: mokly-ai added a Mac, mac-studio-1, as its fourth machine, and runs jobs on the default macOS labels ciproxy-macos and ciproxy-macos-4vcpu. Each label names its platform under its name. The jobs of a macOS label run on the Macs only, and the caption says that a Mac runs at most 2 job VMs at a time. Four machines pass the three of Team, so the banner offers the extra-machine add-on. Add label opens the add dialog with macOS picked, and Edit of ciproxy-macos opens its dialog.",
+    "A what-if of 18 November: mokly-ai added a Mac, mac-studio-1, as its fourth machine, and runs jobs on the default macOS labels ciproxy-macos and ciproxy-macos-medium. Each label names its platform under its name. The jobs of a macOS label run on the Macs only, and the caption says that a Mac runs at most 2 job VMs at a time. Four machines pass the three of Team, so the banner offers the extra-machine add-on. Add label opens the add dialog with macOS picked, and Edit of ciproxy-macos opens its dialog.",
   rationale,
   relatedDocs: related("labels", "jobRouting", "overflow"),
   address,

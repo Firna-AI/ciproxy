@@ -57,15 +57,15 @@ type DialogCopy = {
 
 const steady = machineScenes.steady;
 
-/** The draft of ciproxy-4vcpu before the save: an Admin raises its free disk. */
+/** The draft of ciproxy-medium before the save: an Admin raises its free disk. */
 const largerDiskDraft: Label = {
-  ...labelNamed("ciproxy-4vcpu"),
+  ...labelNamed("ciproxy-medium"),
   freeDiskGb: 40,
 };
 
 const dialogs: Record<LabelDialogMode, DialogCopy> = {
   edit: {
-    label: labelNamed("ciproxy-8vcpu"),
+    label: labelNamed("ciproxy-large"),
     edits: true,
     list: paths.settings,
     machines: steady,
@@ -96,7 +96,7 @@ const dialogs: Record<LabelDialogMode, DialogCopy> = {
     nameError: `A label name cannot have spaces. Use ${refusedLabel.name.replaceAll(" ", "-")} instead.`,
   },
   "no-boat": {
-    label: labelNamed("ciproxy-8vcpu"),
+    label: labelNamed("ciproxy-large"),
     edits: true,
     list: paths.labelsNoBoat,
     machines: steady,

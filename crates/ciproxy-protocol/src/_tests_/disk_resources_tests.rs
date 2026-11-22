@@ -99,7 +99,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             false,
         ),
         (
-            "ciproxy-4vcpu exact fit",
+            "ciproxy-medium exact fit",
             Resources {
                 slots: Slots(2),
                 job_disk_bytes: 80_899_612_672,
@@ -108,7 +108,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             true,
         ),
         (
-            "ciproxy-4vcpu disk too small",
+            "ciproxy-medium disk too small",
             Resources {
                 slots: Slots(2),
                 job_disk_bytes: 80_899_612_672 - 1,
@@ -117,7 +117,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             false,
         ),
         (
-            "ciproxy-4vcpu slots too small",
+            "ciproxy-medium slots too small",
             Resources {
                 slots: Slots(1),
                 job_disk_bytes: 80_899_612_672,
@@ -126,7 +126,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             false,
         ),
         (
-            "ciproxy-8vcpu exact fit",
+            "ciproxy-large exact fit",
             Resources {
                 slots: Slots(4),
                 job_disk_bytes: 122_136_727_552,
@@ -135,7 +135,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             true,
         ),
         (
-            "ciproxy-8vcpu disk too small",
+            "ciproxy-large disk too small",
             Resources {
                 slots: Slots(4),
                 job_disk_bytes: 80_899_612_672,
@@ -144,7 +144,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             false,
         ),
         (
-            "ciproxy-8vcpu slots too small",
+            "ciproxy-large slots too small",
             Resources {
                 slots: Slots(3),
                 job_disk_bytes: 122_136_727_552,
@@ -164,7 +164,7 @@ fn default_sizes_use_the_smaller_slot_or_disk_concurrency() {
     let examples = [
         ("ciproxy", ciproxy_size(), 1, 6, 3, 3),
         (
-            "ciproxy-4vcpu",
+            "ciproxy-medium",
             VmSize {
                 vcpu: 4,
                 memory_bytes: 16 * GIGABYTE,
@@ -176,7 +176,7 @@ fn default_sizes_use_the_smaller_slot_or_disk_concurrency() {
             3,
         ),
         (
-            "ciproxy-8vcpu",
+            "ciproxy-large",
             VmSize {
                 vcpu: 8,
                 memory_bytes: 32 * GIGABYTE,
