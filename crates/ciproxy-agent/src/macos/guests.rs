@@ -74,6 +74,36 @@ pub(crate) async fn wait_for_helper(
     }
 }
 
+/// The helper's `ExitTimeOut` of 30 s, then SIGKILL, and a margin.
+pub(crate) const HELPER_EXIT_WAIT: Duration = Duration::from_secs(40);
+
+/// Wait until a stopped helper no longer answers on its control socket.
+///
+/// launchd can drop the job after `launchctl bootout` before the helper
+/// process ends. A new VM on the same seat has the same MAC address and
+/// machine identifier, so it must not start while the old VM runs. A helper
+/// that ended removes its socket, and a killed one leaves a socket that
+/// refuses connections.
+pub(crate) async fn wait_for_helper_end(
+    folders: &VmFolders,
+    local_id: &str,
+    wait: Duration,
+) -> Result<()> {
+    let client = folders.client(local_id);
+    let deadline = Instant::now() + wait;
+    loop {
+        if matches!(client.phase().await, Err(ControlFailure::HelperGone)) {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            return Err(Error::VmHelper {
+                reason: "the VM helper still answers after its stop".to_owned(),
+            });
+        }
+        sleep(HELPER_POLL).await;
+    }
+}
+
 /// Connect through the helper. A guest that does not listen yet gives
 /// `Error::Disconnected`, so the bridge retries after one second.
 pub(crate) struct HelperTransport {

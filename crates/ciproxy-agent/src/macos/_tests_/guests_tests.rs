@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use unimock::{MockFn, Unimock, matching};
 
-use super::guests::{GUEST_PORT, VmFolders, unit_state, wait_for_helper};
+use super::guests::{GUEST_PORT, VmFolders, unit_state, wait_for_helper, wait_for_helper_end};
 use super::vm_control::VmPhase;
 use super::vm_control_server::{VmControlMock, bind, serve};
 use super::vm_spec::ExitReason;
@@ -109,4 +109,31 @@ async fn a_helper_that_never_answers_fails_after_the_wait() {
     let result = wait_for_helper(&folders, id, Duration::from_millis(300)).await;
 
     assert!(matches!(result, Err(Error::VmHelper { .. })), "{result:?}");
+}
+
+/// After a bootout, a helper that still answers holds its seat identity.
+#[tokio::test]
+async fn a_stop_waits_until_the_helper_no_longer_answers() {
+    let (_area, folders) = helper_area();
+    let socket = folders.client(HELPER).socket;
+    wait_for_helper_end(&folders, HELPER, Duration::from_secs(1))
+        .await
+        .expect("no socket: the helper ended");
+
+    let listener = bind(&socket).expect("bind");
+    let control = Unimock::new(
+        VmControlMock::phase
+            .each_call(matching!())
+            .returns(VmPhase::Stopping),
+    );
+    let helper = tokio::spawn(serve(listener, Arc::new(control)));
+    let result = wait_for_helper_end(&folders, HELPER, Duration::from_millis(300)).await;
+    assert!(matches!(result, Err(Error::VmHelper { .. })), "{result:?}");
+
+    helper.abort();
+    let _ = helper.await;
+    // A killed helper leaves a socket that refuses connections.
+    wait_for_helper_end(&folders, HELPER, Duration::from_secs(1))
+        .await
+        .expect("a refused socket: the helper ended");
 }
