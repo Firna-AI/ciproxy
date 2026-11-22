@@ -105,6 +105,19 @@ export function settingsCases(origin: string, output: string): M20Case[] {
         });
         assert.equal(await terms.getAttribute("href"), siteLinks.terms);
         assert.equal(await terms.getAttribute("target"), "_blank");
+        // The dialog opens on Cancel, not on the Terms link before it, so Enter
+        // cannot open the Terms by mistake. No locator gives the focus, so the
+        // page reads it, once: the frame moves the focus as the dialog appears.
+        // A phone sheet then loses that focus for another reason, so the check
+        // asserts only that the Terms link does not hold it.
+        assert.notEqual(
+          await page.evaluate(
+            () => document.activeElement?.getAttribute("href") ?? null,
+            undefined,
+          ),
+          siteLinks.terms,
+          "The dialog opened with the focus on its Terms link",
+        );
         await capture(page, width, output, "member-admin-trust-dialog-open");
         await dialogCancel(page, title);
         await selectRole(page, "Rowan Hale", "admin");

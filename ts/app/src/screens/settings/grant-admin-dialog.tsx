@@ -4,9 +4,10 @@
 // trust notice of the API, and says that an organization whose runners other
 // people should control uses a workspace of its own. It also names the power
 // of each Admin to accept new versions of the terms for the customer that
-// holds the workspace.
+// holds the workspace. The dialog opens on Cancel, the safe action, and not on
+// the Terms link before it.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import type { ApiResult } from "../../api/client.ts";
@@ -40,6 +41,7 @@ export function GrantAdminDialog({
 }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureCopy | null>(null);
+  const cancel = useRef<View>(null);
   const press = async () => {
     setBusy(true);
     setFailure(null);
@@ -54,12 +56,14 @@ export function GrantAdminDialog({
       visible
       busy={busy}
       onClose={onClose}
+      initialFocusRef={cancel}
       footer={
         <View style={styles.footer}>
           <ActionButton
             label="Cancel"
             tone="ghost"
             disabled={busy}
+            buttonRef={cancel}
             onPress={onClose}
           />
           <ActionButton

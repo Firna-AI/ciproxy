@@ -356,13 +356,18 @@ Depends on: every other milestone
 - [x] Commit with Conventional Commits and push the branch.
   Evidence: `.context/terms-acceptance-and-business-checkout/gate-1.log` and
   `gate-1-macos-rerun.log`.
-- [ ] Review the complete local diff against `origin/docs/legal-pages-firna`,
+- [x] Review the complete local diff against `origin/docs/legal-pages-firna`,
       the branch of #111, with the `implementation-review` skill after the
       push. Report the findings, then apply the fix rule: fix the `fix now`
       findings, record follow-up items under `plans/follow-ups/` for the
       rest, re-review once, and report.
+  Review summary: round 1 on `8bda8d3` gave findings 1 to 6. Fixed in
+  `7393b4b`: 3, 4, 5, and 6. Deferred: 1. Removed by its check: 2. Round 2
+  on `7393b4b` gave findings 7 to 10. Fixed in the round 2 fix commit: 8 and
+  9. Deferred: 7, and the wider fix of 8. Open for the user: 10. Evidence:
+  `.context/reviews/conductor/ciproxy-terms-acceptance-and-business-checkout/`.
 - [ ] Delete this plan when the `plans` skill says, under "Deleting the
       plan".
-- [ ] Open the draft pull request into `main`. Its description starts with
+- [x] Open the draft pull request into `main`. Its description starts with
       "Depends on #111" and gives one line for each item: the option, what
       changed, and the commit.
