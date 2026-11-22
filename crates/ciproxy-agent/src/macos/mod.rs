@@ -1,9 +1,12 @@
 //! macOS host parts with no macOS-only dependency, so Linux tests run them.
 //!
 //! The [macOS host design](../../macos-host.md) gives the whole design.
-//! `platform::macos` composes these parts with `ciproxy-vz`. Until it does,
-//! they have no caller outside their tests.
-#![allow(dead_code)]
+//! `platform::macos` composes these parts with `ciproxy-vz`. Other targets
+//! build this module only for its tests.
+#![cfg_attr(
+    not(target_os = "macos"),
+    allow(dead_code, reason = "Only the macOS platform calls these parts.")
+)]
 
 pub(crate) mod fd_passing;
 pub(crate) mod guests;

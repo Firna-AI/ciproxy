@@ -152,6 +152,7 @@ mod terminal_completion;
 mod unit_state;
 #[cfg(target_os = "linux")]
 mod updates;
+mod updates_checked;
 #[cfg(target_os = "linux")]
 mod vm_config;
 #[cfg(target_os = "linux")]
