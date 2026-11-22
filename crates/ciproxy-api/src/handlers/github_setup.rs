@@ -1,21 +1,17 @@
-//! Public GitHub setup return initiates fresh user association proof.
+//! Public GitHub setup return sends pending setup to the terms page.
 
 use axum::extract::{Query, State};
-use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Redirect, Response};
-use secrecy::ExposeSecret;
 
 use crate::error::Result;
-use crate::router::cookie;
 use crate::state::ApiState;
 use crate::wire::access::SetupCallback;
 
-use super::auth::set_cookie;
+use super::auth::set_oauth_cookie;
 
-#[utoipa::path(operation_id="github_setup_begin",get,path="/github/setup",params(SetupCallback),responses((status=303,description="Fresh GitHub authorization or failed setup redirect")))]
+#[utoipa::path(operation_id="github_setup_begin",get,path="/github/setup",params(SetupCallback),responses((status=303,description="Dashboard terms page with pending setup, or failed setup redirect")))]
 pub(crate) async fn begin(
     State(state): State<ApiState>,
-    headers: HeaderMap,
     Query(parameters): Query<SetupCallback>,
 ) -> Result<Response> {
     let request_only = parameters.setup_action.as_deref() == Some("request");
@@ -33,23 +29,11 @@ pub(crate) async fn begin(
             _ => return Ok(Redirect::to("/sign-in?reason=github").into_response()),
         })
     };
-    let previous = cookie(&headers, "__Host-ciproxy");
-    let attempt = state
+    let pending = state
         .access
-        .begin_setup(
-            installation,
-            parameters.state,
-            request_only,
-            previous.as_deref(),
-        )
+        .hold_setup(installation, parameters.state, request_only)
         .await?;
-    let mut response = Redirect::to(&attempt.url).into_response();
-    set_cookie(
-        response.headers_mut(),
-        "__Host-ciproxy-oauth",
-        attempt.binding.expose_secret(),
-        600,
-        true,
-    )?;
+    let mut response = Redirect::to("/continue").into_response();
+    set_oauth_cookie(response.headers_mut(), &pending)?;
     Ok(response)
 }

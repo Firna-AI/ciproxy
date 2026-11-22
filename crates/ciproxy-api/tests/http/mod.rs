@@ -54,6 +54,7 @@ mod refresh_tests;
 mod token_tests;
 
 mod setup_personal_tests;
+mod setup_terms_tests;
 
 mod continuation_tests;
 mod direct_recovery_tests;

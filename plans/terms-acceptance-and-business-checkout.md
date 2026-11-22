@@ -284,18 +284,21 @@ Depends on: 2, 3
 The API sends each GitHub sign-in that does not start on the sign-in page
 through the terms step.
 
-- [ ] Keep the pending setup of the setup return in the one-use OAuth
+- [x] Keep the pending setup of the setup return in the one-use OAuth
       cookie, and open `/continue`.
-- [ ] Start the setup purpose from a valid pending setup at
+- [x] Start the setup purpose from a valid pending setup at
       `/api/auth/github?resume=setup`. Start a plain sign-in otherwise.
-- [ ] Give `/continue` as the reauthorization URL of the session and of
+- [x] Give `/continue` as the reauthorization URL of the session and of
       each organization link.
-- [ ] Update the tests of the setup return. Add regression tests for the
+- [x] Update the tests of the setup return. Add regression tests for the
       terms step, the resume, an expired or unreadable pending setup, a
       plain sign-in after a setup return, and the reauthorization URL.
-- [ ] Regenerate the API types with `npm --prefix ts run api:generate`.
-- [ ] Update the `ciproxy-api` README.
-- [ ] Run the targeted API tests, rustfmt, and clippy.
+- [x] Regenerate the API types with `npm --prefix ts run api:generate`.
+- [x] Update the `ciproxy-api` README.
+- [x] Run the targeted API tests, rustfmt, and clippy.
+
+Evidence: `.context/terms-acceptance-and-business-checkout/milestone-4/`
+and `.context/terms-acceptance-and-business-checkout/m4/`.
 
 ## Milestone 5: Dashboard fixtures and browser smokes
 

@@ -16,7 +16,7 @@ use uuid::Uuid;
 use super::fixture::{Browser, Fixture};
 use super::fixture_io::{CallbackOutcome, json};
 use super::link_support::{self, begin, event, memberships, other_workspace, pending, scenario};
-use super::setup_support::{browser, finish};
+use super::setup_support::{browser, complete_setup, finish};
 
 fn historical_claim(fixture: &Fixture) -> Uuid {
     let claim = InstallationClaim {
@@ -62,16 +62,10 @@ async fn authorize(fixture: &Fixture, prior: Option<&Browser>) -> Browser {
 
 async fn waiting(fixture: &Fixture, prior: &Browser, state: &str) -> Browser {
     browser(
-        &finish(
+        &complete_setup(
             fixture,
-            fixture
-                .request(
-                    Some(prior),
-                    "GET",
-                    &format!("/github/setup?setup_action=request&state={state}"),
-                    None,
-                )
-                .await,
+            Some(prior),
+            &format!("?setup_action=request&state={state}"),
             CallbackOutcome::Accepted,
         )
         .await,

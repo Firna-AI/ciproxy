@@ -12,7 +12,7 @@ use uuid::Uuid;
 use super::fixture::{Browser, Fixture};
 use super::fixture_io::{CallbackOutcome, json};
 use super::link_support::{self, event, memberships, scenario};
-use super::setup_support::{browser, finish};
+use super::setup_support::{browser, complete_setup};
 
 async fn session(fixture: &Fixture, browser: &Browser) -> Value {
     json(
@@ -25,16 +25,10 @@ async fn session(fixture: &Fixture, browser: &Browser) -> Value {
 
 async fn setup_return(fixture: &Fixture, prior: &Browser, state: &str) -> Browser {
     browser(
-        &finish(
+        &complete_setup(
             fixture,
-            fixture
-                .request(
-                    Some(prior),
-                    "GET",
-                    &format!("/github/setup?installation_id=1066&state={state}"),
-                    None,
-                )
-                .await,
+            Some(prior),
+            &format!("?installation_id=1066&state={state}"),
             CallbackOutcome::Accepted,
         )
         .await,

@@ -147,9 +147,7 @@ pub(crate) async fn session(
             SignInState::Ready
         },
         csrf_token: principal.csrf().to_owned(),
-        reauthorization_url: principal
-            .browser_only()
-            .then(|| "/api/auth/github".to_owned()),
+        reauthorization_url: principal.browser_only().then(|| "/continue".to_owned()),
         reauthorization_required,
         login: principal.login().to_owned(),
         expires_at: principal.expires_at(),
