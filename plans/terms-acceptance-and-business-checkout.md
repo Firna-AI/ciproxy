@@ -184,6 +184,16 @@ Each design call below is my call of 22 November 2026.
   and `plans/follow-ups/protocol-docs-over-length-target.md` splits them
   later. Reason: they were over the target before this branch, and their
   splits move many links outside the five calls.
+- **The shared link fixture.** My call, from the fixtures: the `link()`
+  fixture of the dashboard harness gives `/continue`, as the API does, and
+  the Node test of the link recovery passes its own marker URL. Reason:
+  the fixture then mirrors the API, and the test still proves that the
+  action uses the URL of the link.
+- **Harness sessions with no reauthorization URL.** My call, from the
+  fixtures: five harness scenarios keep `reauthorization_url: null`, which
+  the API never gives for a session that is not ready, and
+  `plans/follow-ups/harness-reauthorization-url-drift.md` fixes them later.
+  Reason: the drift predates this branch, and a smoke depends on it.
 
 Contract owners:
 
@@ -309,13 +319,15 @@ Depends on: 4
 The fixtures of the dashboard mirror the API again, and the browser smokes
 pass the terms step.
 
-- [ ] Give `/continue` as the reauthorization URL in the fixtures that
+- [x] Give `/continue` as the reauthorization URL in the fixtures that
       mirror the API.
-- [ ] Make the browser smokes that follow a GitHub sign-in link pass the
+- [x] Make the browser smokes that follow a GitHub sign-in link pass the
       terms step and its Continue.
-- [ ] Update the sign-in rules in `ts/app/src/api/README.md` and the
+- [x] Update the sign-in rules in `ts/app/src/api/README.md` and the
       browser checks in `ts/app/scripts/README.md`.
-- [ ] Run the typecheck, the lint, and the changed browser smokes.
+- [x] Run the typecheck, the lint, and the changed browser smokes.
+
+Evidence: `.context/terms-acceptance-and-business-checkout/m5/`.
 
 ## Milestone 6: Follow-up items
 

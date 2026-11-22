@@ -1,3 +1,4 @@
+import { pages } from "../src/routing/pages.ts";
 import { workspaceId } from "./fixtures-core.ts";
 import type { ScenarioName } from "./harness-scenarios.ts";
 import { boatCases } from "./browser-boat-cases.ts";
@@ -38,6 +39,12 @@ export const smokeCases: readonly SmokeCase[] = [
     path: jobs,
     heading: "Run GitHub Actions on your own machines",
     text: "Your sign-in ended after 30 days",
+  },
+  {
+    name: "terms-step",
+    scenario: "signed-out",
+    path: pages.termsStep,
+    heading: "Sign in to continue",
   },
   {
     name: "install",
