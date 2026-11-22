@@ -128,8 +128,10 @@ phase_shrink() {
     vm_wait_stopped 300
     python3 -c 'import os, sys; os.truncate(sys.argv[1], int(sys.argv[2]))' \
         "$bundle/disk.img" "$DISK_BYTES"
-    # The first start proves that the cut disk boots, and writes the backup
-    # GPT at the new end.
+    # The firmware does not start a guest whose GPT names sectors after the
+    # cut, so the host fixes the GPT first. The first start proves that the
+    # cut disk boots.
+    python3 "$definition/fix-gpt.py" "$bundle/disk.img"
     vm_start
     wait_ssh 900
     guest_ssh 'yes | sudo diskutil repairDisk disk0 >/dev/null; diskutil list disk0'

@@ -102,8 +102,10 @@ file holds the password in a reversible form.
 Run it after the `configure` phase. For a small test disk, run the opt-in
 `shrink` phase first, with `DISK_BYTES` set in the environment. It removes
 the update's leftovers and the guest's Recovery container, shrinks the main
-APFS container, and cuts `disk.img` to `DISK_BYTES`. Then it starts the
-guest once, which proves that the disk boots, and repairs the partition map.
+APFS container, and cuts `disk.img` to `DISK_BYTES`. `fix-gpt.py` then
+makes the partition map match the new length, because the VM firmware does
+not start a guest whose map names sectors after the cut. Then the phase
+starts the guest once, which proves that the disk boots.
 It changes nothing when the used space does not fit with a 2 GB margin.
 
 The `test-image` phase needs no Xcode archive. It installs the stock runner

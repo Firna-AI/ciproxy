@@ -6,8 +6,8 @@
 #
 # The Recovery container sits at the end of the disk, after the main APFS
 # container, so it is removed. The image then has no paired Recovery. The
-# backup GPT is lost with the cut. The first start after the cut runs
-# "diskutil repairDisk disk0", which writes it at the new end.
+# cut loses the backup GPT, and the primary GPT names the old end, so the
+# host runs fix-gpt.py before the first start.
 set -euo pipefail
 
 disk_bytes=${1:?Usage: shrink-disk.sh DISK_BYTES}
