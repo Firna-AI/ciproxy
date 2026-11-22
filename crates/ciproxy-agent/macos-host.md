@@ -144,7 +144,8 @@ launchd sends early output, such as a panic, to the same file.
   other launchd jobs, so they keep running.
 - launchd has no environment file. So the job runs `/bin/sh`, which
   loads `/etc/ciproxy-agent/environment` with `set -a` when the file
-  exists, then replaces itself with the agent. The keys are the same as on
+  exists, is owned by root, and is not writable by group or others. Then
+  the shell replaces itself with the agent. The keys are the same as on
   Linux.
 - The agent runs `caffeinate -i -w PID` while it runs, so the Mac does not
   go into idle sleep. A sleeping Mac takes no jobs, and its VMs pause. The
@@ -349,10 +350,14 @@ Seats follow `Slots::for_machine` with P's rule, then
    names the minimum, the current version, and the repair.
 2. Create the control folder, the area volume, and the area folders. Load
    the pf rules.
-3. Register. Create `/usr/local/bin` when it is missing. Copy the binary to
-   a staging name, then rename it into place. A rename gives a new file.
-   macOS caches a code signature for each file, so a write into a signed
-   binary makes the kernel stop it.
+3. Register. Create `/usr/local/bin` when it is missing. Refuse when
+   `/usr/local` or `/usr/local/bin` is not owned by root or is writable by
+   group or others, because a user could then replace the binary that the
+   root daemon runs. Copy the binary to a staging name, give it root:wheel
+   and mode 0755, then rename it into place. `fs::copy` clones the file on
+   macOS and keeps the source owner, so the owner change is needed. A
+   rename gives a new file. macOS caches a code signature for each file,
+   so a write into a signed binary makes the kernel stop it.
 4. Write the log rotation and the launchd file, then load or restart the
    daemon.
 

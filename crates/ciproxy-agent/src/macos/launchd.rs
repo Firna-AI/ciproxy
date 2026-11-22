@@ -24,12 +24,13 @@ struct Job<'a> {
 
 /// The agent daemon in `/Library/LaunchDaemons`. It starts at boot.
 ///
-/// launchd has no environment file, so `/bin/sh` loads the root-only
-/// settings file, as systemd's `EnvironmentFile` does on Linux. The shell
-/// then replaces itself with the agent.
+/// launchd has no environment file, so `/bin/sh` loads the settings file,
+/// as systemd's `EnvironmentFile` does on Linux. The shell runs as root, so
+/// it loads the file only when root owns it and no group or other user can
+/// write it. Then the shell replaces itself with the agent.
 pub(crate) fn agent_plist() -> String {
     let start = format!(
-        "if [ -f {ENVIRONMENT} ]; then set -a; . {ENVIRONMENT}; set +a; fi; exec {BINARY} run"
+        "if [ -f {ENVIRONMENT} ] && [ -O {ENVIRONMENT} ] && [ -z \"$(find {ENVIRONMENT} -perm +022)\" ]; then set -a; . {ENVIRONMENT}; set +a; fi; exec {BINARY} run"
     );
     render(&Job {
         label: AGENT_LABEL,

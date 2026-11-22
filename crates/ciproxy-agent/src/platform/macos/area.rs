@@ -82,13 +82,16 @@ pub(crate) fn prepare(requested_bytes: Option<u64>) -> Result<AreaRecord> {
     )?;
     add_fstab_line(&record.volume_uuid)?;
     mount(&record)?;
+    let real = real_area();
+    let real = real.to_string_lossy();
     for (program, args) in [
-        ("mdutil", vec!["-i", "off", AREA]),
-        ("tmutil", vec!["addexclusion", "-v", AREA]),
+        ("mdutil", ["-i", "off", real.as_ref()]),
+        ("tmutil", ["addexclusion", "-v", real.as_ref()]),
     ] {
-        if !run_quiet(program, &args) {
+        if let Some(error) = run_checked(program, &args) {
             tracing::warn!(
                 program,
+                error,
                 "the area volume keeps its default indexing or backup"
             );
         }
@@ -240,13 +243,17 @@ fn diskutil(args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
-fn run_quiet(program: &str, args: &[&str]) -> bool {
-    Command::new(program)
-        .args(args)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .is_ok_and(|status| status.success())
+/// Run a tool. Return its output when it fails, for the log.
+fn run_checked(program: &str, args: &[&str]) -> Option<String> {
+    match Command::new(program).args(args).output() {
+        Ok(output) if output.status.success() => None,
+        Ok(output) => Some(format!(
+            "{} {}",
+            String::from_utf8_lossy(&output.stdout).trim(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        )),
+        Err(error) => Some(error.to_string()),
+    }
 }
 
 fn area_error(step: &'static str) -> Error {

@@ -2,7 +2,7 @@
 //! lifetimes, so a stop or a restart of the agent keeps running jobs.
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -62,21 +62,47 @@ impl Service for LaunchdService {
 /// Copy the running binary to a staging name, then rename it into place.
 /// A rename gives a new file. macOS caches a code signature for each file,
 /// so a write into an existing signed binary makes the kernel stop it.
+///
+/// A root daemon runs this binary, so only root may change it or its
+/// folders. On macOS, `fs::copy` clones the file and keeps the source
+/// owner, so install sets root:wheel and mode 0755 itself.
 fn install_binary() -> Result<()> {
     if !Path::new(BINARY_FOLDER).is_dir() {
         fs::create_dir_all(BINARY_FOLDER).context("create /usr/local/bin")?;
-        fs::set_permissions(BINARY_FOLDER, fs::Permissions::from_mode(0o755))
-            .context("open /usr/local/bin")?;
+        for folder in ["/usr/local", BINARY_FOLDER] {
+            fs::set_permissions(folder, fs::Permissions::from_mode(0o755))
+                .context("open /usr/local/bin")?;
+        }
+    }
+    for folder in ["/usr/local", BINARY_FOLDER] {
+        root_only_folder(Path::new(folder))?;
     }
     let current = std::env::current_exe().context("locate agent binary")?;
     if current == Path::new(BINARY) {
-        return Ok(());
+        return root_executable(Path::new(BINARY));
     }
     let pending = format!("{BINARY}.pending");
     fs::copy(&current, &pending).context("stage agent binary")?;
-    fs::set_permissions(&pending, fs::Permissions::from_mode(0o755))
-        .context("open agent binary")?;
+    root_executable(Path::new(&pending))?;
     fs::rename(&pending, BINARY).context("install agent binary")
+}
+
+fn root_executable(path: &Path) -> Result<()> {
+    std::os::unix::fs::chown(path, Some(0), Some(0)).context("give the agent binary to root")?;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).context("protect agent binary")
+}
+
+/// A user who owns or can write a folder of the binary could replace the
+/// binary by a rename, and the root daemon would run it.
+fn root_only_folder(path: &Path) -> Result<()> {
+    let metadata = fs::metadata(path).context("inspect a binary folder")?;
+    if metadata.uid() != 0 || metadata.mode() & 0o022 != 0 {
+        return Err(Error::Preparation {
+            component: "/usr/local/bin",
+            repair: "Make /usr/local and /usr/local/bin owned by root and not writable by group or others: sudo chown root:wheel /usr/local /usr/local/bin && sudo chmod 755 /usr/local /usr/local/bin. Then rerun install.",
+        });
+    }
+    Ok(())
 }
 
 /// launchd reads its files as root and refuses one that others can write.
