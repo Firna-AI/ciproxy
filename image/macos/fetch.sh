@@ -50,14 +50,24 @@ tar -xzf "$inputs/runner-images.tar.gz" -C "$work_dir/upstream" --strip-componen
 # stops when the archive is missing.
 mkdir -p "$inputs/xcode"
 # Apple names the download Xcode_VERSION_Universal.xip. The recipe asks for
-# the upstream name, so the copy takes that name.
-if [[ ! -f "$inputs/xcode/$XCODE_XIP_NAME" && -n "${XCODE_DIR:-}" ]]; then
+# the upstream name, so the copy takes that name. XCODE_DIR is a local
+# override. Else the R2 read keys download the private copy in ciproxy-xcode.
+xcode_xip="$inputs/xcode/$XCODE_XIP_NAME"
+if [[ ! -f "$xcode_xip" && -n "${XCODE_DIR:-}" ]]; then
     source_xip="$XCODE_DIR/$XCODE_XIP_NAME"
     [[ -f "$source_xip" ]] || source_xip="$XCODE_DIR/Xcode_${XCODE_VERSION}_Universal.xip"
-    cp -c "$source_xip" "$inputs/xcode/$XCODE_XIP_NAME"
+    cp -c "$source_xip" "$xcode_xip"
+elif [[ ! -f "$xcode_xip" && -n "${R2_ACCOUNT_ID:-}" && -n "${R2_XCODE_ACCESS_KEY_ID:-}" &&
+    -n "${R2_XCODE_SECRET_ACCESS_KEY:-}" ]]; then
+    set +x
+    source "$definition/r2.sh"
+    r2_require R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
+    r2_aws R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY s3 cp \
+        "s3://ciproxy-xcode/xcode/$XCODE_XIP_NAME" "$xcode_xip.part"
+    mv "$xcode_xip.part" "$xcode_xip"
 fi
-if [[ -f "$inputs/xcode/$XCODE_XIP_NAME" ]]; then
-    check "$XCODE_SHA256" "$inputs/xcode/$XCODE_XIP_NAME"
+if [[ -f "$xcode_xip" ]]; then
+    check "$XCODE_SHA256" "$xcode_xip"
 else
     echo "No Xcode archive: only the test image can be built. Set XCODE_DIR for a release."
 fi
