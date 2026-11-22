@@ -19,9 +19,9 @@ use tokio::sync::Mutex;
 use unimock::{Clause, MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, HostMock, ImagesMock, VmsMock};
+use crate::boundaries::{ImageLease, ImageLeaseMock};
 use crate::cache_authority::CacheAuthority;
 use crate::controller::{Agent, Controller};
-use crate::image_registry::{ImageLease, ImageLeaseMock};
 use crate::state::{Identity, MachineState, VmRecord};
 use crate::storage_sizing::DEFAULT_IMAGE_BYTES;
 use crate::workload_space::MachineWorkloadSpace;

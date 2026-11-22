@@ -10,8 +10,9 @@ use crate::boundaries::{ServiceMock, StoreMock};
 use crate::cli::Action;
 use crate::controller::AgentMock;
 use crate::host_fixtures::inventory;
-use crate::host_preparation::{FinalUninstall, Uninstall, UninstallState};
+use crate::host_preparation::FinalUninstall;
 use crate::identity_store::IdentityStore;
+use crate::preparation::{Uninstall, UninstallState};
 use crate::runtime_ownership::{RuntimeClaimsMock, RuntimeOwner};
 use crate::state::MachineState;
 

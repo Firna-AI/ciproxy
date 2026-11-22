@@ -130,7 +130,7 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
                     Ok(())
                 }))
                 .at_least_times(0),
-            VmsMock::restore
+            VmsMock::reattach
                 .each_call(matching!(_))
                 .answers_arc(Arc::new(move |_, record| {
                     restores

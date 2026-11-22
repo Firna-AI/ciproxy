@@ -85,7 +85,7 @@ async fn saved_stop_uses_late_hello_loss_proof_and_preserves_it_across_restart()
         serde_json::from_slice(&durable).unwrap(),
         Unimock::new((
             report_dependencies(),
-            VmsMock::restore.some_call(matching!(_)).returns(Ok(())),
+            VmsMock::reattach.some_call(matching!(_)).returns(Ok(())),
             VmsMock::stop.some_call(matching!(_)).returns(Ok(())),
             CacheMock::release.some_call(matching!(_)).returns(Ok(())),
             StoreMock::save.some_call(matching!(_)).returns(Ok(())),

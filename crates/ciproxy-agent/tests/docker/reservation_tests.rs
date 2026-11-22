@@ -7,7 +7,7 @@ use std::time::{Duration, UNIX_EPOCH};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::CacheMock;
-use crate::docker::DockerDisks;
+use crate::boundaries::DockerDisks;
 use crate::docker_files;
 use crate::error::Error;
 use crate::fixtures::{TemporaryLayout, facts, scope, vm};

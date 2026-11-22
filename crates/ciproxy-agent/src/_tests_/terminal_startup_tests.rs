@@ -14,9 +14,9 @@ use crate::boundaries::{CacheMock, DelayMock, GuestEvent, GuestProvenance, Image
 use crate::cache_authority::CacheAuthority;
 use crate::error::Error;
 use crate::fixtures::{controller, vm};
-use crate::host_preparation::PreparationMock;
 use crate::maintenance::MaintenanceMock;
 use crate::network_fixtures::{restored, saving};
+use crate::preparation::PreparationMock;
 use crate::runtime::{AgentDaemon, Daemon};
 use crate::state::{MachineState, Mode};
 use crate::timed_fakes::ManualDelay;
@@ -40,7 +40,7 @@ async fn removed_startup_drains_saved_jobs_without_identity_or_gateway_access() 
         ImagesMock::recover
             .each_call(matching!())
             .answers(&|_| Ok(())),
-        VmsMock::restore.some_call(matching!(_)).returns(Ok(())),
+        VmsMock::reattach.some_call(matching!(_)).returns(Ok(())),
         VmsMock::send.some_call(matching!(_, _)).returns(Ok(())),
         VmsMock::stop.some_call(matching!(_)).returns(Ok(())),
         CacheMock::release.some_call(matching!(_)).returns(Ok(())),

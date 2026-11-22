@@ -19,8 +19,8 @@ use crate::connection_socket::WebSocketDialerMock;
 use crate::controller::AgentMock;
 use crate::endpoint::AgentEndpoint;
 use crate::fixtures::report;
-use crate::host_preparation::PreparationMock;
 use crate::installation::{Install, Installer};
+use crate::preparation::PreparationMock;
 use crate::state::MachineState;
 
 #[tokio::test]

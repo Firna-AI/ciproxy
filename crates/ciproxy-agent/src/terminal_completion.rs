@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::boundaries::Service;
-use crate::host_preparation::Preparation;
+use crate::preparation::Preparation;
 
 /// Terminal completion either stops the daemon or removes the installation.
 pub enum CompletionAction {

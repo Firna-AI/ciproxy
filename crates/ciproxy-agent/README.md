@@ -226,9 +226,40 @@ checks free bytes as runner UID 1001 on two image sizes.
 The [development guide](development.md) gives the `docker_regression` checks,
 KVM and GitHub smoke checks, and release packaging commands.
 
+### Platform Layer
+
+The generic core runs on every platform. It holds the controller, the daemon,
+the connection, the reports, the state, and the CLI actions. The core reaches
+the operating system only through the ports in
+[src/boundaries.rs](src/boundaries.rs) and
+[src/preparation.rs](src/preparation.rs).
+
+The `Platform` trait in [src/platform.rs](src/platform.rs) builds those ports
+for one invocation: the service manager, the root check and hardware probe,
+host preparation, the image store, the machine cache, the VM backend, the
+Docker disks, the agent update, and the final uninstall.
+
+- [src/platform/linux.rs](src/platform/linux.rs) builds the Linux adapters:
+  systemd, Firecracker and its jailer, XFS, ext4, and nftables.
+  `src/main.rs` builds the Linux adapter modules only on Linux.
+- [src/platform/macos.rs](src/platform/macos.rs) builds stubs. Each stub
+  returns `Error::PlatformUnsupported`, so each command stops at the root
+  check on a Mac.
+
+The `Vms` port is the VM backend. The backend sends each guest message to the
+`GuestEvent` channel that it gets when it is built. When a VM stops, the
+backend sends `GuestToAgent::RunnerExited`. `Vms::reattach` connects again to
+a VM that kept running across an agent restart.
+
+To type-check the macOS build on Linux, add the target with
+`rustup target add aarch64-apple-darwin`. The C dependencies need the macOS
+SDK, so give `cargo check --target aarch64-apple-darwin` a C compiler stub
+that only creates its output files. The check does not link.
+
 ### Key Code
 
-- [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/application.rs](src/application.rs) composes the generic core over the
+  native platform.
 - [src/application_setup.rs](src/application_setup.rs) resolves commands
   and claims the [runtime lock](src/runtime_ownership.rs) for Run and uninstall.
 - [src/application_cache.rs](src/application_cache.rs) composes the cache
@@ -307,8 +338,10 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/capacity.rs](src/capacity.rs) selects shared machine resources.
 - [src/workload_space.rs](src/workload_space.rs) releases idle Docker disks
   and machine-cache space before root and Docker writes.
-- [src/host_preparation.rs](src/host_preparation.rs) owns host setup and
-  uninstall entry points. `Uninstall::start` selects direct guarded cleanup
+- [src/preparation.rs](src/preparation.rs) defines the host setup and
+  uninstall ports.
+- [src/host_preparation.rs](src/host_preparation.rs) owns Linux host setup
+  and the final uninstall. `Uninstall::start` selects direct guarded cleanup
   or VM recovery and drain. `Uninstall::finish` removes the drained area.
 - [src/application_uninstall.rs](src/application_uninstall.rs) runs the
   uninstall drain loop while cleanup retains runtime ownership.

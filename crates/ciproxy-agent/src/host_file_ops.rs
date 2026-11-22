@@ -7,8 +7,7 @@ use std::path::Path;
 
 use uuid::Uuid;
 
-use crate::error::{Error, ErrorResultExt, Result};
-use crate::host_system::repair;
+use crate::error::{Error, ErrorResultExt, Result, repair};
 
 pub(crate) fn metadata(path: &Path) -> Result<Option<Metadata>> {
     match fs::symlink_metadata(path) {

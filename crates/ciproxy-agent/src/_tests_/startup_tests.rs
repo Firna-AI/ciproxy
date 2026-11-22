@@ -49,8 +49,8 @@ impl Vms for PausedVms {
         barrier.await.unwrap();
         self.delegate.start(vm, config).await
     }
-    async fn restore(&self, vm: &VmRecord) -> Result<()> {
-        self.delegate.restore(vm).await
+    async fn reattach(&self, vm: &VmRecord) -> Result<()> {
+        self.delegate.reattach(vm).await
     }
     async fn request_stop(&self, vm: &VmRecord) -> Result<()> {
         self.delegate.request_stop(vm).await

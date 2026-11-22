@@ -2,8 +2,7 @@
 
 use ciproxy_protocol::resources::{DEFAULT_IMAGE_BUDGET_BYTES, Resources};
 
-use crate::error::Result;
-use crate::host_system::repair;
+use crate::error::{Result, repair};
 
 pub(crate) const DEFAULT_IMAGE_BYTES: u64 = DEFAULT_IMAGE_BUDGET_BYTES;
 pub(crate) const MINIMUM_DISK_BYTES: u64 = 250_000_000_000;

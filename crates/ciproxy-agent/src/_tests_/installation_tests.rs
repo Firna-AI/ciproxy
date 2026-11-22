@@ -14,8 +14,8 @@ use crate::controller::AgentMock;
 use crate::endpoint::AgentEndpoint;
 use crate::error::Error;
 use crate::fixtures::{identity, report, vm};
-use crate::host_preparation::PreparationMock;
 use crate::installation::{Install, Installer};
+use crate::preparation::PreparationMock;
 use crate::state::{Identity, MachineState, Mode};
 
 fn installer(mock: Unimock) -> Installer {

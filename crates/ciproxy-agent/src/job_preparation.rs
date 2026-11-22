@@ -5,9 +5,9 @@ use ciproxy_protocol::guest::{AgentToGuest, JobDecision};
 use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::runners::RunnerState;
 
+use crate::boundaries::DockerDisks;
 use crate::cache_authority::CacheAuthority;
 use crate::controller::Controller;
-use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
 use crate::state::VmRecord;
 

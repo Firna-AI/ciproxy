@@ -5,9 +5,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 
+use crate::boundaries::DockerDisks;
 use crate::boundaries::{Cache, Host};
 use crate::capacity::machine_resources;
-use crate::docker::DockerDisks;
 use crate::error::Result;
 use crate::state::MachineState;
 

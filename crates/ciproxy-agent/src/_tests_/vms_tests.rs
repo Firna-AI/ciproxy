@@ -109,7 +109,7 @@ async fn stop_discards_disks_even_when_the_owned_unit_already_exited() {
 }
 
 #[tokio::test]
-async fn a_pending_new_pin_preserves_existing_vm_restore_and_stop() {
+async fn a_pending_new_pin_preserves_existing_vm_reattach_and_stop() {
     let disks = Arc::new(AtomicUsize::new(0));
     let prepared = disks.clone();
     let mock = Unimock::new((
@@ -163,7 +163,7 @@ async fn a_pending_new_pin_preserves_existing_vm_restore_and_stop() {
     assert!(matches!(poll!(start.as_mut()), Poll::Pending));
     ready.await.unwrap();
     assert_eq!(disks.load(Ordering::SeqCst), 0);
-    runtime.restore(&existing).await.unwrap();
+    runtime.reattach(&existing).await.unwrap();
     let stop = runtime.stop(&existing);
     pin_mut!(stop);
     assert!(
