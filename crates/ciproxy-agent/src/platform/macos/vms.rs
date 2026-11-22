@@ -24,7 +24,7 @@ use super::vm_files::{
 use crate::boundaries::Vms;
 use crate::cache_authority::CacheAuthority;
 use crate::error::{Error, Result};
-use crate::macos::guests::VmFolders;
+use crate::macos::guests::{HELPER_START_WAIT, VmFolders, wait_for_helper};
 use crate::macos::seats::{SeatNeeds, StartKind, free_seat};
 use crate::macos::vm_spec::{VM_SPEC_FORMAT, VmSpec};
 use crate::persistence::private_directory;
@@ -86,6 +86,7 @@ impl Vms for MacVms {
             self.prepare(vm).await?;
             self.launchd.bootstrap_vm(&vm.local_id).await?;
         }
+        wait_for_helper(&self.folders, &vm.local_id, HELPER_START_WAIT).await?;
         self.guests.attach(vm, Some(config)).await
     }
 

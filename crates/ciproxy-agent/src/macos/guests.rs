@@ -1,13 +1,15 @@
 //! The guest bridge on macOS: streams and liveness come from the VM helper.
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use async_trait::async_trait;
+use tokio::time::{Instant, sleep};
 
 use super::vm_control::VmPhase;
 use super::vm_control_client::{ControlFailure, VmControlClient};
 use super::vm_spec::{ExitReason, VmExit};
-use crate::error::{ErrorResultExt, Result};
+use crate::error::{Error, ErrorResultExt, Result};
 use crate::guest_transport::{GuestSocket, GuestTransport, framed};
 use crate::state::VmRecord;
 use crate::unit_state::UnitState;
@@ -35,6 +37,40 @@ impl VmFolders {
 
     pub(crate) fn exit_file(&self, local_id: &str) -> PathBuf {
         self.folder(local_id).join("exit.json")
+    }
+}
+
+/// The time that a new helper gets to answer on its control socket, through
+/// a cold start or a restore of its VM.
+pub(crate) const HELPER_START_WAIT: Duration = Duration::from_secs(60);
+const HELPER_POLL: Duration = Duration::from_millis(100);
+
+/// Wait until a new helper answers on its control socket.
+///
+/// `launchctl bootstrap` returns before the helper binds its socket. The
+/// guest bridge reads a missing socket with no `exit.json` as a VM that is
+/// gone, so a bridge that starts too early ends the new VM at once. A helper
+/// that already ended leaves `exit.json`, and this wait fails at once.
+pub(crate) async fn wait_for_helper(
+    folders: &VmFolders,
+    local_id: &str,
+    wait: Duration,
+) -> Result<()> {
+    let client = folders.client(local_id);
+    let exit = folders.exit_file(local_id);
+    let deadline = Instant::now() + wait;
+    loop {
+        match client.phase().await {
+            Ok(_) => return Ok(()),
+            Err(ControlFailure::HelperGone | ControlFailure::TimedOut) if !exit.exists() => {}
+            Err(failure) => return Err(failure.into()),
+        }
+        if Instant::now() >= deadline {
+            return Err(Error::VmHelper {
+                reason: "the VM helper did not answer on its control socket".to_owned(),
+            });
+        }
+        sleep(HELPER_POLL).await;
     }
 }
 

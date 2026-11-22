@@ -24,7 +24,8 @@ impl MachineRuntime {
                     self.start(input, *start).await
                 }
             }
-            Action::StopRunner { runner_id, .. } => {
+            Action::StopRunner { runner_id, reason } => {
+                tracing::info!(runner = %runner_id.0, ?reason, "retire an idle runner");
                 let runner = input
                     .runners
                     .iter()
