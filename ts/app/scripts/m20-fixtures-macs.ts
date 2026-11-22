@@ -157,7 +157,7 @@ export function macLabels(): Schemas["LabelView"][] {
     },
     {
       id: "60000000-0000-4000-8000-000000000102",
-      label: { ...base, name: "ciproxy-macos-4vcpu", vcpus: 4, memory_gb: 16 },
+      label: { ...base, name: "ciproxy-macos-medium", vcpus: 4, memory_gb: 16 },
       fit: {
         ...macFit(),
         fitting_machines: 1,

@@ -7,7 +7,7 @@ import { labelNamed, nothingFitsLabel } from "./settings.ts";
 
 /** Monday 23 November, 09:12: a machine report is missing. */
 export const unknownFit = {
-  label: labelNamed("ciproxy-8vcpu"),
+  label: labelNamed("ciproxy-large"),
   waiting: rows("unknown-fit-wait", [
     [
       "integration (postgres)",
@@ -17,7 +17,7 @@ export const unknownFit = {
       "waiting",
       none,
       "52s",
-      "ciproxy-8vcpu",
+      "ciproxy-large",
     ],
     [
       "integration (redis)",
@@ -27,7 +27,7 @@ export const unknownFit = {
       "waiting",
       none,
       "52s",
-      "ciproxy-8vcpu",
+      "ciproxy-large",
     ],
     [
       "bench (catalogue)",
@@ -37,7 +37,7 @@ export const unknownFit = {
       "waiting",
       none,
       "31s",
-      "ciproxy-8vcpu",
+      "ciproxy-large",
     ],
   ]),
 };

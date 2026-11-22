@@ -202,12 +202,12 @@ const placeCases: {
     name: "a refused size of a label that fits own machines",
     labels: [
       waitingLabel("ciproxy", 3, "fits", fitting),
-      waitingLabel("ciproxy-8vcpu", 2, "fits", { ...fitting, refused: true }),
+      waitingLabel("ciproxy-large", 2, "fits", { ...fitting, refused: true }),
     ],
     overflow: { ...connectedBoat, refused_sizes: ["large"] },
     notices: [
       [
-        "size-refused-label-ciproxy-8vcpu",
+        "size-refused-label-ciproxy-large",
         "Its jobs take the first free slot on your machines, and ciproxy tries Boat again.",
       ],
       [

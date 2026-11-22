@@ -73,7 +73,7 @@ export function labelInput(overrides: Partial<LabelInput> = {}): LabelInput {
     allow_machines: true,
     disk_gb: 60,
     memory_gb: 32,
-    name: "ciproxy-8vcpu",
+    name: "ciproxy-large",
     vcpus: 8,
     when_nothing_fits: "wait",
     ...overrides,
