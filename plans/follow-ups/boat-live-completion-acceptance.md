@@ -254,15 +254,15 @@
   - `plans/follow-ups/boat-exit-report-response-log.md`: it corrects the
     guest's log line that the Background describes. No option here waits
     for it.
-- **Recommendation:** F. The first recommendation was B. F has the cost of
-  B and needs no paid sandbox beyond the last two held slots. It also
-  proves that the deployed control plane accepts a real guest's report
-  where that report alone ends the sandbox. Before the answer, B was the
-  fallback if the user rejected that evidence. E keeps the plan's
-  large-job and own-claim requirement, but it weakens the live check's
-  claim rule for the two smokes. C best protects the checks, because it
-  keeps that rule for every case. A sandbox past the limit still needs
-  the orchestrator's authorization.
+  - `plans/follow-ups/agent-preview-report-compatibility.md`: the current
+    preview rejects the released agent 0.1.4 reports. This blocks the
+    machine readiness that both smokes require.
+- **Recommendation:** F. The first recommendation was B. F has B's cost.
+  It needs no sandbox beyond the two held slots. Earlier claims prove
+  report acceptance and deletion after a no-job exit. B was the fallback
+  if the user rejected them. E keeps the plan's large-job claim but weakens
+  the smoke claims. C keeps every claim rule. Extra sandboxes need the
+  orchestrator's authorization.
 - **User answer, 2026-11-22:** F. Not chosen: A, B alone, C, D, E, and G.
   The two held smokes no longer need their own `reported_at`. Each needs a
   POST to the exit route in its delivery window, with its status, in the
