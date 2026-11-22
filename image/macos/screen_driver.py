@@ -138,6 +138,15 @@ class Screen:
                     return
         self.fail(f"{expected!r} did not appear after clicks on {pattern!r}")
 
+    def double_click_above(self, pattern, offset):
+        """Double-click the icon above a label, such as a startup disk."""
+        matches = self.find(pattern)
+        if not matches:
+            self.fail(f"no label matches {pattern!r}")
+        label = matches[0]
+        self.vnc.double_click(label["x"], label["y"] - offset)
+        time.sleep(1)
+
     def row_after(self, first, second):
         """Click the row after two rows, at the same spacing. For a row whose
         text OCR reads badly, such as "Adult" after "Child" and "Teen"."""
@@ -171,6 +180,8 @@ def run_action(screen, action, values):
         screen.uncheck(*values)
     elif action == "click_until":
         screen.click_until(*values)
+    elif action == "double_click_above":
+        screen.double_click_above(*values)
     elif action == "row_after":
         screen.row_after(*values)
     elif action == "select":
@@ -199,7 +210,8 @@ def leave(screen, name, expected, last, timeout, retry_after=30):
         screen.read()
         if not screen.find(expected):
             return
-        if last[0] in ("click", "press", "row_after") and time.monotonic() >= retry:
+        repeatable = ("click", "press", "row_after", "double_click_above")
+        if last[0] in repeatable and time.monotonic() >= retry:
             if last[0] != "click" or screen.find(last[1]):
                 run_action(screen, last[0], last[1:])
             retry = time.monotonic() + retry_after
