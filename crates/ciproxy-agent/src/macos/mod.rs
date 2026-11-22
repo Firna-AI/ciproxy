@@ -24,3 +24,9 @@ mod paths;
 #[cfg(test)]
 #[path = "_tests_/launchd_tests.rs"]
 mod launchd_tests;
+
+mod pf;
+
+#[cfg(test)]
+#[path = "_tests_/pf_tests.rs"]
+mod pf_tests;
