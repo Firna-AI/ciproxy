@@ -68,7 +68,9 @@ of each tier.
 - The count is the current number, not the highest number of the period.
 - The count includes every registered machine, also one that is offline,
   [draining](agent.md#drain-and-remove), or unable to run jobs, such as a
-  machine without KVM.
+  machine whose [virtualization check](agent.md#the-virtualization-check)
+  fails.
+- A Mac counts as one own machine, as an x64 Linux computer does.
 - **Decision:** a machine that cannot run jobs still counts. Reason: the
   count stays stable while a machine recovers, and no limit stops a job.
 - A machine joins the count when it registers.

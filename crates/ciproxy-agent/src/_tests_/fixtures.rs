@@ -10,6 +10,7 @@ use ciproxy_protocol::identifiers::{
     CommandId, ImageId, JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
 use ciproxy_protocol::images::{ImageMetadata, ImageReport};
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_protocol::reports::{DiskReport, HardwareReport, MachineReport};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 use ciproxy_protocol::runners::{RunnerReport, RunnerSpec, RunnerState};
@@ -83,6 +84,7 @@ pub(super) fn spec() -> RunnerSpec {
         runner_id: RunnerId("runner-1".to_owned()),
         organization_id: OrganizationId("org-1".to_owned()),
         label: LabelName("ciproxy".to_owned()),
+        platform: Platform::LinuxX64,
         size: requested_size(),
         registration: Secret::new("one-use-registration"),
     }
@@ -90,10 +92,11 @@ pub(super) fn spec() -> RunnerSpec {
 
 pub(super) fn hardware() -> HardwareReport {
     HardwareReport {
+        platform: Platform::LinuxX64,
         processor: "Fixture CPU".to_owned(),
         threads: 16,
         memory_bytes: 64 * GIGABYTE,
-        kvm: true,
+        virtualization: Virtualization::Available,
         disks: vec![DiskReport {
             name: "data".to_owned(),
             capacity_bytes: 1000 * GIGABYTE,

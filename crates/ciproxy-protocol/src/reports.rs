@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::cache::{DockerDiskReport, MachineCacheReport};
 use crate::identifiers::{JobId, RunnerId};
 use crate::images::ImageReport;
+use crate::platform::{Platform, Virtualization};
 use crate::resources::Slots;
 use crate::runners::RunnerReport;
 use crate::statistics::Statistics;
@@ -19,7 +20,7 @@ pub struct MachineReport {
     pub hostname: String,
     /// Installed agent release used for the version health check.
     pub agent_version: String,
-    /// CPU, memory, KVM, and disk health observed on this machine.
+    /// Platform, CPU, memory, virtualization, and disk health of this machine.
     pub hardware: HardwareReport,
     /// Slot capacity calculated from the documented host reserve.
     pub capacity: Slots,
@@ -42,14 +43,16 @@ pub struct MachineReport {
 /// Hardware and current health facts, without policy decisions.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct HardwareReport {
+    /// Operating system and architecture of the machine and of its job VMs.
+    pub platform: Platform,
     /// Processor model reported by the operating system.
     pub processor: String,
     /// Hardware threads, each equivalent to one vCPU.
     pub threads: u32,
     /// Installed memory, in bytes.
     pub memory_bytes: u64,
-    /// Whether KVM is available to run job VMs.
-    pub kvm: bool,
+    /// Whether the machine can run job VMs, or why it cannot.
+    pub virtualization: Virtualization,
     /// Disk capacity and current free space.
     pub disks: Vec<DiskReport>,
 }

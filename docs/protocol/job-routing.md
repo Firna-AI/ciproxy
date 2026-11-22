@@ -37,6 +37,23 @@ warm runners. It also states what happens when a part fails.
   - three quarters of its memory, divided by 8 GB and rounded down
 - The agent reports the slots and the disk of a machine when it connects.
 
+### Slots on a Mac
+
+- The same slot rule holds on a [Mac](agent.md#terms).
+- A Mac also runs at most 2 job VMs at a time, warm runners included, as
+  [Platforms](agent.md#platforms) says.
+- So the job VMs of a Mac are the smaller of 2 and the number that its
+  slots and its job disk hold.
+- Example: a Mac mini with 10 threads and 16 GB keeps 2.5 threads and 4 GB
+  for the host. Its memory gives 1 slot, so it runs 1 job of `ciproxy-macos`.
+- Example: a Mac with 16 threads and 64 GB has 6 slots. It runs 2 jobs of
+  `ciproxy-macos` at a time, and 4 of its slots stay free.
+- **Decision:** a Mac uses the slot rule of Linux and a limit of 2 job VMs.
+  Rejected: at most 2 slots on a Mac, because a label of 2 slots would then
+  leave a large Mac with one job. Rejected: a slot rule only for Macs,
+  because the scaler and the label dialog would then need a second rule.
+  This is a proposal until the user decides it.
+
 ### Disk
 
 [Disk](job-routing-capacity.md#disk) gives the image budget, the job disk,
@@ -66,8 +83,11 @@ and a mini PC whose disk limits concurrent jobs.
 - ciproxy starts one Boat runner for each job that has waited the overflow
   wait.
 - The overflow wait applies only to a job that an own machine can run.
-- An own machine can run a job when the label allows own machines and the
-  size of the job fits the machine.
+- An own machine can run a job when the label allows own machines, the
+  machine has the [platform](labels.md#platform) of the label, and the size
+  of the job fits the machine.
+- **Decision:** a job runs only on a machine of the platform of its label.
+  Reason: a macOS job needs macOS and Xcode, and a Linux job needs Linux.
 - The machine must also be connected, must have reported its selected
   [image](agent.md#the-image), and must not be
   [draining](agent.md#drain-and-remove).
@@ -80,6 +100,10 @@ and a mini PC whose disk limits concurrent jobs.
   drift from routing.
 - When no own machine can run a job, ciproxy starts a Boat runner for it
   at once, if Boat can take the job.
+- A job of a macOS label never gets a Boat runner, and no overflow wait
+  applies to it.
+- It waits in GitHub until a Mac that can run it has a free place, as
+  [Platform](labels.md#platform) says.
 - ciproxy never re-runs a job by itself, for example after an own machine
   goes offline.
 
@@ -99,6 +123,7 @@ and a mini PC whose disk limits concurrent jobs.
 - This switch is in Settings under Overflow.
 - ciproxy starts a Boat runner for a job only when overflow is on, the
   label of the job allows Boat, and Boat is available.
+- A macOS label never allows Boat.
 - Boat is unavailable before the customer connects Boat and after Boat
   rejects the key, as [The Boat account](overflow.md#the-boat-account)
   says.
@@ -130,14 +155,18 @@ and a mini PC whose disk limits concurrent jobs.
   once.
 - Each own machine has a warm runner count, which is 2 by default.
 - The customer sets the count of each machine on its machine page.
-- Warm runners serve the label `ciproxy` only.
+- On a Linux machine, warm runners serve the label `ciproxy` only.
+- On a Mac, warm runners serve the label `ciproxy-macos` only.
+- When the workspace has no label `ciproxy-macos`, its Macs keep no warm
+  runners.
+- On a Mac, the warm runners also count against the limit of 2 job VMs.
 - Each warm runner belongs to one organization of the workspace.
-- GitHub gives a waiting job of the label `ciproxy` to a ready warm runner
-  of its organization at once.
+- GitHub gives a waiting job of the label of a warm runner to a ready warm
+  runner of its organization at once.
 - In a workspace with several organizations, the warm runner count of a
   machine stays one count.
 - ciproxy gives each warm runner to an organization by the recent jobs of
-  the label `ciproxy` of each organization.
+  the label of the warm runner in each organization.
 - The recent jobs are the jobs of the last 24 hours, with equal weight.
 - Each organization gets a share of the count in proportion to its recent
   jobs, rounded down. Each runner left over goes to the organization with
@@ -152,10 +181,10 @@ and a mini PC whose disk limits concurrent jobs.
 - A job of another label gets a new runner in a fresh job VM, in free
   slots and available job disk.
 - A default warm runner holds 1 slot and the root for 20 GB of free job
-  disk, including its image and ext4 allowance.
+  disk, including its image and filesystem allowance.
 - A warm runner never keeps a waiting job from an own machine.
-- ciproxy stops warm runners to free the slots and the job disk that a
-  waiting job needs.
+- ciproxy stops warm runners to free the slots, the job disk, and on a Mac
+  the place of a job VM, that a waiting job needs.
 - ciproxy starts warm runners up to the count of a machine, only in free
   slots and available job disk that no waiting job needs.
 - When a warm runner takes a job, ciproxy starts a new warm runner in a

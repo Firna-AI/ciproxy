@@ -80,6 +80,7 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
     let clock = clock(true);
     let image = ciproxy_protocol::images::ImageDownload {
         image_id: ciproxy_protocol::identifiers::ImageId("fixture".to_owned()),
+        platform: ciproxy_protocol::platform::Platform::LinuxX64,
         download_url: ciproxy_protocol::secret::Secret::new(
             "https://images.example/fixture.tar.zst",
         ),
