@@ -155,6 +155,14 @@ Mac boot the macOS image.
 - ciproxy builds the macOS image automatically. The build installs macOS
   from Apple's restore image into a VM, completes the Setup Assistant over
   VNC, and runs the macOS scripts of the open-source GitHub runner images.
+- The build installs Apple's newest full restore image, then updates the
+  guest to the macOS version of the pinned GitHub runner image. Now that
+  version is macOS 26.7.2.
+- The build turns off System Integrity Protection (SIP) in the guest, as
+  the GitHub macOS runner images do, because the upstream scripts write
+  the system TCC database.
+  [Job isolation on a Mac](security.md#job-isolation-on-a-mac) says why
+  this is safe.
 - Then the build adds the runner and the guest, as for the machine image.
 - ciproxy serves each release of the macOS image as it serves the machine
   image. The agent downloads and verifies it in the same way.

@@ -56,6 +56,8 @@ against a tier.
   price on 21 November 2026.
 - Team adds several GitHub organizations, sticky Docker disks, alerts by
   email and Slack, and email support.
+- Sticky Docker disks apply to Linux machines only, as
+  [Docker disks on a Mac](docker-disks.md#docker-disks-on-a-mac) says.
 - Business adds single sign-on, an audit log, custom VM images, and
   priority support.
 - A tier also includes each feature of the tiers below it.

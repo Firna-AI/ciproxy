@@ -123,8 +123,12 @@ command, and the wait for the first image.
   [macOS image](agent-images.md#the-macos-image) or later.
 - `install` refuses a Mac with an older macOS, with a message that names
   the version that the Mac needs.
-- The exact version is a placeholder until the build of the macOS image
-  settles it. The spike ran a macOS 26.6.2 guest on a macOS 26.7.3 Mac.
+- The planned minimum is macOS 26.7.2. The pinned GitHub runner image
+  `macos-26-arm64/20261117.0516`, which `macos-latest` names now, runs
+  macOS 26.7.2. The build installs Apple's newest full restore image,
+  macOS 26.6.2, and then updates the guest to macOS 26.7.2.
+- The minimum stays a planned value until the user chooses the options of
+  the image build.
 - When a Mac cannot run the image that it has, its
   [virtualization check](agent.md#the-virtualization-check) reports
   `operating_system_too_old`.

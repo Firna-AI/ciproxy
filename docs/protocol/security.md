@@ -257,6 +257,16 @@ GitHub permissions, keys, isolation, and job data.
 - **Decision:** a Mac isolates its job VMs with pf on the bridge of the NAT
   network of Virtualization.framework. Rejected: a network stack of our
   own in the agent, because the NAT network with pf passed the spike.
+- The macOS image turns off System Integrity Protection (SIP) in the guest,
+  as the GitHub macOS runner images do. The upstream build of the image
+  writes the system TCC database, and SIP blocks that write.
+- So a job can change the system files of its job VM. This is safe,
+  because each job VM is fresh and the agent never uses its disk again, and
+  because the pf rules of the host, outside the guest, isolate it.
+- **Decision:** the macOS image keeps SIP off in the guest. Rejected: SIP
+  on, because the upstream scripts of the GitHub runner images could then
+  not set up the image. Reason: the isolation comes from the host and from
+  the fresh VM, not from the guest.
 - The agent removes its pf rules when it is uninstalled, and it keeps every
   other pf rule of the Mac.
 

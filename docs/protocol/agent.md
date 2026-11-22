@@ -166,10 +166,11 @@ runs on own machines.
   a clone in 1 ms.
 - The actual total allocation must hold the image. An insufficient total
   keeps the existing capacity error.
-- On Linux, Docker shares the root disk's free space and its cached Docker images,
-  unless a sticky [Docker disk](cache.md#docker-disks) attaches under the
-  cache rules. Docker then keeps its data on that disk.
-- A macOS job VM has no Docker and no Docker disk.
+- On Linux, Docker shares the root disk's free space and its cached Docker
+  images, unless a sticky [Docker disk](cache.md#docker-disks) attaches
+  under the cache rules. Docker then keeps its data on that disk.
+- A macOS job VM has no Docker and no Docker disk, as
+  [Docker disks on a Mac](docker-disks.md#docker-disks-on-a-mac) says.
 - **Decision:** each job runs in a fresh VM. Rejected: a VM that runs
   several jobs, because a job must not read the secrets or the files of
   another job.
@@ -204,6 +205,7 @@ runs on own machines.
 - The machine page also shows each slot with its job or its warm runner.
 - The machine page also shows the use of the
   [machine cache](cache.md#cache-tiers).
+- The machine page of a Mac shows no Docker disk figures.
 
 ## Drain and remove
 
