@@ -9,7 +9,7 @@ use ciproxy_protocol::reports::{DiskReport, HardwareReport};
 use super::paths::AREA;
 use crate::error::Error;
 
-/// A macOS release, such as 26.7.2.
+/// A macOS release, such as 26.7.3.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(crate) struct MacosVersion {
     pub(crate) major: u32,
@@ -40,13 +40,13 @@ impl fmt::Display for MacosVersion {
     }
 }
 
-/// The macOS of the planned macOS image. Virtualization.framework does not
+/// The macOS of the macOS image. Virtualization.framework does not
 /// run a guest newer than its host, so install refuses an older Mac. The
 /// metadata of a newer image can raise this minimum after install.
 pub(crate) const MINIMUM: MacosVersion = MacosVersion {
     major: 26,
     minor: 7,
-    patch: 2,
+    patch: 3,
 };
 
 /// What the Mac reports about itself.

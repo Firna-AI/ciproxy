@@ -156,8 +156,9 @@ Mac boot the macOS image.
   from Apple's restore image into a VM, completes the Setup Assistant over
   VNC, and runs the macOS scripts of the open-source GitHub runner images.
 - The build installs Apple's newest full restore image, then updates the
-  guest to the macOS version of the pinned GitHub runner image. Now that
-  version is macOS 26.7.2.
+  guest to the pinned macOS version: macOS 26.7.3 (25G342).
+- The pinned GitHub runner image runs macOS 26.7.2. Software Update no
+  longer offers 26.7.2, so the guest is one security update newer.
 - The build turns off System Integrity Protection (SIP) in the guest, as
   the GitHub macOS runner images do, because the upstream scripts write
   the system TCC database.
