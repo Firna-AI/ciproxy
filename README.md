@@ -146,7 +146,12 @@ The protocol docs hold the requirements and the decisions in force:
 - [Agent](docs/protocol/agent.md): install, the connection, machine
   identity, job VMs, the image, updates, health, drain, and remove.
 - [Security](docs/protocol/security.md): sign-in and access, GitHub App
-  permissions, repository access, key custody, isolation, and job data.
+  permissions, repository access, and key custody.
+  [Terms acceptance](docs/protocol/terms-acceptance.md) states who accepts
+  the terms of service and when a new version applies.
+  [Isolation](docs/protocol/security-isolation.md) and
+  [Data and retention](docs/protocol/security-data.md) state isolation, job
+  data, and data retention.
 - [Removing or suspending the App](docs/protocol/app-removal.md): what
   stops, what stays, and what ciproxy deletes when an organization removes
   or suspends the App, and when the last organization of a workspace

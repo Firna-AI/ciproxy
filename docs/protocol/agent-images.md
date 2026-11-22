@@ -161,8 +161,8 @@ Mac boot the macOS image.
 - The build turns off System Integrity Protection (SIP) in the guest, as
   the GitHub macOS runner images do, because the upstream scripts write
   the system TCC database.
-  [Job isolation on a Mac](security.md#job-isolation-on-a-mac) says why
-  this is safe.
+  [Job isolation on a Mac](security-isolation.md#job-isolation-on-a-mac)
+  says why this is safe.
 - Then the build adds the runner and the guest, as for the machine image.
 - ciproxy serves each release of the macOS image as it serves the machine
   image. The agent downloads and verifies it in the same way.

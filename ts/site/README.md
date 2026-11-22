@@ -119,6 +119,12 @@ Rules for the legal pages:
 - Both texts are approved. Each change to a text is a new version, which
   needs the owner's approval. Set the effective date of its page to the
   day that the new version goes live.
+- On the day that a new version of the terms goes live, an operator emails
+  the billing address of each paid workspace, as
+  [Announce a new version of the terms](../../deploy/operations.md#announce-a-new-version-of-the-terms)
+  says.
+- The terms define "the customer", which holds a workspace, and "you", the
+  person who signs in. Each clause names the party that it binds.
 - When a text states a legal right or tells a person how to use it, give
   each channel or detail as a help, not as a condition. Add no condition
   that the law does not set, such as where the person lives.
@@ -128,6 +134,9 @@ Rules for the legal pages:
 - The data retention of the privacy policy shows its text first. The table
   of the decided limits and the job history of each plan come after it.
   The limits come from `src/data/legal.ts`.
+- Each retention period of the privacy policy is a requirement in
+  [Data retention](../../docs/protocol/security-data.md#data-retention).
+  Change the requirement and the text together.
 
 ## Development
 

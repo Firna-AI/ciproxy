@@ -126,11 +126,14 @@ Each design call below is my call of 22 November 2026.
   the Terms. This covers the move from Free and the move between paid
   tiers. Reason: both reviews start a paid purchase.
 - **The split of the security doc.** My call: `docs/protocol/security.md`
-  keeps sign-in, the terms, roles, App permissions, repository access, and
-  key custody. `security-isolation.md` takes tenant and job isolation.
-  `security-data.md` takes secrets, job data, and data retention. Reason:
-  each page stays under about 250 lines, and the names follow the split
-  pages of billing and job routing.
+  keeps sign-in, roles, App permissions, repository access, and key
+  custody. `security-isolation.md` takes tenant and job isolation.
+  `security-data.md` takes secrets, job data, and data retention.
+  `terms-acceptance.md` takes the rules of the terms: who accepts, the terms
+  notice, and new versions. Reason: each page stays under about 250 lines,
+  the names follow the split pages of billing and job routing, and the
+  terms rules form one topic. The first form of this call kept the terms in
+  `security.md`, which then had 276 lines.
 - **The backup location.** My call: the retention requirements state
   periods only. The backup location stays in the privacy policy and the
   default of Cloud SQL. Reason: option B covers the periods, and option C,
@@ -166,10 +169,26 @@ Each design call below is my call of 22 November 2026.
   Terms links of the grant dialog and of the checkout review open a new
   tab. The terms notice opens the terms in the same tab, as before. Reason:
   the dialog and the review keep their place and their work.
+- **Repository choices in the privacy policy.** My call, from the docs:
+  the privacy policy says that configuration, repository choices included,
+  stays at most while the workspace exists. Reason: the repository choices
+  of an organization go with its data 30 days after it removes the App,
+  which can come before the workspace goes, and the requirement says "at
+  most".
+- **The headings of the terms.** My call, from the docs: "Your machines and
+  Boat" and "Your data" keep their titles. Reason: a heading binds no party,
+  each clause names the customer or "you", and the titles match the
+  mockups.
+- **Three long protocol docs.** My call, from the docs: `billing.md`,
+  `workspaces.md`, and `agent.md` stay over about 250 lines in this branch,
+  and `plans/follow-ups/protocol-docs-over-length-target.md` splits them
+  later. Reason: they were over the target before this branch, and their
+  splits move many links outside the five calls.
 
 Contract owners:
 
 - [Security](../docs/protocol/security.md), with its new linked pages.
+- [Terms acceptance](../docs/protocol/terms-acceptance.md).
 - [Billing](../docs/protocol/billing.md).
 - [Deployment operations](../deploy/operations.md).
 - The [site README](../ts/site/README.md), for the legal pages.
@@ -211,29 +230,31 @@ Depends on: 1
 The protocol docs state the requirements of the five calls. The legal texts
 and the operator step follow them.
 
-- [ ] Split `docs/protocol/security.md` as the design says. Update each
+- [x] Split `docs/protocol/security.md` as the design says. Update each
       live link, comment, and mockup reference that names a moved section.
-- [ ] State each retention period of the privacy policy in "Data
+- [x] State each retention period of the privacy policy in "Data
       retention", with a decision line that says agent call. Add a comment
       above `backup_configuration` in
       `deploy/terraform/modules/foundation/data.tf` that links to it.
-- [ ] Add the terms requirements to "Sign-in and access": the notice before
+- [x] Add the terms requirements to "Sign-in and access": the notice before
       each sign-in, the terms step, who accepts, and when a changed version
       applies. Give each call a decision line that says agent call.
-- [ ] Add the requirement of the grant dialog to "Roles".
-- [ ] Add the business-use requirement to "Checkout" in
+- [x] Add the requirement of the grant dialog to "Roles".
+- [x] Add the business-use requirement to "Checkout" in
       `docs/protocol/billing.md`, with a decision line that says agent
       call.
-- [ ] Add the operator step for a new version of the terms to
+- [x] Add the operator step for a new version of the terms to
       `deploy/operations.md`.
-- [ ] Change the terms: the definitions, the party of each clause, the
+- [x] Change the terms: the definitions, the party of each clause, the
       acceptance, the changes, and the business use with the consumer
       fallback.
-- [ ] Add the use of the billing address in Stripe to the privacy policy.
-- [ ] Keep the effective date of both pages at the day that the pull
+- [x] Add the use of the billing address in Stripe to the privacy policy.
+- [x] Keep the effective date of both pages at the day that the pull
       request is ready.
-- [ ] Update the site README where a rule of the legal pages changes.
-- [ ] Run the site build, the site tests, and the Markdown check.
+- [x] Update the site README where a rule of the legal pages changes.
+- [x] Run the site build, the site tests, and the Markdown check.
+
+Evidence: `.context/terms-acceptance-and-business-checkout/m2/`.
 
 ## Milestone 3: Screens
 

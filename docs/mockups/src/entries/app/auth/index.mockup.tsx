@@ -9,7 +9,7 @@ export const signIn = defineScreen({
   title: "Sign in",
   description:
     "The first screen of ciproxy. A person signs in with GitHub; ciproxy has no password of its own. The footer shows the terms notice, which the terms step shows too.",
-  relatedDocs: related("security"),
+  relatedDocs: related("security", "termsAcceptance"),
   address: `${host}/sign-in`,
   useCasePaths: [
     paths.flowFirstGreenJob,

@@ -50,7 +50,7 @@ person installs the App.
   its busy and idle runners. Reason: two workspaces can have the same label
   name, so an idle runner of another workspace could otherwise take a job
   of the current workspace, against
-  [Tenant isolation](security.md#tenant-isolation).
+  [Tenant isolation](security-isolation.md#tenant-isolation).
 - After a removal, the [dashboard](../architecture.md#components) says that
   the App was removed from the organization, and how to install it again.
 - For 30 days, the Organizations tab of Settings shows the organization as
@@ -122,8 +122,9 @@ person installs the App.
 
 - [Workspaces](workspaces.md): the organizations of a workspace, and how an
   Admin takes one out.
-- [Security](security.md): sign-in, roles, key custody, tenant isolation,
-  and job data.
+- [Security](security.md): sign-in, roles, and key custody.
+- [Isolation](security-isolation.md#tenant-isolation): tenant isolation.
+- [Data and retention](security-data.md): job data and its retention.
 - [Agent](agent.md#drain-and-remove): what a removed machine does.
 - [Overflow](overflow.md#after-an-app-removal): the sandboxes after a
   removal, and the Boat key.
