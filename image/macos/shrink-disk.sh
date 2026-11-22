@@ -40,8 +40,24 @@ diskutil info -plist disk0 > "$plist"
 block=$(value DeviceBlockSize)
 # Keep 33 blocks for the backup GPT and 1 MiB of slack at the end.
 target=$(( (disk_bytes - offset - 33 * block - 1048576) / 1048576 * 1048576 ))
-diskutil apfs list -plist "$main" > "$plist"
-used=$(( $(value Containers.0.CapacityCeiling) - $(value Containers.0.CapacityFree) ))
+# The partition is the container's physical store. The container itself has
+# its own reference, so find it in the full list.
+diskutil apfs list -plist > "$plist"
+container=""
+for index in $(seq 0 $(( $(value Containers) - 1 ))); do
+    stores=$(value "Containers.$index.PhysicalStores")
+    for store in $(seq 0 $((stores - 1))); do
+        if [[ $(value "Containers.$index.PhysicalStores.$store.DeviceIdentifier") == "$main" ]]; then
+            container=$index
+        fi
+    done
+done
+if [[ -z $container ]]; then
+    echo "no APFS container has the physical store $main" >&2
+    diskutil list >&2
+    exit 1
+fi
+used=$(( $(value "Containers.$container.CapacityCeiling") - $(value "Containers.$container.CapacityFree") ))
 if (( used + margin > target )); then
     echo "the container uses $used bytes, which does not fit $target bytes with a" \
         "margin of $margin. Choose a larger DISK_BYTES." >&2

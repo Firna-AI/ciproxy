@@ -126,7 +126,9 @@ wait_for_build() {
             echo "the VM stopped during the update; starting it again"
             vm_start
         fi
-        if seen=$(guest_ssh 'sw_vers -buildVersion' 2>/dev/null) && [[ $seen == "$target" ]]; then
+        # The guest is down for a while, so SSH fails. That is no error.
+        seen=$(guest_ssh 'sw_vers -buildVersion' 2>/dev/null || true)
+        if [[ $seen == "$target" ]]; then
             echo "the guest runs build $seen after $(( SECONDS - started )) s"
             return 0
         fi
