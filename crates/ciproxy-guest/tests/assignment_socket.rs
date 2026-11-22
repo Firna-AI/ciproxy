@@ -13,6 +13,8 @@ mod error;
 mod guest_setup;
 #[path = "../src/handoff.rs"]
 mod handoff;
+#[path = "../src/platform.rs"]
+mod platform;
 #[path = "../src/proxy.rs"]
 mod proxy;
 
