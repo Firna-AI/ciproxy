@@ -6,6 +6,7 @@
 #![allow(dead_code)]
 
 mod fd_passing;
+mod guests;
 mod vm_control;
 mod vm_control_client;
 mod vm_control_server;
@@ -43,3 +44,7 @@ mod hardware;
 #[cfg(test)]
 #[path = "_tests_/hardware_tests.rs"]
 mod hardware_tests;
+
+#[cfg(test)]
+#[path = "_tests_/guests_tests.rs"]
+mod guests_tests;

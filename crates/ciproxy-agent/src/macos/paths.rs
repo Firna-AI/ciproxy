@@ -56,16 +56,6 @@ pub(crate) fn vm_plist(local_id: &str) -> PathBuf {
         .join(format!("{local_id}.plist"))
 }
 
-/// The folder of one VM: its bundle clone, `vm.json`, and `exit.json`.
-pub(crate) fn vm_folder(local_id: &str) -> PathBuf {
-    PathBuf::from(AREA).join("vms").join(local_id)
-}
-
-/// The control socket. Its path stays below the 104-byte limit of macOS.
-pub(crate) fn control_socket(local_id: &str) -> PathBuf {
-    vm_folder(local_id).join("control.sock")
-}
-
 /// The saved state of one VM seat, and the folder that builds the next one.
 pub(crate) fn seat_folder(seat: u16, build: bool) -> PathBuf {
     PathBuf::from(AREA)
