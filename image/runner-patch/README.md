@@ -31,6 +31,10 @@ The image runs the original listener and other official assemblies.
 the listener starts, so the listener never starts with an older Worker.
 The agent accepts only guests of handoff format 2, so own machines need an
 image built from this source.
+It also raises `Microsoft.AspNetCore.WebUtilities` in the Worker project to
+8.0.34, the first 8.0 version that fixes GHSA-x33c-w48q-qrgc. The pinned
+`Microsoft.DevTunnels.Connections` brings 8.0.25, and the runner's NuGet
+audit fails the build on it. The audit stays on.
 
 `CiproxyAssignment.cs` reads `SystemVssConnection` from the original GitHub
 job request before action setup. It reads the runtime token, cache URL,
