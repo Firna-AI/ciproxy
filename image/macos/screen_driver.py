@@ -10,6 +10,9 @@ import time
 from vnc import Vnc, VncError
 
 
+LEADING_SYMBOLS = re.compile(r"^[^\w(]+")
+
+
 class ScreenError(RuntimeError):
     pass
 
@@ -44,8 +47,13 @@ class Screen:
         return " | ".join(item["text"] for item in self.items)
 
     def find(self, pattern):
+        """The items whose text matches. OCR reads a menu or list icon as a
+        leading symbol, such as "* Utilities", so the text also matches
+        without its leading symbols."""
         expression = re.compile(pattern, re.IGNORECASE)
-        return [item for item in self.items if expression.search(item["text"])]
+        return [item for item in self.items
+                if expression.search(item["text"])
+                or expression.search(LEADING_SYMBOLS.sub("", item["text"]))]
 
     def wait(self, pattern, timeout=120, absent=None):
         """Wait until a text matches. With absent, also wait until it is gone."""
