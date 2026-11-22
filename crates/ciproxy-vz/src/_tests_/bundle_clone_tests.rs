@@ -131,3 +131,42 @@ fn clone_bundle_clones_an_image_without_identity_files_on_apfs() {
     assert_eq!(clone.read_hardware_model().unwrap(), b"model");
     assert!(!image.machine_identifier().exists());
 }
+
+/// `clonefile` fails on an existing target, and the target stays as it was.
+#[cfg(target_os = "macos")]
+#[test]
+fn clone_bundle_fails_on_an_existing_target_and_keeps_it() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = image(&directory.path().join("image"));
+    let existing = image(&directory.path().join("vm"));
+    let other = Identity {
+        mac_address: MacAddress::new([0xa2, 9, 9, 9, 9, 9]),
+        machine_identifier: b"other".to_vec(),
+    };
+    existing.write_identity(&other).unwrap();
+
+    let result = crate::clone_bundle(&source, existing.root(), &seat_identity());
+
+    assert!(matches!(
+        result,
+        Err(Error::Io { action: "clone the bundle", path, .. }) if path == existing.root()
+    ));
+    assert_eq!(existing.read_identity().unwrap(), other);
+}
+
+/// A failed identity write removes the new clone, so a retry at the same
+/// path can work. A folder at the source's machine identifier path makes
+/// the write fail.
+#[cfg(target_os = "macos")]
+#[test]
+fn clone_bundle_removes_the_clone_when_the_identity_write_fails() {
+    let directory = tempfile::tempdir().unwrap();
+    let image = image(&directory.path().join("image"));
+    std::fs::create_dir(image.machine_identifier()).unwrap();
+    let target = directory.path().join("vm");
+
+    let result = crate::clone_bundle(&image, &target, &seat_identity());
+
+    assert!(result.is_err());
+    assert!(!target.exists());
+}
