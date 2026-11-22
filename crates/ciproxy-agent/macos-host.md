@@ -129,8 +129,10 @@ data, or a log. This is the same rule as on Linux.
 
 `/Library/LaunchDaemons/dev.ciproxy.agent.plist` runs
 `/usr/local/bin/ciproxy-agent run` with `RunAtLoad`, `KeepAlive` with
-`SuccessfulExit` false, and `ThrottleInterval` 5. Its output goes to
-`agent.log`.
+`SuccessfulExit` false, and `ThrottleInterval` 5. The agent and its VM
+helpers write their JSON logs to `agent.log` themselves. Every 5 s a write
+checks whether newsyslog has moved the file, and then opens the path again.
+launchd sends early output, such as a panic, to the same file.
 
 - `KeepAlive` with `SuccessfulExit` false restarts the agent after a
   failure, as `Restart=on-failure` does. A removed machine exits with 0
@@ -215,8 +217,25 @@ day on the host.
 Each job VM clones the newest image bundle with its seat identity into
 `vms/LOCAL_ID/bundle/` and boots cold.
 
-A seat's saved state restores only for its own seat, image, MAC address,
-CPU count, memory size, and agent version, and only for 12 hours.
+### Saved states are off
+
+Saved states for warm starts are built in the code, but the constant
+`SAVED_STATES` in [`platform/macos.rs`](src/platform/macos.rs) turns them
+off. On the test Mac, a save worked only in a logged-in user's GUI session
+(`gui/UID`). The save stopped the VM in these setups:
+
+- a root job in the system domain;
+- a system job with `UserName`;
+- a system job with `UserName` and `SessionCreate`.
+
+The user's background domain (`user/UID`) refused the job. A warm start
+saves about 3 to 8 s per job. Warm starts in a login session need
+auto-login, which macOS does not allow with FileVault on. Cal decides
+between cold starts only and an opt-in warm start in a login session.
+
+When the constant is on, the design is as follows. A seat's saved state
+restores only for its own seat, image, MAC address, CPU count, memory
+size, and agent version, and only for 12 hours.
 [`seats.rs`](src/macos/seats.rs) holds this rule, and
 [`seat_states.rs`](src/platform/macos/seat_states.rs) builds the states.
 
@@ -224,10 +243,12 @@ CPU count, memory size, and agent version, and only for 12 hours.
    the image and the VM settings of that job, when the seat has no usable
    one. Install and uninstall build none.
 2. A build clones the image into `seats/N/build/bundle/` and cold-starts it
-   in a VM helper. It waits for the guest's first `Hello` on vsock and
-   closes the connection with nothing sent. Then `SAVE` pauses and saves
-   the VM, and the helper stops. The state file goes into the bundle, then
-   `saved.json`, and a rename publishes `seats/N/current/`.
+   in a VM helper. It waits for the guest's first `Hello` on vsock, closes
+   the connection with nothing sent, and waits 1 s, so the guest is back in
+   `accept`. Then `SAVE` pauses and saves the VM, and the helper stops. A
+   failed save fails the build, and nothing is published. The state file
+   goes into the bundle, then `saved.json`, and a rename publishes
+   `seats/N/current/`.
 3. A start cancels a running build on its seat. With a usable saved state,
    it clones `current/bundle`, with the state file in it, and the helper
    restores and resumes it. Else it clones the image and boots cold.
@@ -237,8 +258,11 @@ CPU count, memory size, and agent version, and only for 12 hours.
 5. Daemon start and uninstall stop build helpers, which have no record,
    and remove `seats/N/build/`.
 
-**Check:** the save and the restore from a clone at another path, through
-the helpers. The smoke script runs it with a guest binary.
+In a `gui/UID` session on the test Mac, the smoke script saved a VM in 3 s
+to a 1.7 GB state file, and restored it from an APFS clone at another path.
+The guest stream was ready 6 s after the restore began, against 9 s after a
+cold start. After a restore, the first stream can be dead, so the guest
+bridge and the build retry it.
 
 Facts from the test Mac: a restore from a 12-hour-old state gave the guest
 the host's UTC time within one second, because network time is on in the
@@ -273,6 +297,17 @@ them. Before each VM start, the agent checks that pf is on and that the
 anchor shows the same rules as just after its own load. If not, it loads
 them again. If that fails, the start fails. Install loads them too.
 Uninstall flushes the anchor with `pfctl -a com.apple/ciproxy -F all`.
+
+While VMs run, a guard checks every 10 s:
+
+- that pf is on and the rules are loaded, and it loads them again when
+  they are missing or changed;
+- that each guest's DHCP address is inside the subnet that the rules cover.
+  The IPv4 rules match that subnet, so a guest on another vmnet network
+  would escape them.
+
+When a check fails, the guard stops the affected VMs, because their
+isolation is gone. [`guard.rs`](src/platform/macos/guard.rs) holds it.
 
 ## Machine cache
 
@@ -351,9 +386,9 @@ runs a macOS VM. The start fails, and the core reports it.
 
 ## Open work
 
-- The agent builds a saved state also while the machine drains.
-- The pf check runs before each start, not in each report cycle, and the
-  agent does not check the bridge membership of a VM yet.
-- After a log rotation, a job writes to the rotated file until it
-  restarts.
+- Warm starts: Cal's decision on saved states (see above). With the
+  constant on, the agent also builds a saved state while the machine
+  drains.
+- **Check** on a real install: the `diskutil` quota syntax, the volume
+  mount at boot, and the `pfctl` output that the agent reads.
 - The machine cache on macOS.
