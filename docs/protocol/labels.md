@@ -37,14 +37,18 @@ machine and where each job runs.
 | Label | Platform | vCPU | Memory | Free job disk | Slots |
 | --- | --- | --- | --- | --- | --- |
 | `ciproxy` | Linux | 2 | 8 GB | 20 GB | 1 |
-| `ciproxy-4vcpu` | Linux | 4 | 16 GB | 20 GB | 2 |
-| `ciproxy-8vcpu` | Linux | 8 | 32 GB | 60 GB | 4 |
+| `ciproxy-medium` | Linux | 4 | 16 GB | 20 GB | 2 |
+| `ciproxy-large` | Linux | 8 | 32 GB | 60 GB | 4 |
 | `ciproxy-macos` | macOS | 2 | 8 GB | 20 GB | 1 |
-| `ciproxy-macos-4vcpu` | macOS | 4 | 16 GB | 20 GB | 2 |
+| `ciproxy-macos-medium` | macOS | 4 | 16 GB | 20 GB | 2 |
 
+- **Decision:** the name of a default label gives a tier, not a size, so
+  the name stays true when the customer edits the size. Rejected: names
+  with the vCPU count, such as `ciproxy-4vcpu`, because a label has no
+  rename.
 - The sizes of the macOS labels are a proposal until the user decides them.
 - `ciproxy-macos` takes 1 slot, so it fits a Mac with 16 GB of memory.
-  `ciproxy-macos-4vcpu` takes 2 slots, so it needs a Mac with 24 GB or more.
+  `ciproxy-macos-medium` takes 2 slots, so it needs a Mac with 24 GB or more.
 - **Decision:** the default macOS labels mirror the two smaller Linux
   labels. Rejected: 4 vCPU and 8 GB, because the size takes 2 slots and
   fits no Mac with 16 GB. Reason: the base Mac mini has 16 GB.
@@ -117,6 +121,18 @@ machine and where each job runs.
 - So ciproxy stops the runners of the old size that have no job, and it
   starts runners of the new size.
 - A job that runs during the change keeps its VM.
+
+## The label list
+
+- The list of labels in Settings, under Labels, shows the Linux labels
+  first, then the macOS labels.
+- Each platform lists its labels from the smallest size to the largest: by
+  vCPU, then memory, then free job disk, then name.
+- So a label can move in the list when the customer edits its size.
+- **Decision:** the list orders the labels by platform and size. Rejected:
+  name order, because tier names such as `ciproxy-medium` and
+  `ciproxy-large` do not sort by size. Rejected: the order in which the
+  labels were made, because it needs a stored order.
 
 ## Platform
 

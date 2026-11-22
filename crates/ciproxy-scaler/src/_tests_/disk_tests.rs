@@ -40,22 +40,22 @@ fn reserves_disk_for_all_starts_in_the_same_tick() {
             ],
         ),
         (
-            "ciproxy-4vcpu",
+            "ciproxy-medium",
             large(),
             279,
             4,
             vec![
-                own("a", "ciproxy-4vcpu", large()),
-                own("a", "ciproxy-4vcpu", large()),
-                own("a", "ciproxy-4vcpu", large()),
+                own("a", "ciproxy-medium", large()),
+                own("a", "ciproxy-medium", large()),
+                own("a", "ciproxy-medium", large()),
             ],
         ),
         (
-            "ciproxy-8vcpu",
+            "ciproxy-large",
             largest,
             279,
             2,
-            vec![own("a", "ciproxy-8vcpu", largest)],
+            vec![own("a", "ciproxy-large", largest)],
         ),
     ] {
         let mut state = snapshot();

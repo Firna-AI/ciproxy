@@ -135,6 +135,8 @@ mod process;
 mod registration;
 mod release_client;
 mod reporting;
+#[cfg(any(target_os = "macos", test))]
+mod resumable_download;
 mod retirement;
 mod runtime;
 mod runtime_ownership;
@@ -192,6 +194,10 @@ mod network_barriers;
 #[cfg(test)]
 #[path = "_tests_/fixtures.rs"]
 mod fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/range_server.rs"]
+mod range_server;
 
 #[cfg(test)]
 #[path = "_tests_/connection_fixtures.rs"]

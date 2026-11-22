@@ -135,10 +135,10 @@ impl ScaleSetApi for Resources {
             .push((label.to_owned(), group, saved));
         let canonical = match label {
             "ciproxy" => self.base_id.load(Ordering::SeqCst),
-            "ciproxy-4vcpu" => 59,
-            "ciproxy-8vcpu" => 61,
+            "ciproxy-medium" => 59,
+            "ciproxy-large" => 61,
             "ciproxy-macos" => 67,
-            "ciproxy-macos-4vcpu" => 71,
+            "ciproxy-macos-medium" => 71,
             _ => return Err(Error::AccessUnavailable(422)),
         };
         let mut names = self.names.lock().unwrap();

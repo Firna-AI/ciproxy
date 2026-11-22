@@ -13,8 +13,8 @@ The actual root changes when the image release changes.
 | Label | Free job disk | Complete root bytes | Slots |
 | --- | --- | --- | --- |
 | `ciproxy` | 20 GB | 80,899,612,672 | 1 |
-| `ciproxy-4vcpu` | 20 GB | 80,899,612,672 | 2 |
-| `ciproxy-8vcpu` | 60 GB | 122,136,727,552 | 4 |
+| `ciproxy-medium` | 20 GB | 80,899,612,672 | 2 |
+| `ciproxy-large` | 60 GB | 122,136,727,552 | 4 |
 
 ## Slots and the minimum machine
 
@@ -60,7 +60,7 @@ The actual root changes when the image release changes.
 | Label | Slots | Free job disk | Complete root GB, rounded | By slots | By disk | At a time |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ciproxy` | 1 | 20 GB | 80.900 | 6 | 3 | 3 |
-| `ciproxy-4vcpu` | 2 | 20 GB | 80.900 | 3 | 3 | 3 |
-| `ciproxy-8vcpu` | 4 | 60 GB | 122.137 | 1 | 2 | 1 |
+| `ciproxy-medium` | 2 | 20 GB | 80.900 | 3 | 3 | 3 |
+| `ciproxy-large` | 4 | 60 GB | 122.137 | 1 | 2 | 1 |
 
 [Job routing](job-routing.md) gives the fit and warm runner requirements.
