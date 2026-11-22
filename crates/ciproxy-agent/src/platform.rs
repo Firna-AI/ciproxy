@@ -29,6 +29,15 @@ mod macos;
 
 #[cfg(target_os = "linux")]
 pub(crate) use linux::LinuxPlatform as NativePlatform;
+
+/// The platform of this machine and of its job VMs. The agent refuses a
+/// runner or an image of another platform.
+#[cfg(target_os = "linux")]
+pub(crate) const NATIVE: ciproxy_protocol::platform::Platform =
+    ciproxy_protocol::platform::Platform::LinuxX64;
+#[cfg(target_os = "macos")]
+pub(crate) const NATIVE: ciproxy_protocol::platform::Platform =
+    ciproxy_protocol::platform::Platform::MacosArm64;
 #[cfg(target_os = "macos")]
 pub(crate) use macos::MacPlatform as NativePlatform;
 #[cfg(target_os = "macos")]

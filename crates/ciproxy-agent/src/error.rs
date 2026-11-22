@@ -39,6 +39,9 @@ pub enum Error {
         /// The oldest macOS release that runs the macOS image.
         minimum: String,
     },
+    /// The command names an image or runner of another platform.
+    #[error("[agent] the command names another platform than this machine")]
+    PlatformMismatch,
     /// A VM helper cannot run its VM.
     #[cfg_attr(
         not(target_os = "macos"),
