@@ -83,8 +83,8 @@ handle drops or when the process exits.
 
 ### User context
 
-A LaunchDaemon, as root or with `UserName`, can start, run, and stop VMs.
-Only a process in the login session
+A LaunchDaemon, as root or with `UserName`, can start, run, and stop VMs,
+and can connect to their vsock ports. Only a process in the login session
 of a normal user can save and restore a VM: a LaunchAgent in the
 `gui/<uid>` domain of a user who is logged in at the console. Workstream A
 tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
@@ -104,6 +104,9 @@ tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
 - In a LaunchDaemon, also with `UserName` and with `SessionCreate`, `pause`
   and then `save` stop the VM with `VZErrorDomain` error 1, "Internal
   Virtualization error". The vsock connect passes there.
+- In a LaunchDaemon as root, with no `UserName`, the vsock connect gave a
+  working stream. The stream passed to another process with `SCM_RIGHTS`.
+  Then `stop` and `stopped` worked.
 - Under `sudo`, `start` fails with `VZErrorDomain` error -9, "Unable to
   access security information".
 - In `user/<uid>`, `launchctl bootstrap` fails with error 5, "Input/output
