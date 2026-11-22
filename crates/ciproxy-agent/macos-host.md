@@ -215,18 +215,30 @@ day on the host.
 Each job VM clones the newest image bundle with its seat identity into
 `vms/LOCAL_ID/bundle/` and boots cold.
 
-Saved states are designed but not built yet. A seat's saved state restores
-only for its own seat, image, MAC address, and agent version, and only for
-12 hours. [`seats.rs`](src/macos/seats.rs) holds this rule. The design:
+A seat's saved state restores only for its own seat, image, MAC address,
+CPU count, memory size, and agent version, and only for 12 hours.
+[`seats.rs`](src/macos/seats.rs) holds this rule, and
+[`seat_states.rs`](src/platform/macos/seat_states.rs) builds the states.
 
-1. Build a saved state only when the seat is free and the machine is not
-   draining: clone the image, cold-start it, wait for the guest `Hello`,
-   close the vsock connection, pause, save, stop, and publish the folder
-   by rename.
-2. A start stops a running build on its seat. With a usable saved state,
-   it restores a clone of the saved bundle. Else it boots cold.
-3. A saved state restores only into a VM with the same CPU count and
-   memory size, so the record must also name them.
+1. After a job VM ends, the daemon builds a saved state for its seat with
+   the image and the VM settings of that job, when the seat has no usable
+   one. Install and uninstall build none.
+2. A build clones the image into `seats/N/build/bundle/` and cold-starts it
+   in a VM helper. It waits for the guest's first `Hello` on vsock and
+   closes the connection with nothing sent. Then `SAVE` pauses and saves
+   the VM, and the helper stops. The state file goes into the bundle, then
+   `saved.json`, and a rename publishes `seats/N/current/`.
+3. A start cancels a running build on its seat. With a usable saved state,
+   it clones `current/bundle`, with the state file in it, and the helper
+   restores and resumes it. Else it clones the image and boots cold.
+4. When a restore fails, the helper boots the same clone cold in a new VM
+   object and writes `restore-failed`. When that VM ends, the agent
+   discards the seat's saved state.
+5. Daemon start and uninstall stop build helpers, which have no record,
+   and remove `seats/N/build/`.
+
+**Check:** the save and the restore from a clone at another path, through
+the helpers. The smoke script runs it with a guest binary.
 
 Facts from the test Mac: a restore from a 12-hour-old state gave the guest
 the host's UTC time within one second, because network time is on in the
@@ -339,7 +351,7 @@ runs a macOS VM. The start fails, and the core reports it.
 
 ## Open work
 
-- Saved-state builds and restores, as designed above.
+- The agent builds a saved state also while the machine drains.
 - The pf check runs before each start, not in each report cycle, and the
   agent does not check the bridge membership of a VM yet.
 - After a log rotation, a job writes to the rotated file until it
