@@ -11,8 +11,8 @@ use crate::boundaries::{ServiceMock, VmsMock};
 use crate::cli::Action;
 use crate::controller::Agent;
 use crate::fixtures::controller;
-use crate::host_preparation::PreparationMock;
 use crate::identity_store_fixtures::{IdentityFiles, legacy_state};
+use crate::preparation::PreparationMock;
 use crate::state::{MachineState, Mode};
 use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 

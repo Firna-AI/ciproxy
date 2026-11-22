@@ -11,10 +11,9 @@ use crate::error::{Error, ErrorResultExt};
 use crate::fixtures::{controller, vm};
 use crate::host_fixtures::inventory;
 use crate::host_packages::PackagesMock;
-use crate::host_preparation::{
-    FinalUninstall, HostPreparation, Preparation, PreparationMock, Uninstall, UninstallState,
-};
+use crate::host_preparation::{FinalUninstall, HostPreparation};
 use crate::host_tools::ToolsMock;
+use crate::preparation::{Preparation, PreparationMock, Uninstall, UninstallState};
 use crate::state::{MachineState, Mode};
 
 use super::uninstall_fixtures::{Event, cleanup, runtime, uninstall};

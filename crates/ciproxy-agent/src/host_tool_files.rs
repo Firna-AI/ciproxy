@@ -7,11 +7,10 @@ use std::path::Path;
 
 use uuid::Uuid;
 
-use crate::error::{ErrorResultExt, Result};
+use crate::error::{ErrorResultExt, Result, repair};
 use crate::host_file_ops::{atomic, directory, metadata, owned_file, ownership};
 use crate::host_paths::{CONTROL, tools};
 use crate::host_release::{CheckedTools, FIRECRACKER_SHA256, JAILER_SHA256, LIMIT, verify};
-use crate::host_system::repair;
 use crate::host_tools::ToolFiles;
 
 pub(crate) struct LinuxToolFiles;

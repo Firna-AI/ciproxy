@@ -129,7 +129,7 @@ async fn unconfigured_stop_failure_remains_owned_and_reconciliation_retries() {
                 .then()
                 .answers(&|_, _| Ok(()));
         }),
-        VmsMock::restore.some_call(matching!(_)).returns(Ok(())),
+        VmsMock::reattach.some_call(matching!(_)).returns(Ok(())),
         CacheMock::release.some_call(matching!(_)).returns(Ok(())),
         CacheMock::refresh_budget
             .some_call(matching!(_))

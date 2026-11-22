@@ -11,8 +11,9 @@ use crate::boundaries::{ServiceMock, StoreMock};
 use crate::error::Error;
 use crate::fixtures::controller;
 use crate::host_fixtures::inventory;
-use crate::host_preparation::{FinalUninstall, PreparationMock, Uninstall, UninstallState};
+use crate::host_preparation::FinalUninstall;
 use crate::network_fixtures::{Deletion, HostNetworks, commands, restored, runtime, saving};
+use crate::preparation::{PreparationMock, Uninstall, UninstallState};
 
 #[tokio::test]
 async fn empty_uninstall_preserves_area_and_state_until_orphan_network_cleanup_succeeds() {

@@ -6,7 +6,8 @@ use unimock::{Clause, MockFn, Unimock, matching};
 
 use crate::boundaries::ImagesMock;
 use crate::controller::AgentMock;
-use crate::host_preparation::{FinalUninstall, PreparationMock};
+use crate::host_preparation::FinalUninstall;
+use crate::preparation::PreparationMock;
 use crate::terminal_completion::CompletionAction;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

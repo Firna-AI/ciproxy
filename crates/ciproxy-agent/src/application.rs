@@ -1,55 +1,37 @@
-//! Production composition for the Linux machine agent.
+//! Production composition of the machine agent over the native platform.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use clap::Parser;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::Mutex;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use crate::application_cache;
 use crate::application_endpoint::{self, ConfiguredAction};
 use crate::application_setup::{
     InvocationError, InvocationSetup, LoadedInvocation, PreparedInvocation,
 };
 use crate::application_uninstall;
-use crate::area::AreaFiles;
-use crate::area_files::LinuxAreaFiles;
-use crate::boundaries::{Host, Service, Vms};
 use crate::cli::{Action, Cli};
 use crate::controller::{Agent, Controller};
-use crate::docker::{DockerDisks, LinuxDockers};
 use crate::endpoint::{CommandEndpoint, EndpointSettings};
-use crate::endpoint_files::LinuxEndpointFiles;
+use crate::endpoint_files::ControlEndpointFiles;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
-use crate::hardware::LinuxHost;
-use crate::host_composition::services;
-use crate::host_file_ops::directory;
-use crate::host_paths::{AREA, CONTROL, tools};
-use crate::host_preparation::{FinalUninstall, Uninstall, stage_error, uninstall_inventory};
-use crate::host_system::LinuxHostSystem;
+use crate::host_paths::CONTROL;
 use crate::identity_store::IdentityStore;
 use crate::installation::{Install, Installer};
-use crate::layout::Layout;
 use crate::logging::subscriber;
 use crate::maintenance::{HourlyMaintenance, TokioDelay};
-use crate::network::LinuxNetwork;
 use crate::persistence::FileStore;
-use crate::process::{Commands, LinuxCommands};
+use crate::platform::{Machine, MachineInput, NativePlatform, Platform, UninstallParts};
+use crate::preparation::stage_error;
 use crate::runtime::{AgentDaemon, Daemon};
-use crate::runtime_ownership::{CliRuntimeWaitNotice, LinuxRuntimeClaims, RuntimeClaims};
+use crate::runtime_ownership::{CliRuntimeWaitNotice, FileRuntimeClaims, RuntimeClaims};
 use crate::startup::{AgentStartup, Startup, StartupState};
 use crate::state::Mode;
-use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
-use crate::system_service::SystemService;
-use crate::updates::AgentUpdates;
-use crate::vm_files::LinuxVmFiles;
-use crate::vm_root::{LinuxRootFiles, ReflinkRoot};
-use crate::vms::LinuxVms;
-use crate::vsock::LinuxGuests;
 use crate::workload_space::{MachineWorkloadSpace, WorkloadSpace};
 
 pub(crate) async fn main() -> Result<()> {
@@ -58,54 +40,25 @@ pub(crate) async fn main() -> Result<()> {
     subscriber(BoxMakeWriter::new(std::io::stderr), &directives)
         .try_init()
         .context("initialize safe JSON logging")?;
-    execute(cli.action()).await
+    execute(NativePlatform::new(), cli.action()).await
 }
 
-async fn execute(action: Action) -> Result<()> {
-    let endpoint_files = Arc::new(LinuxEndpointFiles);
+async fn execute<P: Platform>(platform: P, action: Action) -> Result<()> {
+    let endpoint_files = Arc::new(ControlEndpointFiles);
     let endpoints: Arc<dyn EndpointSettings> = Arc::new(CommandEndpoint {
         files: endpoint_files.clone(),
     });
-    let service: Arc<dyn Service> = Arc::new(SystemService);
-    let layout = Layout {
-        data: PathBuf::from(AREA),
-        firecracker: tools().join("firecracker"),
-        jailer: tools().join("jailer"),
-    };
-    let files: Arc<dyn AreaFiles> = Arc::new(LinuxAreaFiles::new());
-    let system = Arc::new(LinuxHostSystem);
-    let host: Arc<dyn Host> = Arc::new(LinuxHost {
-        system: system.clone(),
-        area: files.clone(),
-    });
+    let service = platform.service();
+    let host = platform.host();
     host.require_root()?;
-    if let Err(error) = directory(Path::new(CONTROL)) {
-        return Err(stage_error(
-            error,
-            "control directory",
-            "Restore root ownership and write access to /var/lib/ciproxy. Then rerun install.",
-        ));
-    }
-    let requested = match std::env::var("CIPROXY_IMAGE_BUDGET_BYTES") {
-        Ok(value) => Some(value),
-        Err(std::env::VarError::NotPresent) => None,
-        Err(std::env::VarError::NotUnicode(_)) => {
-            return Err(Error::Preparation {
-                component: "image budget setting",
-                repair: "Set CIPROXY_IMAGE_BUDGET_BYTES to an integer byte count.",
-            });
-        }
-    };
-    let requested_budget = setting(requested.as_deref())?;
-    let services = services(files.clone(), system, requested_budget)?;
-    let preparation = services.preparation;
+    let (preparation, prepared) = platform.prepare()?;
     let store = Arc::new(IdentityStore {
         store: Arc::new(FileStore {
             directory: PathBuf::from(CONTROL),
         }),
         endpoints: endpoint_files,
     });
-    let runtime: Arc<dyn RuntimeClaims> = Arc::new(LinuxRuntimeClaims {
+    let runtime: Arc<dyn RuntimeClaims> = Arc::new(FileRuntimeClaims {
         control: PathBuf::from(CONTROL),
         notice: Arc::new(CliRuntimeWaitNotice),
     });
@@ -130,47 +83,25 @@ async fn execute(action: Action) -> Result<()> {
         }
         Err(InvocationError::Setup(error)) => return Err(error),
     };
-    let inventory = if matches!(action, ConfiguredAction::Uninstall) {
-        uninstall_inventory(files.as_ref())?
-    } else {
-        files.inspect()?
-    };
-    let image_budget = inventory
-        .record
-        .map_or(requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES), |record| {
-            record.image_budget
-        });
     let preclaimed = ownership.map(|ownership| ownership.runtime());
-    let image_services =
-        crate::application_images::prepare(&layout, image_budget, runtime, preclaimed.clone())?;
-    let space = image_services.space;
-    let images = image_services.images;
+    let Machine {
+        image_budget,
+        images,
+        cache,
+        vms,
+        guests: guest_rx,
+        tasks: _tasks,
+    } = platform.machine(
+        prepared,
+        MachineInput {
+            uninstall: matches!(action, ConfiguredAction::Uninstall),
+            claims: runtime,
+            owner: preclaimed.clone(),
+            identity: state.identity.as_ref(),
+        },
+    )?;
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
-    let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
-    let cache_services = application_cache::prepare(commands.clone(), identity.as_ref())?;
-    let cache = cache_services.cache.clone();
-    let (guest_tx, guest_rx) = mpsc::channel(256);
-    let guests = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
-    let vms: Arc<dyn Vms> = Arc::new(LinuxVms {
-        tools: services.tools,
-        layout: layout.clone(),
-        commands: commands.clone(),
-        network: Arc::new(LinuxNetwork::new(
-            commands.clone(),
-            services.network_packages,
-        )),
-        files: Arc::new(LinuxVmFiles {
-            layout: layout.clone(),
-            root: Arc::new(ReflinkRoot {
-                files: Arc::new(LinuxRootFiles),
-                commands: commands.clone(),
-            }),
-            space,
-        }),
-        guests,
-        operation: Mutex::new(()),
-    });
     let allocation = Arc::new(Mutex::new(()));
     let state = Arc::new(Mutex::new(state));
     let workload_space: Arc<dyn WorkloadSpace> = Arc::new(MachineWorkloadSpace {
@@ -191,20 +122,13 @@ async fn execute(action: Action) -> Result<()> {
         cache: cache.clone(),
         space: workload_space.clone(),
         image_budget,
-        dockers: Some(Arc::new(LinuxDockers {
-            layout: layout.clone(),
-            commands: commands.clone(),
-            allocation,
-            space: workload_space,
-            image_budget,
-        }) as Arc<dyn DockerDisks>),
+        dockers: platform.dockers(allocation, workload_space, image_budget),
     });
     match action {
         ConfiguredAction::Install { token, endpoint } => {
             let connection = application_endpoint::connection(&endpoint);
             preparation.prepare().await?;
-            let cache_service = application_cache::installer(commands.clone());
-            if let Err(error) = cache_service.install().await {
+            if let Err(error) = platform.install_cache().await {
                 tracing::warn!(%error, "machine cache install unavailable; GitHub fallback remains available");
             }
             let installer: Arc<dyn Install> = Arc::new(Installer {
@@ -241,11 +165,7 @@ async fn execute(action: Action) -> Result<()> {
                 report_delay: delay.clone(),
                 maintenance: Arc::new(HourlyMaintenance {
                     delay,
-                    updates: Arc::new(AgentUpdates {
-                        commands,
-                        release_server: std::env::var("CIPROXY_RELEASE_SERVER_URL")
-                            .unwrap_or_else(|_| "https://get.ciproxy.dev".to_owned()),
-                    }),
+                    updates: platform.updates(),
                 }),
             });
             daemon.run(identity, guest_rx, removing).await?;
@@ -254,9 +174,8 @@ async fn execute(action: Action) -> Result<()> {
             let Some(runtime) = preclaimed else {
                 return Err(Error::ImageOwnership);
             };
-            let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
-                _runtime: runtime,
-                files,
+            let uninstall = platform.uninstall(UninstallParts {
+                runtime,
                 images,
                 preparation,
                 service,

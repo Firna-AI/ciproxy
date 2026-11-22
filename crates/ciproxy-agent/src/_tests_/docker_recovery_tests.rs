@@ -7,9 +7,9 @@ use ciproxy_protocol::identifiers::{JobId, RunnerId};
 use ciproxy_protocol::runners::RunnerExit;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisksMock;
 use crate::boundaries::{CacheMock, GuestProvenance, StoreMock, VmsMock};
 use crate::controller::Agent;
-use crate::docker::DockerDisksMock;
 use crate::error::Error;
 use crate::fixtures::{controller, trusted_facts, vm};
 use crate::state::MachineState;
@@ -67,7 +67,7 @@ async fn failed_drive_close_retries_pending_discard_after_restart() {
     let discarded = events.clone();
     let marker = pending.clone();
     let mock = Unimock::new((
-        VmsMock::restore.some_call(matching!(_)).returns(Ok(())),
+        VmsMock::reattach.some_call(matching!(_)).returns(Ok(())),
         DockerDisksMock::pending
             .some_call(matching!(_))
             .returns(Ok(true)),

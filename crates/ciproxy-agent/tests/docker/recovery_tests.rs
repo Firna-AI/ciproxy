@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use unimock::{MockFn, Unimock};
 
-use crate::docker::DockerDisks;
+use crate::boundaries::DockerDisks;
 use crate::docker_files::{self, AttachmentPhase};
 use crate::error::Error;
 use crate::fixtures::{TemporaryLayout, active_lease, vm};

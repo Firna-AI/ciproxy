@@ -152,7 +152,7 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
         HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware)),
-        VmsMock::restore
+        VmsMock::reattach
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
         CacheMock::refresh_budget
