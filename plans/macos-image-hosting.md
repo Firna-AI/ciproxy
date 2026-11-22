@@ -112,28 +112,32 @@ ciproxy-macos-images/
 
 ### Publish
 
-`image/macos/publish.sh ARTIFACT_DIR` runs on the build Mac after
-`package.sh`. It reads the R2 endpoint, the bucket, and the publish token
-from environment variables. It never prints them.
+`image/macos/publish.sh [--test-image] ARTIFACT_DIR` runs on the build Mac
+after `package.sh`. It reads `R2_ACCOUNT_ID` and the publish token from
+environment variables, and it never prints them. The endpoint comes from
+`R2_ACCOUNT_ID`. The script fixes the bucket name `ciproxy-macos-images`.
 
-1. Check `SHA256SUMS` in the artifact folder.
-2. Read `image_id` from `manifest.json`. Refuse a test image unless
+1. Read `image_id` from `manifest.json`. Refuse a test image unless
    `--test-image` is given.
-3. Stop when `releases/<image_id>/manifest.json` exists. The upload of
-   `manifest.json` also sends `If-None-Match: *`, so two publishes of one
-   release cannot both write it.
+2. Check `SHA256SUMS` in the artifact folder.
+3. Stop when `releases/<image_id>/manifest.json` exists.
 4. Upload `macos.tar` as a multipart upload with 128 MiB parts. A 60 GB
    file then needs about 450 parts, under the S3 limit of 10,000.
-5. Upload the small files, then `manifest.json`.
+5. Upload the small files.
 6. Read back the byte size of `macos.tar` with a HEAD request, and compare
-   it with `downloads.json`.
-7. Print the value for `MACOS_IMAGE_MANIFEST_PATH`:
+   it with `downloads.json`. This check comes before the manifest, so a
+   release folder with a manifest always holds the full archive.
+7. Upload `manifest.json` with `If-None-Match: *`, so two publishes of one
+   release cannot both write it.
+8. Print the value for `MACOS_IMAGE_MANIFEST_PATH`:
    `releases/<image_id>/manifest.json`.
 
 The script uses the AWS CLI v2 with `--endpoint-url`. It sets
 `AWS_REQUEST_CHECKSUM_CALCULATION=when_required` and
 `AWS_RESPONSE_CHECKSUM_VALIDATION=when_required`, which Cloudflare advises
-for R2.
+for R2. `publish.sh` needs AWS CLI 2.17.34 or later, the first release with
+conditional writes for `PutObject`. The shared helper `image/macos/r2.sh`
+gives the keys only to the environment of each `aws` process.
 
 ### Offer one image for each platform
 
@@ -281,6 +285,11 @@ no r2.dev access, and no custom domain. So the S3 endpoint is
   removes a finished archive that waits for extraction, as today.
 - One download runs at a time. A second `FetchImage` for the same image
   waits for the first.
+- Checked on 23 November 2026 on the test Mac: R2 finishes a running
+  download after its presigned URL expires. A GET URL with a 30 s expiry
+  streamed all 2,965,708,631 bytes of the Xcode archive in 188 s with HTTP
+  200. A new request with the same URL 35 s later got 403. So a 2-hour URL
+  and the `Range` resume of decision 2 D are enough.
 - After the size and the SHA-256 match, the partial file becomes
   `images/<name>.tar`, and publication continues as today.
 
@@ -293,6 +302,10 @@ no r2.dev access, and no custom domain. So the S3 endpoint is
   `main`.
 - PR H4, sub-workspace "H4 publish and Xcode fetch": Milestones 4 and 6,
   stacked on PR #113, because `image/macos/` comes with that pull request.
+  It merges after PR H3, because only H3 makes the deploy read
+  `MACOS_IMAGE_MANIFEST_PATH`.
+
+Merge order: H2, then H3. PR #113, then H4 after H3. H5 has no order.
 
 ## Decisions
 
