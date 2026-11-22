@@ -31,8 +31,9 @@ This change does not cover macOS overflow, GPU sizes, or instabox's own CI
 product. instabox rents a Mac only with a 24-hour lease. So macOS jobs still
 never overflow, as
 [Overflow runners](../docs/protocol/overflow.md#overflow-runners) says.
-Five decisions wait for the user, under
-[Open decisions](#open-decisions). Milestone 3 needs a paid instabox
+The user decided two items on 22 November 2026, under
+[User decisions](#user-decisions). Four decisions still wait for the user,
+under [Open decisions](#open-decisions). Milestone 3 needs a paid instabox
 workspace and a workspace API key from the user.
 
 Contract owners:
@@ -111,9 +112,11 @@ Replaced ways:
 - **Provider seams:** the ciproxy-only parts of a provider: the account
   facts, the guest launcher, the launch inspection, and the image source.
   They live in `crates/ciproxy-overflow/src/<provider>/`.
-- **Overlay:** the small set of ciproxy parts that a launch installs on a
-  provider's own GitHub-like image: the guest program, the pinned stock
-  runner, and the launch units. Item 1 decides whether instabox uses it.
+- **Account image:** the snapshot of the job image that ciproxy builds in
+  the instabox workspace of one customer. It takes the place of the shared
+  snapshot of Boat.
+- **Builder sandbox:** a short-lived sandbox that builds an account image.
+  ciproxy deletes it after the snapshot save.
 
 ## Design
 
@@ -137,13 +140,17 @@ Replaced ways:
     guest once.
   - `GuestInspection` reads the launch marker without a change.
   - The image source says how a sandbox gets the job software: a shared
-    snapshot for Boat, and the answer of item 1 for instabox.
+    snapshot for Boat, and an account image for instabox.
 - The control-plane composition builds a provider registry. One `Overflow`
   service serves every workspace. It picks the factory from the provider of
   the workspace's active key.
 - A provider without its deployment settings is unavailable. Setup and
   Settings do not offer it. Boat works the same way today without
   `BOAT_SHARED_SNAPSHOT`.
+- The account image lifecycle is shared code in `ciproxy-overflow`. It keeps
+  one state for each provider account and image release: building, ready,
+  failed, or retired. A provider supplies only its build steps. The starts
+  of an account wait until its first account image is ready.
 - The disk model of a size offer is `whole root` or `data disk`. With
   `whole root`, the offer's disk must hold the image, the free job disk, and
   the ext4 allowance, as for Boat today. With `data disk`, the template
@@ -162,8 +169,8 @@ provider adds only these parts:
    harness, and the new pinned revision in ciproxy.
 2. A value of `OverflowProvider`, its descriptor, and its seams under
    `crates/ciproxy-overflow/src/<provider>/`.
-3. Its image source, and its launch script under `image/` when it needs
-   one.
+3. Its image source: a shared snapshot, or the build steps of an account
+   image. Its launch script goes under `image/` when it needs one.
 4. Its connect form, copy, and mockup states.
 5. A provider section in [Overflow](../docs/protocol/overflow.md) and in
    [Agent images](../docs/protocol/agent-images.md).
@@ -181,7 +188,7 @@ sources, read on 22 November 2026. Research notes:
 
 | Contract function | instabox |
 | --- | --- |
-| Start a VM of at least a size, with one runner registration | `POST /v1/machines` with `vcpus` and `memMiB` of an allowed size, then `PUT /v1/machines/{id}/files` and `POST /v1/machines/{id}/exec` |
+| Start a VM of at least a size, with one runner registration | `POST /v1/machines` from the account image in the stopped state, `PATCH /v1/machines/{id}` to an allowed size, and a start. Then `PUT /v1/machines/{id}/files` and `POST /v1/machines/{id}/exec` |
 | Bill by the second or finer | Runtime is billed by the second while the sandbox runs |
 | Report the state of each VM | `GET /v1/machines/{id}` and `GET /v1/operations/{id}` |
 | Stop and delete a VM | `DELETE /v1/machines/{id}` with `X-Confirm-Delete` and `Idempotency-Key` |
@@ -216,6 +223,31 @@ Other instabox facts that the design uses:
   limits and exec concurrency. Their `retryable` field tells them apart.
 - An abuse check, such as `abuse_cpu` or `abuse_network_flows`, can pause
   a sandbox and lock it for 24 hours.
+
+### User decisions
+
+- **Item 6, decided on 22 November 2026:** the customer brings its own
+  instabox key, and instabox bills the customer. The user's words: "ok, let
+  the customer bring their own key". Rejected: ciproxy's own instabox
+  account for every workspace, which the brainstorm recommended, and both
+  models together. So the decisions in force on the customer's own account
+  and against reselling overflow minutes stay. The brainstorm notes are in
+  `.context/overflow-providers-and-instabox/brainstorm-ciproxy-account.md`.
+- **Item 1, decided on 22 November 2026:** while instabox offers no
+  snapshot sharing, the first step after a customer saves an instabox key
+  builds the account image in the customer's instabox workspace. The
+  user's words: "if there is no template sharing we can just have the first
+  step after the key is added to create the template on their account".
+  Rejected: options A, F, and G, which run jobs without the pinned image.
+  Options B and H stay the goal, but instabox does not offer them today.
+  instabox calls the result a snapshot, because only instabox staff can
+  create a template.
+- My call, 22 November 2026, inside the item 1 decision: the build imports
+  the published job image, as option D says. Option E, the full recipe in
+  each workspace, is the fallback when Milestone 3 shows that the import
+  fails. Reason: D keeps full parity, takes minutes instead of hours, and
+  gives every customer the same files. Option C would change the
+  requirement on pinned tool versions.
 
 ### Design calls
 
@@ -268,12 +300,31 @@ My calls, 22 November 2026:
 - ciproxy does not use instabox webhooks. Reason: the reads and the orphan
   cleanup already reconcile each sandbox, and a webhook adds a public
   endpoint for each account.
+- An account image build starts when a key is saved and when an image
+  release is new. The old account image serves starts until the new one
+  passes its checks. Reason: a failed rebuild must not stop overflow.
+- ciproxy deletes an old account image after its last sandbox ends. It
+  builds again when the snapshot of a ready image is gone, for example
+  after the customer deletes it. Reason: the customer can see and delete
+  snapshots in its instabox account.
+- The spend limit counts each builder sandbox. Reason:
+  [Spend limit](../docs/protocol/overflow.md#spend-limit) counts each
+  sandbox that ciproxy starts for the workspace.
+- Each job sandbox starts as a stopped create from the account image, a
+  resize to the job's size, and a start. When Milestone 3 shows that a
+  resize fails, the build saves one account image for each size. Reason: a
+  create from a snapshot fixes the size of the sandbox.
+- An instabox key needs the snapshot scopes `images:read`, `images:write`,
+  and `images:delete`, beside the machine scopes. Reason: the build saves
+  and deletes snapshots.
 
 ### Risks
 
-- instabox can change its `ci` template at any time. With item 1 option A
-  or F, a new template can bring a new runner or tool set. Option F tests
-  one version in each release.
+- A rebuild runs on instabox's current `ci` template. A template change
+  can break a rebuild. The old account image then keeps serving starts.
+- Each image release rebuilds the account image in every connected
+  instabox account. Each build runs in the customer's account and within
+  its start limits.
 - The upload cap can slow jobs that push images or upload artifacts. Item 5
   decides how ciproxy handles it.
 - Job code runs as root in the sandbox, as on a GitHub-hosted runner.
@@ -309,8 +360,13 @@ names Boat for a rule of every provider names the connected provider.
 - [ ] Update the Jobs notices and the job page for instabox: the size that
       ran the job, the spend limit, a rejected key, billing, refused
       starts, and a sandbox that an abuse check paused.
-- [ ] Add the image version and the upload-cap line to the job page of an
-      instabox job, as items 1 and 5 choose. Waits for items 1 and 5.
+- [ ] Add the upload-cap line of item 5 to the job page of an instabox
+      job. Waits for item 5.
+- [ ] Add the account image states after an instabox key is saved:
+      building with its progress, ready, failed with a retry, and
+      rebuilding after a release. Show them in Setup, in Settings under
+      Overflow, and on the Machines page.
+- [ ] Add a Jobs notice for jobs that wait for the first account image.
 - [ ] Update the overflow panel of the Machines page and the savings rows,
       with a row for each provider.
 - [ ] Update the user flows `peak-overflow-to-boat`,
@@ -338,6 +394,9 @@ decisions of this plan. A Boat-only rule stays under Boat.
       "The Boat account". State the key, the paid plan, the checks of
       item 3, and the account name. State one or several providers, as
       item 2 says.
+- [ ] In the same section, state the account image: the build after the key
+      is saved, the first wait, the rebuild after each release, and the
+      builder sandbox in the spend.
 - [ ] In `docs/protocol/overflow.md`, make "Overflow runners", "Orphan
       cleanup", "After an App removal", "Spend limit", and "Refused
       sandboxes" provider-neutral. Keep the trial lifetime and the start
@@ -347,8 +406,9 @@ decisions of this plan. A Boat-only rule stays under Boat.
       of each disk model.
 - [ ] In `docs/protocol/job-routing.md`, make "When Boat cannot take a
       job", "What the dashboard shows", and "Boat fails" provider-neutral.
-- [ ] In `docs/protocol/agent-images.md`, add "The instabox image" with the
-      decision of item 1. Waits for item 1.
+- [ ] In `docs/protocol/agent-images.md`, add "The instabox image": the
+      account image, its import over the `ci` system, its rebuild after
+      each release, and each difference from the machine image.
 - [ ] In `docs/protocol/security.md`, state key custody for every provider,
       the instabox key scopes, and no instabox Secrets in a sandbox.
 - [ ] Make the Boat text of `metering.md`, `billing.md`, `app-removal.md`,
@@ -375,11 +435,16 @@ from the user. It saves its evidence under
       `Idempotency-Key`, `metadata` marks, `deleteAfterSeconds`,
       `autoSuspendAfterSeconds` of 0, no Secrets, and `vault` false.
       Measure the time to `running`.
-- [ ] Install the overlay of item 1 options A and F. Start one just-in-time
-      runner with `ciproxy-guest`. Run a Docker job of the smoke workflow
-      in the private `Firna-AI/ciproxy-spike-cache` repository with its
+- [ ] Build an account image with the `snapshot import` steps on the `ci`
+      base, from a test OCI build of the job image. Measure the pull, the
+      layering, and the snapshot save.
+- [ ] From that account image, start one just-in-time runner with
+      `ciproxy-guest`. Run a Docker job of the smoke workflow in the
+      private `Firna-AI/ciproxy-spike-cache` repository with its
       `runner_label` input. Measure the time from the queue to the first
       step.
+- [ ] When the import fails, run the pinned recipe on the `ci` base instead,
+      and measure its time.
 - [ ] Prove the lifetime. A sandbox with a 10-minute `deleteAfterSeconds`
       ends with no API call, also when it is stopped or paused.
 - [ ] Record the bodies of `429 rate_limited`, `429 quota_exceeded`,
@@ -400,12 +465,10 @@ from the user. It saves its evidence under
       accepts a key with `workspace:admin`, for item 3.
 - [ ] Run a CPU-heavy build and a network-heavy job for 30 minutes each.
       Record whether an instabox abuse check pauses the sandbox.
-- [ ] Run the `snapshot import` steps on the `ci` base with a test OCI
-      image, and save one snapshot. From it, start two sizes with a stopped
-      create and a resize, and with a fork. This is for item 1 options C,
-      D, and I.
-- [ ] Create a sandbox from a pinned `ci` version with `templateVersion`,
-      for item 1 option F.
+- [ ] From one account image, start two sizes with a stopped create and a
+      resize.
+- [ ] Check that a key with the snapshot scopes can save and delete a
+      snapshot, and that a key without them gets `403 missing_scope`.
 - [ ] Ask instabox whether ciproxy can publish an OAuth app, for item 3
       option F.
 - [ ] Update the design and the TODOs of this plan with the results. Add a
@@ -533,6 +596,8 @@ A pull request in `futex-ai/sandbox`, from its own workspace, adds
       needs one.
 - [ ] Implement `SandboxFiles` with the file mode and the SHA-256 check, and
       `SandboxProcesses` over exec.
+- [ ] Implement `SandboxSnapshots`: save, list, inspect, and delete, for the
+      account images.
 - [ ] Map the refusals. `429 rate_limited` becomes a temporary refusal with
       its retry time.
 - [ ] Map `429 quota_exceeded` and `429 concurrency_limit` by their
@@ -553,26 +618,53 @@ A pull request in `futex-ai/sandbox`, from its own workspace, adds
 
 Depends on: 3
 
-The image work gives instabox sandboxes the job software that item 1
-chooses. The TODOs below are for options A and F. Waits for item 1.
+Each image release publishes the job image as an OCI image. A build script
+lays it over the `ci` system in a builder sandbox. A launch script starts the
+guest in each job sandbox.
 
-- [ ] Add `image/instabox-run.sh` and its units. The script checks the
-      overlay, installs it, moves the work folder and Docker data to
-      `/data`, and starts the guest with the private registration file.
+- [ ] Publish the job image of each release as a public OCI image, built
+      from the machine build. Record its digest in the release.
+- [ ] Add `image/instabox-build.sh`. It pulls the image by digest and lays
+      its files over the `ci` system. It keeps instabox's kernel, guest
+      agent, and network setup, and runs the image checks.
+- [ ] When Milestone 3 shows that the import fails, make the script run the
+      pinned recipe instead, as the Boat build does.
+- [ ] Add `image/instabox-run.sh` and its units. The script moves the work
+      folder, the runner temp folder, and the Docker data to `/data`. It
+      starts the guest with the private registration file.
 - [ ] Keep a root-owned marker for each delivery, so a launch runs once.
-- [ ] Pin the tested `ci` version in each release, with `latest` as the
-      fallback, as item 1 option F says.
-- [ ] Build the overlay with each image release: the guest program, the
-      pinned stock runner, the units, and the script, each with a SHA-256.
-- [ ] Publish the overlay with the release. The control-plane setting
-      names its URL and its SHA-256.
-- [ ] Add image checks for the script that need no instabox account, as the
-      Boat checks do.
+- [ ] Add image checks for both scripts that need no instabox account, as
+      the Boat checks do.
 - [ ] Add `image/instabox.md` and update `image/README.md`.
+
+## Milestone 9a: Shared account image lifecycle
+
+Depends on: 5
+
+The overflow service builds, rolls out, and cleans up the account image of
+each provider account that has no shared snapshot. The code is shared for
+every such provider. Mocks stand in for the provider in this milestone.
+
+- [ ] Add a store table for account images: the key, the image release, the
+      state, the snapshot, the builder sandbox, the failure, and the times.
+      Add its migration.
+- [ ] Start a build when a key is saved, when an image release is new, and
+      when the snapshot of a ready image is gone.
+- [ ] Run each build in a builder sandbox with the marks, a lifetime, and no
+      Secrets. Save the snapshot, then delete the builder.
+- [ ] Keep the old ready image for starts until the new one is ready.
+      Delete an old snapshot after its last sandbox ends.
+- [ ] Retry a failed build with a backoff. Keep the failure for the
+      dashboard view.
+- [ ] Hold the starts of an account until its first image is ready. Report
+      the wait in the overflow view.
+- [ ] Count each builder sandbox in the spend limit.
+- [ ] Add service tests over a real `PgStore` for each state change.
+- [ ] Update the README of the overflow crate.
 
 ## Milestone 10: instabox provider in ciproxy
 
-Depends on: 5, 6, 7, 8, 9
+Depends on: 5, 6, 7, 8, 9, 9a
 
 ciproxy adds the instabox seams and registers instabox as a provider.
 
@@ -585,12 +677,17 @@ ciproxy adds the instabox seams and registers instabox as a provider.
       fixed launch script under the marker. Add the read-only inspection
       of the marker.
 - [ ] Add the connect checks that item 3 chooses. Waits for item 3.
+- [ ] Add the instabox build steps: a builder sandbox from the `ci`
+      template, `image/instabox-build.sh` over exec, and the snapshot save.
+- [ ] Start each job sandbox as a stopped create from the account image, a
+      resize to the job's size, and a start. When Milestone 3 shows that a
+      resize fails, save one account image for each size instead.
 - [ ] Add the spend bound: the hourly price for the whole lifetime, no start
       fee, and the egress rule of item 4. Waits for item 4.
 - [ ] End a delivery whose sandbox instabox pauses with a
       `cooldownReason`, and delete the sandbox.
-- [ ] Register instabox. Add the settings for the instabox origin, the
-      overlay release, and the pinned `ci` version.
+- [ ] Register instabox. Add the settings for the instabox origin and the
+      published image of each release.
 - [ ] Add service tests over a real `PgStore` with instabox mocks. Cover
       connect, start, refusals, the end report, and orphan cleanup.
 - [ ] Also cover the spend, a key change, Disconnect, and an App removal.
@@ -612,6 +709,8 @@ The app shows the approved mockups for both providers.
       switch of item 2.
 - [ ] Update the labels, the Jobs notices, the job page, the Machines page,
       and the savings report.
+- [ ] Add the account image states and the first-wait notice of the
+      mockups.
 - [ ] Update the app tests, the harness scripts, and the browser checks.
       Add instabox fixtures.
 - [ ] Run the app typecheck, lint, tests, and export. Compare the screens
@@ -624,9 +723,11 @@ Depends on: 2
 The site gets a connect guide for instabox. Pages that name Boat for a rule
 of every provider name both providers.
 
-- [ ] Add `guides/connect-instabox.md`: the paid plan, a key with machine
-      scopes only, the spend limit, the lifetime, the sizes, and the upload
-      rate of item 5.
+- [ ] Add `guides/connect-instabox.md`: the paid plan, and a key with the
+      machine and snapshot scopes only. Add the first image build and its
+      wait, and the builder sandbox and snapshot in the customer's account.
+      Add the spend limit, the lifetime, the sizes, and the upload rate of
+      item 5.
 - [ ] Update `connect-boat.md`, `set-a-spend-limit.md`,
       `how-ciproxy-works.md`, `reference/labels.mdx`, `plans.mdx`, the
       security pages, the quickstart, and the index.
@@ -644,8 +745,8 @@ The live checks use a paid instabox workspace and the Boat test account.
 They need no deployment of the branch.
 
 - [ ] Run the probes of `examples/instabox_live.rs`: the key check, the
-      sizes, a start with a real runner, the end report, the cleanup, and
-      the usage read.
+      sizes, an account image build, a start with a real runner, the end
+      report, the cleanup, and the usage read.
 - [ ] Run the Boat live probes, to prove that Boat still works.
 - [ ] Save the results under `.context/overflow-providers-and-instabox/`.
 
@@ -673,115 +774,22 @@ Depends on: every other milestone
       the job page, the sandbox deletion, and the spend.
 - [ ] Repeat the staging job on Boat.
 - [ ] Ask instabox for snapshot sharing across workspaces or a ciproxy
-      template, for item 1 options B and H.
+      template. Either one replaces the account images, as the item 1
+      decision says.
 - [ ] Ask instabox for OAuth app publishing, for item 3 option F, and for
       the CI upload rate, for item 5.
 
 ## Open decisions
 
-Five items wait for the user. Each item uses the layout of the
-`decisions-and-findings` skill. The options check of 22 November 2026 added
-options F, G, and H to item 1, E and F to item 3, E to item 4, and C to
-item 5. It changed the recommendations of items 1 and 5. Its report:
+Four items wait for the user: items 2, 3, 4, and 5. Each item uses the
+layout of the `decisions-and-findings` skill. The user decided items 1 and 6
+on 22 November 2026, as [User decisions](#user-decisions) says. The git
+history of this plan keeps the full text of item 1. The options check of 22
+November 2026 added options F, G, and H to item 1, E and F to item 3, E to item
+4, and C to item 5. It changed the recommendations of items 1 and 5. Its report:
 `.context/overflow-providers-and-instabox/options-check.md`. On 22 November
-2026, the user asked for other ways to load a snapshot. The answer added
-option I to item 1 and lowered the costs of its options C and D.
-
-### 1. instabox cannot use a shared snapshot
-
-- **Severity:** High. **Effort:** Medium.
-- **Source:** Design.
-- **Category:** Docs or spec.
-- **Location:** `docs/protocol/agent-images.md`, "The Boat snapshot", and
-  `docs/protocol/overflow.md`, "Overflow runners".
-- **Background:** The image definition of ciproxy pins GitHub's
-  runner-images recipe and a stock runner. Boat runs one snapshot that
-  ciproxy builds for each image release. A share code gives that snapshot
-  to every customer account. A requirement says that an overflow job finds
-  the pinned version of each tool first, as on a job VM. Each option keeps
-  instabox's kernel and base system, because instabox starts only its own
-  kernel.
-- **Problem:** instabox cannot share a snapshot across instabox
-  workspaces. No route moves a snapshot or a sandbox to another workspace.
-  A snapshot also fixes the vCPU and memory of a sandbox that a create
-  makes from it.
-  The `ci` template has GitHub's tool set from `ubuntu24/20261026.354`,
-  and ciproxy pins `ubuntu24/20261101.360`. The `ci` template also leaves
-  out Haskell, Swift, Julia, CodeQL, Edge, and Homebrew, and its Android SDK
-  is trimmed.
-- **Impact if no action:** The instabox image work and the launcher wait.
-- **Root question:** How does an instabox sandbox get the software that a
-  ciproxy job expects?
-- **Options:**
-  - **A.** Start each sandbox from the latest `ci` template. Each launch
-    installs the overlay: the guest program, the pinned stock runner, and
-    the units. Jobs get instabox's tool versions and miss the tools that
-    `ci` leaves out. instabox can change the template without notice.
-    Effort: Medium.
-  - **B.** Ask instabox for snapshot sharing across workspaces. Then build
-    one snapshot for each image release in a ciproxy workspace, and share
-    it, as for Boat. Full parity. It waits for instabox. Effort: Medium,
-    after instabox ships the feature.
-  - **C.** Build an overlay snapshot in each customer workspace at connect
-    and at each ciproxy release. Parity as in A, with fixed and faster
-    starts. Each account gets an image state: a first wait, rollouts,
-    cleanup, and failed builds. A stopped create and a resize give each
-    size from one snapshot, with a second start for each job. Milestone 3
-    confirms it. Effort: Large.
-  - **D.** Publish the image as an OCI image at each release. In each
-    customer workspace, run the steps of instabox's `snapshot import`
-    through the API on the `ci` base, and save a snapshot. The CLI uses a
-    Debian base, so ciproxy runs the steps itself. Full parity of tool
-    versions. Each account pulls about 18 GB for each release, and pulls
-    have no cap. It gets the image state of C. Milestone 3 tests the
-    layering. Effort: Large.
-  - **E.** Run the full pinned recipe in each customer workspace, as the
-    Boat build does on Boat, and save a snapshot. Full parity. Each build
-    takes hours for each account and release, with the image state of C.
-    Effort: Large.
-  - **F.** A, but each ciproxy release tests one `ci` version and sends it
-    as `templateVersion`. A start uses `latest` when the pinned version is
-    not creatable or gets `no_capacity`. The job page shows the image
-    version. Each release needs a live check on a paid instabox workspace,
-    and old pins get `no_capacity` more often. Effort: Medium.
-  - **G.** Pull the pinned image, about 18 GB, at each launch. Run the job
-    under the image's own systemd in a private namespace. Full parity, and
-    no image state for each account. Each job waits minutes for the pull,
-    needs a larger `/data`, and runs Docker inside a namespace. Effort:
-    Large.
-  - **H.** Ask instabox to publish a ciproxy template at each release,
-    built from a public OCI build of the image definition. Full parity, and
-    no image state for each account. It waits for instabox, as B does.
-    Effort: Medium, after instabox agrees.
-  - **I.** D or E, and each start forks a prepared sandbox that runs no
-    job. Each fork gets the job's size and boots in seconds. Forks stay on
-    the host of their source. A full host gives a retryable
-    `409 fork_unavailable`, and the start then creates from the snapshot.
-    Effort: Large.
-- **Left out:**
-  - The machine image in a nested VM in each sandbox. Reason: a sandbox
-    has no `/dev/kvm`, so a nested VM cannot run.
-  - A move of a snapshot or a sandbox from a ciproxy workspace. Reason:
-    the API has no such route. Only a sign-in can move a whole personal
-    plan into a workspace.
-  - A devcontainer image. Reason: instabox applies the devcontainer
-    settings, but it does not boot the image.
-  - An export of a sandbox. Reason: an export holds only `/data`, and
-    instabox cannot import one.
-- **Wider fix:** None. The image source kind of the provider descriptor
-  already lets each provider choose its own source.
-- **Previous examples:** "The Boat snapshot" in
-  `docs/protocol/agent-images.md`, and Milestone 27a, "Boat-native job
-  image", of `plans/ciproxy-mvp.md`.
-- **Related:** Item 3. Options C, D, and E need the snapshot scopes in the
-  connect checks.
-- **Recommendation:** F, and ask instabox for B or H at the same time. The
-  options check changed the recommendation from A. F keeps the few moving
-  parts of A, and a template change becomes a tested release step. B or H
-  replaces F with full parity when instabox ships one of them. D is the
-  best route to full parity without instabox.
-- **Action:** ask the user, because F changes the requirement that an
-  overflow job finds the pinned tool versions first.
+2026, the user asked for other ways to load a snapshot. The answer added option
+I to item 1 and lowered the costs of its options C and D.
 
 ### 2. No rule for several providers
 
@@ -834,9 +842,9 @@ option I to item 1 and lowered the costs of its options C and D.
   does not save a key that Boat refuses. An instabox key reaches one
   instabox workspace. By default, a workspace key gets `workspace:admin`
   rights over members, invites, and Secrets. Only a sign-in can create a
-  key. instabox also offers agent sign-up and OAuth apps, which give a
-  credential with chosen scopes. Today every paid plan allows the idle
-  pause off.
+  key. The account image build of item 1 also needs the snapshot scopes.
+  instabox also offers agent sign-up and OAuth apps, which give a credential
+  with chosen scopes. Today every paid plan allows the idle pause off.
 - **Problem:** A key of a Free workspace works, but it cannot create a `ci`
   sandbox. No requirement says what ciproxy does with such a key, or with a
   key that has more rights than ciproxy needs.
@@ -849,9 +857,9 @@ option I to item 1 and lowered the costs of its options C and D.
   - **A.** Accept each key that instabox accepts. Starts then fail with plan
     refusals, and the Jobs page shows them. Effort: Small.
   - **B.** At connect, check the paid plan, the always-on choice, and the
-    machine scopes. Refuse a key that fails a check, with a message that
-    names the check. A later downgrade gives plan refusals, and jobs wait.
-    Effort: Medium.
+    machine and snapshot scopes. Refuse a key that fails a check, with a
+    message that names the check. A later downgrade gives plan refusals,
+    and jobs wait. Effort: Medium.
   - **C.** B, and also refuse a key with `workspace:admin` rights. A
     harmless read that only such a key can make finds it. Milestone 3
     confirms the read. Effort: Medium.
@@ -870,8 +878,8 @@ option I to item 1 and lowered the costs of its options C and D.
   scope probe and no scope name.
 - **Previous examples:** The Boat key check in "The Boat account" of
   `docs/protocol/overflow.md`.
-- **Related:** Item 1. Options C, D, and E of item 1 also need the snapshot
-  scopes.
+- **Related:** Item 1. Its decision needs the snapshot scopes
+  `images:read`, `images:write`, and `images:delete`.
 - **Recommendation:** C. Only C serves every paid workspace now. Ask
   instabox for app publishing, so that F can replace C later.
 - **Action:** ask the user, because B, C, and D add new refusals or a new
