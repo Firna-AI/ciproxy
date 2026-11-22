@@ -27,9 +27,12 @@ Items marked **Check** still need a run on a real Mac.
 
 The parts with no macOS-only dependency live in [`src/macos/`](src/macos/).
 They build on macOS and in the tests of every target, so the Linux gate
-tests them. The parts that use `ciproxy-vz`, `launchctl`, `pfctl`, or
-`diskutil` live in [`src/platform/macos/`](src/platform/macos.rs) and build
-only on macOS. The `rust-macos` gate phase type-checks and lints them.
+tests them. They can use the pure types of `ciproxy-vz`, such as
+`VmSettings`, because the tests have `ciproxy-vz` as a dev dependency.
+`VmSpec::settings` in [`src/macos/vm_spec.rs`](src/macos/vm_spec.rs) builds
+the settings of each VM there. The parts that start VMs or use
+`launchctl`, `pfctl`, or `diskutil` live in
+[`src/platform/macos/`](src/platform/macos.rs) and build only on macOS. The `rust-macos` gate phase type-checks and lints them.
 
 ## Processes
 
@@ -51,6 +54,10 @@ its own VM helper, as each Linux VM runs in its own systemd unit.
 - The VM helper reads `area/vms/LOCAL_ID/vm.json`. This file holds no
   secret: the bundle path, the CPU count, the memory size, the seat, and
   the start kind. The helper refuses an inconsistent file.
+- The memory size in `vm.json` is the label size in decimal bytes, such as
+  8,000,000,000 for 8 GB. Virtualization.framework needs whole MiB, so the
+  helper rounds it down to a whole MiB. The VM never uses more memory than
+  the label and its slots reserve.
 - The VM helper listens on `area/vms/LOCAL_ID/control.sock`. The socket has
   mode `0600`, and its folder has mode `0700`, both owned by root.
 - When the VM stops, the VM helper writes `exit.json` with a rename, then
