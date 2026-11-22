@@ -104,6 +104,8 @@ The package guides give their commands and main code entry points:
 - [ciproxy-agent](crates/ciproxy-agent/README.md): the agent that runs jobs in
   fresh Firecracker VMs on customer machines.
 - [ciproxy-protocol](crates/ciproxy-protocol/README.md): shared wire types.
+- [ciproxy-vz](crates/ciproxy-vz/README.md): macOS VMs on Apple Silicon over
+  Virtualization.framework, for the agent on Macs.
 - [ciproxy-control-plane](crates/ciproxy-control-plane/README.md): the hosted
   HTTP runtime and its API, agent, and GitHub webhook routes.
 - [xtask](xtask/README.md): the repository gate.
@@ -164,5 +166,5 @@ The mockups are part of the spec.
 
 Only the directories with their own `LICENSE` file are open source, under
 Apache-2.0: `crates/ciproxy-agent`, `crates/ciproxy-protocol`,
-`crates/ciproxy-guest`, `crates/ciproxy-cache-sidecar`, `image`, and
-`image/runner-patch`. The rest of this repository has no open licence.
+`crates/ciproxy-guest`, `crates/ciproxy-cache-sidecar`, `crates/ciproxy-vz`,
+`image`, and `image/runner-patch`. The rest of this repository has no open licence.
