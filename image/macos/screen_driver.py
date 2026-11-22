@@ -128,27 +128,51 @@ class Screen:
         self.vnc.close()
 
 
+def run_action(screen, action, values):
+    if action == "click":
+        screen.click(*values)
+    elif action == "uncheck":
+        screen.uncheck(*values)
+    elif action == "select":
+        screen.select(*values)
+    elif action == "type":
+        screen.type(values[0])
+    elif action == "press":
+        screen.press(*values)
+    elif action == "wait":
+        screen.wait(*values)
+    elif action == "gone":
+        screen.wait_gone(*values)
+    elif action == "sleep":
+        time.sleep(values[0])
+    else:
+        raise ValueError(f"unknown action {action}")
+
+
+def leave(screen, name, expected, last, timeout, retry_after=30):
+    """Wait until the step's screen text is gone. While it stays, click the
+    last control again, because a click can come before the control is
+    ready. A slow step, such as the account creation, can take a minute."""
+    deadline = time.monotonic() + timeout
+    retry = time.monotonic() + retry_after
+    while time.monotonic() < deadline:
+        screen.read()
+        if not screen.find(expected):
+            return
+        if last[0] in ("click", "press") and time.monotonic() >= retry:
+            if last[0] == "press" or screen.find(last[1]):
+                run_action(screen, last[0], last[1:])
+            retry = time.monotonic() + retry_after
+        time.sleep(2)
+    screen.fail(f"step {name}: the screen {expected!r} stayed for {timeout} s")
+
+
 def run_steps(screen, steps, log=print):
-    """Run (name, expected pattern, actions, timeout) steps in order."""
+    """Run (name, expected pattern, actions, timeout) steps in order. Each
+    step ends when its screen text is gone."""
     for name, expected, actions, timeout in steps:
         log(f"step: {name}")
         screen.wait(expected, timeout)
         for action, *values in actions:
-            if action == "click":
-                screen.click(*values)
-            elif action == "uncheck":
-                screen.uncheck(*values)
-            elif action == "select":
-                screen.select(*values)
-            elif action == "type":
-                screen.type(values[0])
-            elif action == "press":
-                screen.press(*values)
-            elif action == "wait":
-                screen.wait(*values)
-            elif action == "gone":
-                screen.wait_gone(*values)
-            elif action == "sleep":
-                time.sleep(values[0])
-            else:
-                raise ValueError(f"unknown action {action}")
+            run_action(screen, action, values)
+        leave(screen, name, expected, actions[-1], max(timeout, 120))

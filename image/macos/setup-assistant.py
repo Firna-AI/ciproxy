@@ -17,7 +17,8 @@ import time
 from screen_driver import Screen, run_steps
 
 USER = "runner"
-CONTINUE = r"^Continue$"
+# OCR can read the button with a full stop.
+CONTINUE = r"^Continue\.?$"
 
 
 def steps(password):
@@ -34,15 +35,17 @@ def steps(password):
         ("languages", r"Written and Spoken Languages", [("click", CONTINUE)], 120),
         ("accessibility", r"^Accessibility$", [("click", r"^Not Now$")], 120),
         ("privacy", r"Data & Privacy", [("click", CONTINUE)], 120),
+        # Creating the account takes about 40 s.
         ("account", r"Create a Mac Account",
          [("click", r"^Full Name$", False), ("type", USER), ("press", "tab"),
           ("press", "tab"), ("type", password), ("press", "tab"), ("type", password),
           ("uncheck", r"Allow computer account password to be reset"),
-          ("click", CONTINUE)], 120),
-        ("apple account", r"Sign In with Your Apple Account|Apple Account",
-         [("click", r"Other Sign-In Options"), ("wait", r"Sign in Later in Settings", 60),
-          ("click", r"Sign in Later in Settings"), ("wait", r"^Skip$", 60),
-          ("click", r"^Skip$")], 600),
+          ("click", CONTINUE)], 180),
+        # A mouse click on the menu item does not register, but the keys do.
+        ("apple account", r"Sign In to Your Apple Account",
+         [("click", r"Other Sign-In Options"), ("sleep", 1), ("press", "down"),
+          ("press", "down"), ("press", "return"), ("sleep", 2), ("click", CONTINUE),
+          ("wait", r"^Skip$", 60), ("click", r"^Skip$")], 300),
         ("terms", r"Terms and Conditions",
          [("click", r"^Agree$"), ("sleep", 2), ("wait", r"^Agree$", 30), ("click", r"^Agree$")],
          180),
