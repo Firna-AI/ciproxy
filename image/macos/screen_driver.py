@@ -7,7 +7,7 @@ import re
 import subprocess
 import time
 
-from vnc import Vnc
+from vnc import Vnc, VncError
 
 
 class ScreenError(RuntimeError):
@@ -26,7 +26,10 @@ class Screen:
         self.items = []
 
     def read(self):
-        self.vnc.refresh()
+        try:
+            self.vnc.refresh()
+        except (OSError, VncError) as error:
+            self.fail(f"VNC error: {error!r}")
         self.count += 1
         path = self.evidence / f"screen-{self.count:04d}.png"
         self.vnc.png(path)
@@ -172,7 +175,10 @@ def run_steps(screen, steps, log=print):
     step ends when its screen text is gone."""
     for name, expected, actions, timeout in steps:
         log(f"step: {name}")
-        screen.wait(expected, timeout)
-        for action, *values in actions:
-            run_action(screen, action, values)
-        leave(screen, name, expected, actions[-1], max(timeout, 120))
+        try:
+            screen.wait(expected, timeout)
+            for action, *values in actions:
+                run_action(screen, action, values)
+            leave(screen, name, expected, actions[-1], max(timeout, 120))
+        except (OSError, VncError) as error:
+            screen.fail(f"step {name}: VNC error: {error!r}")

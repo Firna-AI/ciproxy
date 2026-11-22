@@ -34,8 +34,14 @@ def vnc_response(password, challenge):
 
 
 class Vnc:
-    def __init__(self, host, port, password=None, timeout=30):
-        self.sock = socket.create_connection((host, port), timeout=timeout)
+    def __init__(self, host, port, password=None):
+        self.host, self.port, self.password = host, port, password
+        self.frame = bytearray()
+        self.connect()
+
+    def connect(self):
+        password = self.password
+        self.sock = socket.create_connection((self.host, self.port), timeout=30)
         version = self.read(12)
         if not version.startswith(b"RFB 003."):
             raise VncError(f"not an RFB server: {version!r}")
@@ -62,7 +68,18 @@ class Vnc:
         encodings = [RAW, DESKTOP_SIZE]
         self.sock.sendall(struct.pack(">BxH", 2, len(encodings))
                           + b"".join(struct.pack(">i", value) for value in encodings))
-        self.frame = bytearray(self.width * self.height * 4)
+        if len(self.frame) != self.width * self.height * 4:
+            self.frame = bytearray(self.width * self.height * 4)
+        # A server can leave a request unanswered for a while. A timeout
+        # before the first byte of a message loses no data.
+        self.sock.settimeout(10)
+
+    def reconnect(self):
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+        self.connect()
 
     def read(self, size):
         data = bytearray()
@@ -74,10 +91,27 @@ class Vnc:
         return bytes(data)
 
     def refresh(self):
-        """Request a full frame and apply every rectangle of the answer."""
-        self.sock.sendall(struct.pack(">BBHHHH", 3, 0, 0, 0, self.width, self.height))
+        """Request a full frame and apply every rectangle of the answer.
+
+        An unanswered request is sent again. A broken stream reconnects.
+        After three tries without an answer, the last frame stays.
+        """
+        request = struct.pack(">BBHHHH", 3, 0, 0, 0, self.width, self.height)
+        for _ in range(3):
+            try:
+                self.sock.sendall(request)
+                try:
+                    kind = self.read(1)[0]
+                except socket.timeout:
+                    continue
+                self.receive(kind)
+                return
+            except (OSError, VncError):
+                self.reconnect()
+
+    def receive(self, kind):
+        """Read server messages up to and including one frame update."""
         while True:
-            kind = self.read(1)[0]
             if kind == 0:
                 self.read(1)
                 for _ in range(struct.unpack(">H", self.read(2))[0]):
@@ -86,13 +120,12 @@ class Vnc:
             if kind == 1:
                 self.read(3)
                 self.read(6 * struct.unpack(">H", self.read(2))[0])
-            elif kind == 2:
-                continue
             elif kind == 3:
                 self.read(3)
                 self.read(struct.unpack(">I", self.read(4))[0])
-            else:
+            elif kind != 2:
                 raise VncError(f"unknown server message {kind}")
+            kind = self.read(1)[0]
 
     def rectangle(self):
         x, y, width, height, encoding = struct.unpack(">HHHHi", self.read(12))
