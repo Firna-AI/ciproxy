@@ -30,9 +30,10 @@ pub struct Slots(
 impl Slots {
     /// Compute capacity after reserving one quarter of CPU and memory.
     ///
-    /// A machine without KVM has no slots. Disk does not enter this formula.
-    pub fn for_machine(threads: u32, memory_bytes: u64, kvm: bool) -> Self {
-        if !kvm {
+    /// A machine without available virtualization has no slots.
+    /// Disk does not enter this formula.
+    pub fn for_machine(threads: u32, memory_bytes: u64, virtualization: bool) -> Self {
+        if !virtualization {
             return Self(0);
         }
         let cpu_slots = u64::from(threads) * 3 / 8;
@@ -69,13 +70,18 @@ impl Resources {
     ///
     /// Pass the capacity of the disk used for images, VMs, and machine cache.
     /// Filesystem free bytes are a health measurement, not this capacity.
-    pub fn for_machine(threads: u32, memory_bytes: u64, disk_bytes: u64, kvm: bool) -> Self {
+    pub fn for_machine(
+        threads: u32,
+        memory_bytes: u64,
+        disk_bytes: u64,
+        virtualization: bool,
+    ) -> Self {
         Self::for_machine_with_image_budget(
             threads,
             memory_bytes,
             disk_bytes,
             DEFAULT_IMAGE_BUDGET_BYTES,
-            kvm,
+            virtualization,
         )
     }
 
@@ -88,10 +94,10 @@ impl Resources {
         memory_bytes: u64,
         disk_bytes: u64,
         image_budget_bytes: u64,
-        kvm: bool,
+        virtualization: bool,
     ) -> Self {
         Self {
-            slots: Slots::for_machine(threads, memory_bytes, kvm),
+            slots: Slots::for_machine(threads, memory_bytes, virtualization),
             job_disk_bytes: (u128::from(disk_bytes.saturating_sub(image_budget_bytes)) * 3 / 4)
                 as u64,
         }

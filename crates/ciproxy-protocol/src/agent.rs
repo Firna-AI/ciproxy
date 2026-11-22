@@ -197,6 +197,8 @@ pub enum CommandOutcome {
 pub enum CommandFailure {
     /// A runner could not start.
     RunnerStart,
+    /// A runner or an image has a platform other than the machine's platform.
+    PlatformMismatch,
     /// An idle runner could not stop.
     RunnerStop,
     /// Cache entries could not be cleared.

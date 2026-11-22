@@ -1,6 +1,5 @@
 ---
 source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
-assertion_line: 20
 description: Tagged JSON for agent_report; all credentials are dummy test values.
 expression: message
 ---
@@ -10,10 +9,11 @@ expression: message
     "hostname": "build-machine",
     "agent_version": "0.1.0",
     "hardware": {
+      "platform": "linux_x64",
       "processor": "Example x64 CPU",
       "threads": 8,
       "memory_bytes": 32000000000,
-      "kvm": true,
+      "virtualization": "available",
       "disks": [
         {
           "name": "nvme0n1",

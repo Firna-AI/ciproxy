@@ -13,6 +13,7 @@ expression: message
     "runner_id": "runner-1",
     "organization_id": "organization-1",
     "label": "ciproxy",
+    "platform": "linux_x64",
     "size": {
       "vcpu": 2,
       "memory_bytes": 8000000000,

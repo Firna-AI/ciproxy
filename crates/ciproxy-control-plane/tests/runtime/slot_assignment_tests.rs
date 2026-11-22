@@ -193,6 +193,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
     let clock = clock(true);
     let image = ciproxy_protocol::images::ImageDownload {
         image_id: ciproxy_protocol::identifiers::ImageId("fixture".to_owned()),
+        platform: ciproxy_protocol::platform::Platform::LinuxX64,
         download_url: ciproxy_protocol::secret::Secret::new(
             "https://images.example/fixture.tar.zst",
         ),

@@ -63,6 +63,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
     let clock = clock(true);
     let image = ciproxy_protocol::images::ImageDownload {
         image_id: ciproxy_protocol::identifiers::ImageId("selected".to_owned()),
+        platform: ciproxy_protocol::platform::Platform::LinuxX64,
         download_url: ciproxy_protocol::secret::Secret::new(
             "https://images.example/selected.tar.zst",
         ),

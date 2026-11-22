@@ -27,7 +27,7 @@ impl MachineObservation {
             processor: report.hardware.processor.clone(),
             hardware_threads: i32::try_from(report.hardware.threads).unwrap_or(i32::MAX),
             memory_bytes: i64::try_from(report.hardware.memory_bytes).unwrap_or(i64::MAX),
-            kvm_available: report.hardware.kvm,
+            kvm_available: report.hardware.virtualization.is_available(),
             slots: i32::try_from(report.capacity.0).unwrap_or(i32::MAX),
             last_contact_at: contact.at,
             agent_version: report.agent_version.clone(),

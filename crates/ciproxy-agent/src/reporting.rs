@@ -14,7 +14,11 @@ use crate::state::Mode;
 impl Controller {
     pub(crate) async fn machine_report(&self) -> Result<MachineReport> {
         let hardware = self.host.hardware()?;
-        let capacity = Slots::for_machine(hardware.threads, hardware.memory_bytes, hardware.kvm);
+        let capacity = Slots::for_machine(
+            hardware.threads,
+            hardware.memory_bytes,
+            hardware.virtualization.is_available(),
+        );
         let job_disk_bytes = machine_resources(&hardware, self.image_budget).job_disk_bytes;
         let cache = match self.cache.report().await {
             Ok(report) => Statistics::Measured(report),
