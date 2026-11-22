@@ -2,7 +2,7 @@
 
 - **Severity:** High. **Effort:** Small. **Confidence:** High.
   **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Post-merge task.
 - **Added:** 2026-11-21, from `conductor/boat-callback-diagnosis`, item 2
   of the read-only code and contract trace of the failed Boat `large` live
   check. A fresh options check on the same day added options E, F, and G,
@@ -12,9 +12,8 @@
 - **Category:** Test.
 - **Location:** `plans/ciproxy-mvp.md:2827-2830`, `:2888-2890`, and
   `:2910-2913`.
-- **Reason:** F changes the acceptance rule that the plan records, and the
-  options have real trade-offs, so the human user must answer. The last two
-  paid sandbox slots wait for that answer.
+- **Reason:** Main has merged. F's live runs are approved and remain pending.
+  They do not wait for this PR to merge. No result is recorded yet.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
@@ -120,9 +119,11 @@
       0.1.4 at `b751ef5f`, on an older snapshot with the same report path.
     - Both cases failed their checks for other causes. Those FAILs stay.
   - Four of the six paid sandbox slots that the orchestrator allowed are
-    used, and each of the four sandboxes now returns 404. The last two
-    slots are for the overflow smoke and the spend-limit smoke. They stay
-    unused until the user answers this item.
+    used, and each of the four sandboxes now returns 404. The last two are
+    for the overflow smoke and the complete spend-limit smoke, once each,
+    with no retry. At the end, every task sandbox must be deleted, and
+    overflow must be off in both workspaces. The main machine in Firna-AI
+    must be Ready again on agent 0.1.4.
 - **Problem:**
   - For a successful job, the job-end cleanup and the exit report compete
     for the workspace lock, and the code gives neither side priority. When
@@ -234,40 +235,42 @@
     - G fails a status that the race cannot explain, which A and B accept.
       So it narrows the false positive of the isolated window. It needs
       Cloud SQL logs in the live check and a small clock tolerance between
-      the two logs. G stays a proposal and puts no check in force.
+      the two logs. G puts no check in force.
     - Effort: Medium.
 - **Left out:**
   - Change nothing and run the held cases, because successful jobs can
     meet the same race and use the last paid slots.
   - Mark a recorded FAIL as a PASS, because each run failed the rule that
-    it had. A new rule needs the user's recorded answer to this item and a
-    new run record. F does not mark a FAIL as a PASS. It cites facts of
-    those runs in a new record.
-- **Wider fix:** None at the check boundary. Option B or H of
-  `plans/follow-ups/boat-exit-report-lock-timeout.md` removes the race from
-  the claim itself.
+    it had. The new rule applies only to new runs, in a new run record.
+    F cites facts of the old runs and marks no FAIL as a PASS.
+- **Wider fix:** None at the check boundary. The chosen B of the lock record
+  in Related removes the race from the claim itself.
 - **Previous examples:** None found.
 - **Related:**
-  - `plans/follow-ups/boat-exit-report-lock-timeout.md`: options C and E of
-    this item wait for its option B, C, F, G, or H and their deploy. Its
-    option F records the claim only if the lock comes free within its wait
-    limit. Option F of this item uses earlier evidence of the report path,
-    which that item does not change.
+  - `plans/follow-ups/boat-exit-report-lock-timeout.md`: the user chose B
+    there, and a separate workspace builds it. F uses earlier evidence of
+    the report path, so it waits for no B deploy. The unchosen C and E
+    would wait for B, C, F, G, or H there and their deploy.
   - `plans/follow-ups/boat-exit-report-response-log.md`: it corrects the
     guest's log line that the Background describes. No option here waits
     for it.
 - **Recommendation:** F. The first recommendation was B. F has the cost of
   B and needs no paid sandbox beyond the last two held slots. It also
   proves that the deployed control plane accepts a real guest's report
-  where that report alone ends the sandbox. B is the fallback if the user
-  rejects evidence from those earlier cases. E keeps the plan's large-job
-  and own-claim requirement, but it weakens the live check's claim rule for
-  the two smokes. C best protects the checks, because it keeps that rule
-  for every case. A recommendation grants no new acceptance rule and no
-  sandbox past the limit. The rule needs the user's answer. The sandbox
-  needs the orchestrator's authorization.
-- **Action:** ask the user, because F changes the acceptance rule that the
-  plan records, and the options have real trade-offs.
+  where that report alone ends the sandbox. Before the answer, B was the
+  fallback if the user rejected that evidence. E keeps the plan's
+  large-job and own-claim requirement, but it weakens the live check's
+  claim rule for the two smokes. C best protects the checks, because it
+  keeps that rule for every case. A sandbox past the limit still needs
+  the orchestrator's authorization.
+- **User answer, 2026-11-22:** F. Not chosen: A, B alone, C, D, E, and G.
+  The two held smokes no longer need their own `reported_at`. Each needs a
+  POST to the exit route in its delivery window, with its status, in the
+  load balancer log. It also needs GitHub job success, the matching
+  runner, an ended delivery, and a Boat GET 404. The two earlier saved
+  claims prove the report path. No recorded FAIL becomes a PASS.
+- **Action:** fix now, apply F to the two one-shot live smokes, as the user
+  chose on 22 November 2026. Keep both records as the user requested.
 
 ## Evidence levels
 
@@ -290,8 +293,7 @@ sender match.
   no such match.
 - The task allowed the checks beside the merge into main. The orchestrator
   owns their run order and may run the two held smokes one after the other.
-  That supports the isolated-window inference. It creates no new gate and
-  changes no acceptance rule before the user's answer.
+  That supports the isolated-window inference and creates no new gate.
 
 Evidence outside Git: the observed run and the orchestrator's check of the
 two earlier accepted reports, in the folder `callback-resume/` in

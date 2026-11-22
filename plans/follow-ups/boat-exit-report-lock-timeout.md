@@ -2,7 +2,7 @@
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
   **Confidence:** High. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-21, from `conductor/boat-callback-diagnosis`, item 1
   of the read-only code and contract trace of the failed Boat `large` live
   check. Later checks added F, G, and H, and corrected B, F, and G.
@@ -13,8 +13,7 @@
   `crates/ciproxy-overflow/src/service/cleanup.rs:28-33`,
   `crates/ciproxy-store-interface/src/overflow/store.rs:44`, and
   `crates/ciproxy-control-plane/overflow.md:136-137`.
-- **Reason:** The recommended option changes protocol requirements, so the
-  human user must decide. This branch records the decision and no code.
+- **Reason:** A separate workspace makes the chosen B and its protocol change.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
@@ -172,10 +171,8 @@
     - B also keeps a report behind a cleanup pass that ends several
       deliveries in turn, longer than any wait that fits the guest's limit.
     - In the observed run, B would have saved the claim at about
-      09:27:59.9Z, before the end. That matters for options C and E of
-      `plans/follow-ups/boat-live-completion-acceptance.md`: C keeps a claim
-      for each case, and E for one new `large` run. B's main value is the
-      report of a no-job exit and after an App removal.
+      09:27:59.9Z, before the end. B's main value is the report of a no-job
+      exit and after an App removal.
     - An error-class log of a failed report can support its validation.
       Effort: Medium.
   - **C.** Delay the job-end deletion by a short grace time, for example
@@ -248,32 +245,35 @@
 - **Wider fix:** B, or H in its try-lock form. The report becomes a durable
   claim that no holder can drop, once each save keeps the claim and the
   first end. G is equally structural, at Large effort.
-- **Previous examples:** None found of this cause.
-  `plans/follow-ups/boat-launched-runner-readiness.md` lists "a failed
-  report" as one cause of a stranded job, with no cause named.
+- **Previous examples:** None found of this cause. The readiness item in
+  Related lists "a failed report" but does not name why it failed.
 - **Related:**
-  - `plans/follow-ups/boat-live-completion-acceptance.md`: its options C
-    and E keep a claim rule and wait for B, C, F, G, or H of this item and
-    their deploy. In the observed order, B, G, and H record the claim, and
-    C and F only under the conditions in their texts. Its option F uses
-    earlier accepted reports, which this item does not change.
+  - `plans/follow-ups/boat-live-completion-acceptance.md`: the user chose F
+    there, which uses earlier accepted reports and waits for no B deploy.
+    Its unchosen C keeps a claim for each case, and E for one new `large`
+    run. Both would wait for B, C, F, G, or H here. In the observed order,
+    B, G, and H record the claim, and C and F only under their conditions.
   - `plans/follow-ups/boat-launched-runner-readiness.md`: the same class,
     where a lost report strands a waiting job. Its ready deadline is a
     backstop for each lost report, not a fix of this cause.
   - `plans/follow-ups/boat-exit-report-response-log.md`: it corrects the
-    guest's acceptance log line in `BoatChannel::send`, which D also
-    changes. Neither item waits for the other.
+    guest's acceptance log line in `BoatChannel::send`, which the unchosen
+    D would also change. Neither item waits for the other.
 - **Recommendation:** B. It keeps each report whatever holds the lock,
   needs no migration, and deletes in the request more often than H. G best
   protects the delivery row against later writers, at Large effort.
-- **Action:** ask the user, because B changes the requirements of
-  `docs/protocol/overflow.md:114`, `:117`, and `:160`, and no recorded user
-  decision covers that change. A recommendation applies nothing.
+- **User answer, 2026-11-22:** B, with its proposed responses. Not chosen:
+  A, C, D, E, F, G, H, and the alternative that keeps 503. B saves the
+  report as a durable claim before it waits for the workspace lock. A 204
+  then means a saved receipt, also when the delete waits for a later pass.
+  B's separate workspace makes the protocol and code changes.
+- **Action:** fix after merge, apply B, because the user chose B on
+  22 November 2026, and a separate workspace builds it.
 
 ## Proposed responses
 
-The table covers replies after JSON extraction. The user chooses a letter
-with its proposed responses, or names the alternative below.
+The table covers replies after JSON extraction. On 22 November 2026, the
+user chose B's row, not the alternative below.
 
 | Letter | Parsed message is not `RunnerExited`, or the runner ID is not a UUID | Bad or used token, or ended | Fails before the save | Saved, then a step fails or the delete waits | Handler completes without another error | A success means | Delete time | Protocol text |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -286,12 +286,12 @@ with its proposed responses, or names the alternative below.
 | G | 400 | 401 for a POST after the end | 503 on a store error | 204 | 204 | Fact saved. a lock holder sets `reported_at` later | In the request within the wait, else a later pass | As B |
 | H | 400 | 401, also for a first POST after the end | 503 on a store error | 204 | 204 | Report saved | In the request only if the lock is free, else a later pass | As B |
 
-- Alternative: B, F, G, and H keep today's 503 for each failure after the
-  save, also for a deferred delete. The user can name it instead.
-- The protocol lines are `docs/protocol/overflow.md:114`, `:117`, and
-  `:160`. The success sentence is "A success answer means only that the
-  control plane saved the report." Each changed letter updates `store.rs:44`
-  and the guide's table (`crates/ciproxy-control-plane/overflow.md:132-137`).
+- Alternative, not chosen: B, F, G, and H keep today's 503 for each
+  failure after the save, also for a deferred delete.
+- B's workspace changes `docs/protocol/overflow.md:114`, `:117`, and
+  `:160`. Its success sentence is "A success answer means only that the
+  control plane saved the report." It also updates `store.rs:44` and the
+  guide's table (`crates/ciproxy-control-plane/overflow.md:132-137`).
 - These answers reach the guide, the load balancer log, the live checks,
   and the retry rule of D. Guest 0.1.4 acts on no status. It logs
   acceptance for each answer that is not 4xx or 5xx (`boat.rs:91-92`).
