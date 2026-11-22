@@ -9,12 +9,14 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
+use crate::platform_text::{parse_platform, platform_text};
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = labels)]
 pub(crate) struct LabelRow {
     id: Uuid,
     name: String,
+    platform: String,
     vcpus: i32,
     memory_gb: i32,
     disk_gb: i32,
@@ -28,6 +30,7 @@ impl LabelRow {
         Ok(Label {
             id: self.id,
             name: self.name,
+            platform: parse_platform(&self.platform)?,
             size: VmSize {
                 vcpus: self.vcpus,
                 memory_gb: self.memory_gb,
@@ -48,6 +51,7 @@ impl LabelStore for PgStore {
                 labels::id.eq(label.id),
                 labels::workspace_id.eq(workspace_id),
                 labels::name.eq(&label.name),
+                labels::platform.eq(platform_text(label.platform)),
                 labels::vcpus.eq(label.size.vcpus),
                 labels::memory_gb.eq(label.size.memory_gb),
                 labels::disk_gb.eq(label.size.disk_gb),

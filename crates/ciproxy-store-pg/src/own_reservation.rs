@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use crate::error::QueryResultExt;
 use crate::labels::LabelRow;
+use crate::platform_text::parse_platform;
 
 pub(crate) fn require_authority(
     connection: &mut PgConnection,
@@ -31,19 +32,19 @@ pub(crate) fn require_authority(
         .for_update()
         .first::<Uuid>(connection)
         .store()?;
-    let allowed = machines::table
+    let Some(machine_platform) = machines::table
         .find(machine_id)
         .filter(machines::workspace_id.eq(workspace_id))
         .filter(machines::removed_at.is_null())
         .filter(machines::draining.eq(false))
-        .select(machines::id)
+        .select(machines::platform)
         .for_update()
-        .first::<Uuid>(connection)
+        .first::<String>(connection)
         .optional()
-        .store()?;
-    if allowed.is_none() {
+        .store()?
+    else {
         return Err(Error::InvalidReference);
-    }
+    };
     let organization = organizations::table
         .find(intent.runner.organization_id)
         .filter(organizations::workspace_id.eq(workspace_id))
@@ -77,7 +78,10 @@ pub(crate) fn require_authority(
         .first::<LabelRow>(connection)
         .store()?
         .into_record()?;
-    if !label.allow_machines || label.size != intent.requested_size {
+    if !label.allow_machines
+        || label.size != intent.requested_size
+        || label.platform != parse_platform(&machine_platform)?
+    {
         return Err(Error::InvalidValue);
     }
     Ok(())

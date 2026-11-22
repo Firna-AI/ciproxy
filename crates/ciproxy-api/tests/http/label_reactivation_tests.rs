@@ -75,7 +75,7 @@ async fn reactivates(action: InstallationAction) {
         .lock()
         .unwrap()
         .insert((default.name, 97), 601);
-    let input = json!({"name":"custom","vcpus":2,"memory_gb":8,"disk_gb":20,"allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"});
+    let input = json!({"name":"custom","vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"});
     let created = fixture
         .request(
             Some(&admin),

@@ -6,6 +6,8 @@ use ciproxy_store_interface::gateway::Contact;
 use ciproxy_store_interface::machines::MachineDisk;
 use diesel::prelude::*;
 
+use crate::platform_text::{platform_text, virtualization_text};
+
 #[derive(Insertable, AsChangeset)]
 #[diesel(table_name = machines)]
 pub(crate) struct MachineObservation {
@@ -13,7 +15,9 @@ pub(crate) struct MachineObservation {
     processor: String,
     hardware_threads: i32,
     memory_bytes: i64,
-    kvm_available: bool,
+    #[diesel(skip_update)]
+    platform: &'static str,
+    virtualization: &'static str,
     slots: i32,
     last_contact_at: DateTime<Utc>,
     agent_version: String,
@@ -27,7 +31,8 @@ impl MachineObservation {
             processor: report.hardware.processor.clone(),
             hardware_threads: i32::try_from(report.hardware.threads).unwrap_or(i32::MAX),
             memory_bytes: i64::try_from(report.hardware.memory_bytes).unwrap_or(i64::MAX),
-            kvm_available: report.hardware.virtualization.is_available(),
+            platform: platform_text(report.hardware.platform),
+            virtualization: virtualization_text(report.hardware.virtualization),
             slots: i32::try_from(report.capacity.0).unwrap_or(i32::MAX),
             last_contact_at: contact.at,
             agent_version: report.agent_version.clone(),

@@ -5,6 +5,7 @@ mod database;
 mod fixture;
 mod machine_statistics_tests;
 mod machine_tests;
+mod platform_label_tests;
 mod ports;
 mod ports_gate;
 mod ports_scale_sets;

@@ -3,6 +3,7 @@
 use ciproxy_api::capacity::MachineCapacity;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageMetadata;
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::statistics::Statistics;
 use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
@@ -19,7 +20,8 @@ fn machine() -> MachineSnapshot {
             processor: "x64".to_owned(),
             hardware_threads: 32,
             memory_bytes: 128_000_000_000,
-            kvm_available: true,
+            platform: Platform::LinuxX64,
+            virtualization: Virtualization::Available,
             slots: 12,
             warm_runners: 0,
             draining: false,

@@ -70,3 +70,4 @@ mod takeout_refresh_tests;
 mod takeout_result_tests;
 mod takeout_scope_tests;
 mod takeout_support;
+mod unused_registration_tests;

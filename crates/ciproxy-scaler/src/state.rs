@@ -3,12 +3,13 @@
 use std::collections::HashSet;
 
 use ciproxy_protocol::identifiers::RunnerId;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::VmSize;
 
 use crate::actions::{Action, Destination, StartReason, StartRunner, StopReason};
 use crate::boat::{Sandbox, SandboxId};
 use crate::capacity::Usage;
-use crate::snapshot::{Label, Runner, RunnerState, Snapshot, WaitingJob};
+use crate::snapshot::{Label, Runner, RunnerState, Snapshot, WaitingJob, warm_label};
 
 pub(crate) struct Plan {
     pub(crate) actions: Vec<Action>,
@@ -61,15 +62,16 @@ impl Plan {
         destination: Destination,
         reason: StartReason,
     ) {
-        self.actions.push(Action::StartRunner(StartRunner {
+        self.actions.push(Action::StartRunner(Box::new(StartRunner {
             target: job.target.clone(),
             organization_id: job.target.organization_id.clone(),
             label: label.name.clone(),
+            platform: label.platform,
             requested_size: label.size,
             size,
             destination,
             reason,
-        }));
+        })));
     }
 }
 
@@ -78,7 +80,9 @@ pub(crate) fn idle(runner: &Runner) -> bool {
 }
 
 pub(crate) fn warm_candidate(runner: &Runner) -> bool {
-    runner.label.0 == "ciproxy" && idle(runner)
+    (runner.label.0 == warm_label(Platform::LinuxX64)
+        || runner.label.0 == warm_label(Platform::MacosArm64))
+        && idle(runner)
 }
 
 pub(crate) fn label_for<'a>(snapshot: &'a Snapshot, runner: &Runner) -> Option<&'a Label> {

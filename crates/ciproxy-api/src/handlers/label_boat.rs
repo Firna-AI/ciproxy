@@ -2,6 +2,7 @@
 
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_overflow::view::OverflowView;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 use ciproxy_scaler::size_policy::{BoatChoice, select_boat_size};
 use ciproxy_scaler::snapshot;
@@ -44,7 +45,8 @@ pub(super) fn enrich(
         });
     let own_fits = fit.fitting_machines > 0;
     let own_unknown = label.allow_machines && fit.unavailable_machines > 0;
-    fit.boat = match (label.allow_boat, required, catalog, overflow) {
+    let allow_boat = label.allow_boat && label.platform == Platform::LinuxX64;
+    fit.boat = match (allow_boat, required, catalog, overflow) {
         (false, _, _, _) => BoatLabelFit::Disabled,
         (true, Some(required), Some(catalog), Some(view)) => {
             let policy = match label.when_nothing_fits {

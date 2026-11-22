@@ -11,7 +11,7 @@ use ciproxy_store_interface::tokens::TokenSubject;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::error::{Error, ErrorResultExt, Result, contact_result};
 use crate::gateway::Gateway;
 use crate::types::{Handshake, Session};
 use crate::versions;
@@ -118,15 +118,12 @@ impl Gateway {
             report,
             at: self.clock.now(),
         };
-        let Some(machine) = self
-            .store
-            .connect_machine(
-                session.workspace_id,
-                session.machine_id,
-                &hash(&credential),
-                &contact,
-            )
-            .internal()?
+        let Some(machine) = contact_result(self.store.connect_machine(
+            session.workspace_id,
+            session.machine_id,
+            &hash(&credential),
+            &contact,
+        ))?
         else {
             return Err(Error::Unauthorized);
         };

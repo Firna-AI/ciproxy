@@ -16,6 +16,9 @@ impl MachineRuntime {
             let Some(report) = &machine.report else {
                 continue;
             };
+            if machine.machine.platform != image.platform {
+                continue;
+            }
             if report.report.images.newest.as_ref() == Some(&image.image_id) {
                 self.image_requests
                     .lock()

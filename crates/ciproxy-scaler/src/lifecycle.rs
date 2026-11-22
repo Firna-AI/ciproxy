@@ -47,9 +47,7 @@ fn obsolete(snapshot: &Snapshot, runner: &Runner, own_machine: bool) -> Option<S
     if label.size != runner.requested_size {
         return Some(StopReason::LabelChanged);
     }
-    if (own_machine && !label.destinations.own_machines)
-        || (!own_machine && !label.destinations.boat)
-    {
+    if (own_machine && !label.destinations.own_machines) || (!own_machine && !label.allows_boat()) {
         return Some(StopReason::DestinationDisabled);
     }
     None
