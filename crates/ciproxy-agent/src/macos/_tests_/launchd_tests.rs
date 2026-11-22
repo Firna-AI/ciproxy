@@ -1,7 +1,7 @@
 //! launchd files keep the restart rules of the design and escape their text.
 
 use super::launchd::{agent_plist, launchctl, loaded_ids, newsyslog_conf, vm_helper_plist};
-use super::paths::{local_id_of_label, seat_folder, valid_local_id, vm_label, vm_plist};
+use super::paths::{local_id_of_label, valid_local_id, vm_label, vm_plist};
 
 const ID: &str = "0123456789abcdef0123456789abcdef";
 
@@ -81,10 +81,6 @@ fn paths_stay_in_the_owned_folders() {
     assert_eq!(
         vm_plist(ID).to_str(),
         Some(format!("/var/db/ciproxy/vms/{ID}.plist").as_str())
-    );
-    assert_eq!(
-        seat_folder(1, true).to_str(),
-        Some("/var/db/ciproxy/area/seats/1/build")
     );
 }
 

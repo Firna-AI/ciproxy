@@ -28,8 +28,10 @@ mod isolation;
 mod launchctl;
 mod preparation;
 mod recovery;
+mod seat_states;
 mod service;
 mod updates;
+mod vm_files;
 pub(crate) mod vm_helper;
 mod vms;
 
@@ -37,8 +39,9 @@ use cache::NoMachineCache;
 use host::MacHost;
 use images::MacImages;
 use isolation::{Isolation, PfIsolation};
-use launchctl::Launchctl;
+use launchctl::{Launchctl, Launchd};
 use preparation::{MacPreparation, MacUninstall};
+use seat_states::SeatStates;
 use service::LaunchdService;
 use updates::MacUpdates;
 use vms::MacVms;
@@ -102,7 +105,7 @@ impl Platform for MacPlatform {
         ))
     }
 
-    fn machine(&self, _prepared: (), _input: MachineInput<'_>) -> Result<Machine> {
+    fn machine(&self, _prepared: (), input: MachineInput<'_>) -> Result<Machine> {
         let folders = VmFolders {
             area: PathBuf::from(AREA),
         };
@@ -116,11 +119,14 @@ impl Platform for MacPlatform {
             }),
             events,
         ));
+        let launchd: Arc<dyn Launchd> = Arc::new(Launchctl);
         let vms: Arc<dyn Vms> = Arc::new(MacVms {
+            seats: Arc::new(SeatStates::new(folders.clone(), launchd.clone())),
             folders,
-            launchd: Arc::new(Launchctl),
+            launchd,
             guests: channels,
             isolation: self.isolation.clone(),
+            builds: !input.uninstall,
             operation: Mutex::new(()),
         });
         Ok(Machine {

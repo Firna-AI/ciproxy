@@ -3,15 +3,18 @@
 //! The agent saves a VM record before it starts the helper. A crash between
 //! the two leaves a record with no helper, which the guest bridge ends. A
 //! helper with no record comes only from damaged state or a manual start.
-//! Startup runs this before the core restores the recorded VMs.
+//! Startup runs this before the core restores the recorded VMs. Uninstall
+//! runs it before it deletes the area, so no build helper still runs.
 
 use std::collections::BTreeSet;
 use std::path::Path;
 
 use super::launchctl::Launchd;
+use super::vm_files::{remove_path, seat_folder};
 use crate::error::{ErrorResultExt, Result};
 use crate::macos::guests::VmFolders;
 use crate::macos::paths::{CONTROL, valid_local_id, vm_plist};
+use crate::macos::seats::SEATS;
 use crate::state::MachineState;
 
 /// The local IDs of the saved VM records, or none when the state is absent.
@@ -71,19 +74,10 @@ pub(crate) async fn remove_orphans(launchd: &dyn Launchd, folders: &VmFolders) -
         remove_path(&vm_plist(&id))?;
         remove_path(&folders.folder(&id))?;
     }
-    Ok(())
-}
-
-fn remove_path(path: &Path) -> Result<()> {
-    let result = if path.is_dir() {
-        std::fs::remove_dir_all(path)
-    } else {
-        std::fs::remove_file(path)
-    };
-    match result {
-        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
-            Err(error).context("remove an orphan VM file")
-        }
-        _ => Ok(()),
+    // A saved-state build helper has no record, so it ended above. Its
+    // unpublished folder goes too.
+    for seat in 0..SEATS {
+        remove_path(&seat_folder(&folders.area, seat, true))?;
     }
+    Ok(())
 }

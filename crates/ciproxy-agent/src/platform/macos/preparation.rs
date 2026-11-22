@@ -79,6 +79,10 @@ impl Preparation for MacPreparation {
     }
 
     async fn remove(&self) -> Result<()> {
+        let folders = VmFolders {
+            area: PathBuf::from(AREA),
+        };
+        remove_orphans(self.launchd.as_ref(), &folders).await?;
         self.isolation.remove().await?;
         area::remove()?;
         match std::fs::remove_dir_all(Path::new(CONTROL).join("vms")) {

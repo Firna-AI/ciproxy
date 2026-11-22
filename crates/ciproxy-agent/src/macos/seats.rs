@@ -33,6 +33,10 @@ pub(crate) struct SavedState {
     pub(crate) image: String,
     /// The MAC address of the seat when the agent saved the VM.
     pub(crate) mac_address: String,
+    /// The VM settings. A saved state restores only into a VM with the same
+    /// CPU count and memory size.
+    pub(crate) cpus: u32,
+    pub(crate) memory_bytes: u64,
     /// The agent that saved the VM. Another version may build another VM
     /// configuration, which cannot restore the state.
     pub(crate) agent_version: String,
@@ -47,6 +51,8 @@ pub(crate) struct SeatNeeds<'a> {
     pub(crate) seat: u16,
     pub(crate) newest_image: &'a str,
     pub(crate) mac_address: &'a str,
+    pub(crate) cpus: u32,
+    pub(crate) memory_bytes: u64,
     pub(crate) agent_version: &'a str,
     pub(crate) now_unix_seconds: u64,
 }
@@ -62,8 +68,8 @@ pub(crate) enum StartKind {
 }
 
 impl SavedState {
-    /// A saved state restores only for its own seat, image, identity, and
-    /// agent version, and only while it is younger than [`MAX_AGE`]. A save
+    /// A saved state restores only for its own seat, image, identity, VM
+    /// settings, and agent version, and only while it is younger than [`MAX_AGE`]. A save
     /// time in the future also fails, because the clock moved back.
     pub(crate) fn usable(&self, needs: SeatNeeds<'_>) -> bool {
         let age = needs
@@ -73,6 +79,8 @@ impl SavedState {
             && self.seat == needs.seat
             && self.image == needs.newest_image
             && self.mac_address == needs.mac_address
+            && self.cpus == needs.cpus
+            && self.memory_bytes == needs.memory_bytes
             && self.agent_version == needs.agent_version
             && age.is_some_and(|age| age < MAX_AGE.as_secs())
     }

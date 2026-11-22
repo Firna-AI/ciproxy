@@ -54,11 +54,3 @@ pub(crate) fn vm_plist(local_id: &str) -> PathBuf {
         .join("vms")
         .join(format!("{local_id}.plist"))
 }
-
-/// The saved state of one VM seat, and the folder that builds the next one.
-pub(crate) fn seat_folder(seat: u16, build: bool) -> PathBuf {
-    PathBuf::from(AREA)
-        .join("seats")
-        .join(seat.to_string())
-        .join(if build { "build" } else { "current" })
-}

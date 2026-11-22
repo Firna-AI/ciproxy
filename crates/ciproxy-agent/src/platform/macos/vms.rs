@@ -4,30 +4,30 @@
 //! and machine identifier, so the vmnet DHCP server gives the seat the same
 //! lease, and a saved state of the seat can restore.
 
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use ciproxy_protocol::guest::AgentToGuest;
-use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::runners::RunnerReport;
-use ciproxy_vz::{Bundle, Identity, clone_bundle};
-use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use super::isolation::Isolation;
 use super::launchctl::Launchd;
 use super::not_supported;
+use super::seat_states::{BuildRequest, SeatStates};
+use super::vm_files::{
+    RESTORE_FAILED, STATE_FILE, clone_with, image_bundle, remove_helper_files, seat_identity,
+    write_helper_files,
+};
 use crate::boundaries::Vms;
 use crate::cache_authority::CacheAuthority;
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::error::{Error, Result};
 use crate::macos::guests::VmFolders;
-use crate::macos::launchd::vm_helper_plist;
-use crate::macos::paths::vm_plist;
-use crate::macos::seats::{StartKind, free_seat};
+use crate::macos::seats::{SeatNeeds, StartKind, free_seat};
 use crate::macos::vm_spec::{VM_SPEC_FORMAT, VmSpec};
-use crate::persistence::{atomic_private_write, private_directory};
+use crate::persistence::private_directory;
 use crate::state::{PreparationState, VmRecord};
 use crate::vsock::Guests;
 
@@ -36,6 +36,9 @@ pub(crate) struct MacVms {
     pub(crate) launchd: Arc<dyn Launchd>,
     pub(crate) guests: Arc<dyn Guests>,
     pub(crate) isolation: Arc<dyn Isolation>,
+    pub(crate) seats: Arc<SeatStates>,
+    /// The daemon builds saved states. Install and uninstall do not.
+    pub(crate) builds: bool,
     /// Starts and stops run one at a time, as on Linux.
     pub(crate) operation: Mutex<()>,
 }
@@ -79,6 +82,7 @@ impl Vms for MacVms {
         self.isolation.ensure().await?;
         {
             let _operation = self.operation.lock().await;
+            self.seats.cancel(vm.network_index).await?;
             self.prepare(vm).await?;
             self.launchd.bootstrap_vm(&vm.local_id).await?;
         }
@@ -94,16 +98,30 @@ impl Vms for MacVms {
     }
 
     async fn stop(&self, vm: &VmRecord) -> Result<()> {
-        let _operation = self.operation.lock().await;
-        self.guests.detach(vm).await?;
-        self.launchd.bootout_vm(&vm.local_id).await?;
-        remove_file(&vm_plist(&vm.local_id))?;
-        match std::fs::remove_dir_all(self.folders.folder(&vm.local_id)) {
-            Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
-                Err(error).context("remove VM folder")
+        {
+            let _operation = self.operation.lock().await;
+            self.guests.detach(vm).await?;
+            self.launchd.bootout_vm(&vm.local_id).await?;
+            let restore_failed = self.folders.folder(&vm.local_id).join(RESTORE_FAILED);
+            if restore_failed.exists() {
+                self.seats.discard(vm.network_index)?;
             }
-            _ => Ok(()),
+            remove_helper_files(&self.folders, &vm.local_id)?;
         }
+        if self.builds {
+            let request = BuildRequest {
+                seat: vm.network_index,
+                image: vm.report.image_id.clone(),
+                cpus: vm.report.size.vcpu,
+                memory_bytes: vm.report.size.memory_bytes,
+            };
+            let identity = seat_identity(&self.folders.area, request.seat)?;
+            let mac_address = identity.mac_address.to_string();
+            if self.seats.usable(needs(vm, &mac_address)).is_none() {
+                self.seats.start_build(request).await;
+            }
+        }
+        Ok(())
     }
 
     async fn send(&self, vm: &VmRecord, message: &AgentToGuest) -> Result<()> {
@@ -112,75 +130,46 @@ impl Vms for MacVms {
 }
 
 impl MacVms {
-    /// Clone the image with the seat identity, then write `vm.json` and the
-    /// helper's launchd file. Every file stays root-only.
+    /// Clone the seat's saved state when it matches the VM, else the image,
+    /// with the seat identity. Then write `vm.json` and the launchd file.
     async fn prepare(&self, vm: &VmRecord) -> Result<()> {
         let folder = self.folders.folder(&vm.local_id);
         private_directory(&folder)?;
         let identity = seat_identity(&self.folders.area, vm.network_index)?;
-        let image = image_bundle(&self.folders.area, &vm.report.image_id);
-        let target = folder.join("bundle");
-        tokio::task::spawn_blocking(move || clone_bundle(&image, &target, &identity))
-            .await
-            .context("join image clone")?
-            .map_err(vz)?;
+        let mac_address = identity.mac_address.to_string();
+        let bundle = folder.join("bundle");
+        let (source, start) = match self.seats.usable(needs(vm, &mac_address)) {
+            Some(saved) => (saved, StartKind::Restore),
+            None => (
+                image_bundle(&self.folders.area, &vm.report.image_id),
+                StartKind::Cold,
+            ),
+        };
+        clone_with(source, bundle.clone(), identity).await?;
         let spec = VmSpec {
             format: VM_SPEC_FORMAT,
             seat: vm.network_index,
             cpus: vm.report.size.vcpu,
             memory_bytes: vm.report.size.memory_bytes,
-            bundle: folder.join("bundle"),
-            start: StartKind::Cold,
-            saved_state: None,
+            saved_state: (start == StartKind::Restore).then(|| bundle.join(STATE_FILE)),
+            bundle,
+            start,
         };
-        atomic_private_write(
-            &folder.join("vm.json"),
-            &serde_json::to_vec(&spec).context("encode VM file")?,
-        )?;
-        let plist = vm_plist(&vm.local_id);
-        if let Some(parent) = plist.parent() {
-            private_directory(parent)?;
-        }
-        atomic_private_write(&plist, vm_helper_plist(&vm.local_id).as_bytes())
+        tracing::info!(seat = vm.network_index, start = ?spec.start, "prepare a job VM");
+        write_helper_files(&self.folders, &vm.local_id, &spec)
     }
 }
 
-/// The checked image bundle of an image. The image store owns this folder.
-pub(crate) fn image_bundle(area: &Path, image: &ImageId) -> Bundle {
-    Bundle::new(
-        area.join("images")
-            .join(hex::encode(Sha256::digest(image.0.as_bytes())))
-            .join("bundle"),
-    )
-}
-
-/// The fixed identity of a seat, made once and kept with the seat.
-pub(crate) fn seat_identity(area: &Path, seat: u16) -> Result<Identity> {
-    let bundle = Bundle::new(seat_identity_folder(area, seat));
-    if let Ok(identity) = bundle.read_identity() {
-        return Ok(identity);
-    }
-    let identity = Identity::fresh().map_err(vz)?;
-    private_directory(bundle.root())?;
-    bundle.write_identity(&identity).map_err(vz)?;
-    Ok(identity)
-}
-
-fn seat_identity_folder(area: &Path, seat: u16) -> PathBuf {
-    area.join("seats").join(seat.to_string()).join("identity")
-}
-
-fn remove_file(path: &Path) -> Result<()> {
-    match std::fs::remove_file(path) {
-        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
-            Err(error).context("remove VM launchd file")
-        }
-        _ => Ok(()),
-    }
-}
-
-pub(crate) fn vz(error: ciproxy_vz::Error) -> Error {
-    Error::VmHelper {
-        reason: error.to_string(),
+fn needs<'a>(vm: &'a VmRecord, mac_address: &'a str) -> SeatNeeds<'a> {
+    SeatNeeds {
+        seat: vm.network_index,
+        newest_image: &vm.report.image_id.0,
+        mac_address,
+        cpus: vm.report.size.vcpu,
+        memory_bytes: vm.report.size.memory_bytes,
+        agent_version: env!("CARGO_PKG_VERSION"),
+        now_unix_seconds: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |time| time.as_secs()),
     }
 }

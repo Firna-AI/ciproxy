@@ -17,6 +17,8 @@ fn saved() -> SavedState {
         seat: 1,
         image: "macos-26.7.2-1".to_owned(),
         mac_address: "02:ab:cd:00:00:01".to_owned(),
+        cpus: 4,
+        memory_bytes: 8 << 30,
         agent_version: "0.5.0".to_owned(),
         saved_at_unix_seconds: SAVED_AT,
     }
@@ -27,6 +29,8 @@ fn needs(now: u64) -> SeatNeeds<'static> {
         seat: 1,
         newest_image: "macos-26.7.2-1",
         mac_address: "02:ab:cd:00:00:01",
+        cpus: 4,
+        memory_bytes: 8 << 30,
         agent_version: "0.5.0",
         now_unix_seconds: now,
     }
@@ -64,6 +68,8 @@ fn any_mismatch_or_age_boots_cold() {
         |state: &mut SavedState| state.mac_address = "02:ab:cd:00:00:02".to_owned(),
         |state: &mut SavedState| state.agent_version = "0.5.1".to_owned(),
         |state: &mut SavedState| state.format = 2,
+        |state: &mut SavedState| state.cpus = 8,
+        |state: &mut SavedState| state.memory_bytes = 16 << 30,
     ] {
         let mut state = saved();
         change(&mut state);

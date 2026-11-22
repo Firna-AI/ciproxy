@@ -21,11 +21,10 @@ use crate::macos::vm_control::{ControlError, StopReason, VmPhase};
 use crate::macos::vm_control_server::{VmControl, bind, serve};
 use crate::macos::vm_spec::{ExitReason, VmExit, VmSpec};
 
+use super::vm_files::{RESTORE_FAILED, STATE_FILE};
+
 /// The time that open WAIT requests get to send their answer after a stop.
 const WAIT_ANSWER_GRACE: std::time::Duration = std::time::Duration::from_secs(1);
-
-/// The file that `SAVE` writes in the VM folder.
-pub(crate) const SAVED_STATE_FILE: &str = "state.vzvmsave";
 
 /// Run one VM until it stops, then write `exit.json` and return.
 pub(crate) async fn run(local_id: &str) -> Result<()> {
@@ -45,10 +44,9 @@ pub(crate) async fn run(local_id: &str) -> Result<()> {
         memory_bytes: spec.memory_bytes,
         display: None,
     };
-    let vm = Arc::new(Vm::new(&Bundle::new(&spec.bundle), &settings).map_err(vz)?);
     let listener = bind(&folders.client(local_id).socket).context("bind the control socket")?;
     let mut terminate = signal(SignalKind::terminate()).context("watch SIGTERM")?;
-    start(&vm, &spec).await?;
+    let vm = Arc::new(start(&spec, &settings, &folder).await?);
     let control = Arc::new(HelperVm {
         vm: vm.clone(),
         folder: folder.clone(),
@@ -73,15 +71,35 @@ pub(crate) async fn run(local_id: &str) -> Result<()> {
     Ok(())
 }
 
-async fn start(vm: &Vm, spec: &VmSpec) -> Result<()> {
-    match (spec.start, &spec.saved_state) {
-        (StartKind::Cold, _) => vm.start().await.map_err(vz),
-        (StartKind::Restore, Some(state)) => {
-            vm.restore(state).await.map_err(vz)?;
-            vm.resume().await.map_err(vz)
+/// Start the VM. A failed restore boots the same clone cold in a new VM
+/// object and leaves `restore-failed`, so the agent discards that saved
+/// state when this VM ends.
+async fn start(spec: &VmSpec, settings: &VmSettings, folder: &Path) -> Result<Vm> {
+    let bundle = Bundle::new(&spec.bundle);
+    let vm = Vm::new(&bundle, settings).map_err(vz)?;
+    let state = match (spec.start, &spec.saved_state) {
+        (StartKind::Cold, _) => {
+            vm.start().await.map_err(vz)?;
+            return Ok(vm);
         }
-        (StartKind::Restore, None) => Err(helper("a restore needs a state file")),
+        (StartKind::Restore, Some(state)) => state,
+        (StartKind::Restore, None) => return Err(helper("a restore needs a state file")),
+    };
+    let restored = async {
+        vm.restore(state).await?;
+        vm.resume().await
     }
+    .await;
+    let Err(error) = restored else {
+        return Ok(vm);
+    };
+    tracing::warn!(%error, "the restore failed, so the VM boots cold");
+    std::fs::write(folder.join(RESTORE_FAILED), b"").context("mark the failed restore")?;
+    let _ = vm.stop().await;
+    drop(vm);
+    let vm = Vm::new(&bundle, settings).map_err(vz)?;
+    vm.start().await.map_err(vz)?;
+    Ok(vm)
 }
 
 /// Write `exit.json` with a rename, so the agent never reads half a file.
@@ -131,7 +149,7 @@ impl VmControl for HelperVm {
     async fn save(&self) -> std::result::Result<(), ControlError> {
         let result = async {
             self.vm.pause().await?;
-            self.vm.save(&self.folder.join(SAVED_STATE_FILE)).await
+            self.vm.save(&self.folder.join(STATE_FILE)).await
         }
         .await;
         result.map_err(|error| {
