@@ -12,6 +12,7 @@ use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_github::scale_sets::sdk::SdkScaleSetApi;
 use ciproxy_github::scale_sets::{ScaleSetApi, ScaleSetFactory};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
@@ -105,6 +106,7 @@ pub(super) fn setup_with_label(store: &dyn Store, name: &str) -> ListenerTarget 
     };
     store.install_organization(&organization).unwrap();
     let label = Label {
+        platform: Platform::LinuxX64,
         id: id(2),
         name: name.to_owned(),
         size: VmSize {

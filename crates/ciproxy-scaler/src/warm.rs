@@ -4,7 +4,7 @@ use ciproxy_protocol::identifiers::OrganizationId;
 
 use crate::actions::{Action, Destination, StartReason, StopReason};
 use crate::capacity::eligible;
-use crate::snapshot::{Machine, RunnerState, Snapshot, WaitingJob};
+use crate::snapshot::{Machine, RunnerState, Snapshot, WaitingJob, warm_label};
 use crate::state::{Plan, warm_candidate};
 
 pub(crate) fn reconcile(snapshot: &Snapshot, plan: &mut Plan) {
@@ -28,14 +28,12 @@ pub(crate) fn reconcile(snapshot: &Snapshot, plan: &mut Plan) {
 }
 
 pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&WaitingJob]) {
-    let Some(label) = snapshot
-        .labels
-        .iter()
-        .find(|label| label.name.0 == "ciproxy")
-    else {
-        return;
-    };
     for (index, machine) in snapshot.machines.iter().enumerate() {
+        let Some(label) = snapshot.labels.iter().find(|label| {
+            label.name.0 == warm_label(machine.platform) && label.platform == machine.platform
+        }) else {
+            continue;
+        };
         if !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }
@@ -48,7 +46,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
         let mut vacancies = targets(snapshot, machine);
         let mut occupied = 0;
         for runner in &machine.runners {
-            if runner.label.0 == "ciproxy"
+            if runner.label == label.name
                 && matches!(
                     runner.state,
                     RunnerState::Starting | RunnerState::Ready | RunnerState::Retiring

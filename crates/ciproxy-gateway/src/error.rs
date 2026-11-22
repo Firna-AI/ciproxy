@@ -44,3 +44,11 @@ impl fmt::Debug for Error {
 
 /// Result at a gateway boundary.
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// Map a contact write, where a changed machine platform is an invalid message.
+pub(crate) fn contact_result<T>(result: ciproxy_store_interface::error::Result<T>) -> Result<T> {
+    match result {
+        Err(ciproxy_store_interface::error::Error::InvalidValue) => Err(Error::InvalidMessage),
+        result => result.internal(),
+    }
+}

@@ -1,3 +1,11 @@
 {
-  "order": ["list", "machine", "add", "new-machine", "roles", "loading-error"]
+  "order": [
+    "list",
+    "machine",
+    "add",
+    "new-machine",
+    "macs",
+    "roles",
+    "loading-error"
+  ]
 }

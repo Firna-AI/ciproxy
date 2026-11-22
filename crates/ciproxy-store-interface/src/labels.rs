@@ -1,5 +1,6 @@
 //! Label configuration queries.
 
+use ciproxy_protocol::platform::Platform;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -22,6 +23,8 @@ pub struct Label {
     pub id: Uuid,
     /// The workflow label name.
     pub name: String,
+    /// The platform of the label's job VMs. It does not change after insertion.
+    pub platform: Platform,
     /// The requested VM resources.
     pub size: VmSize,
     /// Whether own machines may serve the label.
@@ -34,10 +37,11 @@ pub struct Label {
 
 /// Queries scoped to the workspace that owns each label.
 pub trait LabelStore: Send + Sync {
-    /// Insert a label. Label names do not change after insertion.
+    /// Insert a label. Label names and platforms do not change after insertion.
     fn create_label(&self, workspace_id: Uuid, label: &Label) -> Result<()>;
     /// Read all labels of one workspace.
     fn labels(&self, workspace_id: Uuid) -> Result<Vec<Label>>;
     /// Change the size, source switches, and fallback of a label.
+    /// Keep its name and platform.
     fn update_label(&self, workspace_id: Uuid, label: &Label) -> Result<()>;
 }

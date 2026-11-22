@@ -1,4 +1,4 @@
-//! Composition of the Linux guest from explicit runtime configuration.
+//! Composition of the Linux or macOS guest from explicit runtime configuration.
 
 use std::path::PathBuf;
 
@@ -9,9 +9,10 @@ use clap::{Parser, Subcommand};
 use crate::boat::BoatChannel;
 use crate::boundary::{Channel, Power};
 use crate::error::Result;
-use crate::guest_setup::LinuxGuestSetup;
-use crate::power::{BoatPower, LinuxPower, LinuxShutdownCommand};
-use crate::process::LinuxRunner;
+use crate::guest_setup::{GuestSetup, LinuxGuestSetup, MacGuestSetup};
+use crate::platform::{Account, Platform};
+use crate::power::{BoatPower, SystemShutdownCommand, VmPower};
+use crate::process::StockRunner;
 use crate::service::{Guest, Supervisor};
 use crate::vsock::VsockChannel;
 
@@ -25,6 +26,9 @@ pub struct Cli {
     /// Script that loads the image environment and executes the stock runner.
     #[arg(long, default_value = "/usr/local/libexec/ciproxy-runner")]
     runner_entry: PathBuf,
+    /// Local account that runs the stock runner.
+    #[arg(long, default_value = "runner")]
+    runner_account: String,
     /// Configuration transport and shutdown mode.
     #[command(subcommand)]
     mode: Mode,
@@ -34,7 +38,7 @@ pub struct Cli {
 enum Mode {
     /// Receive newline-delimited protocol JSON from the host over vsock.
     Vsock {
-        /// Guest port used by the own-machine agent's Firecracker connection.
+        /// Guest port of the own-machine agent's vsock connection.
         #[arg(long)]
         port: u32,
     },
@@ -46,25 +50,27 @@ enum Mode {
     },
 }
 
-/// The Linux application boundary, used only by the binary.
+/// The guest application boundary, used only by the binary.
 #[async_trait]
 pub trait Application: Send + Sync {
     /// Construct the transport and supervise this fresh guest.
     async fn run(&self, cli: Cli) -> Result<()>;
 }
 
-/// Linux implementation of the guest application.
-pub struct LinuxApplication;
+/// Guest application for the platform of this build.
+pub struct GuestApplication;
 
 #[async_trait]
-impl Application for LinuxApplication {
+impl Application for GuestApplication {
     async fn run(&self, cli: Cli) -> Result<()> {
+        let platform = Platform::current();
         let own_machine = matches!(cli.mode, Mode::Vsock { .. });
         let (channel, power): (Box<dyn Channel>, Box<dyn Power>) = match cli.mode {
             Mode::Vsock { port } => (
                 Box::new(VsockChannel::accept(port).await?),
-                Box::new(LinuxPower {
-                    command: Box::new(LinuxShutdownCommand),
+                Box::new(VmPower {
+                    platform,
+                    command: Box::new(SystemShutdownCommand),
                 }),
             ),
             Mode::Boat { registration_file } => (
@@ -72,13 +78,20 @@ impl Application for LinuxApplication {
                 Box::new(BoatPower),
             ),
         };
+        let account = Account::lookup(&cli.runner_account)?;
+        let setup: Box<dyn GuestSetup> = match platform {
+            Platform::Linux => Box::new(LinuxGuestSetup),
+            Platform::MacOs => Box::new(MacGuestSetup),
+        };
         let mut guest: Box<dyn Guest> = Box::new(Supervisor {
             image_id: ImageId(cli.image_id),
             channel,
-            runner: Box::new(LinuxRunner::new(
+            runner: Box::new(StockRunner::new(
+                platform,
+                account,
                 cli.runner_entry,
                 own_machine,
-                Box::new(LinuxGuestSetup),
+                setup,
             )),
             power,
         });

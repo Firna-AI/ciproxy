@@ -6,7 +6,9 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use chrono::Duration;
 use ciproxy_gateway::types::{Delivery, MachineAction};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
+use ciproxy_scaler::snapshot::warm_label;
 use ciproxy_store_interface::dashboard::records::CurrentMachineCost;
 
 use crate::access::Principal;
@@ -62,27 +64,32 @@ pub(super) async fn read(
     .await?;
     let latest = releases.latest().await.ok();
     let labels = query(state.store.clone(), move |store| store.labels(workspace)).await?;
-    let default_size = labels
-        .into_iter()
-        .find(|label| label.name == "ciproxy")
-        .map(|label| VmSize {
-            vcpu: label.size.vcpus.try_into().unwrap_or(0),
-            memory_bytes: u64::try_from(label.size.memory_gb)
-                .unwrap_or(0)
-                .saturating_mul(GIGABYTE),
-            disk_bytes: u64::try_from(label.size.disk_gb)
-                .unwrap_or(0)
-                .saturating_mul(GIGABYTE),
-        });
+    // The default label of a machine is the label that its warm runners serve.
+    let default_size = |platform: Platform| {
+        labels
+            .iter()
+            .find(|label| label.name == warm_label(platform) && label.platform == platform)
+            .map(|label| VmSize {
+                vcpu: label.size.vcpus.try_into().unwrap_or(0),
+                memory_bytes: u64::try_from(label.size.memory_gb)
+                    .unwrap_or(0)
+                    .saturating_mul(GIGABYTE),
+                disk_bytes: u64::try_from(label.size.disk_gb)
+                    .unwrap_or(0)
+                    .saturating_mul(GIGABYTE),
+            })
+    };
     Ok(values
         .into_iter()
         .map(|value| {
             let capacity = state.capacity.capacity(&value.snapshot);
-            let default_size = default_size.map(|requested| machine_views::DefaultSize {
-                requested,
-                root_bytes: state
-                    .capacity
-                    .required_root_bytes(&value.snapshot, requested.disk_bytes),
+            let default_size = default_size(value.snapshot.machine.platform).map(|requested| {
+                machine_views::DefaultSize {
+                    requested,
+                    root_bytes: state
+                        .capacity
+                        .required_root_bytes(&value.snapshot, requested.disk_bytes),
+                }
             });
             machine_views::machine(
                 value,
@@ -231,7 +238,8 @@ pub(crate) async fn issue_token(
         id: token.id.to_string(),
         command: install_command::command(&state.config, &token.token)?,
         expires_at: token.expires_at,
-        requirements: "x64 Linux with KVM, 4 cores, 16 GB of memory, and at least 250 GB of disk."
+        requirements: "x64 Linux with KVM, 4 cores, 16 GB of memory, and 250 GB of disk, \
+            or a Mac with Apple Silicon, macOS 26.7.3 or later, and 16 GB of memory."
             .to_owned(),
     }))
 }

@@ -1,6 +1,7 @@
 // The Labels tab: the labels of the workspace with their sizes and where
 // their jobs run, Add label, and Edit for each label. A workflow picks a
-// label in runs-on, and each label starts a fresh VM of its size.
+// label in runs-on, and each label starts a fresh VM of its platform and
+// size. A macOS label runs on the Macs only.
 
 import { useState, type ReactNode } from "react";
 import { StyleSheet, Text } from "react-native";
@@ -57,8 +58,9 @@ export function LabelsTab({ context }: { context: WorkspaceContext }) {
     <>
       <Text style={[text.small, styles.intro]}>
         A workflow picks a label in <Text style={text.mono}>runs-on</Text>. Each
-        label starts a fresh VM of its size, on your machines first and on Boat
-        when they are busy.
+        label starts a fresh VM of its platform and size, on your machines first
+        and on Boat when they are busy. Jobs of a macOS label run on your Macs
+        only.
       </Text>
       <SettingsRead
         snapshot={snapshot}
@@ -98,7 +100,7 @@ export function LabelsTab({ context }: { context: WorkspaceContext }) {
               <Text style={text.caption}>
                 A slot on your machines is 2 vCPU and 8 GB. A larger size takes
                 several slots. Each running job also holds disk for the image
-                and its free disk.
+                and its free disk. A Mac runs at most 2 job VMs at a time.
               </Text>
               {target ? (
                 <LabelDialog

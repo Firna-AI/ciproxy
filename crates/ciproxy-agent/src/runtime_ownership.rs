@@ -49,12 +49,12 @@ impl RuntimeWaitNotice for CliRuntimeWaitNotice {
     }
 }
 
-pub(crate) struct LinuxRuntimeClaims {
+pub(crate) struct FileRuntimeClaims {
     pub(crate) control: PathBuf,
     pub(crate) notice: Arc<dyn RuntimeWaitNotice>,
 }
 
-impl RuntimeClaims for LinuxRuntimeClaims {
+impl RuntimeClaims for FileRuntimeClaims {
     fn claim(&self) -> Result<Arc<dyn RuntimeOwner>> {
         let file = self.open()?;
         FileExt::try_lock_exclusive(&file).context("claim image cache ownership")?;
@@ -75,7 +75,7 @@ impl RuntimeClaims for LinuxRuntimeClaims {
     }
 }
 
-impl LinuxRuntimeClaims {
+impl FileRuntimeClaims {
     fn open(&self) -> Result<File> {
         OpenOptions::new()
             .create(true)

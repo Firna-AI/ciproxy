@@ -167,6 +167,7 @@ impl MachineRuntime {
                 runner_id: RunnerId(id.to_string()),
                 organization_id: OrganizationId(github_organization_id.to_string()),
                 label: start.label,
+                platform: start.platform,
                 size: start.requested_size,
                 registration: Secret::new(registration.configuration.expose_secret()),
             },

@@ -5,8 +5,9 @@ use std::sync::Arc;
 
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisks;
 use crate::boundaries::{Cache, CacheMock};
-use crate::docker::{DockerDisks, LinuxDockers};
+use crate::docker::LinuxDockers;
 use crate::docker_files;
 use crate::error::Error;
 use crate::fixtures::{TemporaryLayout, active_lease, facts, scope, vm};

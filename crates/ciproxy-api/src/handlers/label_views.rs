@@ -1,11 +1,12 @@
 //! Label resources and connected-machine fit from the shared capacity arithmetic.
 
 use ciproxy_gateway::types::{MachineView, Presence};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use uuid::Uuid;
 
-use crate::capacity::MachineCapacity;
+use crate::capacity::{MachineCapacity, platform_vms};
 use crate::error::{Error, Result};
 use crate::wire::facts::{LabelMachineFit, LabelPlacement};
 use crate::wire::job_fit::BoatLabelFit;
@@ -15,9 +16,16 @@ pub(super) fn stored(id: Uuid, input: LabelInput) -> Result<Label> {
     if input.vcpus < 1 || input.memory_gb < 1 || input.disk_gb < 1 {
         return Err(Error::InvalidInput);
     }
+    // A macOS label never uses Boat, because cloud Macs bill 24 hours at minimum.
+    if input.platform != Platform::LinuxX64
+        && (input.allow_boat || !matches!(input.when_nothing_fits, NothingFits::Wait))
+    {
+        return Err(Error::InvalidInput);
+    }
     Ok(Label {
         id,
         name: input.name,
+        platform: input.platform,
         size: ciproxy_store_interface::vm_size::VmSize {
             vcpus: input.vcpus,
             memory_gb: input.memory_gb,
@@ -39,6 +47,7 @@ pub(super) fn label(
 ) -> LabelView {
     let input = LabelInput {
         name: label.name,
+        platform: label.platform,
         vcpus: label.size.vcpus,
         memory_gb: label.size.memory_gb,
         disk_gb: label.size.disk_gb,
@@ -81,7 +90,8 @@ pub(super) fn fit(
         .filter(|machine| {
             machine.presence == Presence::Online
                 && !machine.snapshot.machine.draining
-                && machine.snapshot.machine.kvm_available
+                && machine.snapshot.machine.platform == label.platform
+                && machine.snapshot.machine.virtualization.is_available()
                 && machine.snapshot.machine.slots > 0
         })
         .collect::<Vec<_>>();
@@ -95,14 +105,15 @@ pub(super) fn fit(
                 .zip(root_bytes)
                 .map(|(job_disk_bytes, root_bytes)| {
                     if label.allow_machines {
-                        Resources {
+                        let jobs = Resources {
                             slots: facts.slots,
                             job_disk_bytes,
                         }
                         .concurrent_vms(VmSize {
                             disk_bytes: root_bytes,
                             ..size
-                        })
+                        });
+                        platform_vms(label.platform, jobs)
                     } else {
                         0
                     }
@@ -126,10 +137,13 @@ pub(super) fn fit(
             job_disk_bytes,
         };
         let jobs = if label.allow_machines {
-            resources.concurrent_vms(VmSize {
-                disk_bytes: root_bytes,
-                ..size
-            })
+            platform_vms(
+                label.platform,
+                resources.concurrent_vms(VmSize {
+                    disk_bytes: root_bytes,
+                    ..size
+                }),
+            )
         } else {
             0
         };

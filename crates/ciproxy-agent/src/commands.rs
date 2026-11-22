@@ -9,6 +9,7 @@ use ciproxy_protocol::version::ProtocolVersion;
 use crate::controller::Controller;
 use crate::error::{Error, Result};
 use crate::mode::ModeAction;
+use crate::platform::NATIVE;
 use crate::state::PreparationState;
 
 impl Controller {
@@ -30,6 +31,11 @@ impl Controller {
                 }
                 (command_id, result, CommandFailure::RunnerStart)
             }
+            ControlMessage::StartRunner { command_id, runner } if runner.platform != NATIVE => (
+                command_id,
+                Err(Error::PlatformMismatch),
+                CommandFailure::PlatformMismatch,
+            ),
             ControlMessage::StartRunner { command_id, runner } => (
                 command_id,
                 self.start(runner).await,
@@ -122,11 +128,15 @@ impl Controller {
                 CommandFailure::CacheClear,
             ),
             ControlMessage::FetchImage { command_id, image } => {
-                let result = self.images.fetch(&image).await;
-                let reason = if matches!(result, Err(Error::ImageVerification)) {
-                    CommandFailure::ImageVerification
+                let result = if image.platform == NATIVE {
+                    self.images.fetch(&image).await
                 } else {
-                    CommandFailure::ImageDownload
+                    Err(Error::PlatformMismatch)
+                };
+                let reason = match result {
+                    Err(Error::ImageVerification) => CommandFailure::ImageVerification,
+                    Err(Error::PlatformMismatch) => CommandFailure::PlatformMismatch,
+                    _ => CommandFailure::ImageDownload,
                 };
                 (command_id, result, reason)
             }

@@ -1,4 +1,4 @@
-//! Linux runner processes with drained output and observable readiness.
+//! Stock runner processes with drained output and observable readiness.
 
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -11,16 +11,19 @@ use ciproxy_protocol::secret::Secret;
 use rustix::io::Errno;
 use rustix::process::{Pid, Signal, kill_process_group};
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
-use tokio::process::{Child, ChildStdout, Command};
+use tokio::process::{Child, ChildStdout};
 
 use crate::assignment::{Assignments, Inbox, SocketAssignments};
 use crate::guest_setup::{GuestSetup, PreloadedDocker};
+use crate::platform::{Account, Platform};
 use crate::runner_assignment::{AssignedJob, WaitingJob};
 
 use crate::boundary::{EventFuture, Runner, RunnerEvent};
 use crate::error::{Error, ErrorOptionExt, ErrorResultExt, Result};
 
-pub(crate) struct LinuxRunner {
+pub(crate) struct StockRunner {
+    pub(crate) platform: Platform,
+    pub(crate) account: Account,
     pub(crate) setup: Box<dyn GuestSetup>,
     pub(crate) entry: PathBuf,
     process: Option<Running>,
@@ -36,9 +39,17 @@ struct Running {
     assignment: Option<Box<dyn AssignedJob>>,
 }
 
-impl LinuxRunner {
-    pub(crate) fn new(entry: PathBuf, handoff: bool, setup: Box<dyn GuestSetup>) -> Self {
+impl StockRunner {
+    pub(crate) fn new(
+        platform: Platform,
+        account: Account,
+        entry: PathBuf,
+        handoff: bool,
+        setup: Box<dyn GuestSetup>,
+    ) -> Self {
         Self {
+            platform,
+            account,
             setup,
             entry,
             process: None,
@@ -48,7 +59,7 @@ impl LinuxRunner {
 }
 
 #[async_trait]
-impl Runner for LinuxRunner {
+impl Runner for StockRunner {
     async fn start(&mut self, registration: Secret) -> Result<()> {
         let preloaded = if self.handoff {
             self.setup.inspect().await
@@ -56,15 +67,12 @@ impl Runner for LinuxRunner {
             PreloadedDocker::default()
         };
         let listener = if self.handoff {
-            Some(crate::handoff::listen().await?)
+            Some(crate::handoff::listen(self.platform, &self.account).await?)
         } else {
             None
         };
-        let mut command = Command::new("/usr/sbin/runuser");
+        let mut command = self.platform.runner_command(&self.account, &self.entry);
         command
-            .args(["--user", "runner", "--"])
-            .arg(&self.entry)
-            .env_clear()
             .env(
                 "ACTIONS_RUNNER_INPUT_JITCONFIG",
                 registration.expose_secret(),
@@ -72,7 +80,7 @@ impl Runner for LinuxRunner {
             .env(
                 "CIPROXY_ASSIGNMENT_SOCKET",
                 if self.handoff {
-                    "/run/ciproxy/assignment.sock"
+                    self.platform.assignment_socket()
                 } else {
                     ""
                 },
@@ -131,7 +139,7 @@ impl Runner for LinuxRunner {
                     },
                     line = running.output.next_line(), if running.output_open => {
                         match line.context("read runner readiness")? {
-                            Some(line) if !running.ready && line.ends_with(": Listening for Jobs") => {
+                            Some(line) if !running.ready && line.trim_end().ends_with(": Listening for Jobs") => {
                                 running.ready = true;
                                 return Ok(RunnerEvent::Ready);
                             }

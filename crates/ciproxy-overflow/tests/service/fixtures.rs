@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use ciproxy_overflow::api::StartRequest;
 use ciproxy_overflow::provider::{AccountFacts, Capabilities};
 use ciproxy_protocol::identifiers::{LabelName, OrganizationId};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
@@ -81,6 +82,7 @@ pub(super) fn request() -> StartRequest {
         label_id: id(4),
         scale_set_id: id(5),
         action: StartRunner {
+            platform: Platform::LinuxX64,
             target: RegistrationTarget {
                 organization_id: OrganizationId(id(3).to_string()),
                 label_id: id(4).to_string(),

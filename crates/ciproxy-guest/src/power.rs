@@ -1,23 +1,25 @@
-//! End an own-machine Firecracker VM or leave Boat cleanup to its provider.
+//! End an own-machine VM or leave Boat cleanup to its provider.
 
 use async_trait::async_trait;
 use tokio::process::Command;
 
 use crate::boundary::Power;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::platform::Platform;
 
 #[cfg_attr(test, unimock::unimock(api = ShutdownCommandMock))]
 #[async_trait]
 pub(crate) trait ShutdownCommand: Send {
-    async fn run(&mut self, program: &str) -> Result<bool>;
+    async fn run(&mut self, program: &str, arguments: &[&str]) -> Result<bool>;
 }
 
-pub(crate) struct LinuxShutdownCommand;
+pub(crate) struct SystemShutdownCommand;
 
 #[async_trait]
-impl ShutdownCommand for LinuxShutdownCommand {
-    async fn run(&mut self, program: &str) -> Result<bool> {
+impl ShutdownCommand for SystemShutdownCommand {
+    async fn run(&mut self, program: &str, arguments: &[&str]) -> Result<bool> {
         Ok(Command::new(program)
+            .args(arguments)
             .status()
             .await
             .context("end job VM")?
@@ -25,14 +27,16 @@ impl ShutdownCommand for LinuxShutdownCommand {
     }
 }
 
-pub(crate) struct LinuxPower {
+pub(crate) struct VmPower {
+    pub(crate) platform: Platform,
     pub(crate) command: Box<dyn ShutdownCommand>,
 }
 
 #[async_trait]
-impl Power for LinuxPower {
+impl Power for VmPower {
     async fn shutdown(&mut self) -> Result<()> {
-        if self.command.run("/sbin/reboot").await? {
+        let (program, arguments) = self.platform.end_command();
+        if self.command.run(program, arguments).await? {
             Ok(())
         } else {
             Err(Error::PoweroffFailed)

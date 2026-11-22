@@ -19,16 +19,7 @@ pub(crate) trait Commands: Send + Sync {
     async fn unit(&self, name: &str) -> Result<UnitState>;
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-/// Unit status used to preserve live VMs and reclaim exited VMs.
-pub enum UnitState {
-    /// The unit process is live or starting.
-    Active,
-    /// The unit process exited with this code.
-    Exited(i32),
-    /// No loaded unit has this locally generated name.
-    Absent,
-}
+pub use crate::unit_state::UnitState;
 
 pub(crate) struct LinuxCommands;
 

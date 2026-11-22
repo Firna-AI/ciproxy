@@ -7,6 +7,7 @@ pub mod guest;
 pub mod identifiers;
 pub mod images;
 pub mod jobs;
+pub mod platform;
 pub mod reports;
 pub mod resources;
 pub mod runners;

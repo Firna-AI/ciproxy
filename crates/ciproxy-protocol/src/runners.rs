@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::identifiers::{ImageId, JobId, LabelName, OrganizationId, RunnerId};
+use crate::platform::Platform;
 use crate::resources::VmSize;
 use crate::secret::Secret;
 
@@ -17,6 +18,8 @@ pub struct RunnerSpec {
     pub organization_id: OrganizationId,
     /// Label whose jobs this runner can take.
     pub label: LabelName,
+    /// The label's platform, which must match the machine's platform.
+    pub platform: Platform,
     /// Original label resources, with disk measured as free job bytes.
     pub size: VmSize,
     /// Just-in-time registration valid for one runner only.

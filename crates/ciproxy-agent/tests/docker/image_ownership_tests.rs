@@ -13,7 +13,7 @@ use crate::image_registry::ImageRegistry;
 use crate::image_space::ImageSpaceMock;
 use crate::image_store::{ImageStore, LinuxImageStore};
 use crate::layout::Layout;
-use crate::runtime_ownership::{LinuxRuntimeClaims, RuntimeClaims, RuntimeWaitNoticeMock};
+use crate::runtime_ownership::{FileRuntimeClaims, RuntimeClaims, RuntimeWaitNoticeMock};
 
 #[test]
 fn preclaimed_runtime_initializes_images_and_stays_locked_through_recovery() {
@@ -22,7 +22,7 @@ fn preclaimed_runtime_initializes_images_and_stays_locked_through_recovery() {
         data: temporary.layout.data.join("area"),
         ..temporary.layout.clone()
     };
-    let claims = Arc::new(LinuxRuntimeClaims {
+    let claims = Arc::new(FileRuntimeClaims {
         control: temporary.layout.data.clone(),
         notice: Arc::new(Unimock::new(())),
     });
@@ -65,7 +65,7 @@ fn uninstall_waits_for_the_real_runtime_lock_and_notifies_once_without_a_workloa
     let temporary = TemporaryLayout::new();
     let (noticed, notice) = mpsc::channel();
     let finished = noticed.clone();
-    let claims = Arc::new(LinuxRuntimeClaims {
+    let claims = Arc::new(FileRuntimeClaims {
         control: temporary.layout.data.clone(),
         notice: Arc::new(Unimock::new(
             RuntimeWaitNoticeMock::waiting

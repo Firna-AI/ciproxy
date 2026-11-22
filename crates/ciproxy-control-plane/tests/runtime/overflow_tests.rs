@@ -8,6 +8,7 @@ use chrono::Duration;
 use ciproxy_control_plane::boat_callback;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::overflow::record::StartPhase;
@@ -84,6 +85,7 @@ async fn no_eligible_machine_starts_boat_immediately_and_retains_its_original_ro
     assert_eq!(stored.starts[0].required_root_disk_bytes, 80_899_612_672);
     harness.runtime.image = Some(ImageDownload {
         image_id: ImageId("new-larger-image".to_owned()),
+        platform: Platform::LinuxX64,
         download_url: Secret::new("https://images.example/new"),
         sha256: "fixture".to_owned(),
         size_bytes: 1,

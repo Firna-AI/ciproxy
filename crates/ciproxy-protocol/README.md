@@ -20,6 +20,12 @@ as JSON with a `type` tag and snake-case variant names.
 The connection hello carries the same full machine state as later reports.
 Reports include hardware, health, slots, runners, images, cache counts,
 and Docker disk use. The report interval is ten seconds.
+The hardware carries the machine's `Platform`, `linux_x64` or `macos_arm64`,
+and a `Virtualization` result: `available` or the cause of the failure.
+A runner start and an image download name their platform too. The agent
+refuses a mismatch with `platform_mismatch`. A Mac runs at most
+`MACOS_VM_LIMIT`, which is 2, job VMs at a time.
+The optional `openapi` feature also exports `Platform` and `Virtualization`.
 Each cache and Docker section uses `Statistics<T>`: measured figures or an
 unavailable result. Measured fields stay flat beside `status: "measured"`.
 Unavailable sections carry only `status: "unavailable"`.

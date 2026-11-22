@@ -10,8 +10,8 @@ use ciproxy_protocol::reports::MachineReport;
 use ciproxy_protocol::runners::RunnerState;
 use tokio::sync::Mutex;
 
+use crate::boundaries::DockerDisks;
 use crate::boundaries::{Cache, GuestProvenance, Host, Images, Store, Vms};
-use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
 use crate::mode::ModeAction;
 use crate::state::{MachineState, Mode};
@@ -122,7 +122,7 @@ impl Agent for Controller {
                 }
                 continue;
             }
-            self.vms.restore(&vm).await?;
+            self.vms.reattach(&vm).await?;
             if let Err(error) = self.recover_docker(&vm).await {
                 tracing::warn!(%error, "pending Docker recovery will retry");
             }
@@ -147,7 +147,7 @@ impl Agent for Controller {
             {
                 continue;
             }
-            self.vms.restore(&vm).await?;
+            self.vms.reattach(&vm).await?;
             if let Err(error) = self.recover_docker(&vm).await {
                 tracing::warn!(%error, "pending Docker recovery will retry");
             }

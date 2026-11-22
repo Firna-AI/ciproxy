@@ -19,6 +19,7 @@ use uuid::Uuid;
 
 use super::overflow_support::Harness;
 use super::settled::Settled;
+use ciproxy_protocol::platform::Platform;
 
 #[tokio::test]
 async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
@@ -77,6 +78,7 @@ async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
                 label_id: label.id,
                 scale_set_id: set.id,
                 action: StartRunner {
+                    platform: Platform::LinuxX64,
                     target: RegistrationTarget {
                         organization_id: OrganizationId(organization.id.to_string()),
                         label_id: label.id.to_string(),

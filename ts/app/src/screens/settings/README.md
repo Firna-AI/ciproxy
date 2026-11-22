@@ -14,9 +14,14 @@ Organizations tab.
   shows the count of open requests for access on each tab. While the first
   read loads or after it failed, Members shows no count, never 0. A later
   read that fails keeps the last count.
-- Labels lists each label with its size, where its jobs run now, and the
-  jobs of the last 30 days, as the API gives them. A count that the API does
-  not know says so.
+- Labels lists each label with its platform and size, where its jobs run
+  now, and the jobs of the last 30 days, as the API gives them. A count that
+  the API does not know says so.
+- A label has a platform, Linux or macOS, which Add label asks for and Edit
+  shows read-only, as it shows the name. A macOS label runs on the Macs
+  only: its dialog has no switches and no "When nothing fits", and it always
+  sends Boat off and "Wait", which the API requires. Its fit line names
+  Macs. The free disk can have a most value; the API gives none yet.
 - Without a Boat account, the jobs of a label run on the machines only, and
   the dialog keeps the fit of the machines and says that Boat is not
   connected. It never says that a Boat size does not fit before the Boat

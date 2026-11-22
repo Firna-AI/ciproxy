@@ -30,7 +30,7 @@ export const listCopy = {
   legend: { job: "Running a job", warm: "Warm runner", free: "Free" },
   emptyTitle: "Add your first machine",
   emptyBody:
-    "Run one command on a Linux machine. Jobs start there first, and on Boat when it is busy.",
+    "Run one command on a Linux machine or a Mac. Jobs start there first. When it is busy, Linux jobs run on Boat.",
   loading: "Loading machines…",
   subject: "machines",
   refreshTitle: "Unable to refresh machines",
@@ -62,10 +62,11 @@ export const slotCopy = {
   warm: "Warm runner, ready",
   free: "Free",
   freeNoDisk: "Free, no disk for a job",
-  size: (slots: number) =>
-    `${count(slots, "slot", "slots")} of ${unbroken("2 vCPU")} and ${unbroken("8 GB")}. A larger VM size takes several slots.`,
-  fits: (jobs: number) =>
-    `${count(jobs, "job", "jobs")} of ciproxy ${jobs === 1 ? "fits" : "fit"} at a time.`,
+  freeAtVmLimit: (limit: number) => `Free, the Mac runs its ${limit} VMs`,
+  size: (slots: number, vmLimit: number | null = null) =>
+    `${count(slots, "slot", "slots")} of ${unbroken("2 vCPU")} and ${unbroken("8 GB")}${vmLimit === null ? "" : `, and at most ${vmLimit} VMs at once`}. A larger VM size takes several slots.`,
+  fits: (jobs: number, label = "ciproxy") =>
+    `${count(jobs, "job", "jobs")} of ${label} ${jobs === 1 ? "fits" : "fit"} at a time.`,
   offlineBody: "Slots show again when the machine is back.",
   preparingBody: "Slots take jobs when the machine is ready.",
   noSlotsBody: (elsewhere: string) => `No slots. ${elsewhere}`,
@@ -85,6 +86,8 @@ export const elsewhereCopy = {
   machines: (subject: string) => `${subject} run on your other machines.`,
   boat: (subject: string) => `${subject} run on Boat.`,
   wait: (subject: string) => `${subject} wait until a machine can take them.`,
+  macs: (subject: string) =>
+    `${subject} of macOS labels wait until a Mac has a free slot.`,
 } as const;
 
 export const detailCopy = {
@@ -118,19 +121,21 @@ export const noticeCopy = {
       ? "ciproxy lost contact with it."
       : `ciproxy lost contact with it ${since} ago.`,
   offlineCheck: "Check that the machine is on and can reach ciproxy.dev.",
-  noKvmTitle: (host: string) => `${host} cannot start VMs`,
-  noKvm:
-    "ciproxy runs each job in its own VM, which needs KVM. Turn on virtualization for this machine, then run the command again.",
+  noVirtualizationTitle: (host: string) => `${host} cannot start VMs`,
+  macSlotsTitle: (host: string, jobs: number) =>
+    `${host} runs ${count(jobs, "job", "jobs")} at a time`,
+  macSlots: (slots: number, vmLimit: number) =>
+    `Its threads and memory leave room for ${count(slots, "slot", "slots")} after the host reserve. A Mac with more memory runs up to ${vmLimit} jobs at a time.`,
   showCommand: "Show install command",
   noSlotsTitle: (host: string) => `${host} has no slots`,
   noSlots:
     "Its threads and memory leave no room for a job after the host reserve. Use a machine with more threads and memory.",
-  diskLimitTitle: (host: string, jobs: number) =>
-    `Disk limits ${host} to ${count(jobs, "job", "jobs")} of ciproxy at a time`,
-  diskLimit: (vmDisk: string | null, jobDisk: string | null) =>
+  diskLimitTitle: (host: string, jobs: number, label: string) =>
+    `Disk limits ${host} to ${count(jobs, "job", "jobs")} of ${label} at a time`,
+  diskLimit: (vmDisk: string | null, jobDisk: string | null, label: string) =>
     vmDisk === null || jobDisk === null
       ? "Add disk to run more jobs at once."
-      : `With the current image, a job of ciproxy holds ${unbroken(`${vmDisk} GB`)} of disk. The machine has ${unbroken(`${jobDisk} GB`)} for jobs after the VM images and the host reserve. Add disk to run more jobs at once.`,
+      : `With the current image, a job of ${label} holds ${unbroken(`${vmDisk} GB`)} of disk. The machine has ${unbroken(`${jobDisk} GB`)} for jobs after the VM images and the host reserve. Add disk to run more jobs at once.`,
   preparingTitle: (host: string) => `${host} is getting the job image`,
   preparing: "Jobs start on it when it is ready.",
   savedOffline: (host: string) =>
@@ -153,9 +158,9 @@ export const healthCopy = {
   title: "Health",
   lastContact: "Last contact",
   noContact: "No contact yet",
-  kvm: "KVM",
-  kvmReady: "Ready",
-  kvmMissing: "Not available",
+  virtualization: "Virtualization",
+  virtualizationReady: "Ready",
+  virtualizationMissing: "Not available",
   disk: "Disk",
   diskAt: (path: string) => `Disk ${path}`,
   diskFree: (free: string) => `${unbroken(`${free} GB`)} free`,
@@ -166,8 +171,8 @@ export const healthCopy = {
     dotJoin(version, unbroken(`${latest} available`)),
   oldValues: (since: string | null) =>
     since === null
-      ? "KVM, disk, and agent show the values of the last contact."
-      : `KVM, disk, and agent show the values of the last contact, ${since} ago.`,
+      ? "Virtualization, disk, and agent show the values of the last contact."
+      : `Virtualization, disk, and agent show the values of the last contact, ${since} ago.`,
 } as const;
 
 export const cacheCopy = {
@@ -245,8 +250,10 @@ export const addCopy = {
     `Run this command on the new machine. It installs the ciproxy agent and connects the machine to ${workspace}.`,
   waiting: "Waiting for the machine to connect…",
   connected: (host: string) => `${host} connected`,
-  diskHolds: (jobs: number) =>
-    `Its disk holds ${count(jobs, "job", "jobs")} of ciproxy at a time.`,
+  diskHolds: (jobs: number, label: string) =>
+    `Its disk holds ${count(jobs, "job", "jobs")} of ${label} at a time.`,
+  macJobs: (vmLimit: number) =>
+    `It runs the jobs of macOS labels, at most ${vmLimit} at a time.`,
 } as const;
 
 /**

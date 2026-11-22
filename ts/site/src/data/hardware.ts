@@ -60,6 +60,18 @@ export function machineConcurrentJobs(
   );
 }
 
+/** The most job VMs that a Mac runs at a time: Apple allows 2 macOS VMs. */
+export const macosVmLimit = 2;
+
+/**
+ * A Mac Studio with 16 cores and 64 GB: its slots follow the rule of a Linux
+ * machine, but it runs at most 2 job VMs at a time.
+ */
+export const macStudio: Pick<Hardware, "threads" | "memoryGb"> = {
+  threads: 16,
+  memoryGb: 64,
+};
+
 /** A new Hetzner AX42, as the Hetzner page lists it. */
 export const ax42: Hardware = {
   cpu: "AMD Ryzen 7 PRO 8700GE",

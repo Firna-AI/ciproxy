@@ -15,6 +15,18 @@ import {
 } from "./format.ts";
 import { imageCopy } from "./machines-copy.ts";
 import { machineStatus, otherMachineTakesJobs } from "./machines.ts";
+import { macJobsLine } from "./machines-capacity.ts";
+import {
+  canStartVms,
+  defaultLabelName,
+  isMac,
+  virtualizationProblem,
+} from "./platform.ts";
+
+/** The most job VMs of a machine at once: 2 on a Mac, else no limit. */
+function vmLimitOf(machine: MachineView): number {
+  return machine.vm_limit ?? Infinity;
+}
 
 export type StepStatus = "done" | "active" | "todo" | "skipped";
 
@@ -54,8 +66,8 @@ export type SetupModel = {
   total: number;
   complete: boolean;
   connected: ConnectedMachine | null;
-  /** The name of a machine that joined without KVM. */
-  noKvm: string | null;
+  /** A machine that joined but cannot start job VMs, with the fix. */
+  cannotStartVms: { host: string; fix: string } | null;
   /** Organizations whose App GitHub suspended. */
   suspended: readonly string[];
   job: FirstJob;
@@ -120,15 +132,17 @@ export function connectedMachine(machine: MachineView): ConnectedMachine {
   return {
     name: machine.hostname,
     facts: [
-      countText(machine.threads, "thread", "threads"),
+      isMac(machine)
+        ? countText(machine.threads, "core", "cores")
+        : countText(machine.threads, "thread", "threads"),
       formatGigabytes(machine.memory_bytes),
-      "KVM ready",
+      isMac(machine) ? "Virtualization ready" : "KVM ready",
       countText(machine.slots, "slot", "slots"),
     ].join(" · "),
     diskNote:
-      atOnce !== null && atOnce < machine.slots
-        ? `Its disk holds ${countText(atOnce, "job", "jobs")} of ciproxy at a time.`
-        : null,
+      atOnce !== null && atOnce < Math.min(machine.slots, vmLimitOf(machine))
+        ? `Its disk holds ${countText(atOnce, "job", "jobs")} of ${defaultLabelName(machine)} at a time.`
+        : macJobsLine(machine),
     preparing: machineStatus(machine) === "preparing",
   };
 }
@@ -179,7 +193,7 @@ export function setupComplete(
 ): boolean {
   return (
     setup.organizations.some((item) => item.state === "active") &&
-    machines.some((machine) => machine.kvm) &&
+    machines.some(canStartVms) &&
     firstJob(setup.first_job).kind === "finished"
   );
 }
@@ -199,8 +213,12 @@ export function setupModel(
   const suspended = setup.organizations
     .filter((item) => item.state === "suspended")
     .map((item) => item.login);
-  const ready = machines.find((machine) => machine.kvm);
-  const noKvm = ready === undefined ? (machines[0]?.hostname ?? null) : null;
+  const ready = machines.find(canStartVms);
+  const blocked = ready === undefined ? machines[0] : undefined;
+  const fix =
+    blocked === undefined
+      ? null
+      : virtualizationProblem(blocked.virtualization);
   const job = firstJob(setup.first_job);
   const githubDone = active.length > 0;
   const machineDone = ready !== undefined && !holdMachine;
@@ -226,7 +244,7 @@ export function setupModel(
       status: machineDone ? "done" : "active",
       summary: ready
         ? machineSummary(ready)
-        : "Run one command on a Linux machine.",
+        : "Run one command on a Linux machine or a Mac.",
     },
     {
       key: "boat",
@@ -251,7 +269,10 @@ export function setupModel(
     total: steps.length,
     complete: githubDone && machineDone && jobDone,
     connected: ready === undefined ? null : connectedMachine(ready),
-    noKvm,
+    cannotStartVms:
+      blocked === undefined || fix === null
+        ? null
+        : { host: blocked.hostname, fix },
     suspended,
     job,
     imageWait: imageWait(setup, ready, machines, boat),

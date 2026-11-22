@@ -8,9 +8,9 @@ use crate::error::{ErrorResultExt, Result};
 pub(crate) const ENDPOINT_PATH: &str = "/var/lib/ciproxy/agent-url";
 pub(crate) const PENDING_ENDPOINT_PATH: &str = "/var/lib/ciproxy/agent-url.pending";
 
-pub(crate) struct LinuxEndpointFiles;
+pub(crate) struct ControlEndpointFiles;
 
-impl EndpointFiles for LinuxEndpointFiles {
+impl EndpointFiles for ControlEndpointFiles {
     fn environment(&self) -> Result<Option<String>> {
         match std::env::var("CIPROXY_AGENT_URL") {
             Ok(value) => Ok(Some(value)),

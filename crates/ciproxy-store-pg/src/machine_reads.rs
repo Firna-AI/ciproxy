@@ -46,13 +46,12 @@ pub(crate) fn load_machines(
             .or_default()
             .push(disk(row));
     }
-    Ok(rows
-        .into_iter()
+    rows.into_iter()
         .map(|row| {
             let disks = by_machine.remove(&row.id()).unwrap_or_default();
             row.into_record(disks)
         })
-        .collect())
+        .collect()
 }
 
 /// Read one complete machine back after an authenticated contact write.
@@ -75,7 +74,7 @@ pub(crate) fn load_machine(
         .select(DiskRow::as_select())
         .load::<DiskRow>(connection)
         .store()?;
-    Ok(row.into_record(disks.into_iter().map(disk).collect()))
+    row.into_record(disks.into_iter().map(disk).collect())
 }
 
 /// Add every active machine's full report through one workspace report query.

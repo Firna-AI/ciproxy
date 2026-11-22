@@ -137,6 +137,8 @@ impl ScaleSetApi for Resources {
             "ciproxy" => self.base_id.load(Ordering::SeqCst),
             "ciproxy-4vcpu" => 59,
             "ciproxy-8vcpu" => 61,
+            "ciproxy-macos" => 67,
+            "ciproxy-macos-4vcpu" => 71,
             _ => return Err(Error::AccessUnavailable(422)),
         };
         let mut names = self.names.lock().unwrap();

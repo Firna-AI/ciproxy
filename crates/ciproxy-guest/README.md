@@ -1,7 +1,9 @@
 # ciproxy-guest
 
 Run one GitHub Actions runner in a fresh ciproxy job image.
-The binary runs inside the job VM or Boat sandbox.
+The binary runs inside the Linux job VM, the macOS job VM, or the Boat
+sandbox. It builds for `x86_64-unknown-linux-gnu` and
+`aarch64-apple-darwin`.
 The own-machine agent uses `ciproxy-protocol` to configure it.
 This crate has the Apache-2.0 licence in [LICENSE](LICENSE).
 
@@ -15,6 +17,9 @@ The only workspace dependency is `ciproxy-protocol`.
 ## What This Crate Does
 
 In `vsock` mode, listen on the configured guest port.
+On Linux, the agent connects through Firecracker's vsock device. On macOS,
+it connects through the virtio socket device of Virtualization.framework.
+Both use the same port, 5252, and the same messages.
 Exchange newline-delimited JSON using `AgentToGuest` and `GuestToAgent`.
 Send `Hello`, then wait for `ConfigureRunner` or `Shutdown`.
 `Hello` carries `configuration_received`. It is true after receipt, also in
@@ -32,8 +37,17 @@ Firecracker ends its x86 process on that reset instead of booting again.
 Guest `poweroff` leaves that process alive because x86 Firecracker has no
 ACPI power control. See the [Firecracker shutdown contract][shutdown].
 The image's systemd unit also requests shutdown after initialization fails.
+A macOS guest powers off with `shutdown -h now` instead, because a reboot
+starts a Virtualization.framework VM again. The agent sees the VM stop.
+The [macOS start script](../../image/macos/guest/start.sh) also powers off
+after the guest ends for any reason.
 
 The listener runs as the `runner` account through `runuser`.
+`--runner-account` names another account.
+macOS has no `runuser`. There, `launchctl asuser` starts the listener in the
+account's launchd domain, so per-user services such as the simulator and
+the keychain are reachable. Then `sudo` changes the account. It keeps only
+the JIT registration and the assignment socket value.
 The guest clears its own service environment for this start.
 It passes only the JIT registration and the assignment socket value.
 `runuser` sets `HOME`, `USER`, `LOGNAME`, and `SHELL` from the account.
@@ -41,6 +55,8 @@ The image's [entry script](../../image/runner-entry.sh) then loads
 `/etc/profile`, exports `/etc/environment`, and loads the account's own
 `.profile`, in that order.
 Jobs therefore keep the image tool `PATH` and the account's additions.
+The [macOS entry script](../../image/macos/guest/runner-entry.sh) loads
+`/etc/profile` and then the account's `.bash_profile` or `.profile`.
 
 Handle `Shutdown` while the runner waits.
 A second configuration starts no second runner, because each guest runs one
@@ -71,6 +87,12 @@ lifetime.
 
 Before the runner can take its one job, the guest measures the proxy URL on
 Docker's actual bridge and the preloaded Docker bytes.
+A macOS image has no Docker. Its steps run in the VM itself, so the proxy
+listens on `127.0.0.1:8230`, and the guest reports that URL and 0 Docker
+bytes. A macOS guest ignores a Docker disk attachment and reports it as not
+attached.
+The assignment socket is `/run/ciproxy/assignment.sock` on Linux and
+`/var/run/ciproxy/assignment.sock` on macOS.
 The pinned runner source hook reads the original assignment before action
 setup. It sends the job UUID, original runtime credentials, and effective
 cache rights over a private Unix socket, in handoff format 2.
@@ -118,6 +140,10 @@ ciproxy-guest --image-id IMAGE_ID vsock --port 5252
 ```
 
 The agent must use the same guest port.
+A macOS image starts the same interface from the launchd daemon
+`dev.ciproxy.guest`, with `--runner-account`. The
+[macOS guest guide](../../image/macos/guest/README.md) gives its install
+steps.
 The Boat snapshot starts its guest with this interface:
 
 ```sh
@@ -166,9 +192,11 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [src/handoff.rs](src/handoff.rs) prepares the in-memory proxy.
 - [src/process.rs](src/process.rs) starts the listener as the runner
   account, drains its output, and controls its group.
-- [src/power.rs](src/power.rs) requests the Firecracker reset or leaves the
-  end of a Boat sandbox to the control plane.
-- [src/cli.rs](src/cli.rs) composes the selected Linux runtime.
+- [src/power.rs](src/power.rs) requests the Firecracker reset or the macOS
+  power-off, or leaves the end of a Boat sandbox to the control plane.
+- [src/platform.rs](src/platform.rs) holds the paths and commands that
+  differ between Linux and macOS.
+- [src/cli.rs](src/cli.rs) composes the runtime of the build platform.
 - [src/_tests_/service_tests.rs](src/_tests_/service_tests.rs) protects the
   lifecycle requirements.
 - [tests/assignment_socket.rs](tests/assignment_socket.rs)

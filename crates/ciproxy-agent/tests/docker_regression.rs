@@ -65,6 +65,8 @@ mod sparse_copy;
 mod state;
 #[path = "../src/storage_sizing.rs"]
 mod storage_sizing;
+#[path = "../src/unit_state.rs"]
+mod unit_state;
 #[path = "../src/vm_drives.rs"]
 mod vm_drives;
 #[path = "../src/workload_space.rs"]

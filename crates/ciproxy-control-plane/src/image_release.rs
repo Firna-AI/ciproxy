@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
 use reqwest::Client;
 use serde::Deserialize;
@@ -90,6 +91,7 @@ impl ImageReleases for CdnReleases {
         let downloads: Downloads = self.read(&format!("{directory}/downloads.json")).await?;
         let download = ImageDownload {
             image_id: manifest.image_id,
+            platform: Platform::LinuxX64,
             download_url: Secret::new(format!(
                 "{}/{}/{}",
                 self.prefix.trim_end_matches('/'),

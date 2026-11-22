@@ -1,8 +1,8 @@
 // The dialog that adds a label or edits one. While the person types, it
 // asks the API how many jobs of the size fit on each machine. A save goes to
 // GitHub first for a new name, and the dialog shows the refusal of GitHub
-// under the name. An edit keeps the name, and every label but `ciproxy`
-// offers Delete label, which a rename uses with a new label.
+// under the name. An edit keeps the name and the platform, and every label
+// but `ciproxy` offers Delete label, which a rename uses with a new label.
 
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -21,6 +21,7 @@ import {
   editDraft,
   labelFailure,
   newDraft,
+  noLimits,
   type LabelDraft,
   type SizeField,
 } from "../../view/settings-label-form.ts";
@@ -61,7 +62,11 @@ export function LabelDialog({
   const previewState = useValue(preview.state);
   useEffect(() => () => preview.stop(), [preview]);
 
-  const check = checkDraft(draft);
+  // The API gives no most free disk of a label yet. When it gives the free
+  // space of the macOS image, as `free_job_bytes`, the limits of a macOS
+  // draft come from it.
+  const limits = noLimits;
+  const check = checkDraft(draft, limits);
   const key = check.ok ? fitKey(check.input) : null;
   // Each change of the parts in `key` enters the preview store, which ends
   // the earlier work and decides between the shown fit and a new ask.
@@ -161,6 +166,7 @@ export function LabelDialog({
         <LabelForm
           draft={draft}
           edit={saved !== null}
+          maxDiskGb={limits.maxDiskGb}
           nameError={nameError}
           sizeErrors={sizeErrors}
           fit={<LabelFitLine check={check} preview={previewState} />}

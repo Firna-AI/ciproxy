@@ -9,6 +9,8 @@
 mod error;
 #[path = "../src/process.rs"]
 mod process;
+#[path = "../src/unit_state.rs"]
+mod unit_state;
 #[path = "../src/vm_root.rs"]
 mod vm_root;
 

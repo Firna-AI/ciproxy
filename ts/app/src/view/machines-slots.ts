@@ -13,10 +13,16 @@ import type {
   SlotState,
   SlotView,
 } from "../api/schema.ts";
-import { slotCopy } from "./machines-copy.ts";
+import { elsewhereCopy, slotCopy } from "./machines-copy.ts";
 import { formatRuntime } from "./machines-format.ts";
 import { concurrentJobs } from "./machines-capacity.ts";
-import { elsewhereText, machineStatus, slotEntries } from "./machines.ts";
+import {
+  countRunners,
+  elsewhereText,
+  machineStatus,
+  slotEntries,
+} from "./machines.ts";
+import { defaultLabelName, isMac } from "./platform.ts";
 
 /** The dashboard job of a busy slot. `id` is its canonical identity. */
 export type SlotJob = {
@@ -100,7 +106,14 @@ function slotsWithoutDisk(machine: MachineView): number {
   return Math.max(0, machine.slots - Number(byDisk));
 }
 
+/** The VMs that run: one for each job and warm runner, also over slots. */
+function runningVms(machine: MachineView): number {
+  return countRunners(machine, "job") + countRunners(machine, "warm");
+}
+
 function slotRows(machine: MachineView, entries: SlotView[]): SlotRow[] {
+  const vmLimit = machine.vm_limit ?? null;
+  const atLimit = vmLimit !== null && runningVms(machine) >= vmLimit;
   const free = entries.filter((slot) => slot.state === "free");
   const without = Math.min(free.length, slotsWithoutDisk(machine));
   const noDisk = new Set(
@@ -113,9 +126,11 @@ function slotRows(machine: MachineView, entries: SlotView[]): SlotRow[] {
         ? (job?.name ?? slotCopy.job)
         : slot.state === "warm"
           ? slotCopy.warm
-          : noDisk.has(slot.index)
-            ? slotCopy.freeNoDisk
-            : slotCopy.free;
+          : atLimit && vmLimit !== null
+            ? slotCopy.freeAtVmLimit(vmLimit)
+            : noDisk.has(slot.index)
+              ? slotCopy.freeNoDisk
+              : slotCopy.free;
     return {
       key: slot.index,
       label: slotCopy.row(Number(slot.index) + 1),
@@ -142,7 +157,10 @@ export function slotsModel(
     };
   }
   if (status === "no-slots") {
-    const elsewhere = elsewhereText(machine, machines, summary);
+    // A Mac runs macOS jobs only, which never run on Boat.
+    const elsewhere = isMac(machine)
+      ? elsewhereCopy.macs(elsewhereCopy.jobs)
+      : elsewhereText(machine, machines, summary);
     return {
       kind: "message",
       text: slotCopy.noSlotsBody(elsewhere),
@@ -158,7 +176,7 @@ export function slotsModel(
     kind: "slots",
     states: entries.map((slot) => slot.state),
     rows: slotRows(machine, entries),
-    caption: slotCopy.size(machine.slots),
-    fits: jobs === null ? null : slotCopy.fits(jobs),
+    caption: slotCopy.size(machine.slots, machine.vm_limit ?? null),
+    fits: jobs === null ? null : slotCopy.fits(jobs, defaultLabelName(machine)),
   };
 }

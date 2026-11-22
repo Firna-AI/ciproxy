@@ -1,5 +1,6 @@
 //! Trusted prepared machine capacity supplied by the hosted runtime.
 
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::Slots;
 use ciproxy_store_interface::gateway::MachineSnapshot;
 use unimock::unimock;
@@ -27,4 +28,11 @@ pub trait MachineCapacity: Send + Sync {
         snapshot: &MachineSnapshot,
         requested_free_disk_bytes: u64,
     ) -> Option<u64>;
+}
+
+/// Limit a count of concurrent job VMs to the VM limit of the platform.
+///
+/// A Mac runs at most 2 job VMs, whatever its slots and job disk hold.
+pub(crate) fn platform_vms(platform: Platform, count: u64) -> u64 {
+    platform.vm_limit().map_or(count, |limit| count.min(limit))
 }

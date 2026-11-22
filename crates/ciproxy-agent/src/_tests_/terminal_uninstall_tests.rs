@@ -10,10 +10,11 @@ use crate::area::DiskAreaMock;
 use crate::boundaries::{Images, ServiceMock, StoreMock, VmsMock};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::fixtures::{controller, identity};
-use crate::host_preparation::{FinalUninstall, HostPreparation, Uninstall};
+use crate::host_preparation::{FinalUninstall, HostPreparation};
 use crate::host_tools::ToolsMock;
 use crate::images::ManagedImages;
 use crate::network_fixtures::{restored, saving};
+use crate::preparation::Uninstall;
 use crate::state::{MachineState, Mode};
 
 use self::terminal_image_fixtures::storage;

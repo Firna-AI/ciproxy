@@ -87,6 +87,16 @@ backend must give ciproxy.
 
 ## Overflow runners
 
+- Only the jobs of Linux labels overflow to Boat.
+- A job of a [macOS label](labels.md#platform) never runs on Boat. It waits
+  for a Mac of the workspace, also when overflow is on and the Macs are
+  busy.
+- **Decision:** macOS jobs never overflow. Rejected: cloud Macs as a second
+  backend, because cloud Macs that rent by API bill 24 hours at minimum
+  under Apple's licence, so per-minute macOS overflow is not possible.
+  Reason: this holds from the MVP foundation plan of 3 November 2026.
+- The [spend limit](#spend-limit) and the overflow wait never apply to a
+  macOS job.
 - Each sandbox runs one runner, which takes one job.
 - Each sandbox has the cheapest Boat size that covers the label's vCPU,
   memory, and complete VM root allocation.

@@ -54,10 +54,11 @@ node ts/app/scripts/harness-server.ts --port=4340
 pages and the Settings tabs, with the same `--port` option, by default 4341.
 It also answers the reads of History, a job, and Plans that those pages link
 to. `POST /__fixture/control` with a JSON `scenario` sets its fixture state,
-and `m20-harness-state.ts` lists its scenario names. With `holdMachines` set
-to `true`, each read of the machines waits. A control that sets it to `false`
-or names a scenario lets each waiting read answer. Any other value of
-`holdMachines` gets status 400 and changes nothing.
+and `m20-harness-state.ts` lists its scenario names. The `macs` scenario adds
+three Macs and the default macOS labels of `m20-fixtures-macs.ts`. With
+`holdMachines` set to `true`, each read of the machines waits. A control that
+sets it to `false` or names a scenario lets each waiting read answer. Any
+other value of `holdMachines` gets status 400 and changes nothing.
 
 ```sh
 npm --prefix ts run app:export

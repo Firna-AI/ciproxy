@@ -12,6 +12,10 @@ the release workflow and local smoke checks. Run it from the repository
 root. The [packaging guide](../development.md#release-packaging) gives the
 build, glibc check, and archive commands.
 
+[macos-release.sh](macos-release.sh) signs, notarizes, and checks the macOS
+agent. [macOS signing](../updates-and-releases.md#macos-signing) gives its
+inputs.
+
 ## Job image wait
 
 Each live smoke in this folder runs real GitHub jobs on the machine. Before

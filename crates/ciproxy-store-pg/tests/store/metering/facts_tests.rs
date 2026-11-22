@@ -1,5 +1,6 @@
 //! Workspace-scoped facts and exact cost-history persistence.
 
+use ciproxy_protocol::platform::Virtualization;
 use std::sync::Arc;
 
 use chrono::Duration;
@@ -24,7 +25,7 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
     let foreign = database.organization(&other);
     let mut own = machine();
     own.draining = true;
-    own.kvm_available = false;
+    own.virtualization = Virtualization::KvmUnavailable;
     own.last_contact_at = None;
     database.store.create_machine(workspace.id, &own).unwrap();
     database.store.create_machine(other.id, &machine()).unwrap();

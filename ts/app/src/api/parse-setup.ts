@@ -22,6 +22,7 @@ import {
   readPlacement,
 } from "./parse-label-facts.ts";
 import { readActivation } from "./parse-links.ts";
+import { readPlatform } from "./parse-platform.ts";
 import {
   readProfile,
   readRepositoryCounts,
@@ -106,9 +107,12 @@ export function readLabelFit(value: unknown): LabelFit {
   };
 }
 
+/** A label; an absent platform means Linux, as the API says. */
 function labelInput(value: unknown): LabelInput {
   const fields = object(value, "label");
+  const platform = optional(fields.platform, readPlatform);
   return {
+    ...(platform === null ? {} : { platform }),
     allow_boat: boolean(fields.allow_boat),
     allow_machines: boolean(fields.allow_machines),
     disk_gb: integer(fields.disk_gb),

@@ -2,9 +2,14 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::machines::{machine_disks, machines};
+use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::machines::{Machine, MachineDisk};
 use diesel::prelude::*;
 use uuid::Uuid;
+
+use crate::platform_text::{
+    parse_platform, parse_virtualization, platform_text, virtualization_text,
+};
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset)]
 #[diesel(table_name = machines, treat_none_as_null = true)]
@@ -15,7 +20,9 @@ pub(crate) struct MachineRow {
     processor: String,
     hardware_threads: i32,
     memory_bytes: i64,
-    kvm_available: bool,
+    #[diesel(skip_update)]
+    platform: String,
+    virtualization: String,
     slots: i32,
     warm_runners: i32,
     draining: bool,
@@ -47,7 +54,8 @@ impl MachineRow {
             processor: machine.processor.clone(),
             hardware_threads: machine.hardware_threads,
             memory_bytes: machine.memory_bytes,
-            kvm_available: machine.kvm_available,
+            platform: platform_text(machine.platform).to_owned(),
+            virtualization: virtualization_text(machine.virtualization).to_owned(),
             slots: machine.slots,
             warm_runners: machine.warm_runners,
             draining: machine.draining,
@@ -57,14 +65,15 @@ impl MachineRow {
         }
     }
 
-    pub(crate) fn into_record(self, disks: Vec<MachineDisk>) -> Machine {
-        Machine {
+    pub(crate) fn into_record(self, disks: Vec<MachineDisk>) -> Result<Machine> {
+        Ok(Machine {
             id: self.id,
             hostname: self.hostname,
             processor: self.processor,
             hardware_threads: self.hardware_threads,
             memory_bytes: self.memory_bytes,
-            kvm_available: self.kvm_available,
+            platform: parse_platform(&self.platform)?,
+            virtualization: parse_virtualization(&self.virtualization)?,
             slots: self.slots,
             warm_runners: self.warm_runners,
             draining: self.draining,
@@ -72,6 +81,6 @@ impl MachineRow {
             agent_version: self.agent_version,
             disks,
             removed_at: self.removed_at,
-        }
+        })
     }
 }

@@ -31,6 +31,8 @@ mod network_rules;
 mod process;
 #[path = "../../src/state.rs"]
 mod state;
+#[path = "../../src/unit_state.rs"]
+mod unit_state;
 #[path = "../../src/vm_config.rs"]
 mod vm_config;
 #[path = "../../src/vm_drives.rs"]

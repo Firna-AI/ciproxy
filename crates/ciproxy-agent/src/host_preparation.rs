@@ -1,4 +1,4 @@
-//! Host preparation and uninstall routing have explicit mockable entry points.
+//! Linux host preparation and the uninstall of the owned area and identity.
 
 use std::sync::Arc;
 
@@ -10,18 +10,10 @@ use crate::boundaries::{Images, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, Result};
 use crate::host_packages::Packages;
-use crate::host_system::repair;
 use crate::host_tools::Tools;
+use crate::preparation::{Preparation, Uninstall, UninstallState, stage_error};
 use crate::runtime_ownership::RuntimeOwner;
 use crate::terminal_completion::{CompletionAction, UninstallCleanup};
-
-#[cfg_attr(test, unimock::unimock(api = PreparationMock))]
-#[async_trait]
-pub(crate) trait Preparation: Send + Sync {
-    async fn prepare(&self) -> Result<()>;
-    async fn verify(&self) -> Result<()>;
-    async fn remove(&self) -> Result<()>;
-}
 
 pub(crate) struct HostPreparation {
     pub(crate) files: Arc<dyn AreaFiles>,
@@ -82,33 +74,6 @@ fn stage(result: Result<()>, component: &'static str, action: &'static str) -> R
         Ok(()) => Ok(()),
         Err(error) => Err(stage_error(error, component, action)),
     }
-}
-
-pub(crate) fn stage_error(error: Error, component: &'static str, action: &'static str) -> Error {
-    match error {
-        error @ Error::Preparation { .. } => error,
-        error => {
-            tracing::warn!(%error, component, "host preparation needs repair");
-            repair(component, action)
-        }
-    }
-}
-
-#[async_trait]
-pub(crate) trait Uninstall: Send + Sync {
-    /// Remove an empty machine or prepare its recorded VMs for draining.
-    async fn start(&self) -> Result<UninstallState>;
-    /// Remove the area and identity only after every recorded VM finishes.
-    async fn finish(&self) -> Result<()>;
-}
-
-/// Cleanup completes immediately without VMs or waits for their drain loop.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum UninstallState {
-    /// Guarded cleanup removed the empty machine.
-    Complete,
-    /// The caller must drain recorded VMs and then finish cleanup.
-    Draining,
 }
 
 pub(crate) struct FinalUninstall {

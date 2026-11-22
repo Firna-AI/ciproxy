@@ -15,7 +15,7 @@ use unimock::Unimock;
 use crate::fixtures::vm;
 use crate::layout::Layout;
 
-use super::{Channel, Guests, LinuxGuests};
+use super::{Channel, GuestChannels, Guests};
 
 struct OpenGuest(Arc<AtomicBool>);
 
@@ -29,7 +29,7 @@ impl Drop for OpenGuest {
 async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
     let mock = Arc::new(Unimock::new(()));
     let (events, _event_rx) = mpsc::channel(1);
-    let guests = LinuxGuests::new(
+    let guests = GuestChannels::new(
         Layout {
             data: PathBuf::from("/fixture"),
             firecracker: PathBuf::from("/tools/firecracker"),

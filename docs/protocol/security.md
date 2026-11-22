@@ -231,6 +231,45 @@ GitHub permissions, keys, isolation, and job data.
   [Trusted write-back](cache.md#trusted-write-back), and
   [Docker disks](cache.md#docker-disks).
 
+### Job isolation on a Mac
+
+- The rules of [Job isolation](#job-isolation) hold on a Mac too.
+- A macOS job VM uses the NAT network of Virtualization.framework. Its
+  traffic passes the host bridge of that network, such as `bridge100`.
+- The agent loads pf rules for that bridge. They block each packet from a
+  job VM to these addresses:
+  - each address of the host of the Mac
+  - the private ranges, link-local, `100.64.0.0/10`, and the other reserved
+    ranges that a Linux job VM cannot reach
+  - each IPv6 address
+- The rules allow the DNS and the DHCP of the NAT network, and the
+  [machine cache](cache.md#cache-tiers) of the Mac.
+- So a macOS job VM reaches the internet, DNS, and its machine cache only.
+- The rules also keep the two job VMs of a Mac apart.
+- The spike proved the rules for the host, the private ranges, link-local,
+  `100.64.0.0/10`, and IPv6. It did not test traffic between two job VMs,
+  so the agent work must prove it.
+- **Decision:** the pf rules block all IPv6 from the job VMs. Reason: in
+  the spike, a job VM reached the host over IPv6 link-local without this
+  rule. Rejected: IPv6 rules that allow only the internet, because the
+  spike proved only the block of all IPv6, and each IPv6 rule is one more
+  way out.
+- **Decision:** a Mac isolates its job VMs with pf on the bridge of the NAT
+  network of Virtualization.framework. Rejected: a network stack of our
+  own in the agent, because the NAT network with pf passed the spike.
+- The macOS image turns off System Integrity Protection (SIP) in the guest,
+  as the GitHub macOS runner images do. The upstream build of the image
+  writes the system TCC database, and SIP blocks that write.
+- So a job can change the system files of its job VM. This is safe,
+  because each job VM is fresh and the agent never uses its disk again, and
+  because the pf rules of the host, outside the guest, isolate it.
+- **Decision:** the macOS image keeps SIP off in the guest. Rejected: SIP
+  on, because the upstream scripts of the GitHub runner images could then
+  not set up the image. Reason: the isolation comes from the host and from
+  the fresh VM, not from the guest.
+- The agent removes its pf rules when it is uninstalled, and it keeps every
+  other pf rule of the Mac.
+
 ## Secrets and job data
 
 - Code and secrets go from GitHub straight to the runner.

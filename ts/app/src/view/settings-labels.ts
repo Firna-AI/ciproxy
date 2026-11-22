@@ -1,11 +1,14 @@
-// The Labels tab: each label with its size, where its jobs run now, and the
-// jobs that it ran in the last 30 days. The placement, the count, and whether
+// The Labels tab: each label with its platform and size, where its jobs run
+// now, and the
+// jobs that it ran in the last 30 days. A macOS label runs on the Macs only.
+// The placement, the count, and whether
 // the workspace has a Boat account come from the API; the switches of a label
 // only choose the words of a wait. When the API knows the fit of the machines
 // but not the Boat fit, the row names both. The fit of the label dialog is in
 // settings-label-fit.ts.
 
 import type { LabelFit, LabelInput, LabelView } from "../api/schema.ts";
+import { isMacLabel, labelPlatform, platformName } from "./platform.ts";
 
 /**
  * The one label that cannot be deleted, because the warm runners serve it,
@@ -48,8 +51,23 @@ function waitReason(label: LabelInput, fit: LabelFit): string {
   return "nothing fits";
 }
 
+/** Where the jobs of a macOS label run now: on the Macs only, or they wait. */
+function macPlacement(fit: LabelFit): Placement {
+  switch (fit.placement) {
+    case "waits":
+      return { text: "Waits: no Mac fits", warn: true, note: null };
+    case "unavailable":
+      return fit.fitting_machines > 0
+        ? { text: "Your Macs only", warn: false, note: null }
+        : { text: "Not known yet", warn: false, note: null };
+    default:
+      return { text: "Your Macs only", warn: false, note: null };
+  }
+}
+
 /** Where the jobs of a label run now, as the API places them. */
 export function placement(label: LabelInput, fit: LabelFit): Placement {
+  if (isMacLabel(label)) return macPlacement(fit);
   switch (fit.placement) {
     case "machines_then_boat":
       return { text: "Your machines, then Boat", warn: false, note: null };
@@ -87,7 +105,7 @@ export function labelRows(labels: readonly LabelView[]): LabelRow[] {
       id: view.id,
       name: view.label.name,
       isDefault: view.label.name === protectedLabelName,
-      size: sizeText(view.label),
+      size: `${platformName[labelPlatform(view.label)]}${nbsp}· ${sizeText(view.label)}`,
       where: placement(view.label, view.fit),
       jobs: jobs === null ? null : grouped.format(BigInt(jobs)),
     };

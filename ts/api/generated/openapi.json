@@ -14819,7 +14819,7 @@
       },
       "LabelInput": {
         "type": "object",
-        "description": "Label definition whose name never changes after creation.",
+        "description": "Label definition whose name and platform never change after creation.",
         "required": [
           "name",
           "vcpus",
@@ -14832,7 +14832,7 @@
         "properties": {
           "allow_boat": {
             "type": "boolean",
-            "description": "Whether Boat may run this label."
+            "description": "Whether Boat may run this label. Always false for a macOS label."
           },
           "allow_machines": {
             "type": "boolean",
@@ -14852,6 +14852,10 @@
             "type": "string",
             "description": "Workflow label accepted by GitHub."
           },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "description": "Platform of the label's job VMs. Jobs run only on machines of this platform.\nAn absent value means `linux_x64`."
+          },
           "vcpus": {
             "type": "integer",
             "format": "int32",
@@ -14859,7 +14863,7 @@
           },
           "when_nothing_fits": {
             "$ref": "#/components/schemas/NothingFits",
-            "description": "What happens when neither destination fits."
+            "description": "What happens when neither destination fits. Always `wait` for a macOS label."
           }
         }
       },
@@ -15018,6 +15022,8 @@
           "processor",
           "threads",
           "memory_bytes",
+          "platform",
+          "virtualization",
           "kvm",
           "slots",
           "capacity_known",
@@ -15117,7 +15123,7 @@
           },
           "kvm": {
             "type": "boolean",
-            "description": "Whether KVM can start job VMs."
+            "description": "Deprecated: whether `virtualization` is `available`. Read `virtualization`."
           },
           "last_contact_at": {
             "type": [
@@ -15160,6 +15166,10 @@
             "type": "boolean",
             "description": "Whether no contact arrived during the last sixty seconds."
           },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "description": "Platform reported at registration: Linux x64 or macOS on Apple Silicon."
+          },
           "processor": {
             "type": "string",
             "description": "Processor model."
@@ -15184,6 +15194,19 @@
             "type": "integer",
             "format": "int32",
             "description": "Reported hardware threads."
+          },
+          "virtualization": {
+            "$ref": "#/components/schemas/Virtualization",
+            "description": "Whether the machine can start job VMs, or why it cannot."
+          },
+          "vm_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Most job VMs that may run at once, absent when only slots and disk limit them.",
+            "minimum": 0
           },
           "warm_runners": {
             "type": "integer",
@@ -16250,6 +16273,14 @@
             "description": "Current use, offer, and the one page banner."
           }
         }
+      },
+      "Platform": {
+        "type": "string",
+        "description": "An operating system and processor architecture that ciproxy supports.\n\nA label, a machine, an image, and a job VM each have one platform. A job\nVM runs only on a machine, and from an image, of the label's platform.",
+        "enum": [
+          "linux_x64",
+          "macos_arm64"
+        ]
       },
       "PortalLink": {
         "type": "object",
@@ -17364,6 +17395,17 @@
             "description": "The mutation completed successfully."
           }
         }
+      },
+      "Virtualization": {
+        "type": "string",
+        "description": "Whether a machine can run job VMs, and the cause when it cannot.\n\nA machine whose virtualization is not available has no slots.",
+        "enum": [
+          "available",
+          "kvm_unavailable",
+          "framework_unsupported",
+          "entitlement_missing",
+          "operating_system_too_old"
+        ]
       },
       "WaitingLabelFit": {
         "type": "object",

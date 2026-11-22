@@ -1,6 +1,7 @@
 //! Pure routing inputs with explicit trusted times and capacity.
 
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
@@ -19,7 +20,7 @@ pub(crate) fn at() -> DateTime<Utc> {
 pub(crate) fn input() -> RoutingSnapshot {
     let report=serde_json::from_value(serde_json::json!({
   "hostname":"fixture", "agent_version":"fixture",
-  "hardware":{"processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"kvm":true,"disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
+  "hardware":{"platform":"linux_x64","processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"virtualization":"available","disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
   "capacity":3,"job_disk_bytes":150_000_000_000u64,"slots":[],"runners":[],"drain":"active",
   "cache":{"used_bytes":0,"capacity_bytes":0,"restores_last_7_days":0,"hits_last_7_days":0,"jobs":[]},"docker_disks":{"leased_bytes":0,"repositories":0,"used_bytes":0},"images":{"available":[{"image_id":"fixture","root_disk_bytes":60_263_759_872u64}],"newest":"fixture"}
  })).unwrap();
@@ -36,6 +37,7 @@ pub(crate) fn input() -> RoutingSnapshot {
         workspace_id: Uuid::from_u128(1),
         organizations: vec![organization(2)],
         labels: vec![Label {
+            platform: Platform::LinuxX64,
             id: Uuid::from_u128(4),
             name: "ciproxy".to_owned(),
             size: VmSize {
@@ -54,7 +56,8 @@ pub(crate) fn input() -> RoutingSnapshot {
                 processor: "x64".to_owned(),
                 hardware_threads: 8,
                 memory_bytes: 32_000_000_000,
-                kvm_available: true,
+                platform: Platform::LinuxX64,
+                virtualization: Virtualization::Available,
                 slots: 3,
                 warm_runners: 2,
                 draining: false,

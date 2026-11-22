@@ -127,7 +127,7 @@ async fn m20_labels_supply_current_placement_allocations_and_retained_thirty_day
     assert_eq!(body[0]["fit"]["boat"]["state"], "unavailable");
     assert_eq!(body[0]["fit"]["placement"], "unavailable");
     pages.fixture.state.capacity = capacity_fixture::standard();
-    let draft = json!({"name":"draft", "vcpus":128, "memory_gb":1024, "disk_gb":20, "allow_machines":true, "allow_boat":true, "when_nothing_fits":"largest_boat"});
+    let draft = json!({"name":"draft", "vcpus":128, "memory_gb":1024, "disk_gb":20, "platform":"linux_x64", "allow_machines":true, "allow_boat":true, "when_nothing_fits":"largest_boat"});
     let preview = json(
         pages
             .fixture
@@ -221,7 +221,7 @@ async fn m20_labels_supply_current_placement_allocations_and_retained_thirty_day
     assert_eq!(unobserved[0]["fit"]["boat_connected"], Value::Null);
     assert_eq!(unobserved[0]["fit"]["placement"], "unavailable");
     let viewer = pages.fixture.login(8, Some(Role::Viewer)).await;
-    assert_eq!(pages.fixture.request(Some(&viewer), "POST", &pages.fixture.path("/labels/preview"), Some(json!({"name":"draft", "vcpus":2,"memory_gb":8,"disk_gb":20,"allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"}))).await.status(), StatusCode::FORBIDDEN);
+    assert_eq!(pages.fixture.request(Some(&viewer), "POST", &pages.fixture.path("/labels/preview"), Some(json!({"name":"draft", "vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"}))).await.status(), StatusCode::FORBIDDEN);
 }
 
 async fn labels(fixture: &Fixture, browser: &Browser) -> Value {

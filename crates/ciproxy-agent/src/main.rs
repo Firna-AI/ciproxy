@@ -1,26 +1,48 @@
 //! Composition root of the open-source ciproxy machine agent.
 
+#![cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        dead_code,
+        reason = "Only the Linux adapters use some shared parts until macOS has its adapters."
+    )
+)]
+
 mod application;
+#[cfg(target_os = "linux")]
 mod application_cache;
 mod application_endpoint;
+#[cfg(target_os = "linux")]
 mod application_images;
 mod application_metadata;
 mod application_setup;
 mod application_uninstall;
+#[cfg(target_os = "linux")]
 mod area;
+#[cfg(target_os = "linux")]
 mod area_files;
+#[cfg(target_os = "linux")]
 mod area_mounts;
+#[cfg(target_os = "linux")]
 mod area_types;
 mod assignment_state;
 mod boundaries;
+#[cfg(target_os = "linux")]
 mod budget_file;
+#[cfg(target_os = "linux")]
 mod cache;
+#[cfg(target_os = "linux")]
 mod cache_admin;
 mod cache_authority;
+#[cfg(target_os = "linux")]
 mod cache_composition;
+#[cfg(target_os = "linux")]
 mod cache_install;
+#[cfg(target_os = "linux")]
 mod cache_network;
+#[cfg(target_os = "linux")]
 mod cache_service;
+#[cfg(target_os = "linux")]
 mod cache_unit;
 mod capacity;
 mod cli;
@@ -29,80 +51,86 @@ mod connection;
 mod connection_socket;
 mod connection_types;
 mod controller;
+#[cfg(target_os = "linux")]
 mod docker;
+#[cfg(target_os = "linux")]
 mod docker_files;
+#[cfg(target_os = "linux")]
 mod docker_prepare;
+#[cfg(target_os = "linux")]
 mod docker_recovery;
+#[cfg(target_os = "linux")]
 mod docker_reservation;
 mod endpoint;
 mod endpoint_files;
 mod error;
 mod gateway;
 mod guest_transport;
+#[cfg(target_os = "linux")]
 mod hardware;
+#[cfg(target_os = "linux")]
 mod host_composition;
+#[cfg(target_os = "linux")]
 mod host_file_ops;
+#[cfg(target_os = "linux")]
 mod host_packages;
 mod host_paths;
+#[cfg(target_os = "linux")]
 mod host_preparation;
+#[cfg(target_os = "linux")]
 mod host_release;
+#[cfg(target_os = "linux")]
 mod host_system;
+#[cfg(target_os = "linux")]
 mod host_tool_files;
+#[cfg(target_os = "linux")]
 mod host_tools;
 mod identity_store;
+#[cfg(target_os = "linux")]
 mod image_artifact;
+#[cfg(target_os = "linux")]
 mod image_download;
+#[cfg(target_os = "linux")]
 mod image_extract;
+#[cfg(target_os = "linux")]
 mod image_files;
+#[cfg(target_os = "linux")]
 mod image_registry;
+#[cfg(target_os = "linux")]
 mod image_space;
+#[cfg(target_os = "linux")]
 mod image_store;
+#[cfg(target_os = "linux")]
 mod image_verification;
+#[cfg(target_os = "linux")]
 mod images;
 mod installation;
 mod job_decisions;
 mod job_preparation;
 mod launches;
+#[cfg(target_os = "linux")]
 mod layout;
 mod logging;
+#[cfg(any(target_os = "macos", test))]
+mod macos;
 mod maintenance;
 mod mode;
+#[cfg(target_os = "linux")]
 mod network;
+#[cfg(target_os = "linux")]
 mod network_forwarding;
+#[cfg(target_os = "linux")]
 mod network_inventory;
 mod network_lifecycle;
+#[cfg(target_os = "linux")]
 mod network_preparation;
-
-#[cfg(test)]
-#[path = "_tests_/network_fixtures.rs"]
-mod network_fixtures;
-
-#[cfg(test)]
-#[path = "_tests_/network_ownership_tests.rs"]
-mod network_ownership_tests;
-
-#[cfg(test)]
-#[path = "_tests_/network_lifecycle_tests.rs"]
-mod network_lifecycle_tests;
-
-#[cfg(test)]
-#[path = "_tests_/network_barriers.rs"]
-mod network_barriers;
-
-#[cfg(test)]
-#[path = "_tests_/network_progress_tests.rs"]
-mod network_progress_tests;
-
-#[cfg(test)]
-#[path = "_tests_/network_uninstall_tests.rs"]
-mod network_uninstall_tests;
-
+#[cfg(target_os = "linux")]
 mod network_rules;
-#[cfg(test)]
-#[path = "_tests_/network_start_failure_tests.rs"]
-mod network_start_failure_tests;
 mod observations;
 mod persistence;
+mod platform;
+mod preparation;
+#[cfg(target_os = "linux")]
 mod process;
 mod registration;
 mod release_client;
@@ -116,74 +144,29 @@ mod slot_allocation;
 mod sparse_copy;
 mod startup;
 mod state;
+#[cfg(target_os = "linux")]
 mod storage_sizing;
+#[cfg(target_os = "linux")]
 mod system_service;
 mod terminal_completion;
+mod unit_state;
+#[cfg(target_os = "linux")]
 mod updates;
+mod updates_checked;
+#[cfg(target_os = "linux")]
 mod vm_config;
+#[cfg(target_os = "linux")]
 mod vm_drives;
+#[cfg(target_os = "linux")]
 mod vm_files;
+mod vm_liveness;
+#[cfg(target_os = "linux")]
 mod vm_root;
+#[cfg(target_os = "linux")]
 mod vms;
 mod vsock;
 mod vsock_stream;
 mod workload_space;
-
-#[cfg(test)]
-#[path = "_tests_/vm_root_tests.rs"]
-mod vm_root_tests;
-
-#[cfg(test)]
-#[path = "_tests_/vm_root_failure_tests.rs"]
-mod vm_root_failure_tests;
-
-#[cfg(test)]
-#[path = "_tests_/image_start_tests.rs"]
-mod image_start_tests;
-
-#[cfg(test)]
-#[path = "_tests_/image_retry_tests.rs"]
-mod image_retry_tests;
-
-#[cfg(test)]
-#[path = "_tests_/fixtures.rs"]
-mod fixtures;
-
-#[cfg(test)]
-#[path = "_tests_/connection_fixtures.rs"]
-mod connection_fixtures;
-
-#[cfg(test)]
-#[path = "_tests_/job_facts_tests.rs"]
-mod job_facts_tests;
-
-#[cfg(test)]
-#[path = "_tests_/cache_authority_tests.rs"]
-mod cache_authority_tests;
-
-#[cfg(test)]
-#[path = "_tests_/host_decision_tests.rs"]
-mod host_decision_tests;
-
-#[cfg(test)]
-#[path = "_tests_/hosted_preparation_tests.rs"]
-mod hosted_preparation_tests;
-
-#[cfg(test)]
-#[path = "_tests_/startup_tests.rs"]
-mod startup_tests;
-
-#[cfg(test)]
-#[path = "_tests_/network_tests.rs"]
-mod network_tests;
-
-#[cfg(test)]
-#[path = "_tests_/capacity_tests.rs"]
-mod capacity_tests;
-
-#[cfg(test)]
-#[path = "_tests_/image_fixtures.rs"]
-mod image_fixtures;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
@@ -197,24 +180,31 @@ async fn main() -> std::process::ExitCode {
 }
 
 #[cfg(test)]
-#[path = "_tests_/admission_tests.rs"]
-mod admission_tests;
+mod root_tests;
 
 #[cfg(test)]
-#[path = "_tests_/recovery_tests.rs"]
-mod recovery_tests;
+#[path = "_tests_/network_fixtures.rs"]
+mod network_fixtures;
 
 #[cfg(test)]
-#[path = "_tests_/image_response_tests.rs"]
-mod image_response_tests;
+#[path = "_tests_/network_barriers.rs"]
+mod network_barriers;
 
 #[cfg(test)]
-#[path = "_tests_/image_concurrency_tests.rs"]
-mod image_concurrency_tests;
+#[path = "_tests_/fixtures.rs"]
+mod fixtures;
 
 #[cfg(test)]
-#[path = "_tests_/mode_reconcile_tests.rs"]
-mod mode_reconcile_tests;
+#[path = "_tests_/connection_fixtures.rs"]
+mod connection_fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/cache_authority_tests.rs"]
+mod cache_authority_tests;
+
+#[cfg(test)]
+#[path = "_tests_/image_fixtures.rs"]
+mod image_fixtures;
 
 #[cfg(test)]
 #[path = "_tests_/timed_fakes.rs"]
@@ -243,7 +233,3 @@ mod area_fixtures;
 #[cfg(test)]
 #[path = "_tests_/root_failure_fixtures.rs"]
 mod root_failure_fixtures;
-
-#[cfg(test)]
-#[path = "_tests_/state_upgrade_tests.rs"]
-mod state_upgrade_tests;
