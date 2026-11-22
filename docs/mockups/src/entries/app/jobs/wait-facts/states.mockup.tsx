@@ -13,7 +13,7 @@ export const unknownFit = defineScreen({
   slug: "unknown-fit",
   title: "The fit of a label is unknown",
   description:
-    "Monday 23 November: a machine report is missing, so the API gives no fit for ciproxy-8vcpu and no count of free own slots. The figure says Unknown, not 0, and the notice claims no fit and no lack of fit.",
+    "Monday 23 November: a machine report is missing, so the API gives no fit for ciproxy-large and no count of free own slots. The figure says Unknown, not 0, and the notice claims no fit and no lack of fit.",
   rationale,
   relatedDocs: related("labels", "jobRouting"),
   address,
