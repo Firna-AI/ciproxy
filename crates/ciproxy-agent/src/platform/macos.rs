@@ -18,6 +18,7 @@ use crate::workload_space::WorkloadSpace;
 use super::{Machine, MachineInput, Platform, UninstallParts};
 
 mod host;
+mod images;
 mod isolation;
 mod launchctl;
 mod unsupported;

@@ -50,6 +50,7 @@ mod hardware_tests;
 mod guests_tests;
 
 pub(crate) mod image_bundle;
+pub(crate) mod image_extract;
 
 #[cfg(test)]
 #[path = "_tests_/image_bundle_tests.rs"]
