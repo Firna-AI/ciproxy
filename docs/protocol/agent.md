@@ -160,8 +160,10 @@ runs on own machines.
   allowance.
 - On Linux, the agent reflinks the image and grows only the private job
   copy before boot. It keeps the base image unchanged.
-- On a Mac, the agent makes an APFS clone of the image disk and grows only
-  the clone before boot. It keeps the base image unchanged.
+- On a Mac, the agent makes an APFS clone of the image disk and does not
+  grow it. It keeps the base image unchanged. The free space in the image
+  disk is the free disk of the job, as
+  [macOS labels](labels.md#the-disk-of-a-macos-label) says.
 - An APFS clone takes almost no time and no space at first. The spike made
   a clone in 1 ms.
 - The actual total allocation must hold the image. An insufficient total
