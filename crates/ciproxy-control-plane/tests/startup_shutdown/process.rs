@@ -9,12 +9,32 @@ use tokio::process::{Child, Command};
 use tokio::time::timeout;
 
 /// Apply only explicit local inputs to the production executable.
+///
+/// With `macos`, the three macOS settings name a store on the same origin.
 pub(super) fn spawn(
     directory: &Path,
     origin: SocketAddr,
     proxy: SocketAddr,
     database_url: &str,
+    macos: bool,
 ) -> Child {
+    let macos_settings = macos.then(|| {
+        [
+            (
+                "MACOS_IMAGE_URL_PREFIX",
+                format!("http://{origin}/ciproxy-macos-images"),
+            ),
+            (
+                "MACOS_IMAGE_MANIFEST_PATH",
+                "releases/macos-startup/manifest.json".to_owned(),
+            ),
+            (
+                "R2_IMAGES_KEY",
+                r#"{"access_key_id": "startup-key-id", "secret_access_key": "startup-secret"}"#
+                    .to_owned(),
+            ),
+        ]
+    });
     Command::new(env!("CARGO_BIN_EXE_ciproxy-control-plane"))
         .kill_on_drop(true)
         .env_clear()
@@ -41,6 +61,7 @@ pub(super) fn spawn(
             ("LANG", "C".to_owned()),
             ("LC_ALL", "C".to_owned()),
         ])
+        .envs(macos_settings.into_iter().flatten())
         .env("SECRETS_DIRECTORY", directory)
         .stdout(Stdio::null())
         .stderr(Stdio::null())

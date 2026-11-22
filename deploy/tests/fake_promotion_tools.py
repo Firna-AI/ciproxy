@@ -13,6 +13,9 @@ import sys
 tool = Path(sys.argv[0]).name
 args = sys.argv[1:]
 record = {"tool": tool, "args": args}
+if tool == "gcloud" and args[:3] == ["secrets", "versions", "access"]:
+    record["sdk_logging"] = {name: os.environ.get(name) for name in (
+        "CLOUDSDK_CORE_LOG_HTTP", "CLOUDSDK_CORE_DISABLE_FILE_LOGGING")}
 if "--input" in args:
     record["payload"] = json.loads(Path(args[args.index("--input") + 1]).read_text())
 if tool == "terraform" and len(args) > 1 and args[1] == "apply":

@@ -74,17 +74,20 @@ impl SignedReleases {
 
     async fn read<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T> {
         let signed = self.signing.sign(&self.url(path), self.clock.now())?;
-        let response = self
-            .http
-            .get(signed.expose_secret())
-            .send()
-            .await
-            .internal()?;
+        let response = without_url(self.http.get(signed.expose_secret()).send().await)?;
         let status = response.status();
         if !status.is_success() {
             return Err(Error::ReleaseStatus(status.as_u16()));
         }
-        response.json().await.internal()
+        without_url(response.json().await)
+    }
+}
+
+/// Keep the HTTP failure, but drop its signed URL, which grants a read.
+fn without_url<T>(result: reqwest::Result<T>) -> Result<T> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(error) => Err(error.without_url()).internal(),
     }
 }
 

@@ -2,6 +2,7 @@
 
 import base64
 import json
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -21,6 +22,11 @@ BOAT_SHARED_SNAPSHOT = OptionalSecret(
     "boat_shared_snapshot_secret", "boat-shared-snapshot", "BOAT_SHARED_SNAPSHOT", "Boat snapshot")
 R2_IMAGES = OptionalSecret("r2_images_secret", "r2-images", "R2_IMAGES_KEY", "R2 images key")
 
+# The Cloud SDK can write request and response bodies to the terminal and to
+# its own log files. Both settings stay off for a read of a secret payload,
+# whatever the job environment or the gcloud configuration says.
+QUIET_GCLOUD = {"CLOUDSDK_CORE_LOG_HTTP": "false", "CLOUDSDK_CORE_DISABLE_FILE_LOGGING": "true"}
+
 
 def sync_optional_secret(config, optional):
     # Capture both streams. Provider errors can echo a secret-bearing request.
@@ -28,7 +34,7 @@ def sync_optional_secret(config, optional):
         "gcloud", "secrets", "versions", "access", "latest",
         f"--secret={config[optional.output]}",
         f"--project={config['project_id']}",
-    ], text=True, capture_output=True)
+    ], text=True, capture_output=True, env={**os.environ, **QUIET_GCLOUD})
     missing = re.search(
         r"^ERROR: \(gcloud\.secrets\.versions\.access\) NOT_FOUND:",
         read.stderr, re.MULTILINE,

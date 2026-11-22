@@ -28,6 +28,36 @@ fn presigned_get_matches_the_published_aws_signature_example() {
     );
 }
 
+/// The value comes from botocore, the AWS SDK for Python, at the same time.
+#[test]
+fn presigned_r2_get_signs_the_bucket_and_release_path_in_region_auto() {
+    let key = StoreKey::from_json(
+        "R2_IMAGES_KEY",
+        r#"{"access_key_id": "fixture-key-id", "secret_access_key": "fixture-secret"}"#,
+    )
+    .unwrap();
+    let signer = PresignedSigning::new(key, "auto", Duration::from_secs(7_200));
+    let at = "2026-11-05T12:00:00Z".parse().unwrap();
+    let signed = signer
+        .sign(
+            "https://785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com\
+             /ciproxy-macos-images/releases/macos26-v1/macos.tar",
+            at,
+        )
+        .unwrap();
+    assert_eq!(
+        signed.expose_secret(),
+        "https://785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com\
+         /ciproxy-macos-images/releases/macos26-v1/macos.tar\
+         ?X-Amz-Algorithm=AWS4-HMAC-SHA256\
+         &X-Amz-Credential=fixture-key-id%2F20261105%2Fauto%2Fs3%2Faws4_request\
+         &X-Amz-Date=20261105T120000Z\
+         &X-Amz-Expires=7200\
+         &X-Amz-SignedHeaders=host\
+         &X-Amz-Signature=87a238c3ae58f73f805dd9d39778c2857b80854eece0401c0078452807786e4d"
+    );
+}
+
 #[test]
 fn debug_output_shows_no_part_of_the_key() {
     let key = StoreKey::from_json("R2_IMAGES_KEY", AWS_EXAMPLE_KEY).unwrap();

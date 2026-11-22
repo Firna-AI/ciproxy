@@ -3,11 +3,14 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use axum::Router;
 use axum::extract::OriginalUri;
 use axum::http::StatusCode;
+use ciproxy_control_plane::image_release::{ImageReleases, SignedReleases};
 use ciproxy_control_plane::macos_release::{MacosImageSettings, read_macos_release};
+use ciproxy_control_plane::presigned_signing::{PresignedSigning, StoreKey};
 use ciproxy_github::runtime::RuntimeMock;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
@@ -185,4 +188,57 @@ async fn a_failed_release_read_turns_macos_images_off() {
         None
     );
     assert_eq!(store.requests.lock().unwrap().len(), 1);
+}
+
+/// Read one release through the reader that both platforms share.
+async fn read_release(prefix: String) -> String {
+    let releases = SignedReleases {
+        http: reqwest::Client::new(),
+        prefix,
+        manifest_path: "releases/macos26-v1/manifest.json".to_owned(),
+        signing: Arc::new(PresignedSigning::new(
+            StoreKey::from_json("R2_IMAGES_KEY", KEY).unwrap(),
+            "auto",
+            Duration::from_secs(300),
+        )),
+        clock: Arc::new(Unimock::new(
+            RuntimeMock::now.each_call(matching!()).returns(
+                "2026-11-05T12:00:00Z"
+                    .parse::<chrono::DateTime<chrono::Utc>>()
+                    .unwrap(),
+            ),
+        )),
+        platform: Platform::MacosArm64,
+        artifact: "macos",
+    };
+    let error = releases.current().await.err().unwrap();
+    format!("{error:?}")
+}
+
+#[tokio::test]
+async fn failed_release_reads_keep_the_signed_url_out_of_the_error() {
+    let refused = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let closed = refused.local_addr().unwrap();
+    drop(refused);
+    let unreadable = Router::new().fallback(|| async { (StatusCode::OK, "not json") });
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, unreadable).await.unwrap() });
+    for (case, prefix, cause) in [
+        (
+            "refused connection",
+            format!("http://{closed}/ciproxy-macos-images"),
+            "error sending request",
+        ),
+        (
+            "body that is not JSON",
+            format!("http://{address}/ciproxy-macos-images"),
+            "error decoding response body",
+        ),
+    ] {
+        let error = read_release(prefix).await;
+        assert!(error.contains(cause), "{case}: {error}");
+        assert!(!error.contains("X-Amz-Signature"), "{case}: {error}");
+        assert!(!error.contains("manifest.json"), "{case}: {error}");
+    }
 }

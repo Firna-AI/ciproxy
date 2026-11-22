@@ -2,7 +2,7 @@
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::Router;
 use tokio::net::TcpSocket;
@@ -19,6 +19,7 @@ pub(crate) struct Fixture {
     origin: SocketAddr,
     proxy: TcpSocket,
     server: JoinHandle<()>,
+    macos: bool,
 }
 
 impl Fixture {
@@ -35,6 +36,15 @@ impl Fixture {
         fixture
     }
 
+    /// Serve as above, with the macOS settings set and a store that refuses reads.
+    pub(crate) async fn serving_with_forbidden_macos() -> (Self, Arc<Mutex<Vec<String>>>) {
+        let (routes, requests) = cdn::released_with_forbidden_macos();
+        let mut fixture = Self::new(routes).await;
+        fixture.macos = true;
+        secrets::serving(&fixture.directory).await;
+        (fixture, requests)
+    }
+
     async fn new(routes: Router) -> Self {
         let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../.context/control-plane-serving-shutdown")
@@ -49,6 +59,7 @@ impl Fixture {
             origin,
             proxy,
             server,
+            macos: false,
         }
     }
 
@@ -62,6 +73,7 @@ impl Fixture {
             self.origin,
             self.proxy.local_addr().unwrap(),
             database_url,
+            self.macos,
         )
     }
 }

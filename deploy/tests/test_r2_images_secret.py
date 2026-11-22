@@ -48,3 +48,13 @@ class R2ImagesSecretTests(OptionalSecretCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("R2 images key secret read failed", result.stderr)
         self.assertEqual([call for call in self.calls() if call["tool"] == "helm"], [])
+
+    def test_secret_read_runs_with_cloud_sdk_body_logging_off(self):
+        self.env.update(CLOUDSDK_CORE_LOG_HTTP="true", CLOUDSDK_CORE_DISABLE_FILE_LOGGING="false")
+        result = self.cli("deploy.py", "main-preview")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        reads = [call for call in self.calls() if call["tool"] == "gcloud"
+                 and "--secret=fake-r2-images" in call["args"]]
+        self.assertEqual([read["sdk_logging"] for read in reads], [{
+            "CLOUDSDK_CORE_LOG_HTTP": "false", "CLOUDSDK_CORE_DISABLE_FILE_LOGGING": "true",
+        }])

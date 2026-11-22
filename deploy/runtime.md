@@ -229,8 +229,10 @@ After the data apply succeeds, create the R2 API token
 `785233830ca9dfa2eb7c3561dd52f675`. Give it Object Read only, on the bucket
 `ciproxy-macos-images`. Then run these commands as the operator. Repeat them
 for `DEPLOY_ENV=production`. The prompts keep the token out of shell
-arguments, files, and logs. The script stores the SHA-256 of the token
-value, which is the S3 secret access key of R2:
+arguments, files, and logs. Both prompts hide what you type, because the
+here-document already uses standard input. The script turns off the HTTP
+and file logs of the Cloud SDK for its own `gcloud` call. It stores the
+SHA-256 of the token value, which is the S3 secret access key of R2:
 
 ```sh
 export DEPLOY_ENV=main-preview
@@ -244,15 +246,17 @@ import os
 import subprocess
 
 key = json.dumps({
-    "access_key_id": input("R2 token ID: ").strip(),
+    "access_key_id": getpass.getpass("R2 token ID: ").strip(),
     "secret_access_key": hashlib.sha256(
         getpass.getpass("R2 token value: ").strip().encode()).hexdigest(),
 })
+quiet = {"CLOUDSDK_CORE_LOG_HTTP": "false",
+         "CLOUDSDK_CORE_DISABLE_FILE_LOGGING": "true"}
 subprocess.run([
     "gcloud", "secrets", "versions", "add",
     f"ciproxy-{os.environ['DEPLOY_ENV']}-r2-images",
     "--project=ciproxy", "--data-file=-",
-], input=key, text=True, check=True)
+], input=key, text=True, check=True, env={**os.environ, **quiet})
 PY
 ```
 

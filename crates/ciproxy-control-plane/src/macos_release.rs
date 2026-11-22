@@ -89,7 +89,8 @@ impl MacosImageSettings {
 /// Read the pinned macOS release when all three settings are set.
 ///
 /// Otherwise, and after a failed read, log why macOS images are off and give
-/// nothing. Linux work never waits for or fails with this release.
+/// nothing. A failed read never stops the start. The start waits for at most
+/// the request limit of the client for each of the two reads.
 pub async fn read_macos_release(
     settings: &MacosImageSettings,
     http: Client,
