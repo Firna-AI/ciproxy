@@ -11,6 +11,7 @@ use crate::decision::decide;
 use crate::snapshot::RunnerState;
 
 use super::fixtures::{boat, label, large, own, queued, running, small, snapshot, start, warm};
+use ciproxy_protocol::platform::Platform;
 
 #[test]
 fn reserves_disk_for_all_starts_in_the_same_tick() {
@@ -166,6 +167,7 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
     state.machines.push(older);
     state.queue = vec![queued("a", "ciproxy", 0); 2];
     let expected = StartRunner {
+        platform: Platform::LinuxX64,
         target: state.labels[0].targets[0].clone(),
         organization_id: OrganizationId("a".into()),
         label: state.labels[0].name.clone(),
@@ -177,7 +179,10 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
         destination: Destination::Machine(MachineId("older".into())),
         reason: StartReason::OwnMachineCapacity,
     };
-    assert_eq!(decide(&state), vec![Action::StartRunner(expected.clone())]);
+    assert_eq!(
+        decide(&state),
+        vec![Action::StartRunner(Box::new(expected.clone()))]
+    );
     state.queue.clear();
     for machine in &mut state.machines {
         machine.warm_count = 2;
@@ -185,9 +190,9 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
     }
     assert_eq!(
         decide(&state),
-        vec![Action::StartRunner(StartRunner {
+        vec![Action::StartRunner(Box::new(StartRunner {
             reason: StartReason::WarmPool,
             ..expected
-        })]
+        }))]
     );
 }

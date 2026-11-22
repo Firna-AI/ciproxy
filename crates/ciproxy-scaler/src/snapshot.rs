@@ -7,6 +7,7 @@ use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
 use ciproxy_protocol::images::ImageMetadata;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::boat::{BoatAccount, Sandbox};
@@ -39,6 +40,14 @@ pub struct Snapshot {
     pub overflow_wait: Duration,
 }
 
+/// The one label that warm runners serve on a machine of this platform.
+pub fn warm_label(platform: Platform) -> &'static str {
+    match platform {
+        Platform::LinuxX64 => "ciproxy",
+        Platform::MacosArm64 => "ciproxy-macos",
+    }
+}
+
 /// Routing settings shared by all organizations of one workspace.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Label {
@@ -46,12 +55,24 @@ pub struct Label {
     pub targets: Vec<RegistrationTarget>,
     /// GitHub scale set label.
     pub name: LabelName,
+    /// Platform of the label's job VMs, fixed when the label is created.
+    pub platform: Platform,
     /// Current label dimensions, with disk measured as free job bytes.
     pub size: VmSize,
     /// Destinations enabled by the customer.
     pub destinations: Destinations,
     /// Behavior when neither own machines nor the Boat catalog fits.
     pub nothing_fits: NothingFits,
+}
+
+impl Label {
+    /// Whether Boat may serve this label.
+    ///
+    /// Only Linux labels use Boat. Cloud Macs bill 24 hours at minimum, so a
+    /// macOS label waits for a free Mac whatever its Boat switch says.
+    pub fn allows_boat(&self) -> bool {
+        self.destinations.boat && self.platform == Platform::LinuxX64
+    }
 }
 
 /// The two independent label destination settings.
@@ -86,6 +107,8 @@ pub struct WaitingJob {
 pub struct Machine {
     /// Own-machine identity.
     pub id: MachineId,
+    /// Platform reported at registration. Only labels of this platform fit.
+    pub platform: Platform,
     /// Exact selected local release, absent until reported by the machine.
     pub selected_image: Option<ImageMetadata>,
     /// Whether the machine is connected to the control plane.

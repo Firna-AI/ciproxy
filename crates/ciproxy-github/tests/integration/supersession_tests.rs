@@ -1,5 +1,6 @@
 //! A replacement install completes missed removal before it takes ownership.
 
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use std::sync::Arc;
 
@@ -27,7 +28,8 @@ fn credentials(store: &Arc<dyn Store>) -> (TokenHash, TokenHash, TokenHash) {
         processor: "AMD".to_owned(),
         hardware_threads: 8,
         memory_bytes: 32_000_000_000,
-        kvm_available: true,
+        platform: Platform::LinuxX64,
+        virtualization: Virtualization::Available,
         slots: 3,
         warm_runners: 1,
         draining: false,

@@ -3,6 +3,7 @@
 pub(super) mod installation_claim;
 pub(super) mod installation_results;
 
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use std::env;
 use std::sync::Arc;
 
@@ -120,6 +121,7 @@ impl Database {
 
     pub(super) fn label_and_scale_set(&self, organization: &Organization) -> (Label, ScaleSet) {
         let label = Label {
+            platform: Platform::LinuxX64,
             id: Uuid::new_v4(),
             name: format!("ciproxy-{}", Uuid::new_v4()),
             size: VmSize {
@@ -173,7 +175,8 @@ pub(super) fn machine() -> Machine {
         processor: "AMD".to_owned(),
         hardware_threads: 16,
         memory_bytes: 64_000_000_000,
-        kvm_available: true,
+        platform: Platform::LinuxX64,
+        virtualization: Virtualization::Available,
         slots: 6,
         warm_runners: 2,
         draining: false,

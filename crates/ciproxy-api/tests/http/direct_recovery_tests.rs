@@ -116,7 +116,8 @@ async fn failed_direct_created_recovers_without_add_proof_or_duplicate_registrat
                 .scale_sets(saved.workspace_id, saved.id)
                 .unwrap()
                 .len(),
-            3
+            5,
+            "one scale set for each default label"
         );
         assert_eq!(
             fixture

@@ -7,11 +7,13 @@ use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
 use ciproxy_scaler::boat::{BoatAccount, MonthlySpend};
 use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_scaler::snapshot::{
     Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
+    warm_label,
 };
 use ciproxy_store_interface::gateway::{MachineSnapshot, MachineState};
 use ciproxy_store_interface::github::DemandPhase;
@@ -36,26 +38,29 @@ pub(crate) fn build(
         .iter()
         .filter(|o| o.app_state == AppState::Active && runnable.contains(&o.id))
         .collect();
-    let history: Vec<_> = active
-        .iter()
-        .map(|organization| {
-            let jobs = input
-                .jobs
-                .iter()
-                .filter(|job| {
-                    job.organization_id == organization.id
-                        && input
-                            .labels
-                            .iter()
-                            .any(|label| label.id == job.label_id && label.name == "ciproxy")
-                        && job
-                            .assigned_at
-                            .is_some_and(|at| at <= now && at > now - chrono::Duration::hours(24))
-                })
-                .count() as u64;
-            (OrganizationId(organization.id.to_string()), jobs)
-        })
-        .collect();
+    let history = |platform: Platform| -> Vec<(OrganizationId, u64)> {
+        active
+            .iter()
+            .map(|organization| {
+                let jobs = input
+                    .jobs
+                    .iter()
+                    .filter(|job| {
+                        job.organization_id == organization.id
+                            && input.labels.iter().any(|label| {
+                                label.id == job.label_id
+                                    && label.name == warm_label(platform)
+                                    && label.platform == platform
+                            })
+                            && job.assigned_at.is_some_and(|at| {
+                                at <= now && at > now - chrono::Duration::hours(24)
+                            })
+                    })
+                    .count() as u64;
+                (OrganizationId(organization.id.to_string()), jobs)
+            })
+            .collect()
+    };
     Snapshot {
         workspace_id: WorkspaceId(input.workspace_id.to_string()),
         root_sizing,
@@ -83,6 +88,7 @@ pub(crate) fn build(
                     })
                     .collect(),
                 name: LabelName(label.name.clone()),
+                platform: label.platform,
                 size: size(label.size),
                 destinations: Destinations {
                     own_machines: label.allow_machines,
@@ -120,7 +126,7 @@ pub(crate) fn build(
         machines: input
             .machines
             .iter()
-            .map(|machine| machine_input(machine, input, now, &history))
+            .map(|machine| machine_input(machine, input, now, &history(machine.machine.platform)))
             .collect(),
         boat: BoatAccount {
             enabled: input.settings.overflow_enabled,
@@ -158,11 +164,13 @@ fn machine_input(
     let count = usize::try_from(machine.machine.warm_runners).unwrap_or(0);
     Machine {
         id: MachineId(machine.machine.id.to_string()),
+        platform: machine.machine.platform,
         selected_image: machine.report.as_ref().and_then(|report| report.report.images.selected().cloned()),
         connected: machine.state(now) == MachineState::Ready,
         draining: machine.machine.draining,
         capacity: resources.slots, disk_budget_bytes: resources.job_disk_bytes,
-        docker_leased_bytes: machine.report.as_ref().and_then(|report| report.report.docker_disks.as_ref().measured().map(|docker| docker.leased_bytes)),
+        // A Mac has no Docker disks, as docker-disks.md says, so it leases no bytes.
+        docker_leased_bytes: if machine.machine.platform == Platform::MacosArm64 { Some(0) } else { machine.report.as_ref().and_then(|report| report.report.docker_disks.as_ref().measured().map(|docker| docker.leased_bytes)) },
         warm_count: count, warm_allocation: allocate(count, history),
         runners: input.runners.iter().filter(|intent| intent.runner.state != runners::RunnerState::Stopped && matches!(intent.runner.place, RunnerPlace::Machine { machine_id, .. } if machine_id == machine.machine.id)).map(|intent| {
             let running_job = input.jobs.iter().find(|job| job.phase == DemandPhase::Started && job.runner_github_id == intent.runner.github_id && job.organization_id == intent.runner.organization_id && job.scale_set_id == intent.runner.scale_set_id);

@@ -78,7 +78,7 @@ async fn m18_jobs_keep_execution_requests_after_label_edit() {
             &format!("/labels/{}", own.label_id),
             Some(json!({
                 "name":"ciproxy", "vcpus":8, "memory_gb":32, "disk_gb":80,
-                "allow_machines":true, "allow_boat":true, "when_nothing_fits":"wait"
+                "platform":"linux_x64", "allow_machines":true, "allow_boat":true, "when_nothing_fits":"wait"
             })),
         )
         .await;

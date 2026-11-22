@@ -28,6 +28,17 @@ import type {
 } from "./schema.ts";
 
 const slotState = oneOf<SlotState>({ free: true, warm: true, job: true });
+const platform = oneOf<MachineView["platform"]>({
+  linux_x64: true,
+  macos_arm64: true,
+});
+const virtualization = oneOf<MachineView["virtualization"]>({
+  available: true,
+  kvm_unavailable: true,
+  framework_unsupported: true,
+  entitlement_missing: true,
+  operating_system_too_old: true,
+});
 
 function machineCache(value: unknown): CacheView["machine_cache"] {
   const fields = object(value, "machine cache");
@@ -115,6 +126,7 @@ function machine(value: unknown): MachineView {
     monthly_cost_cents: optional(fields.monthly_cost_cents, decimal),
     occupancy: array(fields.occupancy, slot),
     offline: boolean(fields.offline),
+    platform: platform(fields.platform),
     processor: string(fields.processor),
     selected_image_disk_bytes: optional(
       fields.selected_image_disk_bytes,
@@ -127,6 +139,8 @@ function machine(value: unknown): MachineView {
       ready: true,
     })(fields.state),
     threads: integer(fields.threads),
+    virtualization: virtualization(fields.virtualization),
+    vm_limit: optional(fields.vm_limit, integer),
     warm_runners: integer(fields.warm_runners),
   };
 }

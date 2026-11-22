@@ -1,6 +1,7 @@
 //! Pure routing inputs with explicit trusted times and capacity.
 
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
@@ -36,6 +37,7 @@ pub(crate) fn input() -> RoutingSnapshot {
         workspace_id: Uuid::from_u128(1),
         organizations: vec![organization(2)],
         labels: vec![Label {
+            platform: Platform::LinuxX64,
             id: Uuid::from_u128(4),
             name: "ciproxy".to_owned(),
             size: VmSize {
@@ -54,7 +56,8 @@ pub(crate) fn input() -> RoutingSnapshot {
                 processor: "x64".to_owned(),
                 hardware_threads: 8,
                 memory_bytes: 32_000_000_000,
-                kvm_available: true,
+                platform: Platform::LinuxX64,
+                virtualization: Virtualization::Available,
                 slots: 3,
                 warm_runners: 2,
                 draining: false,

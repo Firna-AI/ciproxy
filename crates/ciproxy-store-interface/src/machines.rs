@@ -1,6 +1,7 @@
 //! Machine registration and last-report storage.
 
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -29,8 +30,10 @@ pub struct Machine {
     pub hardware_threads: i32,
     /// The physical memory capacity in bytes.
     pub memory_bytes: i64,
-    /// Whether KVM is available.
-    pub kvm_available: bool,
+    /// The platform reported at registration. It does not change afterwards.
+    pub platform: Platform,
+    /// Whether the machine can run job VMs, or why it cannot.
+    pub virtualization: Virtualization,
     /// The slots reported by the agent.
     pub slots: i32,
     /// The desired count of warm runners.

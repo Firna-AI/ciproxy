@@ -5,7 +5,6 @@ use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_github::registrations::RegistrationRequest;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::{CommandId, OrganizationId, RunnerId};
-use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::runners::RunnerSpec;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartRunner};
@@ -168,8 +167,7 @@ impl MachineRuntime {
                 runner_id: RunnerId(id.to_string()),
                 organization_id: OrganizationId(github_organization_id.to_string()),
                 label: start.label,
-                // Every label is a Linux label until the store keeps a platform.
-                platform: Platform::LinuxX64,
+                platform: start.platform,
                 size: start.requested_size,
                 registration: Secret::new(registration.configuration.expose_secret()),
             },

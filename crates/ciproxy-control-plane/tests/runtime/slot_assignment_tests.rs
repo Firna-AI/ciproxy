@@ -23,6 +23,7 @@ use uuid::Uuid;
 use super::clock::clock;
 use super::settled::Settled;
 use super::support::{Fixture, at};
+use ciproxy_protocol::platform::Platform;
 
 #[tokio::test]
 async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
@@ -107,6 +108,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
         .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
         .unwrap();
     let label = Label {
+        platform: Platform::LinuxX64,
         id: Uuid::new_v4(),
         name: "large".to_owned(),
         size: VmSize {

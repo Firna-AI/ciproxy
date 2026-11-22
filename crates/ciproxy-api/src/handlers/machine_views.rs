@@ -7,7 +7,7 @@ use ciproxy_protocol::resources::{Resources, Slots, VmSize};
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::metering::history::MachineCost;
 
-use crate::capacity::Capacity;
+use crate::capacity::{Capacity, platform_vms};
 use crate::wire::machine_statistics::{CacheView, DockerDiskView, MachineCacheView};
 use crate::wire::machines;
 use crate::wire::money::Cents;
@@ -92,6 +92,7 @@ pub(super) fn machine(
             .slots
             .0
             .checked_div(Slots::for_vm(size.requested).0)
+            .map(|count| platform_vms(machine.platform, count))
     });
     let root = default_size.as_ref().and_then(|size| size.root_bytes);
     let allocated = default_size.as_ref().and_then(|size| {
@@ -102,7 +103,7 @@ pub(super) fn machine(
     });
     let concurrent = resources
         .zip(allocated)
-        .map(|(resources, size)| resources.concurrent_vms(size));
+        .map(|(resources, size)| platform_vms(machine.platform, resources.concurrent_vms(size)));
     machines::MachineView {
         default_jobs_by_slots: by_slots.map(|count| count.to_string()),
         default_root_disk_bytes: root.map(|bytes| bytes.to_string()),
@@ -117,12 +118,16 @@ pub(super) fn machine(
         processor: machine.processor,
         threads: machine.hardware_threads,
         memory_bytes: machine.memory_bytes.to_string(),
-        kvm: machine.kvm_available,
+        platform: machine.platform,
+        virtualization: machine.virtualization,
+        kvm: machine.virtualization.is_available(),
+        vm_limit: machine
+            .platform
+            .vm_limit()
+            .map(|limit| u32::try_from(limit).unwrap_or(u32::MAX)),
         slots: machine.slots,
         selected_image_disk_bytes: capacity.image_disk_bytes.map(|bytes| bytes.to_string()),
-        concurrent_default_jobs: resources
-            .zip(allocated)
-            .map(|(resources, size)| resources.concurrent_vms(size).to_string()),
+        concurrent_default_jobs: concurrent.map(|count| count.to_string()),
         capacity_known: resources.is_some() && allocated.is_some(),
         state: value.state.into(),
         offline: value.presence == Presence::Offline,

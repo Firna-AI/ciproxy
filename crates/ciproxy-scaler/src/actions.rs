@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use ciproxy_protocol::identifiers::{LabelName, MachineId, OrganizationId, RunnerId};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::VmSize;
 
 use crate::boat::{BoatSizeId, SandboxId};
@@ -11,8 +12,8 @@ use crate::registration::RegistrationTarget;
 /// One requested change, with no external work performed by the scaler.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Action {
-    /// Register and start one new ephemeral runner.
-    StartRunner(StartRunner),
+    /// Register and start one new ephemeral runner, boxed to keep actions small.
+    StartRunner(Box<StartRunner>),
     /// Retire an idle own-machine runner after confirming it is still idle.
     StopRunner {
         /// Runner whose registration must be removed before releasing its VM.
@@ -38,6 +39,8 @@ pub struct StartRunner {
     pub organization_id: OrganizationId,
     /// Label of the runner's scale set.
     pub label: LabelName,
+    /// Platform of the label, which the destination machine must have.
+    pub platform: Platform,
     /// Label dimensions at registration, retained separately from Boat size.
     pub requested_size: VmSize,
     /// Actual VM dimensions, including the image and ext4 root allowance.
