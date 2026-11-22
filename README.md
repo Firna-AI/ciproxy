@@ -41,7 +41,8 @@ on a free own machine, or else on Boat.
   gives the rule. The hosted [control plane](docs/architecture.md#components)
   and the [dashboard](docs/architecture.md#components) are the paid part.
 
-ciproxy runs x64 Linux jobs of
+ciproxy runs x64 Linux jobs, and macOS jobs on the customer's own Apple
+Silicon Macs. It runs the jobs of
 [private repositories](docs/protocol/security.md#repository-access) only.
 
 ## Use ciproxy in a workflow

@@ -1,5 +1,6 @@
 //! Machines connect with zero slots when KVM or host capacity is absent.
 
+use ciproxy_protocol::platform::Virtualization;
 use unimock::Unimock;
 
 use crate::controller::Agent;
@@ -9,7 +10,7 @@ use crate::state::MachineState;
 #[tokio::test]
 async fn a_machine_without_kvm_or_slot_capacity_reports_zero_slots() {
     let mut no_kvm = hardware();
-    no_kvm.kvm = false;
+    no_kvm.virtualization = Virtualization::KvmUnavailable;
     let mut too_small = hardware();
     too_small.memory_bytes = 1_000_000_000;
     for hardware in [no_kvm, too_small] {

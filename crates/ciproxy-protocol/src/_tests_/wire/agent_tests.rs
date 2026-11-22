@@ -2,7 +2,9 @@
 
 use crate::agent::{AgentMessage, CommandFailure, CommandOutcome};
 use crate::cache::{DockerDiskReport, MachineCacheReport};
-use crate::reports::MachineReport;
+use crate::platform::{Platform, Virtualization};
+use crate::reports::{DiskReport, HardwareReport, MachineReport};
+use crate::resources::GIGABYTE;
 use crate::runners::RunnerExit;
 use crate::secret::Secret;
 use crate::statistics::Statistics;
@@ -15,7 +17,8 @@ use super::fixtures;
 fn legacy_machine_reports_keep_both_statistics_sections_measured() {
     let report: MachineReport = serde_json::from_value(serde_json::json!({
         "hostname":"legacy", "agent_version":"old",
-        "hardware":{"processor":"x64", "threads":0, "memory_bytes":0, "kvm":false, "disks":[]},
+        "hardware":{"platform":"linux_x64", "processor":"x64", "threads":0, "memory_bytes":0,
+            "virtualization":"kvm_unavailable", "disks":[]},
         "capacity":0, "job_disk_bytes":0, "slots":[], "runners":[], "drain":"active",
         "cache":{"used_bytes":0, "capacity_bytes":0, "restores_last_7_days":0, "hits_last_7_days":0, "jobs":[]},
         "docker_disks":{"leased_bytes":0, "repositories":0, "used_bytes":0},
@@ -78,6 +81,28 @@ fn report_carries_slots_health_and_eligible_cache_counts() {
         AgentMessage::Report {
             report: fixtures::report(),
         },
+    );
+}
+
+#[test]
+fn mac_report_carries_its_platform_and_virtualization_state() {
+    let mut report = fixtures::report();
+    report.hardware = HardwareReport {
+        platform: Platform::MacosArm64,
+        processor: "Apple M4".into(),
+        threads: 10,
+        memory_bytes: 16 * GIGABYTE,
+        virtualization: Virtualization::EntitlementMissing,
+        disks: vec![DiskReport {
+            name: "disk3s1".into(),
+            capacity_bytes: 512 * GIGABYTE,
+            free_bytes: 300 * GIGABYTE,
+        }],
+    };
+    snapshot(
+        "agent_report_mac",
+        "report",
+        AgentMessage::Report { report },
     );
 }
 
