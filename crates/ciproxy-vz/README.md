@@ -83,8 +83,8 @@ handle drops or when the process exits.
 
 ### User context
 
-A LaunchDaemon, as root or with `UserName`, can start, run, and stop VMs,
-and can connect to their vsock ports. Only a process in the login session
+A LaunchDaemon, as root or with `UserName`, can start, run, and stop VMs.
+Only a process in the login session
 of a normal user can save and restore a VM: a LaunchAgent in the
 `gui/<uid>` domain of a user who is logged in at the console. Workstream A
 tested its VM helper on the test Mac, with macOS 26.7.3 on the host:
