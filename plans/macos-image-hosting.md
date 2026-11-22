@@ -213,12 +213,12 @@ not a secret. The buckets have the location hint WEUR, no jurisdiction,
 no r2.dev access, and no custom domain. So the S3 endpoint is
 `https://785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`.
 
-| R2 API token                             | Permission and scope                               | Store                                                                                                                      |
-| ---------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `ciproxy-main-preview-macos-images-read` | Object Read only, bucket `ciproxy-macos-images`    | Secret Manager secret `ciproxy-main-preview-r2-images` in project `ciproxy`                                                |
-| `ciproxy-production-macos-images-read`   | Object Read only, bucket `ciproxy-macos-images`    | Secret Manager secret `ciproxy-production-r2-images` in project `ciproxy`                                                  |
-| `ciproxy-macos-images-publish`           | Object Read & Write, bucket `ciproxy-macos-images` | The operator's password manager. `publish.sh` reads it from `R2_PUBLISH_ACCESS_KEY_ID` and `R2_PUBLISH_SECRET_ACCESS_KEY`. |
-| `ciproxy-xcode-read`                     | Object Read only, bucket `ciproxy-xcode`           | The operator's password manager. `fetch.sh` reads it from `R2_XCODE_ACCESS_KEY_ID` and `R2_XCODE_SECRET_ACCESS_KEY`.       |
+| R2 API token                             | Permission and scope                               | Store                                                                                                                                                                 |
+| ---------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ciproxy-main-preview-macos-images-read` | Object Read only, bucket `ciproxy-macos-images`    | Secret Manager secret `ciproxy-main-preview-r2-images` in project `ciproxy`                                                                                           |
+| `ciproxy-production-macos-images-read`   | Object Read only, bucket `ciproxy-macos-images`    | Secret Manager secret `ciproxy-production-r2-images` in project `ciproxy`                                                                                             |
+| `ciproxy-macos-images-publish`           | Object Read & Write, bucket `ciproxy-macos-images` | `~/ws-i/secrets/r2-publish.env` on the build Mac, mode 600. Source it before `publish.sh`, which reads `R2_PUBLISH_ACCESS_KEY_ID` and `R2_PUBLISH_SECRET_ACCESS_KEY`. |
+| `ciproxy-xcode-read`                     | Object Read only, bucket `ciproxy-xcode`           | `~/ws-i/secrets/r2-xcode-read.env` on the build Mac, mode 600. Source it before `fetch.sh`, which reads `R2_XCODE_ACCESS_KEY_ID` and `R2_XCODE_SECRET_ACCESS_KEY`.    |
 
 - Each Secret Manager version holds one JSON object:
   `{"access_key_id": "<token ID>", "secret_access_key": "<SHA-256 hex of
@@ -240,6 +240,13 @@ no r2.dev access, and no custom domain. So the S3 endpoint is
   environment. They never print them.
 - No GitHub secret is needed. Cal uploaded the Xcode archive with his own
   account token, so no Xcode upload token is needed.
+- 23 November 2026: Cal made the publish and the Xcode read tokens. Their
+  only store is an env file on the build Mac, in a folder with mode 700,
+  because the build Mac has no password manager. Each file exports its two
+  keys and `R2_ACCOUNT_ID`. Cal checked each scope: each token reads its
+  own bucket and the other bucket refuses it.
+- Cal makes the two environment read tokens after the data apply of H3
+  creates their Secret Manager parents.
 
 ### The macOS release reader
 

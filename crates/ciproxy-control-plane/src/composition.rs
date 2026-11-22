@@ -137,6 +137,14 @@ impl Hosted {
         });
         let overflow =
             crate::overflow_composition::compose(config, store.clone(), registrations.clone())?;
+        let cdn: Arc<dyn ImageSigning> = Arc::new(CdnSigning::new(
+            config.cdn_signing_key_name.clone(),
+            config.secret("cdn-signing-key")?.expose_secret(),
+        )?);
+        let offers = config.images.iter().map(|download| ImageOffer {
+            signing: (download.platform == Platform::LinuxX64).then(|| cdn.clone()),
+            download: download.clone(),
+        });
         let mut machine_runtime = MachineRuntime::new(
             store.clone(),
             gateway.clone(),
@@ -145,25 +153,13 @@ impl Hosted {
                 store: persistence.clone(),
             }),
             clock.clone(),
-            Vec::new(),
+            offers,
             installations.clone(),
         );
         machine_runtime.overflow = overflow.as_ref().map(|overflow| overflow.service.clone());
         machine_runtime.boat_retirement = overflow
             .as_ref()
             .map(|overflow| overflow.retirement.clone());
-        let cdn: Arc<dyn ImageSigning> = Arc::new(CdnSigning::new(
-            config.cdn_signing_key_name.clone(),
-            config.secret("cdn-signing-key")?.expose_secret(),
-        )?);
-        machine_runtime.images = config
-            .images
-            .iter()
-            .map(|download| ImageOffer {
-                signing: (download.platform == Platform::LinuxX64).then(|| cdn.clone()),
-                download: download.clone(),
-            })
-            .collect();
         let metering: Arc<dyn Metering> = Arc::new(StoredMetering::new(store.clone()));
         let accounting = Arc::new(AccountingWorker::new(
             store.clone(),

@@ -14,7 +14,6 @@ use ciproxy_github::runtime::Runtime;
 use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::identifiers::ImageId;
-use ciproxy_protocol::images::ImageDownload;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
@@ -26,7 +25,7 @@ use uuid::Uuid;
 
 use crate::boat_authority::BoatRegistrationRetirement;
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::image_signing::ImageSigning;
+pub use crate::image_offers::{ImageOffer, ImageOffers};
 use crate::runtime_tasks::RuntimeTasks;
 use crate::takeout::TakeoutCheck;
 
@@ -77,7 +76,7 @@ pub struct MachineRuntime {
     /// Exact App-JWT installation lookup for pending take-out authority.
     pub installations: Arc<dyn InstallationApi>,
     /// Released images, at most one for each platform.
-    pub images: Vec<ImageOffer>,
+    pub images: ImageOffers,
     pub(crate) operation: Arc<Mutex<()>>,
     pub(crate) tasks: Weak<RuntimeTasks>,
     task_owner: Option<Arc<RuntimeTasks>>,
@@ -85,25 +84,6 @@ pub struct MachineRuntime {
     pub(crate) image_requests: Arc<Mutex<HashMap<(Uuid, Uuid), ImageRequest>>>,
     pub(crate) boat_answers: Arc<Mutex<HashMap<Uuid, (u64, BoatRunnerGuard)>>>,
     pub(crate) takeout_checks: Arc<Mutex<HashMap<Uuid, TakeoutCheck>>>,
-}
-
-/// One released image that the runtime offers to the machines of its platform.
-#[derive(Clone)]
-pub struct ImageOffer {
-    /// Release facts with the unsigned artifact URL.
-    pub download: ImageDownload,
-    /// Signs a fresh URL for each send. Without it, the URL goes out as it is.
-    pub signing: Option<Arc<dyn ImageSigning>>,
-}
-
-impl ImageOffer {
-    /// Offer a release whose URL needs no signature.
-    pub fn unsigned(download: ImageDownload) -> Self {
-        Self {
-            download,
-            signing: None,
-        }
-    }
 }
 
 pub(crate) struct ImageRequest {
@@ -120,7 +100,7 @@ impl MachineRuntime {
         registrations: Arc<dyn RunnerRegistrations>,
         assignments: Arc<dyn JobAssignments>,
         clock: Arc<dyn Runtime>,
-        images: impl IntoIterator<Item = ImageDownload>,
+        images: impl IntoIterator<Item = ImageOffer>,
         installations: Arc<dyn InstallationApi>,
     ) -> Self {
         let tasks = RuntimeTasks::new();
@@ -132,7 +112,7 @@ impl MachineRuntime {
             registrations,
             assignments,
             clock,
-            images: images.into_iter().map(ImageOffer::unsigned).collect(),
+            images: images.into_iter().collect(),
             installations,
             operation: Arc::new(Mutex::new(())),
             tasks: Arc::downgrade(&tasks),
@@ -175,9 +155,7 @@ impl MachineRuntime {
 
     /// The release that the machines of this platform get.
     pub(crate) fn offer(&self, platform: Platform) -> Option<&ImageOffer> {
-        self.images
-            .iter()
-            .find(|offer| offer.download.platform == platform)
+        self.images.get(platform)
     }
 
     /// Root sizing of Linux job VMs and Boat sandboxes, from the Linux release.

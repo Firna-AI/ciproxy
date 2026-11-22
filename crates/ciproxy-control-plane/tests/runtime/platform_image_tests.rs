@@ -3,7 +3,7 @@
 use super::clock::clock;
 use super::settled::Settled;
 use super::support::Fixture;
-use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_control_plane::runtime::{ImageOffer, MachineRuntime};
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -77,7 +77,7 @@ async fn fetches(images: Vec<ImageDownload>) -> (Fixture, Uuid, Vec<(Uuid, Image
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        images,
+        images.into_iter().map(ImageOffer::unsigned),
         Arc::new(Unimock::new(())),
     );
     runtime.settled_tick().await.unwrap();
