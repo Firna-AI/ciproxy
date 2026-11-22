@@ -50,3 +50,5 @@ tower = { version = "0.5.3", features = ["util"] }
 unimock = "0.6.8"
 tokio-tungstenite = "0.30.0"
 futures-util = "0.3.34"
+rcgen = "0.14.10"
+tokio-rustls = "0.26.6"

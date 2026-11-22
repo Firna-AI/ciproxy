@@ -10,7 +10,7 @@ use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
 use reqwest::Client;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::image_release::{ImageReleases, SignedReleases};
 use crate::image_signing::ImageSigning;
 use crate::presigned_signing::{PresignedSigning, StoreKey};
@@ -78,8 +78,13 @@ impl MacosImageSettings {
         else {
             return Ok(None);
         };
+        let url_prefix = url_prefix.trim();
+        // Each read carries a signature in its URL, so it never goes in plaintext.
+        if !url_prefix.starts_with("https://") {
+            return Err(Error::MalformedSetting("MACOS_IMAGE_URL_PREFIX"));
+        }
         Ok(Some(Source {
-            url_prefix: url_prefix.trim(),
+            url_prefix,
             manifest_path: manifest_path.trim(),
             key: StoreKey::from_json(KEY_SETTING, key.expose_secret())?,
         }))
@@ -104,7 +109,7 @@ pub async fn read_macos_release(
             return None;
         }
         Err(error) => {
-            tracing::warn!(%error, "macOS images are off: the R2 key is malformed");
+            tracing::warn!(%error, "macOS images are off: a setting is malformed");
             return None;
         }
     };

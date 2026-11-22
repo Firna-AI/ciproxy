@@ -11,7 +11,7 @@ use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use super::{cdn, process, secrets};
+use super::{cdn, process, secrets, tls_store};
 
 /// Startup inputs with an owned CDN listener and a reserved refused proxy.
 pub(crate) struct Fixture {
@@ -19,7 +19,7 @@ pub(crate) struct Fixture {
     origin: SocketAddr,
     proxy: TcpSocket,
     server: JoinHandle<()>,
-    macos: bool,
+    macos: Option<SocketAddr>,
 }
 
 impl Fixture {
@@ -38,9 +38,11 @@ impl Fixture {
 
     /// Serve as above, with the macOS settings set and a store that refuses reads.
     pub(crate) async fn serving_with_forbidden_macos() -> (Self, Arc<Mutex<Vec<String>>>) {
-        let (routes, requests) = cdn::released_with_forbidden_macos();
-        let mut fixture = Self::new(routes).await;
-        fixture.macos = true;
+        let (routes, requests) = cdn::forbidden_macos();
+        let store = tls_store::serve(routes).await;
+        let mut fixture = Self::new(cdn::released()).await;
+        std::fs::write(fixture.directory.join("macos-store.pem"), store.certificate).unwrap();
+        fixture.macos = Some(store.address);
         secrets::serving(&fixture.directory).await;
         (fixture, requests)
     }
@@ -59,7 +61,7 @@ impl Fixture {
             origin,
             proxy,
             server,
-            macos: false,
+            macos: None,
         }
     }
 

@@ -10,19 +10,21 @@ use tokio::time::timeout;
 
 /// Apply only explicit local inputs to the production executable.
 ///
-/// With `macos`, the three macOS settings name a store on the same origin.
+/// With a macOS store, the three macOS settings name it, and the child
+/// trusts its certificate from `macos-store.pem` in the secret directory.
+/// That store is on loopback, so it bypasses the refused proxy.
 pub(super) fn spawn(
     directory: &Path,
     origin: SocketAddr,
     proxy: SocketAddr,
     database_url: &str,
-    macos: bool,
+    macos: Option<SocketAddr>,
 ) -> Child {
-    let macos_settings = macos.then(|| {
+    let macos_settings = macos.map(|store| {
         [
             (
                 "MACOS_IMAGE_URL_PREFIX",
-                format!("http://{origin}/ciproxy-macos-images"),
+                format!("https://{store}/ciproxy-macos-images"),
             ),
             (
                 "MACOS_IMAGE_MANIFEST_PATH",
@@ -33,6 +35,11 @@ pub(super) fn spawn(
                 r#"{"access_key_id": "startup-key-id", "secret_access_key": "startup-secret"}"#
                     .to_owned(),
             ),
+            (
+                "SSL_CERT_FILE",
+                directory.join("macos-store.pem").display().to_string(),
+            ),
+            ("NO_PROXY", "127.0.0.1".to_owned()),
         ]
     });
     Command::new(env!("CARGO_BIN_EXE_ciproxy-control-plane"))

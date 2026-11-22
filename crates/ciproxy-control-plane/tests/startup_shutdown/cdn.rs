@@ -51,11 +51,11 @@ pub(super) fn released() -> Router {
         )
 }
 
-/// The Linux release, and a macOS store that refuses each read and records it.
-pub(super) fn released_with_forbidden_macos() -> (Router, Arc<Mutex<Vec<String>>>) {
+/// A macOS store that refuses each read and records it.
+pub(super) fn forbidden_macos() -> (Router, Arc<Mutex<Vec<String>>>) {
     let requests = Arc::new(Mutex::new(Vec::new()));
     let recorded = requests.clone();
-    let routes = released().route(
+    let routes = Router::new().route(
         "/ciproxy-macos-images/releases/macos-startup/manifest.json",
         get(move |OriginalUri(uri): OriginalUri| {
             recorded.lock().unwrap().push(uri.to_string());

@@ -1,7 +1,6 @@
 //! The macOS release comes from presigned R2 reads and is optional at start.
 
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -19,56 +18,68 @@ use ciproxy_protocol::secret::Secret;
 use tokio::net::TcpListener;
 use unimock::{MockFn, Unimock, matching};
 
+use self::tls_store::TlsStore;
+
+mod tls_store;
+
 const RELEASE: &str = "/ciproxy-macos-images/releases/macos26-v1";
 const KEY: &str = r#"{"access_key_id": "fixture-key-id", "secret_access_key": "fixture-secret"}"#;
 
-/// A store that answers each path with a fixed status and body, and records each request.
+/// An HTTPS store that answers each path with a fixed status and body, and records each request.
 struct Store {
-    address: SocketAddr,
+    tls: TlsStore,
     requests: Arc<Mutex<Vec<String>>>,
 }
 
+const MANIFEST: &str =
+    r#"{"image_id": "macos26-v1", "root_disk_bytes": 214748364800, "free_job_bytes": 1}"#;
+
 async fn store(status: StatusCode) -> Store {
-    let files: HashMap<String, &str> = HashMap::from([
-        (
-            format!("{RELEASE}/manifest.json"),
-            r#"{"image_id": "macos26-v1", "root_disk_bytes": 214748364800, "free_job_bytes": 1}"#,
-        ),
+    store_with(status, MANIFEST.to_owned()).await
+}
+
+async fn store_with(status: StatusCode, manifest: String) -> Store {
+    let files: HashMap<String, String> = HashMap::from([
+        (format!("{RELEASE}/manifest.json"), manifest),
         (
             format!("{RELEASE}/downloads.json"),
             r#"{"firecracker": {"file": "firecracker.tar.zst", "sha256": "linux", "size_bytes": 1},
-                "macos": {"file": "macos.tar", "sha256": "macos-checksum", "size_bytes": 42949672960}}"#,
+                "macos": {"file": "macos.tar", "sha256": "macos-checksum", "size_bytes": 42949672960}}"#
+                .to_owned(),
         ),
     ]);
     let requests = Arc::new(Mutex::new(Vec::new()));
     let recorded = requests.clone();
     let routes = Router::new().fallback(move |OriginalUri(uri): OriginalUri| {
         recorded.lock().unwrap().push(uri.to_string());
-        let body = files.get(uri.path()).copied();
+        let body = files.get(uri.path()).cloned();
         async move {
             match body {
-                Some(body) if status == StatusCode::OK => (status, body.to_owned()),
+                Some(body) if status == StatusCode::OK => (status, body),
                 Some(_) => (status, String::new()),
                 None => (StatusCode::NOT_FOUND, String::new()),
             }
         }
     });
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(listener, routes).await.unwrap() });
-    Store { address, requests }
+    Store {
+        tls: tls_store::serve(routes).await,
+        requests,
+    }
 }
 
 fn settings(store: &Store) -> MacosImageSettings {
     MacosImageSettings {
-        url_prefix: Some(format!("http://{}/ciproxy-macos-images", store.address)),
+        url_prefix: Some(format!(
+            "https://{}/ciproxy-macos-images",
+            store.tls.address
+        )),
         manifest_path: Some("releases/macos26-v1/manifest.json".to_owned()),
         key: Some(Secret::new(KEY)),
     }
 }
 
 /// Read with a clock that signs, or with one that panics when a read is signed.
-async fn read(settings: &MacosImageSettings, signs: bool) -> Option<ImageDownload> {
+async fn read(store: &Store, settings: &MacosImageSettings, signs: bool) -> Option<ImageDownload> {
     let clock = Arc::new(if signs {
         Unimock::new(
             RuntimeMock::now.each_call(matching!()).returns(
@@ -80,13 +91,13 @@ async fn read(settings: &MacosImageSettings, signs: bool) -> Option<ImageDownloa
     } else {
         Unimock::new(())
     });
-    read_macos_release(settings, reqwest::Client::new(), clock).await
+    read_macos_release(settings, client(&store.tls), clock).await
 }
 
 #[tokio::test]
 async fn the_macos_artifact_is_read_with_presigned_urls_that_expire_after_five_minutes() {
     let store = store(StatusCode::OK).await;
-    let download = read(&settings(&store), true).await.unwrap();
+    let download = read(&store, &settings(&store), true).await.unwrap();
     assert_eq!(download.image_id, ImageId("macos26-v1".to_owned()));
     assert_eq!(download.platform, Platform::MacosArm64);
     assert_eq!(download.sha256, "macos-checksum");
@@ -94,7 +105,7 @@ async fn the_macos_artifact_is_read_with_presigned_urls_that_expire_after_five_m
     assert_eq!(download.root_disk_bytes, 214_748_364_800);
     assert_eq!(
         download.download_url.expose_secret(),
-        format!("http://{}{RELEASE}/macos.tar", store.address)
+        format!("https://{}{RELEASE}/macos.tar", store.tls.address)
     );
     let requests = store.requests.lock().unwrap().clone();
     let paths: Vec<&str> = requests
@@ -122,7 +133,7 @@ async fn the_macos_artifact_is_read_with_presigned_urls_that_expire_after_five_m
 }
 
 #[tokio::test]
-async fn macos_images_stay_off_without_a_read_when_a_setting_is_missing_or_the_key_is_malformed() {
+async fn macos_images_stay_off_without_a_read_when_a_setting_is_missing_or_malformed() {
     let store = store(StatusCode::OK).await;
     let complete = settings(&store);
     let cases = [
@@ -155,6 +166,13 @@ async fn macos_images_stay_off_without_a_read_when_a_setting_is_missing_or_the_k
             },
         ),
         (
+            "a prefix without https",
+            MacosImageSettings {
+                url_prefix: Some(format!("http://{}/ciproxy-macos-images", store.tls.address)),
+                ..complete.clone()
+            },
+        ),
+        (
             "a key that is not JSON",
             MacosImageSettings {
                 key: Some(Secret::new("fixture-secret")),
@@ -164,7 +182,7 @@ async fn macos_images_stay_off_without_a_read_when_a_setting_is_missing_or_the_k
     ];
     for (case, settings) in cases {
         assert_eq!(
-            read(&settings, false)
+            read(&store, &settings, false)
                 .await
                 .map(|download| download.image_id),
             None,
@@ -180,14 +198,18 @@ async fn macos_images_stay_off_without_a_read_when_a_setting_is_missing_or_the_k
 
 #[tokio::test]
 async fn a_failed_release_read_turns_macos_images_off() {
-    let store = store(StatusCode::FORBIDDEN).await;
-    assert_eq!(
-        read(&settings(&store), true)
-            .await
-            .map(|download| download.image_id),
-        None
-    );
-    assert_eq!(store.requests.lock().unwrap().len(), 1);
+    let refused = store(StatusCode::FORBIDDEN).await;
+    let oversized = store_with(StatusCode::OK, " ".repeat(1024 * 1024 + 1)).await;
+    for (case, store) in [("refused", refused), ("larger than 1 MiB", oversized)] {
+        assert_eq!(
+            read(&store, &settings(&store), true)
+                .await
+                .map(|download| download.image_id),
+            None,
+            "{case}"
+        );
+        assert_eq!(store.requests.lock().unwrap().len(), 1, "{case}");
+    }
 }
 
 /// Read one release through the reader that both platforms share.
@@ -233,7 +255,7 @@ async fn failed_release_reads_keep_the_signed_url_out_of_the_error() {
         (
             "body that is not JSON",
             format!("http://{address}/ciproxy-macos-images"),
-            "error decoding response body",
+            "expected ident at line 1 column 2",
         ),
     ] {
         let error = read_release(prefix).await;
@@ -241,4 +263,14 @@ async fn failed_release_reads_keep_the_signed_url_out_of_the_error() {
         assert!(!error.contains("X-Amz-Signature"), "{case}: {error}");
         assert!(!error.contains("manifest.json"), "{case}: {error}");
     }
+}
+
+/// A client of the production form that trusts only this store in addition.
+fn client(store: &TlsStore) -> reqwest::Client {
+    reqwest::Client::builder()
+        .http1_only()
+        .redirect(reqwest::redirect::Policy::none())
+        .add_root_certificate(reqwest::Certificate::from_pem(store.certificate.as_bytes()).unwrap())
+        .build()
+        .unwrap()
 }

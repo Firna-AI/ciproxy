@@ -18,6 +18,9 @@ pub enum Error {
     /// A release file read returned an HTTP error status.
     #[error("[control-plane] image release read returned HTTP status {0}")]
     ReleaseStatus(u16),
+    /// A release file is larger than the 1 MiB limit of release metadata.
+    #[error("[control-plane] an image release file is larger than 1 MiB")]
+    ReleaseTooLarge,
     /// The release's `downloads.json` has no artifact under this key.
     #[error("[control-plane] downloads.json has no {0} artifact")]
     MissingArtifact(&'static str),

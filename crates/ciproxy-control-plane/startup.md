@@ -11,7 +11,8 @@ A missing setting stops the process with exit status 1 and names the setting.
 The process then signs and fetches the pinned published manifest.
 It reads `downloads.json` from the same release directory.
 These files supply the exact root bytes, image ID, archive hash, and size.
-A failed Linux read stops the process.
+A failed Linux read stops the process. Each release file may hold at most
+1 MiB, and a larger one is a failed read.
 When the three macOS settings are set, the process then reads the macOS
 release in the same way, from the private R2 store with presigned URLs.
 When a macOS setting is missing, the key is malformed, or the read fails, it

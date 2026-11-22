@@ -175,6 +175,10 @@ Mac boot the macOS image.
 - That URL expires 2 hours after the control plane makes it.
 - The agent checks the byte size and the SHA-256 that come with the URL,
   as for the machine image.
+- The control plane reads the macOS release only from an `https://` store
+  address, because each read carries a signature in its URL.
+- Each release file that the control plane reads, `manifest.json` and
+  `downloads.json`, holds at most 1 MiB. A larger file fails the read.
 - When no macOS release is set, or the control plane cannot read it, Macs
   get no image. Linux machines and Boat jobs are not affected.
 - **Decision:** a private store, and a signed read URL for each download.

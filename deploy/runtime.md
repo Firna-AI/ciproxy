@@ -80,7 +80,9 @@ supplies this interface:
 The runtime signs and fetches the manifest and its sibling `downloads.json`
 with the existing CDN key. It reads `root_disk_bytes` and `image_id` only
 from the manifest. It reads artifact names, hashes, and download bytes only
-from `downloads.json`. It signs fresh artifact URLs for each send.
+from `downloads.json`. It signs fresh artifact URLs for each send. Each of
+the two files may hold at most 1 MiB. A larger file stops the start, as a
+malformed manifest does.
 
 The GitHub variable `CDN_SIGNING_KEY_NAME` is the one selector of the CDN
 key. From it, the chart sets both the key name and the secret version N of
@@ -201,6 +203,8 @@ logs that once. Linux machines and Boat run as before.
 - `MACOS_IMAGE_URL_PREFIX` is a GitHub environment variable. It holds the
   R2 endpoint and the bucket in path style:
   `https://785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com/ciproxy-macos-images`.
+  It must start with `https://`. Otherwise the runtime logs a warning that
+  names the setting, and macOS images stay off.
 - `MACOS_IMAGE_MANIFEST_PATH` is a GitHub environment variable. It pins one
   release, `releases/<image_id>/manifest.json`, relative to the prefix.
   Keep it empty until the first publish.
@@ -212,7 +216,8 @@ logs that once. Linux machines and Boat run as before.
 At start, the runtime reads the manifest and its sibling `downloads.json`
 with presigned URLs that expire after 5 minutes. It reads `image_id` and
 `root_disk_bytes` from the manifest, and the `macos` artifact from
-`downloads.json`. A failed read or a malformed key logs a warning, and the
+`downloads.json`. Each of the two files may hold at most 1 MiB. A failed
+read, a file over that limit, or a malformed setting logs a warning, and the
 runtime starts without a macOS image. It does not read again until the next
 pod start. For each send to a Mac, it signs a new URL that expires after 2
 hours. A customer Mac must reach

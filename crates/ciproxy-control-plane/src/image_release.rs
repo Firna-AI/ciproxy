@@ -15,6 +15,10 @@ use serde::Deserialize;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_signing::ImageSigning;
 
+/// The most bytes that one `manifest.json` or `downloads.json` may hold.
+const METADATA_LIMIT_BYTES: usize = 1024 * 1024;
+const METADATA_LIMIT: u64 = METADATA_LIMIT_BYTES as u64;
+
 /// Current published release facts, with no guessed root dimensions.
 pub struct ImageRelease {
     /// Immutable artifact identity, hash, and download byte count.
@@ -74,12 +78,26 @@ impl SignedReleases {
 
     async fn read<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T> {
         let signed = self.signing.sign(&self.url(path), self.clock.now())?;
-        let response = without_url(self.http.get(signed.expose_secret()).send().await)?;
+        let mut response = without_url(self.http.get(signed.expose_secret()).send().await)?;
         let status = response.status();
         if !status.is_success() {
             return Err(Error::ReleaseStatus(status.as_u16()));
         }
-        without_url(response.json().await)
+        if response
+            .content_length()
+            .is_some_and(|length| length > METADATA_LIMIT)
+        {
+            return Err(Error::ReleaseTooLarge);
+        }
+        // Count the streamed bytes too: a store need not send Content-Length.
+        let mut body = Vec::new();
+        while let Some(chunk) = without_url(response.chunk().await)? {
+            if body.len() + chunk.len() > METADATA_LIMIT_BYTES {
+                return Err(Error::ReleaseTooLarge);
+            }
+            body.extend_from_slice(&chunk);
+        }
+        serde_json::from_slice(&body).internal()
     }
 }
 

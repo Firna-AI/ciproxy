@@ -7,6 +7,7 @@ use axum::Router;
 use axum::extract::OriginalUri;
 use axum::http::StatusCode;
 use axum::routing::get;
+use ciproxy_control_plane::error::Error;
 use ciproxy_control_plane::image_release::{ImageReleases, SignedReleases};
 use ciproxy_control_plane::image_signing::CdnSigning;
 use ciproxy_gateway::logging;
@@ -98,4 +99,60 @@ async fn signed_manifest_and_bundle_metadata_reads_keep_credentials_out_of_trace
         );
     }
     assert!(!output.contains("AAECAwQFBgcICQoLDA0ODw=="));
+}
+
+/// Declare 2 MiB and close after one byte, so only the declared length is too large.
+async fn declared_oversize_origin() -> std::net::SocketAddr {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        loop {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0; 4096];
+            let _ = tokio::io::AsyncReadExt::read(&mut socket, &mut request).await;
+            let head = b"HTTP/1.1 200 OK\r\nContent-Length: 2097152\r\n\r\n{";
+            let _ = tokio::io::AsyncWriteExt::write_all(&mut socket, head).await;
+        }
+    });
+    address
+}
+
+#[tokio::test]
+async fn linux_release_metadata_over_one_mebibyte_is_a_start_error() {
+    let streamed = || {
+        let chunks = (0..128).map(|_| Ok::<_, std::io::Error>(vec![b' '; 64 * 1024]));
+        axum::body::Body::from_stream(futures_util::stream::iter(chunks))
+    };
+    let routes = Router::new().route(
+        "/images/streamed/manifest.json",
+        get(move || async move { streamed() }),
+    );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, routes).await.unwrap() });
+    let declared = declared_oversize_origin().await;
+    for (case, origin) in [("declared", declared), ("streamed", address)] {
+        let releases = SignedReleases {
+            http: reqwest::Client::new(),
+            prefix: format!("http://{origin}/images"),
+            manifest_path: format!("{case}/manifest.json"),
+            signing: Arc::new(
+                CdnSigning::new("test-image-key".to_owned(), "AAECAwQFBgcICQoLDA0ODw==").unwrap(),
+            ),
+            clock: Arc::new(Unimock::new(
+                RuntimeMock::now.each_call(matching!()).returns(
+                    "2026-11-05T12:00:00Z"
+                        .parse::<chrono::DateTime<chrono::Utc>>()
+                        .unwrap(),
+                ),
+            )),
+            platform: Platform::LinuxX64,
+            artifact: "firecracker",
+        };
+        let error = releases.current().await.err();
+        assert!(
+            matches!(error, Some(Error::ReleaseTooLarge)),
+            "{case}: {error:?}"
+        );
+    }
 }
