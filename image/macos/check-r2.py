@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Check publish.sh and the Xcode download of fetch.sh offline.
+"""Check publish.sh offline. check-r2-xcode.py checks the Xcode download.
 
 A fake `aws` on PATH records each call and keeps the bucket in a folder.
 Needs bash and shasum.
 """
 
 import importlib.util
-import io
 import json
 import pathlib
 import shutil
-import tarfile
 import unittest
-import zipfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("r2_fake", HERE / "r2_fake.py")
@@ -29,17 +26,20 @@ SMALL_FILES = ["downloads.json", "SHA256SUMS", "measurement.json", "software-rep
 
 
 class Publish(FakeR2):
-    def artifacts(self, test_image=False, size_delta=0, image_id=IMAGE_ID):
+    def artifacts(self, test_image=False, size_delta=0, image_id=IMAGE_ID, variant="full",
+                  size_bytes=None):
+        """variant None leaves the key out, as an older build does."""
         folder = self.root / "artifacts"
         folder.mkdir()
         tar = b"macos archive" * 1000
         files = {"macos.tar": tar, "measurement.json": b"{}", "software-report.json": b"{}",
                  "upstream-software.json": b"{}", "size-report.txt": b"macos.tar: 13000\n",
-                 "manifest.json": json.dumps({"image_id": image_id,
-                                              "test_image": test_image}).encode(),
+                 "manifest.json": json.dumps({"image_id": image_id, "test_image": test_image,
+                                              **({} if variant is None else
+                                                 {"variant": variant})}).encode(),
                  "downloads.json": json.dumps({"macos": {
                      "file": "macos.tar", "sha256": sha256(tar),
-                     "size_bytes": len(tar) + size_delta}}).encode()}
+                     "size_bytes": size_bytes or len(tar) + size_delta}}).encode()}
         for name, data in files.items():
             (folder / name).write_bytes(data)
         (folder / "SHA256SUMS").write_text(
@@ -134,15 +134,51 @@ class Publish(FakeR2):
         self.assertEqual(self.calls(), [])
         self.assert_no_key(result)
 
+    def test_publishes_the_full_and_the_standard_release_images(self):
+        for image_id, variant, size in [(PINS["IMAGE_ID"], "full", 73914951680),
+                                        (PINS["STANDARD_IMAGE_ID"], "standard", 47559669760)]:
+            with self.subTest(variant=variant):
+                folder = self.artifacts(image_id=image_id, variant=variant, size_bytes=size)
+                result = self.publish(folder, env={"FAKE_AWS_SIZE": str(size)})
+                shutil.rmtree(folder)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(f"Publishing {image_id}, variant {variant}.", result.stdout)
+                self.assertEqual(result.stdout.splitlines()[-2:], [
+                    f"Published {image_id}, variant {variant}.",
+                    f"MACOS_IMAGE_MANIFEST_PATH=releases/{image_id}/manifest.json"])
+
+    def test_refuses_a_variant_that_disagrees_with_test_image(self):
+        for variant, test_image in [("standard", True), ("test", False)]:
+            with self.subTest(variant=variant):
+                folder = self.artifacts(variant=variant, test_image=test_image)
+                result = self.publish("--test-image", folder)
+                shutil.rmtree(folder)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(f"manifest.json says variant {variant} and test_image", result.stderr)
+                self.assertEqual(self.calls(), [])
+
+    def test_counts_an_older_build_without_variant_by_its_test_flag(self):
+        for test_image, variant in [(False, "full"), (True, "test")]:
+            with self.subTest(variant=variant):
+                image_id = f"{IMAGE_ID}-{variant}"
+                folder = self.artifacts(variant=None, test_image=test_image, image_id=image_id)
+                arguments = ["--test-image"] if test_image else []
+                result = self.publish(*arguments, folder)
+                shutil.rmtree(folder)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stderr.count("manifest.json has no variant"), 1)
+                self.assertIn(f"It counts as {variant}.", result.stderr)
+                self.assertIn(f"Published {image_id}, variant {variant}.", result.stdout)
+
     def test_refuses_a_test_image_without_the_flag(self):
-        result = self.publish(self.artifacts(test_image=True))
+        result = self.publish(self.artifacts(test_image=True, variant="test"))
         self.assertEqual(result.returncode, 1)
         self.assertIn("Give --test-image", result.stderr)
         self.assertEqual(self.calls(), [])
         self.assert_no_key(result)
 
     def test_publishes_a_test_image_with_the_flag(self):
-        result = self.publish("--test-image", self.artifacts(test_image=True))
+        result = self.publish("--test-image", self.artifacts(test_image=True, variant="test"))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.writes()[-1][:2], ["s3api", "put-object"])
 
@@ -158,111 +194,6 @@ class Publish(FakeR2):
         self.assertEqual(result.returncode, 1)
         self.assertIn("The release has no manifest", result.stderr)
         self.assertNotIn(["s3api", "put-object"], [write[:2] for write in self.writes()])
-
-
-XCODE_KEYS = ("R2_XCODE_ACCESS_KEY_ID", "R2_XCODE_SECRET_ACCESS_KEY")
-
-
-class FetchXcode(FakeR2):
-    """Runs a copy of fetch.sh with fake pins, so that every other input is local."""
-
-    def setUp(self):
-        super().setUp()
-        self.definition = self.root / "definition"
-        self.definition.mkdir()
-        for name in ("fetch.sh", "r2.sh"):
-            shutil.copy(HERE / name, self.definition / name)
-        self.work = self.root / "work"
-        inputs = self.work / "inputs"
-        inputs.mkdir(parents=True)
-        packer = io.BytesIO()
-        with zipfile.ZipFile(packer, "w") as archive:
-            archive.writestr("packer", "fake packer")
-        runner_images = io.BytesIO()
-        with tarfile.open(fileobj=runner_images, mode="w:gz") as archive:
-            archive.addfile(tarfile.TarInfo("runner-images/README.md"), io.BytesIO())
-        files = {"restore.ipsw": (b"restore", "RESTORE_IMAGE"),
-                 "runner-images.tar.gz": (runner_images.getvalue(), "RUNNER_IMAGES"),
-                 "upstream-software.json": (b"{}", "SOFTWARE_MANIFEST"),
-                 "runner.tar.gz": (b"runner", "RUNNER"), "packer.zip": (packer.getvalue(), "PACKER")}
-        self.xcode = b"xcode archive"
-        pins = [f"XCODE_XIP_NAME={PINS['XCODE_XIP_NAME']}", f"XCODE_SHA256={sha256(self.xcode)}",
-                "XCODE_VERSION=26.6"]
-        for name, (data, pin) in files.items():
-            (inputs / name).write_bytes(data)
-            pins += [f"{pin}_URL=https://example.invalid/{name}", f"{pin}_SHA256={sha256(data)}"]
-        (self.definition / "pins.env").write_text("\n".join(pins) + "\n")
-        guest = self.root / "guest"
-        guest.mkdir()
-        (guest / "install.sh").write_text("#!/bin/sh\n")
-        (guest / "install.sh").chmod(0o755)
-        self.env["GUEST_DIR"] = str(guest)
-        self.object = self.bucket / "ciproxy-xcode" / "xcode" / PINS["XCODE_XIP_NAME"]
-        self.object.parent.mkdir(parents=True)
-        self.object.write_bytes(self.xcode)
-        self.archive = self.work / "inputs" / "xcode" / PINS["XCODE_XIP_NAME"]
-
-    def fetch(self, keys, env=None, trace=False):
-        return self.run_script(self.definition / "fetch.sh", self.work, keys=keys, env=env,
-                               trace=trace)
-
-    def test_downloads_the_private_xcode_copy_with_the_read_keys(self):
-        # A bash -x trace shows no key either.
-        result = self.fetch(XCODE_KEYS, trace=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        archive = self.archive
-        self.assertEqual([call["argv"][4:] for call in self.calls()], [[
-            "s3", "cp", f"s3://ciproxy-xcode/xcode/{PINS['XCODE_XIP_NAME']}", f"{archive}.part"]])
-        self.assert_r2_call(self.calls()[0], KEY_ID, SECRET)
-        self.assertEqual(archive.read_bytes(), self.xcode)
-        self.assertIn(f"{archive}: OK", result.stdout)
-        self.assert_no_key(result)
-        result = self.fetch(XCODE_KEYS)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(self.calls()), 1)
-
-    def test_downloads_with_any_aws_cli_and_warns_on_one_that_is_not_v2(self):
-        for version, warns in [("2.15.0", False), ("1.33.0", True)]:
-            with self.subTest(version=version):
-                self.archive.unlink(missing_ok=True)
-                result = self.fetch(XCODE_KEYS, env={"FAKE_AWS_VERSION": version})
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(self.archive.read_bytes(), self.xcode)
-                self.assertEqual(f"Warning: the AWS CLI is {version}." in result.stderr, warns)
-
-    def test_keeps_the_message_without_keys_or_folder(self):
-        result = self.fetch(())
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls(), [])
-        self.assertIn("No Xcode archive: only the test image can be built.", result.stdout)
-        self.assertIn("Or source the R2 Xcode env file", result.stdout)
-
-    def test_names_the_missing_key_when_only_some_are_set(self):
-        result = self.fetch(("R2_XCODE_ACCESS_KEY_ID",))
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls(), [])
-        self.assertIn("The R2 Xcode download also needs R2_XCODE_SECRET_ACCESS_KEY.", result.stderr)
-        self.assert_no_key(result)
-
-    def test_prefers_the_local_xcode_folder_over_the_bucket(self):
-        folder = self.root / "xcode"
-        folder.mkdir()
-        (folder / PINS["XCODE_XIP_NAME"]).write_bytes(self.xcode)
-        result = self.fetch(XCODE_KEYS, env={"XCODE_DIR": str(folder)})
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls(), [])
-        self.assertEqual(self.archive.read_bytes(), self.xcode)
-
-    def test_downloads_again_after_a_bad_download(self):
-        self.object.write_bytes(b"broken download")
-        result = self.fetch(XCODE_KEYS)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.archive.exists(), False)
-        self.object.write_bytes(self.xcode)
-        result = self.fetch(XCODE_KEYS)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(self.calls()), 2)
-        self.assertEqual(self.archive.read_bytes(), self.xcode)
 
 
 if __name__ == "__main__":

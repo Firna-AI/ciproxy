@@ -224,10 +224,14 @@ Run it from the repository root after the `package` phase:
 The script reads `R2_ACCOUNT_ID`, `R2_PUBLISH_ACCESS_KEY_ID`, and
 `R2_PUBLISH_SECRET_ACCESS_KEY`. It does these steps in order:
 
-1. It reads `image_id` from `manifest.json`. It refuses an `image_id` that
-   is empty or that holds a character other than a letter, a digit, `.`,
-   `_`, `+`, or `-`. It refuses a manifest with `"test_image": true`. Give
-   `--test-image` before the folder to publish a test image.
+1. It reads `image_id` and `variant` from `manifest.json`, and prints them.
+   It refuses an `image_id` that is empty or that holds a character other
+   than a letter, a digit, `.`, `_`, `+`, or `-`. It accepts the variants
+   `full` and `standard`. It accepts `test` only when `--test-image` comes
+   before the folder. Only the `test` variant may have `"test_image": true`,
+   so the script refuses a manifest where the two disagree. A manifest
+   without `variant` comes from an older build. The script then warns once,
+   and counts it as `test` when `test_image` is true, else as `full`.
 2. It checks `SHA256SUMS` in the artifact folder.
 3. It stops when `releases/<image_id>/manifest.json` exists. A release
    folder is immutable, so a new build needs a new image ID.
@@ -238,14 +242,15 @@ The script reads `R2_ACCOUNT_ID`, `R2_PUBLISH_ACCESS_KEY_ID`, and
    It stops when the size differs from `downloads.json`.
 6. It uploads `manifest.json` last, with `If-None-Match: *`. So a folder
    with a manifest is complete, and two runs cannot both write it.
-7. It prints the value of the GitHub environment variable, for example
+7. It prints the image ID and the variant again, then the value of the
+   GitHub environment variable, for example
    `MACOS_IMAGE_MANIFEST_PATH=releases/<image_id>/manifest.json`.
 
 To ship the release, set `MACOS_IMAGE_MANIFEST_PATH` to that value in the
 GitHub environment, first `main-preview`, then `production`. Then deploy
-that environment. The control plane offers the release only when that
-environment also has `MACOS_IMAGE_URL_PREFIX` and the R2 read key
-`R2_IMAGES_KEY`.
+that environment. [macOS images](../../deploy/runtime.md#macos-images) in
+the runtime guide gives the other settings that the control plane needs.
+Each environment offers one macOS release, the standard variant for now.
 
 The scripts use the AWS CLI v2. `publish.sh` needs version 2.17.34 or
 later, the first release with `--if-none-match` on `aws s3api put-object`.
@@ -282,11 +287,12 @@ repository. Never print a file, and do not source one in a shell with
 `python3 image/macos/check-template.py` checks the template, toolset, and
 variant preparation offline. `python3 image/macos/check-archive.py` checks the
 archive writer and checker against the agent's member list.
-`python3 image/macos/check-r2.py` runs `publish.sh` and the Xcode download
-of `fetch.sh` against a fake `aws` on `PATH`. It checks the upload order,
-the refusals, and that no key reaches the output, a trace, or the `aws`
-arguments. It needs bash and `shasum`, and runs on Linux too. Lint the R2
-scripts from the repository root:
+`python3 image/macos/check-r2.py` runs `publish.sh`, and
+`python3 image/macos/check-r2-xcode.py` runs the Xcode download of
+`fetch.sh`, against a fake `aws` on `PATH`. They check the upload order,
+the variants, the refusals, and that no key reaches the output, a trace,
+or the `aws` arguments. They need bash and `shasum`, and run on Linux too.
+Lint the R2 scripts from the repository root:
 
 ```sh
 shellcheck image/macos/publish.sh image/macos/fetch.sh image/macos/r2.sh

@@ -2,7 +2,8 @@
 """A fake `aws` and a test base for check-r2.py.
 
 The fake records each call and keeps the bucket in a folder. Environment
-knobs set its version, a HEAD error, and a manifest of another publisher.
+knobs set its version, a HEAD error, the size that HEAD reports, and a
+manifest of another publisher.
 """
 
 import hashlib
@@ -48,7 +49,8 @@ if args[:2] == ["s3api", "head-object"]:
     target = root / value("--bucket") / value("--key")
     if not target.exists():
         fail("An error occurred (404) when calling the HeadObject operation: Not Found")
-    print(target.stat().st_size if "--query" in args else "{}")
+    size = os.environ.get("FAKE_AWS_SIZE") or target.stat().st_size
+    print(size if "--query" in args else "{}")
 elif args[:2] == ["s3api", "put-object"]:
     target = root / value("--bucket") / value("--key")
     if "--if-none-match" in args and value("--if-none-match") == "*" and target.exists():
