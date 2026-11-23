@@ -192,11 +192,15 @@ The export goes to `dist/`. The `test` script runs the Node tests in
 `_tests_`. The complete gate lints, typechecks, format-checks, and exports
 the app. It does not run the Node tests or the browser checks below.
 
-Expo loads the shared Geist faces with `expo-font`, and the Metro
-configuration enables their WOFF2 files. The static export puts the faces in
-the page head, so the page renders at once. Do not wait for the fonts before
-the first render. The client would render nothing where the server rendered
-the page, and React would report a hydration error. The export renders each
+[src/components/fonts.tsx](src/components/fonts.tsx) writes the
+`@font-face` rules and the preloads of the shared Geist faces into the page
+head. The Metro configuration enables their WOFF2 files. Each rule declares
+the weight range of the variable file, so Safari adds no synthetic bold.
+`expo-font` writes no weight range, so the app does not use it. The static
+export puts the rules in the page head, so the page renders at once.
+Do not wait for the fonts before the first render. The client would render
+nothing where the server rendered the page, and React would report a
+hydration error. The export renders each
 page without its query, so the first render must not depend on it either.
 The page declares the `only light` colour scheme, so a browser that darkens
 pages leaves it light.
