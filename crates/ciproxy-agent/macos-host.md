@@ -170,7 +170,9 @@ launchd sends early output, such as a panic, to the same file.
 ## Storage
 
 The agent keeps images and VM bundles on one APFS volume of its own,
-named `ciproxy`, in the container of the data volume.
+named `ciproxy`. By default, the volume is in the container of the data
+volume. `CIPROXY_AREA_DISK` puts it on another APFS disk, as
+[Area on another disk](#area-on-another-disk) says.
 
 - The volume has a quota, so jobs and images cannot fill the disk of the
   Mac. This replaces the XFS file of Linux. The default quota is three
@@ -185,7 +187,15 @@ BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
   (`tmutil addexclusion -v`).
 - Daemon start mounts the recorded volume when it is not mounted. Install
   and uninstall act only on the volume with the recorded UUID and the name
-  `ciproxy`.
+  `ciproxy`. For a volume on another disk, `area.json` also records the
+  UUID of the volume's container, so uninstall deletes the volume only in
+  that container.
+- Each mount by the agent (daemon start, install, `prepare-host`, and
+  `import-image`) checks that the volume uses file owners
+  (`GlobalPermissionsEnabled`). macOS can ignore owners on an external
+  volume, and then any user could write the root-only files of the agent.
+  The agent runs `diskutil enableOwnership`, and refuses a volume where
+  owners stay off.
 - APFS clones work inside the volume. A clone takes 1 ms and no space at
   first.
 - **Check:** the quota syntax, and that the fstab line mounts the volume at
@@ -199,6 +209,57 @@ BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
 | `images/NAME.tar.partial.json` | The image ID, SHA-256, and size of them     |
 | `vms/LOCAL_ID/`                | The VM bundle clone, `vm.json`, socket      |
 | `seats/N/identity/`            | The seat identity, in the `ciproxy-vz` form |
+
+### Area on another disk
+
+A Mac with a small internal disk can keep the area on another APFS disk,
+such as an external SSD. Set `CIPROXY_AREA_DISK` for `prepare-host` or the
+first install:
+
+```sh
+sudo env CIPROXY_AREA_DISK=/Volumes/NAME /usr/local/bin/ciproxy-agent install --token TOKEN
+```
+
+- The value is a mounted path, such as `/Volumes/NAME`, or an APFS
+  container reference, such as `disk5`. With no value, the agent uses the
+  startup disk, as before, and the record keeps its older form.
+- The agent reads the container and its free space from the target with
+  `diskutil info -plist` and `diskutil apfs list -plist`. It reads the
+  disk facts from the container's physical store.
+- It refuses a volume that is not APFS, a read-only volume or disk, a
+  target that `diskutil` does not know, such as a network share, and a
+  disk image, which can be on a network share. Each refusal gives a repair
+  line.
+- It warns, and goes on, when the disk is external or removable. The
+  record keeps this fact, and `prepare-host` prints it.
+- The setting applies only to a new volume. With a recorded volume, the
+  agent keeps that volume and warns when the setting names another disk.
+  To move the area, uninstall first.
+
+The disk must stay connected. The agent then acts as follows:
+
+- **At boot, before the disk is there:** daemon start finds no volume with
+  the recorded UUID. It stops with the repair line "The ciproxy volume is
+  missing. Connect the disk that holds it." launchd starts the daemon again
+  every 5 s. When the disk comes, macOS mounts the volume from the fstab
+  line, and the next start goes on as normal. A disk that mounts late gives
+  the same result. A mount by the agent and by fstab at the same time is
+  not an error: the agent checks the mount point again.
+- **When the disk is unplugged while the agent runs:** the mount point is
+  again a bare folder on the startup disk. The agent sees this from the
+  device number of the folder. The hardware report then has no disk, so
+  the Mac has no job disk, and the control plane sends it no job. A VM
+  start refuses with the same repair line. Within 10 s, the guard stops
+  every VM, because their disks are gone, and their jobs fail. When the
+  disk is back, macOS mounts the volume again, and the Mac takes jobs
+  again with no restart.
+- **Uninstall with the disk gone:** with no recorded VM, uninstall goes on.
+  It warns that the volume stays on its disk. It removes the bare mount
+  folder with any file in it, then the fstab line, and the record last.
+  When `diskutil` finds the volume but not its container, uninstall stops
+  and keeps the record, so a retry decides. Delete the volume later with
+  `diskutil apfs deleteVolume UUID`. With a recorded VM, uninstall needs
+  the disk, because it drains the VMs first.
 
 `NAME` is the hex SHA-256 of the image ID, so an ID never names a path.
 
@@ -470,4 +531,7 @@ runs a macOS VM. The start fails, and the core reports it.
   drains.
 - **Check** on a real install: the `diskutil` quota syntax, the volume
   mount at boot, and the `pfctl` output that the agent reads.
+- **Check** on a Mac with an external disk: the `diskutil` keys that the
+  area disk checks read, the file-owner check, and the behaviour when the
+  disk is missing at boot or unplugged.
 - The machine cache on macOS.

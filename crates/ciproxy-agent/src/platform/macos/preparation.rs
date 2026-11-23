@@ -14,6 +14,7 @@ use super::recovery::remove_orphans;
 use crate::boundaries::{Images, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos::area_disk::AreaDisk;
 use crate::macos::guests::VmFolders;
 use crate::macos::hardware::install_check;
 use crate::macos::paths::{AREA, CONTROL};
@@ -27,6 +28,8 @@ pub(crate) struct MacPreparation {
     pub(crate) launchd: Arc<dyn Launchd>,
     /// `CIPROXY_AREA_BYTES`, the size of a new area volume.
     pub(crate) area_bytes: Option<u64>,
+    /// `CIPROXY_AREA_DISK`, the disk of a new area volume.
+    pub(crate) area_disk: AreaDisk,
 }
 
 #[async_trait]
@@ -41,11 +44,11 @@ impl Preparation for MacPreparation {
             )
         })?;
         private_directory(&Path::new(CONTROL).join("vms"))?;
-        area::prepare(self.area_bytes).map_err(|error| {
+        area::prepare(self.area_bytes, &self.area_disk).map_err(|error| {
             stage_error(
                 error,
                 "area volume",
-                "Check that the startup disk is APFS and has free space. Then rerun install.",
+                "Check that the disk of the area is APFS and has free space, and that CIPROXY_AREA_DISK names it. Then rerun install.",
             )
         })?;
         for folder in ["images", "vms", "seats"] {
