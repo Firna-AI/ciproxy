@@ -14,18 +14,18 @@ The guest program samples the CPU and the memory of its VM once per second,
 from the start of the job to the exit of the runner. It sends the samples
 with its runner exit report. On an own machine, the agent forwards them to
 the control plane. On Boat, the end report of the sandbox carries them, and
-the guest also sends them every 30 seconds while the job runs. The
-control plane stores the samples with the job, and it gets the steps of the
-job as decision 1 says. The job page shows the peaks of the job, a chart
-over time, and the figures of each step.
+the guest also sends them every 30 seconds while the job runs. The guest
+also reads the name, the start, and the end of each step from the runner's
+Worker log, and it sends them with the samples. The control plane stores
+the samples and the steps with the job. The job page shows the peaks of
+the job, a chart over time, and the figures of each step.
 
 The change does not cover size hints, figures on the job list, figures
 while a job runs, figures for each process, alerts, or an export to the
 customer's own monitoring. A job that ran before the change has no figures.
 
-Decision 1 waits for the user. The user answered decisions 2, 3, and 4 on
-23 November 2026. Each TODO that needs the answer to decision 1 ends with
-"Waits for decision 1". The other TODOs do not wait.
+The user answered all four decisions by 23 November 2026, so no TODO waits
+for an answer.
 
 Contract owners:
 
@@ -39,9 +39,9 @@ Contract owners:
   [data flow](../docs/architecture/data-flow.md).
 - The [mockups](../docs/mockups/README.md) of the job page.
 - The READMEs of `ciproxy-guest`, `ciproxy-protocol`, `ciproxy-agent`,
-  `ciproxy-github`, `ciproxy-control-plane`, `ciproxy-overflow`,
-  `ciproxy-api`, `ciproxy-schema`, `ciproxy-store-interface`,
-  `ciproxy-store-pg`, and `ts/app`.
+  `ciproxy-control-plane`, `ciproxy-overflow`, `ciproxy-api`,
+  `ciproxy-schema`, `ciproxy-store-interface`, `ciproxy-store-pg`, `image`,
+  and `ts/app`, and the image checks in `image/checks.md`.
 
 ## Decision 2. An out-of-memory kill ends the whole job
 
@@ -220,15 +220,18 @@ Contract owners:
 - **Recommendation:** E. The first recommendation was D. E reads the steps
   from GitHub's documented jobs API, a safer source than the Worker log of
   F.
-- **Action:** ask the user, because the user chose D for its reuse of the
-  timing read, and that read skips most jobs.
+- **Action:** The user chose F on 23 November 2026, in the words "F", after
+  a more detailed comparison of D, E, and F.
 
 History: the first round of the brainstorm asked about each job as a whole
 and recommended C. The user then asked for each step, so the second round
 left C out and recommended D. The user chose D on 22 November 2026, in the
 words "1 = D". The options check of the same day found that the timing
-read skips most jobs, so this decision is open again. The research sources
-are [CircleCI](https://circleci.com/docs/resource-class-overview/),
+read skips most jobs, so this decision was open again. The user then asked
+whether E could be less exact than F because of clocks. F is more exact:
+its steps and its samples come from the same clock of the VM, while the
+steps of E come from GitHub. The research sources are
+[CircleCI](https://circleci.com/docs/resource-class-overview/),
 [WarpBuild](https://www.warpbuild.com/docs/ci/features/observability),
 [Blacksmith](https://docs.blacksmith.sh/blacksmith-cli/jobs),
 [workflow-telemetry-action](https://github.com/step-security/workflow-telemetry-action),
@@ -424,16 +427,17 @@ Design calls, my calls, 22 November 2026:
 - **Step figures:** a point belongs to the step that holds the middle of
   the point. A step shows its average CPU, its peak memory, and its
   out-of-memory kills. A step that holds no point shows no figures. A step
-  without a start or an end gets no figures. Reason: GitHub gives step
-  times in whole seconds, and each point then counts once.
+  without a start or an end gets no figures. Reason: the Worker log gives
+  step times in whole seconds, and each point then counts once.
 - **Where to compute:** the API computes the step figures when it serves
-  the job page. Reason: the samples and the step times can arrive in
-  either order.
+  the job page. Reason: the store keeps the raw points, so a later change
+  to the rule needs no migration.
 - **Chart size:** the API sends at most 600 chart points, merged as the
   guest merges them. Reason: the page stays small on a phone.
-- **Clock:** the samples carry UTC times from the clock of the VM. The
-  runner in the same VM reports the step times to GitHub. Milestone 13
-  proves that the two agree within one second.
+- **Clock:** the samples and the steps carry UTC times from the same clock
+  of the VM. Reason: a VM clock that is off moves both by the same amount,
+  so the steps and the samples still line up. Milestone 13 compares the
+  steps with the steps on GitHub, to prove the Worker log reader.
 - **Units on the wire:** the agent protocol gives memory in MiB. The
   dashboard API gives bytes as decimal strings and times in RFC 3339, as
   `AGENTS.md` says.
@@ -494,12 +498,35 @@ Design calls, my calls, 23 November 2026, for the answers:
   Reason: whole-series reports are simpler than deltas, because the
   points merge as the series grows.
 
+Design calls, my calls, 23 November 2026, for the answer to decision 1:
+
+- **Worker log steps:** the guest reads four lines of the runner's
+  `StepsRunner` in the Worker log. "Processing step: DisplayName=" gives
+  the name, "Starting the step." the start, and "Step result:" the end.
+  "Skipping step due to condition evaluation." marks a skipped step.
+  Reason: the pinned runner writes these lines for each step.
+- **Set up and complete:** the time before the first step shows as "Set up
+  job", and the time after the last step as "Complete job". Reason: the
+  job page of GitHub shows the same two steps.
+- **Step limits:** the guest sends at most 1,000 steps, with at most 256
+  characters for each name. The control plane drops the steps of a report
+  that passes a limit, and keeps its samples. Reason: job code can write
+  the Worker log.
+- **Name rule place:** the control plane applies the script names design
+  call before it stores a name. Reason: the names come from the VM, which
+  job code controls.
+- **Log format check:** a unit test reads a Worker log fixture of the
+  pinned runner. An image check runs a job and compares the steps that the
+  guest reads with the steps of the workflow. Each update of the runner pin
+  reruns both. Reason: the log format is not a contract of the runner.
+
 Contract sketch, for the protocol crate:
 
 - `JobUsage`: the platform, the UTC start of the first point, the length
   of a point in seconds, and three arrays of the same length. The arrays
   hold the CPU in thousandths of a vCPU, the peak memory in MiB, and the
-  out-of-memory kills.
+  out-of-memory kills. It also holds the steps, each with its name, its
+  UTC start, and its UTC end, or a mark that the runner skipped it.
 - `GuestToAgent::RunnerExited` and `AgentMessage::RunnerExited` get
   `usage: Option<JobUsage>`, which serializes only when present.
 - `GuestToAgent::UsageSamples` holds the runner and its `JobUsage`. Only a
@@ -543,7 +570,8 @@ The protocol docs state the requirements of the figures before the code.
 - [ ] Write `docs/protocol/job-usage.md`: the terms, the figures, the
       window, the steps, what the job page shows, the platforms, the trust
       rule, retention, and decision 1 with its rejected options. Link the
-      mockup pages of Milestone 1. Waits for decision 1.
+      mockup pages of Milestone 1. Say that the steps come from the runner
+      in the VM, and that job code can change them.
 - [ ] Add the CPU and memory samples and the steps of each job to the job
       metadata in "Secrets and job data" of `docs/protocol/security.md`,
       with the script names and rule words design calls. Say in "Key
@@ -670,6 +698,9 @@ Boat sample reports.
       `crates/ciproxy-control-plane/src/runtime_agent_event.rs`.
 - [ ] Save the usage of the Boat end report that
       `crates/ciproxy-control-plane/src/boat_callback.rs` receives.
+- [ ] Save the steps of each report with its samples, after the script
+      names design call. Apply the step limits of the design. Test each
+      kind of name and each limit.
 - [ ] Accept the Boat sample reports with the report limits design call.
       Test the rate limit, a report after the record ends, and a newer
       series that replaces an older one.
@@ -681,25 +712,23 @@ Boat sample reports.
       dropped usage keeps the exit.
 - [ ] Update the READMEs of `ciproxy-control-plane` and `ciproxy-overflow`.
 
-## Milestone 9: Step times
+## Milestone 9: Steps from the Worker log
 
-Depends on: 7
+Depends on: 5
 
-The control plane gets the steps of each finished job, as decision 1 says.
-The TODOs below are for E. If decision 1 chooses F, replace them before
-the milestone starts.
+The guest program reads the steps of its job from the Worker log and sends
+them with the samples.
 
-- [ ] Fix the follow-up item `plans/follow-ups/timing-repair-throttle.md`,
-      and delete it in the same commit. Waits for decision 1.
-- [ ] Read the steps of each finished job once, from the reply of the jobs
-      API in `crates/ciproxy-github/src/rest/job_times.rs`. Save the steps
-      of every finished job of the run that the reply covers. Waits for
-      decision 1.
-- [ ] Apply the script names design call to the step names before the
-      store write. Test each kind of name.
-- [ ] Test that one read serves all finished jobs of a run, and that a step
-      without times is saved without them. Waits for decision 1.
-- [ ] Update the `ciproxy-github` README. Waits for decision 1.
+- [ ] Add a Worker log reader to `ciproxy-guest`, as the Worker log steps
+      design call says. Test it with a Worker log fixture of the pinned
+      runner, with a skipped step, and with a log that ends before a step
+      result.
+- [ ] Add the steps to the samples of each report, with the step limits of
+      the design. Test the limits.
+- [ ] Add the image check of the log format check design call, and list it
+      in `image/checks.md` among the checks that each runner pin update
+      reruns.
+- [ ] Update the READMEs of `ciproxy-guest` and `image`.
 
 ## Milestone 10: Dashboard API
 
@@ -711,9 +740,10 @@ The job API gives the figures of the job page.
       600 chart points, and the figures of each step. Put the new wire
       types in a new module beside `crates/ciproxy-api/src/wire/jobs.rs`,
       which has 264 of its 300 lines.
-- [ ] Compute the step figures as the design says. Test a step that holds
-      no point, a step outside the samples, an out-of-memory kill, and a
-      job without steps.
+- [ ] Compute the step figures as the design says, with the "Set up job"
+      and "Complete job" steps. Test a step that holds no point, a step
+      outside the samples, a skipped step, an out-of-memory kill, and a job
+      without steps.
 - [ ] Regenerate the API types with `npm --prefix ts run api:generate`.
 - [ ] Update the `ciproxy-api` README.
 
@@ -754,12 +784,12 @@ Depends on: every other milestone
 The change works end to end, and the review passes.
 
 - [ ] Build the images from this branch. Run a job with several steps on a
-      Linux machine, a Mac, and Boat. Check that the step figures match the
-      step times on GitHub within one second. Save the evidence under
-      `.context/job-step-cpu-and-memory/`.
-- [ ] Run a step whose name uses a secret. Check that the GitHub jobs API
-      masks the secret in the name. If it does not, stop and raise a
-      decision, because decision 3 relies on it.
+      Linux machine, a Mac, and Boat. Check that the steps of the Worker log
+      match the steps on GitHub, with times within one second. Save the
+      evidence under `.context/job-step-cpu-and-memory/`.
+- [ ] Run a step whose name uses a secret. Check that the Worker log masks
+      the secret in the name. If it does not, stop and raise a decision,
+      because decision 3 relies on it.
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
 - [ ] Review the complete local diff against `origin/main` with the
