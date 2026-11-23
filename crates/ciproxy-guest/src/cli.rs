@@ -16,6 +16,8 @@ use crate::process::StockRunner;
 use crate::service::{Guest, Supervisor};
 #[cfg(target_os = "linux")]
 use crate::usage::linux::Proc;
+#[cfg(target_os = "macos")]
+use crate::usage::macos::Mach;
 use crate::usage::{Source, Usage, worker_log::DiagDirectory};
 use crate::vsock::VsockChannel;
 
@@ -90,7 +92,13 @@ impl Application for GuestApplication {
         };
         #[cfg(target_os = "linux")]
         let source: Option<Box<dyn Source>> = Some(Box::new(Proc::new()));
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "macos")]
+        let source: Option<Box<dyn Source>> = if own_machine {
+            Some(Box::new(Mach))
+        } else {
+            None
+        };
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         let source: Option<Box<dyn Source>> = None;
         let mut guest: Box<dyn Guest> = Box::new(Supervisor {
             image_id: ImageId(cli.image_id),

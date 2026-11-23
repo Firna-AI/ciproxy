@@ -957,12 +957,12 @@ Depends on: 5
 The guest program measures macOS job VMs. A Mac is an own machine, so its
 samples start at the job handoff.
 
-- [ ] Read the CPU ticks and the app, wired, and compressed memory of
+- [x] Read the CPU ticks and the app, wired, and compressed memory of
       macOS. Report no out-of-memory kills.
-- [ ] Add `ciproxy-guest` to `MACOS_CRATES` in
+- [x] Add `ciproxy-guest` to `MACOS_CRATES` in
       `xtask/src/check/phases.rs`, as the gate README says for a crate with
       macOS code. Test the conversions that need no macOS call on Linux.
-- [ ] Update the `ciproxy-guest` README.
+- [x] Update the `ciproxy-guest` README.
 
 ## Milestone 7: Store
 

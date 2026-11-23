@@ -4,12 +4,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
+use ciproxy_protocol::platform::Platform;
 use rustix::param::clock_ticks_per_second;
 
-use super::Source;
-use super::window::Reading;
+use super::{CpuReading, Reading, Source};
 
 /// The Linux source for the sampler.
 pub(crate) struct Proc {
@@ -28,12 +27,12 @@ impl Proc {
 }
 
 impl Source for Proc {
+    fn platform(&self) -> Platform {
+        Platform::LinuxX64
+    }
+
     fn read(&self) -> io::Result<Reading> {
-        let at_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .ok()
-            .and_then(|elapsed| i64::try_from(elapsed.as_millis()).ok())
-            .ok_or(ErrorKind::InvalidData)?;
+        let at_ms = Reading::now_ms()?;
         let stat = fs::read_to_string(self.root.join("stat"))?;
         let (busy_cpu_micros, max_cpu_milli_vcpu) =
             cpu(&stat, self.ticks_per_second).ok_or(ErrorKind::InvalidData)?;
@@ -43,7 +42,7 @@ impl Source for Proc {
         let oom_kills = oom_kills(&vmstat).ok_or(ErrorKind::InvalidData)?;
         Ok(Reading {
             at_ms,
-            busy_cpu_micros,
+            cpu: CpuReading::BusyMicros(busy_cpu_micros),
             max_cpu_milli_vcpu,
             memory_mib,
             oom_kills,

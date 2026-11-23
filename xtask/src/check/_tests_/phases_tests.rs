@@ -47,6 +47,9 @@ fn macos_phase_checks_then_lints_each_macos_crate_with_stub_c_tools() {
             "check --target aarch64-apple-darwin --package ciproxy-image-vm --all-targets",
             "clippy --target aarch64-apple-darwin --package ciproxy-image-vm --all-targets \
              --all-features -- -D warnings",
+            "check --target aarch64-apple-darwin --package ciproxy-guest --all-targets",
+            "clippy --target aarch64-apple-darwin --package ciproxy-guest --all-targets \
+             --all-features -- -D warnings",
             "check --target aarch64-apple-darwin --package ciproxy-agent --lib --bins",
             "clippy --target aarch64-apple-darwin --package ciproxy-agent --lib --bins \
              --all-features -- -D warnings",

@@ -94,15 +94,20 @@ after it refreshes the restored services.
 The guest leaves the end of the sandbox to the control plane and the Boat
 lifetime.
 
-### Linux job usage
+### Job usage
 
-The guest samples the whole VM once per second. It reads busy CPU time
-from `/proc/stat`, used memory from `/proc/meminfo`, and out-of-memory
-kills from `/proc/vmstat`. In `vsock` mode, the trusted job handoff starts
-sampling. In `boat` mode, the guest looks for `Runner.Worker` in the
-runner's process tree. It checks once per second until it finds the worker.
+The guest samples the whole VM once per second. In `vsock` mode, the
+trusted job handoff starts sampling on Linux and macOS. In `boat` mode,
+which runs only on Linux, the guest checks the runner's process tree once
+per second. It starts sampling when it finds `Runner.Worker`.
 The guest stops sampling when the runner exits. It sends the final
-samples with the exit report when available. macOS guests do not send usage.
+samples with the exit report when available.
+
+- Linux reads busy CPU time from `/proc/stat`, used memory from
+  `/proc/meminfo`, and out-of-memory kills from `/proc/vmstat`.
+- macOS reads the busy share of the host CPU ticks. It counts app, wired,
+  and compressed memory, as Activity Monitor does. It does not report
+  out-of-memory kills.
 
 When the series would exceed 3,600 points, the guest merges adjacent
 points. Each merged point keeps the average CPU, peak memory, and total
@@ -233,6 +238,7 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [src/usage/mod.rs](src/usage/mod.rs) runs the sampler for the job window.
 - [src/usage/linux.rs](src/usage/linux.rs) reads Linux counters and detects
   the Boat worker.
+- [src/usage/macos/mach.rs](src/usage/macos/mach.rs) reads macOS counters.
 - [src/usage/series.rs](src/usage/series.rs) bounds the series by merging
   points.
 - [src/usage/worker_log/mod.rs](src/usage/worker_log/mod.rs) follows the

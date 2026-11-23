@@ -1,37 +1,48 @@
 //! Turn successive counter reads into one contiguous usage series.
 
-use std::time::Duration;
+use std::io::{self, ErrorKind};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::usage::JobUsage;
 use tokio::time::Instant;
 use tracing::warn;
 
-use super::Source;
 use super::series::{Sample, Series};
+use super::{CpuReading, Source};
 
 /// A read of the VM clock, counters, and memory.
 #[derive(Clone, Copy)]
 pub struct Reading {
     /// The UTC time of this read, in whole milliseconds.
     pub(crate) at_ms: i64,
-    /// Total busy CPU time since boot.
-    pub(crate) busy_cpu_micros: u64,
-    /// Online CPU capacity. Limits rounding at full load.
+    /// CPU counters since boot.
+    pub(crate) cpu: CpuReading,
+    /// Online CPU capacity, in thousandths of a vCPU.
     pub(crate) max_cpu_milli_vcpu: u32,
     /// Current used memory in MiB.
     pub(crate) memory_mib: u32,
-    /// The cumulative number of out-of-memory kills since boot.
+    /// Cumulative out-of-memory kills, or zero if not measured.
     pub(crate) oom_kills: u64,
 }
 
 impl Reading {
+    /// Read the VM wall clock in UTC milliseconds.
+    pub(super) fn now_ms() -> io::Result<i64> {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .ok()
+            .and_then(|elapsed| i64::try_from(elapsed.as_millis()).ok())
+            .ok_or_else(|| ErrorKind::InvalidData.into())
+    }
+
     fn since(self, previous: Self, elapsed: Duration) -> Option<Sample> {
-        let busy = self.busy_cpu_micros.checked_sub(previous.busy_cpu_micros)?;
-        let cpu = (u128::from(busy) * 1_000).checked_div(elapsed.as_micros())?;
+        let cpu = self
+            .cpu
+            .since(previous.cpu, elapsed, self.max_cpu_milli_vcpu)?;
         let kills = self.oom_kills.checked_sub(previous.oom_kills)?;
         Some(Sample {
-            cpu_milli_vcpu: cpu.min(u128::from(self.max_cpu_milli_vcpu)) as u32,
+            cpu_milli_vcpu: cpu,
             memory_mib: self.memory_mib,
             oom_kills: u32::try_from(kills).ok()?,
         })
@@ -39,8 +50,8 @@ impl Reading {
 }
 
 /// A sampled job window. After a gap, retain the longest contiguous segment.
-#[derive(Default)]
 pub(super) struct Window {
+    platform: Platform,
     started_at_ms: Option<i64>,
     previous: Option<(Instant, Reading)>,
     current: Option<Series>,
@@ -48,6 +59,17 @@ pub(super) struct Window {
 }
 
 impl Window {
+    /// Start an empty window for the source's report platform.
+    pub(super) fn new(platform: Platform) -> Self {
+        Self {
+            platform,
+            started_at_ms: None,
+            previous: None,
+            current: None,
+            longest: None,
+        }
+    }
+
     /// Take a baseline or measure the next second. A bad read breaks the segment.
     pub(super) fn capture(&mut self, source: &dyn Source) {
         let now = Instant::now();
@@ -81,8 +103,7 @@ impl Window {
 
     /// Report the longest segment without shifting points across unread seconds.
     pub(super) fn report(&self) -> Option<JobUsage> {
-        self.segment()
-            .map(|series| series.report(Platform::LinuxX64))
+        self.segment().map(|series| series.report(self.platform))
     }
 
     fn segment(&self) -> Option<&Series> {

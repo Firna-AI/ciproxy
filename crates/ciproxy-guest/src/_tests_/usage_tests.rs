@@ -20,7 +20,7 @@ use crate::boundary::{RunnerEvent, RunnerMock};
 use crate::error::Error;
 use crate::service::Guest;
 use crate::usage::worker_log::LogPagesMock;
-use crate::usage::{Reading, ReporterMock, SourceMock, Usage};
+use crate::usage::{CpuReading, Reading, ReporterMock, SourceMock, Usage};
 
 use self::usage_steps::{BOAT_LOG, boat_steps, worker_pages};
 use super::support::{Observation, Trace, channel, configure, configured, hello, supervisor};
@@ -169,6 +169,9 @@ fn source(
     worker_at: Option<u64>,
 ) -> Unimock {
     let reads = reads.clone();
+    let platform = SourceMock::platform
+        .each_call(matching!())
+        .returns(Platform::LinuxX64);
     let read = SourceMock::read
         .each_call(matching!())
         .answers_arc(Arc::new(move |_| {
@@ -179,16 +182,17 @@ fn source(
             }
             Ok(Reading {
                 at_ms: EPOCH_MS + 1_000 * second as i64,
-                busy_cpu_micros: 500_000 * second,
+                cpu: CpuReading::BusyMicros(500_000 * second),
                 max_cpu_milli_vcpu: 1_000,
                 memory_mib: 128 + second as u32,
                 oom_kills: if second < 11 { 10 } else { 12 },
             })
         }));
     let Some(worker_at) = worker_at else {
-        return Unimock::new(read);
+        return Unimock::new((platform, read));
     };
     Unimock::new((
+        platform,
         read,
         SourceMock::worker_present
             .each_call(matching!(101))

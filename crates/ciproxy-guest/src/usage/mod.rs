@@ -1,7 +1,10 @@
 //! Start job sampling on the correct signal, without waiting on report posts.
 
+mod cpu;
 #[cfg(target_os = "linux")]
 pub(crate) mod linux;
+#[cfg(any(target_os = "macos", test))]
+pub(crate) mod macos;
 mod series;
 mod window;
 pub(crate) mod worker_log;
@@ -14,6 +17,7 @@ use std::time::Duration;
 
 use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::identifiers::RunnerId;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::usage::JobUsage;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
@@ -22,6 +26,7 @@ use tracing::warn;
 
 use crate::error::Result;
 
+pub(crate) use self::cpu::CpuReading;
 pub(crate) use self::window::Reading;
 use self::window::Window;
 use self::worker_log::{LogPages, WorkerLog};
@@ -32,6 +37,8 @@ const REPORT_INTERVAL: Duration = Duration::from_secs(30);
 /// The platform measurements and the stock worker start signal.
 #[cfg_attr(test, unimock::unimock(api = SourceMock))]
 pub(crate) trait Source: Send {
+    /// The platform field of this source's usage report.
+    fn platform(&self) -> Platform;
     /// Read the VM clock and counters without logging their values.
     fn read(&self) -> io::Result<Reading>;
     /// Check for a live worker below the runner process.
@@ -177,7 +184,7 @@ async fn collect(
         }
     }
 
-    let mut window = Window::default();
+    let mut window = Window::new(source.platform());
     let started = Instant::now();
     window.capture(&*source);
     let mut ticks = interval(started + SAMPLE_INTERVAL, SAMPLE_INTERVAL);
