@@ -170,3 +170,22 @@ test("History filters round-trip through the address and ask the API from the UT
     days: 1,
   });
 });
+
+test("a running job names its time so far Running for, and a finished job names it Duration", () => {
+  const running = jobDetailModel(
+    fixtureJob({
+      status: "running",
+      result: null,
+      completed_at: null,
+      runtime_seconds: "252",
+    }),
+  );
+  const finished = jobDetailModel(fixtureJob({ runtime_seconds: "372" }));
+  assert.deepEqual(
+    [rows(running)[3], rows(finished)[3]],
+    [
+      ["Running for", "4m 12s", null],
+      ["Duration", "6m 12s", null],
+    ],
+  );
+});

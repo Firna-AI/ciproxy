@@ -13,10 +13,10 @@ connects Boat, changes its key, or disconnects it. The same page sets the
 overflow switch, the wait, and the monthly spend limit, and shows the spend
 of the month.
 Jobs shows the live queue, the history of finished jobs, and a page for each
-job. Savings compares the cost of the jobs with ciproxy against the same jobs
-on Blacksmith and on GitHub-hosted runners. Plan and usage, Plans, and the
-Checkout pages show the plan and its use, and take each payment through
-Stripe.
+job with its CPU and memory. Savings compares the cost of the jobs with
+ciproxy against the same jobs on Blacksmith and on GitHub-hosted runners.
+Plan and usage, Plans, and the Checkout pages show the plan and its use, and
+take each payment through Stripe.
 
 The screens follow the [mockups](../../docs/mockups/README.md).
 Controls come from `@firna/ui` first, then from `src/components`.

@@ -1,7 +1,9 @@
 // One format for each kind of value that the screens show. Times show in
-// the time zone of the browser unless a caller names one, as tests do.
+// the time zone of the browser unless a caller names one, as tests do. A
+// measured CPU or memory figure has one decimal; a size stays whole.
 
 import type { WorkspaceRole } from "../api/schema.ts";
+import { formatCount, unbroken } from "./exact-format.ts";
 
 export const roleNames: Readonly<Record<WorkspaceRole, string>> = {
   admin: "Admin",
@@ -60,9 +62,36 @@ export function formatDuration(
   return `${rest}s`;
 }
 
+/** A byte count in whole decimal gigabytes: "64000000000" -> 64. */
+export function wholeGigabytes(bytes: string): number {
+  return Math.round(Number(bytes) / 1e9);
+}
+
 /** A byte count as whole decimal gigabytes, such as "64 GB". */
 export function formatGigabytes(bytes: string): string {
-  return `${Math.round(Number(bytes) / 1e9)} GB`;
+  return `${wholeGigabytes(bytes)} GB`;
+}
+
+/** A whole amount in tenths of its unit, half up: (1550n, 100n) -> "1.6". */
+function tenths(amount: bigint, tenth: bigint): string {
+  const rounded = (amount * 2n + tenth) / (tenth * 2n);
+  return `${formatCount(rounded / 10n)}.${rounded % 10n}`;
+}
+
+/**
+ * "1.6 vCPU": a measured CPU figure from thousandths of a vCPU, to one
+ * place, half up, on one line. A VM size or a label size stays whole.
+ */
+export function formatMeasuredVcpu(milliVcpu: number): string {
+  return unbroken(`${tenths(BigInt(milliVcpu), 100n)} vCPU`);
+}
+
+/**
+ * "6.1 GB": a measured memory figure from bytes, in decimal gigabytes to one
+ * place, half up, on one line. The digits never pass through a float.
+ */
+export function formatMeasuredGigabytes(bytes: string): string {
+  return unbroken(`${tenths(BigInt(bytes), 100_000_000n)} GB`);
 }
 
 /** "1 slot", "6 slots". */

@@ -1,7 +1,8 @@
 // One job of a workspace, opened from History: where it ran and why, the
-// times that GitHub gave, and its details. The page lives in the shell with
-// Jobs active, and its breadcrumb leads back to History. A job that the
-// history of the plan does not hold has its own state.
+// times that GitHub gave, its details, and the CPU and memory of a job that a
+// runner took. The page lives in the shell with Jobs active, and its
+// breadcrumb leads back to History. A job that the history of the plan does
+// not hold has its own state.
 
 import { Link, useLocalSearchParams } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -19,8 +20,10 @@ import { idParam } from "../../routing/pages.ts";
 import { useRedirect } from "../../services/hooks.ts";
 import { jobDetailModel } from "../../view/jobs-detail.ts";
 import { jobsHref } from "../../view/jobs-links.ts";
+import { usagePanelModel } from "../../view/jobs-usage.ts";
 import { WorkspacePageView } from "../workspace-page.tsx";
 import { DetailsPanel, PlacePanel } from "./job-panels.tsx";
+import { UsageLoading, UsagePanel } from "./job-usage.tsx";
 import { useJob } from "./jobs-hooks.ts";
 
 function Skeleton() {
@@ -51,17 +54,20 @@ function JobPage({
       <>
         <DetailHeader crumbs={crumbs} title="Job" />
         {snapshot.status === "loading" ? (
-          <View style={[styles.panels, wide && styles.wide]}>
-            <View style={wide ? styles.place : undefined}>
-              <Panel title="Where it ran">
-                <Skeleton />
-              </Panel>
+          <View style={styles.panels}>
+            <View style={[styles.panels, wide && styles.wide]}>
+              <View style={wide ? styles.place : undefined}>
+                <Panel title="Where it ran">
+                  <Skeleton />
+                </Panel>
+              </View>
+              <View style={wide ? styles.details : undefined}>
+                <Panel title="Details">
+                  <Skeleton />
+                </Panel>
+              </View>
             </View>
-            <View style={wide ? styles.details : undefined}>
-              <Panel title="Details">
-                <Skeleton />
-              </Panel>
-            </View>
+            <UsageLoading />
           </View>
         ) : missing ? (
           <Panel>
@@ -91,6 +97,7 @@ function JobPage({
     );
   }
   const model = jobDetailModel(snapshot.page.job);
+  const usage = usagePanelModel(snapshot.page.job, snapshot.page.usage);
   return (
     <>
       <DetailHeader
@@ -111,13 +118,16 @@ function JobPage({
           ) : null
         }
       />
-      <View style={[styles.panels, wide && styles.wide]}>
-        <View style={wide ? styles.place : undefined}>
-          <PlacePanel model={model} />
+      <View style={styles.panels}>
+        <View style={[styles.panels, wide && styles.wide]}>
+          <View style={wide ? styles.place : undefined}>
+            <PlacePanel model={model} />
+          </View>
+          <View style={wide ? styles.details : undefined}>
+            <DetailsPanel model={model} />
+          </View>
         </View>
-        <View style={wide ? styles.details : undefined}>
-          <DetailsPanel model={model} />
-        </View>
+        {usage === null ? null : <UsagePanel model={usage} />}
       </View>
     </>
   );

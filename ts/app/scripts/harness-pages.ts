@@ -1,6 +1,7 @@
 import type { components } from "../../api/index.ts";
 import { historyDays, plansPage } from "./fixtures-billing.ts";
 import { pageBanner, usageForRole } from "./fixtures-billing-usage.ts";
+import { fixtureUsage } from "./fixtures-job-usage.ts";
 import { filteredHistory, visibleHistory } from "./fixtures-jobs.ts";
 import { liveJobs } from "./fixtures-jobs-live.ts";
 import { savingsRanges, savingsReport } from "./fixtures-savings.ts";
@@ -132,6 +133,7 @@ export async function servePages(
       return pageReply({
         job,
         banner,
+        usage: fixtureUsage(job),
       } satisfies components["schemas"]["JobDetailPage"]);
     }
     case "savings": {

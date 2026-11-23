@@ -92,8 +92,12 @@ sign-in page.
 
 The page smoke, `browser-pages-smoke.ts`, covers the states of Jobs, the job
 page, Savings, Plan and usage, Plans, the Checkout review and return, and the
-banner. It also covers each page while it loads, and Viewer and Billing views
-of Jobs, Savings, and the billing pages. Its journeys open History from Live
+banner. Its job cases check the CPU and memory panel in each state of
+`fixtures-job-usage.ts`: the figures with the steps, the label size on Boat, a
+step that ran out of memory, a macOS job, a job without steps, a running job,
+a job without figures, and a job that no runner took. It also covers each
+page while it loads, and Viewer and Billing views of Jobs, Savings, and the
+billing pages. Its journeys open History from Live
 and go Back to Live, follow the History filters to a job and back, change the
 Savings range, recover a failed read, and take an offer through review,
 payment, and return. Other journeys cover a paid change with a bank

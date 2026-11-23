@@ -5,6 +5,7 @@ import { jobHref, jobsHref } from "../src/view/jobs-links.ts";
 import { insideViewport, visible } from "./browser-fixture.ts";
 import { workspaceId } from "./fixtures-core.ts";
 import { fixtureJobIds } from "./fixtures-jobs.ts";
+import { usageLayouts, usageScreens } from "./browser-pages-job-usage.ts";
 import { screenRuns, type PageScreen } from "./browser-pages-screens.ts";
 import type { Page } from "./browser-driver.ts";
 import {
@@ -148,6 +149,7 @@ export function jobsScreenRuns(origin: string) {
       path: detail,
       heading: "Build and test",
       text: "Counts as 1 start",
+      layoutCheck: usageLayouts.steps,
     },
     {
       name: "job-boat",
@@ -155,6 +157,7 @@ export function jobsScreenRuns(origin: string) {
       path: jobHref(workspaceId, fixtureJobIds.boat),
       heading: "Browser checks",
       text: "Boat bills this size.",
+      layoutCheck: usageLayouts.labelSize,
     },
     {
       name: "job-unknown-request",
@@ -162,6 +165,7 @@ export function jobsScreenRuns(origin: string) {
       path: jobHref(workspaceId, fixtureJobIds.unknown),
       heading: "Legacy request",
       text: "Requested size unknown",
+      layoutCheck: usageLayouts.noFigures,
     },
     {
       name: "job-running-unknown-request",
@@ -169,6 +173,7 @@ export function jobsScreenRuns(origin: string) {
       path: jobHref(workspaceId, fixtureJobIds.running),
       heading: "Build and test",
       text: "Requested size unknown",
+      layoutCheck: usageLayouts.running,
     },
     {
       name: "job-cancelled",
@@ -176,6 +181,7 @@ export function jobsScreenRuns(origin: string) {
       path: jobHref(workspaceId, fixtureJobIds.cancelled),
       heading: "Cancelled before a runner",
       text: "No ciproxy runner took this job, so it is not a start.",
+      layoutCheck: usageLayouts.noRunner,
     },
     {
       name: "job-unknown-timing",
@@ -183,7 +189,9 @@ export function jobsScreenRuns(origin: string) {
       path: jobHref(workspaceId, fixtureJobIds.untimed),
       heading: "Completed with unknown timing",
       text: "Counts as 1 start",
+      layoutCheck: usageLayouts.noSteps,
     },
+    ...usageScreens,
     {
       name: "job-not-found",
       scenario: "m21-jobs-detail-not-found",

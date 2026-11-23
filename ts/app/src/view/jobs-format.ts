@@ -110,11 +110,21 @@ export function requestText(label: JobLabel): string | null {
   );
 }
 
+/** "8 vCPU": the whole vCPU of a VM or a label, on one line. */
+export function vcpuText(vcpus: number): string {
+  return unbroken(`${vcpus} vCPU`);
+}
+
+/** "16 GB": the memory of a VM or a label in whole GB, on one line. */
+export function memoryText(bytes: string): string {
+  return unbroken(formatGigabytes(bytes));
+}
+
 /** "2 vCPU · 8 GB · 81 GB VM disk": the VM that ran a job on a machine. */
 export function vmText(size: JobVmSize): string {
   return dotJoin(
-    unbroken(`${size.vcpus} vCPU`),
-    unbroken(formatGigabytes(size.memory_bytes)),
+    vcpuText(size.vcpus),
+    memoryText(size.memory_bytes),
     unbroken(`${formatGigabytes(size.disk_bytes)} VM disk`),
   );
 }
@@ -124,8 +134,8 @@ export function boatText(name: string, size: JobVmSize | null): string {
   if (size === null) return `Boat ${name}`;
   return dotJoin(
     unbroken(`Boat ${name}`),
-    unbroken(`${size.vcpus} vCPU`),
-    unbroken(formatGigabytes(size.memory_bytes)),
+    vcpuText(size.vcpus),
+    memoryText(size.memory_bytes),
     unbroken(`${formatGigabytes(size.disk_bytes)} disk`),
   );
 }

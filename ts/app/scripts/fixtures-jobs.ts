@@ -65,7 +65,12 @@ export function historyJobs(): JobView[] {
       id: fixtureJobIds.boat,
       name: "Browser checks",
       workflow: "E2E",
-      location: { kind: "boat", size: "4vcpu-8gb" },
+      location: { kind: "boat", size: "8vcpu-16gb" },
+      actual_size: {
+        vcpus: 8,
+        memory_bytes: "16000000000",
+        disk_bytes: "111000000000",
+      },
       cache_source: "github",
       cache_counts: null,
       waited_seconds: "31.5",
@@ -123,6 +128,14 @@ export function historyJobs(): JobView[] {
     fixtureJob({
       id: fixtureJobIds.older,
       name: "Older retained job",
+      label: { name: "ciproxy-macos", vcpus: 4, memory_gb: 8, disk_gb: 20 },
+      location: {
+        kind: "machine",
+        id: fixtureMachineId,
+        name: "mac-studio-1",
+        first_slot: 0,
+      },
+      routing_reason: "A warm runner was ready on mac-studio-1.",
       queued_at: "2026-10-10T11:50:00Z",
       started_at: "2026-10-10T11:50:00Z",
       completed_at: "2026-10-10T11:56:12Z",

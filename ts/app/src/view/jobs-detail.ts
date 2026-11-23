@@ -1,8 +1,9 @@
 // The job page as a model: where the job ran and why, the times that GitHub
 // gave, and the details of its label, its VM, its wait, its cache, and its
-// start. A request that the API did not keep says so and never takes the
-// current size of the label. A job that no runner took names no VM, no wait,
-// no cache, and no start, because it is not a start.
+// start. A running job names its time so far "Running for". A request that
+// the API did not keep says so and never takes the current size of the
+// label. A job that no runner took names no VM, no wait, no cache, and no
+// start, because it is not a start.
 
 import type { JobView } from "../api/jobs-types.ts";
 import { formatCount } from "./exact-format.ts";
@@ -186,7 +187,7 @@ export function jobDetailModel(
       caption: null,
     });
     rows.push({
-      label: "Duration",
+      label: job.status === "running" ? "Running for" : "Duration",
       value: durationText(job.runtime_seconds),
       caption: null,
     });

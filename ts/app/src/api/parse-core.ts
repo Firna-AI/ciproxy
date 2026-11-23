@@ -95,6 +95,17 @@ export function optional<T>(
   return value === undefined || value === null ? null : read(value);
 }
 
+/**
+ * A value that the contract always sends, which can be null. An absent value
+ * is a wrong shape, unlike an optional one.
+ */
+export function nullable<T>(
+  value: unknown,
+  read: (value: unknown) => T,
+): T | null {
+  return value === null ? null : read(value);
+}
+
 export function array<T>(value: unknown, read: (value: unknown) => T): T[] {
   if (!Array.isArray(value)) throw new ParseError("list");
   return value.map((item: unknown) => read(item));

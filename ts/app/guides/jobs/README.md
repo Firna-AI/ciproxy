@@ -33,7 +33,24 @@ query. The banner of these pages is under
 - The job page shows the request of the label as the API kept it, or
   "Requested size unknown", and never the current size of the label. It names
   the VM that ran the job, and why the job ran there when the API gives a
-  reason. A job that no runner took is not a start.
+  reason. A job that no runner took is not a start. A running job names its
+  time so far "Running for", in place of its duration.
+- The CPU and memory panel of the job page shows the figures that the API
+  gives, as [Job usage](../../../../docs/protocol/job-usage.md#the-job-page)
+  says. A finished job shows its average CPU and its peak memory against the
+  VM that ran it, and on Linux its out-of-memory kills, or "None". A chart
+  shows both over the time of the samples, with a lane of the steps, and a
+  table, or a list on a phone, gives the figures of each step.
+- A measured figure has one decimal, half up. A VM size or a label size keeps
+  the whole numbers of Details. When the VM is larger than the label, as a
+  Boat size can be, a tick on each meter and a grey line on each plot mark
+  the label size.
+- A step whose name hides a script links to that step on GitHub. A skipped
+  step reads "Skipped", and a step that lacks a time reads "Unknown". Neither
+  has figures, and neither does a step that holds no point.
+- A running job says that the figures show when it ends. A finished job
+  without figures says so in one sentence. A job that no runner took has no
+  panel.
 
 ## Key Code
 
@@ -45,10 +62,20 @@ query. The banner of these pages is under
   read, which every notice of the queue reads.
   [jobs-label-notices.ts](../../src/view/jobs-label-notices.ts) words the
   notices of each waiting label from those facts.
+- [jobs-usage-parse.ts](../../src/api/jobs-usage-parse.ts) reads the CPU and
+  memory of a job. [jobs-usage.ts](../../src/view/jobs-usage.ts) turns them
+  into the figures and the steps of the panel, and
+  [jobs-usage-chart.ts](../../src/view/jobs-usage-chart.ts) into the geometry
+  of the chart. `job-usage.tsx`, `usage-chart.tsx`, `usage-plot.tsx`, and
+  `usage-steps.tsx` in `src/screens/jobs` draw them. `@firna/ui/chart` cannot
+  mark steps, and it draws at a fixed width in a static render, so the chart
+  draws SVG in a box that stretches to the panel.
 
 ## Related docs
 
 - [Job routing](../../../../docs/protocol/job-routing.md) says what the
   dashboard shows of each job, under "What the dashboard shows".
+- [Job usage](../../../../docs/protocol/job-usage.md) gives the CPU and memory
+  figures of each job and step, and what the job page shows of them.
 - The [dashboard scripts](../../scripts/README.md#browser-checks) drive
   these pages in a browser.

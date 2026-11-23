@@ -1,6 +1,7 @@
 // Readers for one job, the history, and the job page. A request dimension,
 // a time, a place, or a cache fact that the API leaves out stays null, so a
 // screen can tell an unknown value from zero. Seconds stay exact decimals.
+// The job page also holds the CPU and memory of the job.
 
 import { readBannerField } from "./banner-reader.ts";
 import type {
@@ -14,6 +15,7 @@ import type {
   JobVmSize,
   JobsHistoryPage,
 } from "./jobs-types.ts";
+import { readJobUsage } from "./jobs-usage-parse.ts";
 import {
   array,
   boolean,
@@ -123,5 +125,9 @@ export const parseJobsHistory = parser((value): JobsHistoryPage => {
 
 export const parseJobDetail = parser((value): JobDetailPage => {
   const fields = object(value, "job page");
-  return { job: readJob(fields.job), banner: readBannerField(fields.banner) };
+  return {
+    job: readJob(fields.job),
+    usage: readJobUsage(fields.usage),
+    banner: readBannerField(fields.banner),
+  };
 });

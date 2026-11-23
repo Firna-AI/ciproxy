@@ -946,6 +946,19 @@ Design calls, my calls, 23 November 2026, from Milestone 10:
   Milestone 11. Reason: the mockups and the protocol docs fix the content
   of the customer docs, and Milestone 11 must match the same mockups.
 
+Design calls, my calls, 23 November 2026, from Milestone 11:
+
+- **Long jobs:** the time axis reads `m:ss` below one hour and `h:mm:ss`
+  from one hour. Reason: the mockups cover only short jobs, and a job can
+  run for hours.
+- **Unknown step time:** a step that is not skipped and has no time reads
+  "Unknown" in grey and shows no figures. Reason: the app shows "Unknown"
+  for each value that the API leaves out.
+- **Step table:** the app uses the Firna `Table`, with its header and cell
+  style. Reason: the other tables of the app look the same.
+- **Running for:** the Details panel of a running job says "Running for",
+  as the mockups of Milestone 1 show. Reason: the app matches its mockups.
+
 Contract sketch, for the protocol crate:
 
 - Times in the agent protocol are whole milliseconds since the Unix epoch,
@@ -1211,19 +1224,19 @@ Depends on: 1, 10
 
 The dashboard shows the panel of the mockups.
 
-- [ ] Build the CPU and memory panel and each of its states in
+- [x] Build the CPU and memory panel and each of its states in
       `ts/app/src/screens/jobs/`, as the mockups show them. Check
       `@firna/ui` first, and take each colour from `@ciproxy/tokens`.
-- [ ] Build the chart as the app chart design call says. Draw the label
+- [x] Build the chart as the app chart design call says. Draw the label
       line in the context colour of `chartColors`, not in a status colour.
       Draw the meter tick over `ProgressBar`, not with `BulletChart`,
       whose screen reader text speaks of a target.
-- [ ] Add formatters for one decimal of vCPU and GB. The app formatters
+- [x] Add formatters for one decimal of vCPU and GB. The app formatters
       round to whole numbers today.
-- [ ] Test the formatting of the figures under `ts/app/_tests_/`.
-- [ ] Smoke-test the job page with the dev server, on a phone width and on
+- [x] Test the formatting of the figures under `ts/app/_tests_/`.
+- [x] Smoke-test the job page with the dev server, on a phone width and on
       a desktop width.
-- [ ] Update the `ts/app` README.
+- [x] Update the `ts/app` README.
 
 ## Milestone 12: Customer docs
 
