@@ -5,6 +5,11 @@
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-08, from the complete gate of the pull request #39
   merge.
+- **Seen again:** 2026-11-23, in the complete gate of the branch
+  `calummoore/macos-t-area-disk-access`, which changes only the agent.
+  `completed_takeout_forgets_terminal_registrations_after_retained_reinstall`
+  failed with `Err(StateChanged)` at line 135, in the gate and in one run
+  alone, then passed 3 runs alone.
 - **Source:** Implementation.
 - **Category:** Test.
 - **Location:** `crates/ciproxy-control-plane/tests/runtime/overflow_takeout_tests.rs:107`,
