@@ -91,37 +91,37 @@ Depends on: none
 
 State the stage step and the deploy order in the deploy docs.
 
-- [ ] `deploy/static-delivery.md`, "Lifetimes and publishing": state the
+- [x] `deploy/static-delivery.md`, "Lifetimes and publishing": state the
       three steps of the design, and why the stage step comes first.
-- [ ] `deploy/README.md`: name the stage step in the row of
+- [x] `deploy/README.md`: name the stage step in the row of
       `scripts/deploy.py`. Say that static delivery gives the order.
-- [ ] `deploy/operations.md`, "Static files and protection": add the stage
+- [x] `deploy/operations.md`, "Static files and protection": add the stage
       step to the publisher bullet, with a link to static delivery.
 
 ## Milestone 2: Stage step in the deploy scripts
 
 Depends on: none
 
-- [ ] `deploy/scripts/publish_static.py`: add `--new-only`, as the design
+- [x] `deploy/scripts/publish_static.py`: add `--new-only`, as the design
       says.
-- [ ] `deploy/scripts/deploy.py`: run the stage step before the Helm
+- [x] `deploy/scripts/deploy.py`: run the stage step before the Helm
       upgrades.
-- [ ] Tests, each seen to fail on an assertion before the change:
-  - [ ] `deploy/tests/test_publish_static.py`: `--new-only` creates only
+- [x] Tests, each seen to fail on an assertion before the change:
+  - [x] `deploy/tests/test_publish_static.py`: `--new-only` creates only
         the objects that the fake bucket lacks. It sends each upload with
         the precondition, and every asset before any HTML.
-  - [ ] The same file: an error other than HTTP 412 stops the stage step.
-  - [ ] A deploy test with the fake tools of
+  - [x] The same file: an error other than HTTP 412 stops the stage step.
+  - [x] A deploy test with the fake tools of
         `deploy/tests/fake_promotion_tools.py`: the stage step runs before
         both Helm upgrades, and the full publications run after them.
-- [ ] Run `python3 -m unittest discover -s deploy/tests -p 'test_*.py'`.
+- [x] Run `python3 -m unittest discover -s deploy/tests -p 'test_*.py'`.
 
 ## Milestone 3: Verification, commit, review, and pull request
 
 Depends on: 1, 2
 
-- [ ] Delete `plans/follow-ups/deploy-order-pages-and-api.md`.
-- [ ] Run the deploy tests, the early check, and the complete gate named
+- [x] Delete `plans/follow-ups/deploy-order-pages-and-api.md`.
+- [x] Run the deploy tests, the early check, and the complete gate named
       in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
 - [ ] Open a ready pull request against `main`, as the task asks.

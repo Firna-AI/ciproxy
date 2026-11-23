@@ -49,8 +49,43 @@ CDN entries can be evicted before their configured lifetime.
 The publisher still stores HTML `cacheControl=no-store` and asset
 `cacheControl=public,max-age=86400,must-revalidate` in each multipart upload.
 The asset backend's forced policy controls its effective CDN/client ages.
-The publisher finishes all asset uploads before HTML and never deletes old
-assets. Old pages can still request their earlier hashed assets.
+The publisher never deletes an object. Old pages can still request their
+earlier hashed assets.
+
+Each workload deploy runs these steps in this order:
+
+1. The stage step runs the publisher with `--new-only` on the dashboard
+   export. It creates each object that the dashboard bucket lacks. It
+   finishes all asset uploads before any HTML. Each upload carries a
+   create-only Cloud Storage precondition. So the step skips each name
+   that the bucket already holds. It replaces no object.
+2. The deploy runs the Helm upgrades of the release server and of the
+   control plane. The control plane serves the API.
+3. The publisher uploads the site export and the dashboard export in full.
+   For each export, it finishes all asset uploads before any HTML. It
+   writes every object of both exports.
+
+The stage step comes first because the new API can send a person to a new
+dashboard page, such as `/continue`. Each new page and its hashed assets
+are then live before the new API can send a person to that page. If the
+stage step fails, the deploy stops before any Helm upgrade. Only the
+dashboard export has a stage step, because the API sends people only to
+dashboard paths. The stage step runs in each workload deploy, also when
+the control-plane runtime is off.
+
+An existing page and the files that it loads change only at the full
+publication, after the Helm upgrades. A changed file under an old name,
+such as `_expo/.routes.json`, also waits for the full publication. The
+bucket can still hold a name that an older export left. The stage step
+skips that name too. That object keeps its old content until the full
+publication.
+
+The new API starts to serve before the full publication. A tab that
+reloads between these two events still gets the old version of an existing
+page. The stage step does not change that.
+
+A dry run of the publisher reads no bucket. So with `--new-only`, it still
+lists every object of the export.
 
 ## URL paths
 

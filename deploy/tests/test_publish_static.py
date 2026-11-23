@@ -1,7 +1,8 @@
-"""Regression coverage for static export aliases and object headers."""
+"""Regression coverage for static export aliases, headers, and staging."""
 
 import io
 import json
+from contextlib import redirect_stdout
 from email import policy
 from email.parser import BytesParser
 from pathlib import Path
@@ -10,8 +11,18 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlsplit
 
 from deploy.scripts import publish_static
+
+
+def request_name(request):
+    headers = (
+        f"Content-Type: {request.get_header('Content-type')}\r\nMIME-Version: 1.0\r\n\r\n"
+    ).encode()
+    message = BytesParser(policy=policy.default).parsebytes(headers + request.data)
+    return json.loads(next(message.iter_parts()).get_payload(decode=True))["name"]
 
 
 class StaticPublishingTests(unittest.TestCase):
@@ -78,6 +89,66 @@ class StaticPublishingTests(unittest.TestCase):
                     self.assertEqual(parts[1].get_payload(decode=True), b"offline-payload")
                     self.assertEqual(request.get_method(), "POST")
                     self.assertEqual(request.full_url, "https://storage.googleapis.com/upload/storage/v1/b/private-static-origin/o?uploadType=multipart")
+
+    def stage_export(self, names, upload):
+        scratch = Path(__file__).resolve().parents[2] / ".context/static-upload-tests"
+        scratch.mkdir(parents=True, exist_ok=True)
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory(dir=scratch) as temporary:
+            directory = Path(temporary)
+            for name in names:
+                path = directory / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("offline-payload", encoding="utf-8")
+            arguments = ["publish_static.py", f"--directory={directory}", "--bucket=app-bucket", "--new-only"]
+            with (patch.object(sys, "argv", arguments), redirect_stdout(output),
+                  patch.object(publish_static.subprocess, "check_output", return_value="synthetic-token"),
+                  patch.object(publish_static.urllib.request, "urlopen", side_effect=upload)):
+                publish_static.main()
+        return output.getvalue()
+
+    def test_new_only_creates_missing_assets_before_html_and_aliases(self):
+        existing = {"assets/old.js", "index.html"}
+        requests = []
+        written = []
+
+        def upload(request, timeout):
+            name = request_name(request)
+            query = parse_qs(urlsplit(request.full_url).query)
+            requests.append((name, query))
+            if name in existing and query.get("ifGenerationMatch") == ["0"]:
+                raise HTTPError(request.full_url, 412, "Precondition Failed", {}, io.BytesIO())
+            written.append(name)
+            return io.BytesIO(b"{}")
+
+        output = self.stage_export(
+            ("index.html", "continue.html", "assets/old.js", "assets/new.js"), upload,
+        )
+
+        for name, query in requests:
+            self.assertEqual(query, {"uploadType": ["multipart"], "ifGenerationMatch": ["0"]}, name)
+        names = [name for name, query in requests]
+        self.assertCountEqual(names[:2], ["assets/new.js", "assets/old.js"])
+        self.assertCountEqual(names[2:], ["continue", "continue/", "continue.html", "index.html"])
+        self.assertCountEqual(written, ["assets/new.js", "continue", "continue/", "continue.html"])
+        self.assertEqual(output, "Staged 4 objects in gs://app-bucket; 2 already present.\n")
+
+    def test_new_only_propagates_forbidden_asset_error_before_html(self):
+        forbidden = HTTPError("https://example.invalid/upload", 403, "Forbidden", {}, io.BytesIO())
+        requested = []
+
+        def upload(request, timeout):
+            name = request_name(request)
+            requested.append(name)
+            if name == "assets/blocked.js":
+                raise forbidden
+            return io.BytesIO(b"{}")
+
+        with self.assertRaises(HTTPError) as raised:
+            self.stage_export(("index.html", "assets/blocked.js"), upload)
+
+        self.assertIs(raised.exception, forbidden)
+        self.assertEqual(requested, ["assets/blocked.js"])
 
 
 if __name__ == "__main__":
