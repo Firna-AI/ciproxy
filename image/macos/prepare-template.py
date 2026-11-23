@@ -55,7 +55,7 @@ CIPROXY_STEPS = '''
     environment_vars = ["RUNNER_SHA256=${var.ciproxy_runner_sha256}"]
     execute_command  = "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}"
     inline           = ["bash /tmp/ciproxy/install-runner.sh /tmp/ciproxy/runner.tar.gz",
-                        "cd /tmp/ciproxy/guest && ./install.sh ${var.build_id}",
+                        "cd /tmp/ciproxy/guest && ./install.sh ${var.ciproxy_image_id}",
                         "defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser -string ${var.vm_username}",
                         "bash /tmp/ciproxy/clean-image.sh"]
   }
@@ -68,6 +68,10 @@ variable "ciproxy_inputs" {
 }
 
 variable "ciproxy_definition" {
+  type = string
+}
+
+variable "ciproxy_image_id" {
   type = string
 }
 

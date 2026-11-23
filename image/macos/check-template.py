@@ -67,7 +67,7 @@ class Template(unittest.TestCase):
         self.assertIn('default = "null"', text)
         self.assertIn('source "null" "template"', text)
         self.assertIn(prepare.TOOLSET_NAME, text)
-        self.assertIn("./install.sh ${var.build_id}", text)
+        self.assertIn("./install.sh ${var.ciproxy_image_id}", text)
         self.assertIn('variable "ciproxy_inputs"', text)
         self.assertLess(text.index("install-runner.sh"), text.index('variable "ciproxy_inputs"'))
         self.assertEqual(text.count("{"), text.count("}"))

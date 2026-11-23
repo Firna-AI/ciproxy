@@ -122,7 +122,7 @@ phase_provision() {
     export PACKER_LOG=1 PACKER_LOG_PATH="$run_dir/packer-debug.log"
     (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false -timestamp-ui \
         -var "source_vm_name=127.0.0.1" -var "source_vm_port=$ssh_port" \
-        -var "build_id=$IMAGE_ID" \
+        -var "build_id=${RUNNER_IMAGES_TAG/\//_}" -var "ciproxy_image_id=$IMAGE_ID" \
         -var "vm_username=$guest_user" -var "ciproxy_ssh_key=$ssh_key" \
         -var "xcode_install_storage_url=http://127.0.0.1:$port/" -var "xcode_install_sas=build" \
         -var "ciproxy_inputs=$work_dir/inputs" -var "ciproxy_definition=$definition" \
