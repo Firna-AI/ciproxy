@@ -6,7 +6,7 @@ import { AddMachineScreen } from "../../../../screens/machines/add-machine.tsx";
 import { MachinesScreen } from "../../../../screens/machines/machines-list.tsx";
 
 const rationale =
-  "The agent doc says that an own machine is an x64 Linux machine or an Apple Silicon Mac, and that the same install command connects both. A Mac counts as one own machine on every tier, at the price of any own machine, as the billing doc says. A Mac uses the slot rule of a Linux machine and runs at most 2 job VMs at a time. A Mac needs macOS 26.7.3 or later, the macOS of the job image. Its 512 GB of disk is a placeholder until the size of the macOS image is measured.";
+  "The agent doc says that an own machine is an x64 Linux machine or an Apple Silicon Mac, and that the same install command connects both. A Mac counts as one own machine on every tier, at the price of any own machine, as the billing doc says. A Mac uses the slot rule of a Linux machine and runs at most 2 job VMs at a time. A Mac needs macOS 26.7.3 or later, the macOS of the job image. It also needs about 150 GB of free disk: the unpacked image takes about 77 GB, and a new image downloads about 46 GB while it unpacks.";
 
 export const list = defineScreen({
   slug: "list",

@@ -137,6 +137,9 @@ page of the machine for that, as
   `app.ciproxy.dev`. The machine opens no inbound port.
 - The machine needs outbound HTTPS to ciproxy, to GitHub, and to
   `get.ciproxy.dev`.
+- A Mac also needs outbound HTTPS to
+  `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
+  the [macOS image](/docs/reference/macos-image/).
 
 ## Updates
 
