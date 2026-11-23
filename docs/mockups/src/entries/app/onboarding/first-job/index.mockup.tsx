@@ -9,7 +9,9 @@ import { OnboardingScreen } from "../../../../screens/onboarding/onboarding.tsx"
 export const firstJob = defineScreen({
   title: "Run the first job",
   description:
-    "The last step. The page shows the one-line change to runs-on and waits for the first job with the ciproxy label.",
+    "The last step. The page shows the one-line change to runs-on and waits for the first job with the ciproxy label. Copy prompt for your agent copies an instruction that moves each job of a repository to the ciproxy label that fits the size of its runner.",
+  rationale:
+    "Many people make such edits with a coding agent. The copied diff is not an instruction, so the prompt names the files, the labels of the workspace with their sizes, and the jobs that the agent asks about.",
   relatedDocs: related("labels", "jobRouting"),
   address: orgAddress("setup"),
   useCasePaths: [paths.flowFirstGreenJob],

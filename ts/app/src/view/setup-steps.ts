@@ -14,6 +14,7 @@ import {
   joinWords,
 } from "./format.ts";
 import { imageCopy } from "./machines-copy.ts";
+import { agentPrompt } from "./setup-agent-prompt.ts";
 import { machineStatus, otherMachineTakesJobs } from "./machines.ts";
 import { macJobsLine } from "./machines-capacity.ts";
 import {
@@ -73,6 +74,8 @@ export type SetupModel = {
   job: FirstJob;
   /** The machine whose first job image the waiting first job waits for. */
   imageWait: string | null;
+  /** The prompt that moves the jobs of a repository, for a coding agent. */
+  agentPrompt: string | null;
 };
 
 const outcomes: Readonly<Record<string, string>> = {
@@ -276,5 +279,6 @@ export function setupModel(
     suspended,
     job,
     imageWait: imageWait(setup, ready, machines, boat),
+    agentPrompt: agentPrompt(setup.labels, machines),
   };
 }

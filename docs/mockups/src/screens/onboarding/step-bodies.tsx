@@ -4,9 +4,10 @@
 // machine, as the answer to item 50 says. A machine that connected gets its
 // first job image; while a first job waits for it, the step says why. A Mac
 // connects with the same command, and the step says that it runs the jobs
-// of macOS labels.
+// of macOS labels. The first-job step also copies a prompt for a coding
+// agent.
 
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Copy } from "lucide-react";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { BoatFields } from "../../components/boat-fields.tsx";
@@ -182,6 +183,11 @@ export function FirstJobStep({ state }: { state: OnboardingState }) {
         Change runs-on in one workflow file, then push the change.
       </p>
       <CodeBlock label={workflowFile} lines={runsOnDiff} />
+      <div className="row">
+        <Action size="sm" icon={Copy}>
+          Copy prompt for your agent
+        </Action>
+      </div>
       {state === "first-job-preparing" ? (
         <>
           <WaitingLine>{firstJobWaiting}</WaitingLine>

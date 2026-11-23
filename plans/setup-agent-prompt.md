@@ -1,7 +1,8 @@
 # Setup agent prompt
 
 Status: Active. On branch `calummoore/copying-llm-xioi`, no pull request
-yet. The pull request that completes the work deletes this plan, as the
+yet. The user approved this plan on 23 November 2026, in the word
+"impl". The pull request that completes the work deletes this plan, as the
 `plans` skill says.
 
 The last step of Setup, "Run the first job", shows a diff that changes
@@ -72,6 +73,10 @@ Design calls, my calls, 23 November 2026:
 - **Commit and push.** The prompt tells the agent to commit and push as the
   repository usually does. Reason: Setup waits for a job, and the push
   starts one. The repository's own rules decide the branch.
+- **A failed copy shows the prompt.** The prompt stays off the page while
+  the copy works. When the copy fails, a notice asks the person to select
+  the prompt, and the prompt shows below it. Reason: the person cannot
+  select text that the page does not show.
 - **The visible step stays.** The step text and the diff stay as they are,
   for people who edit the file by hand. Reason: the user asked for a prompt
   option, not a change to the manual path.
@@ -90,13 +95,13 @@ Depends on: none
 The first-job step of the onboarding mockup gets the second button below
 the code block.
 
-- [ ] Add "Copy prompt for your agent" to `FirstJobStep` in
+- [x] Add "Copy prompt for your agent" to `FirstJobStep` in
       `docs/mockups/src/screens/onboarding/step-bodies.tsx`, in both waiting
       states of the step.
-- [ ] Run `npm --prefix ts run mockups:check`. Smoke-test the first-job
-      entry.
-- [ ] Update the design and the TODOs of this plan for each problem that the
-      mockups show.
+- [x] Run `npm --prefix ts run mockups:check`. Smoke-test the first-job
+      entry. Screenshots: `.context/setup-agent-prompt/mockup-*.png`.
+- [x] Update the design and the TODOs of this plan for each problem that the
+      mockups show. The mockups showed no problem.
 
 ## Milestone 2: Documentation
 
@@ -104,7 +109,7 @@ Depends on: 1
 
 No protocol doc states the Setup screen, so no protocol doc changes.
 
-- [ ] Add one sentence on the agent prompt to the Setup section of
+- [x] Add one sentence on the agent prompt to the Setup section of
       `ts/app/README.md`.
 
 ## Milestone 3: The prompt and the button
@@ -113,24 +118,25 @@ Tags: ui
 
 Depends on: 2
 
-- [ ] Add `ts/app/src/view/setup-agent-prompt.ts`. It builds the prompt
+- [x] Add `ts/app/src/view/setup-agent-prompt.ts`. It builds the prompt
       text from the labels of the Setup response and the machines, under
       the design calls above.
-- [ ] Add tests in `ts/app/_tests_/setup-agent-prompt.test.ts`: the default
+- [x] Add tests in `ts/app/_tests_/setup-agent-prompt.test.ts`: the default
       labels, a custom label, macOS labels with and without a Mac, and a
       label that can run nowhere.
-- [ ] Add a labelled copy button for the prompt to `JobStep` in
+- [x] Add a labelled copy button for the prompt to `JobStep` in
       `ts/app/src/screens/setup/step-bodies.tsx`. Reuse `useCopy` and the
       failure notice of `CodeBlock`.
-- [ ] Check the step in a browser at desktop and phone widths. Save the
+- [x] Check the step in a browser at desktop and phone widths. Save the
       screenshots under `.context/setup-agent-prompt/`.
 
 ## Milestone 4: Verification, commit, review, and pull request
 
 Depends on: every other milestone
 
-- [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
-- [ ] Commit with Conventional Commits and push the branch.
+- [x] Run the targeted tests and the complete gate named in `AGENTS.md`.
+      Logs: `.context/setup-agent-prompt/gate*.log`.
+- [x] Commit with Conventional Commits and push the branch.
 - [ ] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, record

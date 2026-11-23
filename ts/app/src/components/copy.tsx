@@ -34,26 +34,29 @@ export function useCopy(text: string): { state: CopyState; copy: () => void } {
 /**
  * The Copy button. `subject` names what it copies, such as "the install
  * command", and completes its accessible name: "Copy the install command",
- * then "Copied the install command".
+ * then "Copied the install command". `label` replaces the visible "Copy"
+ * when the button stands alone, as "Copy prompt for your agent" does.
  */
 export function CopyButton({
   state,
   subject,
+  label = "Copy",
   onPress,
 }: {
   state: CopyState;
   subject: string;
+  label?: string;
   onPress: () => void;
 }) {
-  const label = state === "copied" ? "Copied" : "Copy";
+  const verb = state === "copied" ? "Copied" : "Copy";
   return (
     <Button
       size="sm"
       icon={CopyIcon}
-      accessibilityLabel={`${label} ${subject}`}
+      accessibilityLabel={`${verb} ${subject}`}
       onPress={onPress}
     >
-      {label}
+      {state === "copied" ? "Copied" : label}
     </Button>
   );
 }

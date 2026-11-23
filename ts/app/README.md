@@ -72,6 +72,10 @@ Setup goes on. A first job that waits for a runner then says that it waits
 for that machine, while no other machine takes jobs and Boat is not
 connected. Setup reads again while a machine gets its image, also after the
 first job ended.
+The first-job step copies a prompt for a coding agent. The prompt lists the
+labels of the workspace with their sizes, and moves each job of a repository
+to the label that fits the size of its runner. It lists a macOS label only
+while a Mac of the workspace can start job VMs.
 `?reason=github` or `?reason=ended` on `/sign-in` adds a notice.
 The shell holds the navigation, the workspace switch, the account menu, and
 Add an organization for Admins. A person with no role sees a page that names

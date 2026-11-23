@@ -1,7 +1,8 @@
 // The open step of Setup: the machine step with the install command, and
 // the first-job step. Every name, count, and result comes from the API. A
 // machine that connected and gets its first job image says so, and a first
-// job that waits for that machine says why.
+// job that waits for that machine says why. The first-job step also copies a
+// prompt for a coding agent.
 
 import type { ReactNode } from "react";
 import { Link } from "expo-router";
@@ -20,6 +21,7 @@ import { workspaceHref } from "../../routing/pages.ts";
 import { imageCopy, noticeCopy } from "../../view/machines-copy.ts";
 import type { SetupModel } from "../../view/setup-steps.ts";
 import { ImageLine } from "../machines/image-line.tsx";
+import { AgentPromptCopy } from "./agent-prompt-copy.tsx";
 import { InstallCommandView } from "./install-command.tsx";
 
 const workflowFile = ".github/workflows/ci.yml";
@@ -145,6 +147,9 @@ export function JobStep({
         lines={runsOnDiff}
         copy={{ text: afterText(runsOnDiff), subject: "the workflow change" }}
       />
+      {model.agentPrompt === null ? null : (
+        <AgentPromptCopy prompt={model.agentPrompt} />
+      )}
       <WaitingLine>
         {job.kind === "moving"
           ? job.text
