@@ -86,9 +86,9 @@ pub(super) async fn read(
             let default_size = default_size(value.snapshot.machine.platform).map(|requested| {
                 machine_views::DefaultSize {
                     requested,
-                    root_bytes: state
+                    root: state
                         .capacity
-                        .required_root_bytes(&value.snapshot, requested.disk_bytes),
+                        .required_root(&value.snapshot, requested.disk_bytes),
                 }
             });
             machine_views::machine(

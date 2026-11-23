@@ -72,6 +72,7 @@ impl DownloadDigest {
             metadata: ImageMetadata {
                 image_id: image.image_id.clone(),
                 root_disk_bytes: image.root_disk_bytes,
+                free_job_bytes: None,
             },
         })
     }

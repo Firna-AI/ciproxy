@@ -3,6 +3,7 @@
 mod access_tests;
 mod database;
 mod fixture;
+mod image_limit_tests;
 mod machine_statistics_tests;
 mod machine_tests;
 mod platform_label_tests;

@@ -14,6 +14,7 @@ use crate::boundaries::{DockerDisks, Host, Service, Updates, Vms};
 use crate::error::{Error, Result};
 use crate::macos::area_disk::{AreaDisk, setting_error};
 use crate::macos::guests::{HelperLiveness, HelperTransport, VmFolders};
+use crate::macos::hardware::IMAGE_BUDGET_BYTES;
 use crate::macos::paths::{AREA, CONTROL};
 use crate::preparation::{Preparation, Uninstall};
 use crate::storage_sizing::requested_image_budget;
@@ -53,12 +54,6 @@ use seat_states::SeatStates;
 use service::LaunchdService;
 use updates::MacUpdates;
 use vms::MacVms;
-
-/// The default bytes that the area volume keeps for images: the newest
-/// image, the next one while it downloads, and its archive. Provisional
-/// until the first measured image. `CIPROXY_IMAGE_BUDGET_BYTES` sets
-/// another value, as on Linux.
-const IMAGE_BUDGET_BYTES: u64 = 200 * 1024 * 1024 * 1024;
 
 /// Build saved states of the seats for warm starts. Off: on the test Mac, a
 /// save works only in a logged-in user's GUI session, and the root daemon

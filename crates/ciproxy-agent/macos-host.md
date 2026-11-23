@@ -176,7 +176,11 @@ volume. `CIPROXY_AREA_DISK` puts it on another APFS disk, as
 
 - The volume has a quota, so jobs and images cannot fill the disk of the
   Mac. This replaces the XFS file of Linux. The default quota is three
-  quarters of the free container space, at least 150 GB.
+  quarters of the free container space, at least 132 GB: the 100 GB image
+  budget and the job disk of one default job (20 GB and the 4 GB margin).
+  So a 256 GB Mac needs about 176 GB free: with 180 GB free, the quota is
+  135 GB and the job disk 26 GB; with 200 GB free, 150 GB and 37 GB. Each
+  runs one default job. With 160 GB free, set `CIPROXY_AREA_BYTES`.
   `CIPROXY_AREA_BYTES` sets another size.
 - Install runs `diskutil apfs addVolume CONTAINER APFS ciproxy -quota
 BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
@@ -375,16 +379,23 @@ An image ID that the index already lists is not imported again.
 
 ### Job disk
 
-Cal's decision 17 is open. P and A recommend option (b): the image disk
-has a fixed size of 200 GB, and each VM holds the image's measured
-`free_job_bytes` in the disk accounting. So the agent passes no disk size,
-and one saved state per seat serves every label. The agent keeps
-`free_job_bytes` in its image index. The core uses it once P adds the field
-to the protocol.
+The image disk has a fixed size, and each VM is an APFS clone of it. A
+VM holds its label's free job disk and `MACOS_ROOT_MARGIN_BYTES` (4 GB)
+in the disk accounting, through `RootRule` in `src/root_sizing.rs`. The
+scaler and the control plane use the same rule. The agent reports the
+image's `free_job_bytes` with its image metadata, so a label that asks
+for more free disk than the image has fits no Mac with that image. The
+agent refuses such a start with a warning. It also refuses a new VM when
+the real free space of the area volume is less than the disk that the VM
+holds (`real_space_fits` in `src/capacity.rs`), because running clones
+can grow past their count. An image with no measured `free_job_bytes`
+gives no root (`RootFit::Unknown`), so the control plane places no new
+job on a Mac whose older agent does not report it.
 
 The image budget is the space of the volume that the job disk does not
 use: the job disk is (volume capacity − image budget) × 3/4. The default
-budget is 200 GiB. `CIPROXY_IMAGE_BUDGET_BYTES` sets another value, with
+budget is 100 GB (decimal): one standard image of about 77 GB allocated,
+with headroom. `CIPROXY_IMAGE_BUDGET_BYTES` sets another value, with
 the same rule as on Linux: an integer greater than 16,777,216. Each command
 reads the setting again, so put it in `/etc/ciproxy-agent/environment` for
 the daemon. A Mac records no budget, so a change applies at the next start.

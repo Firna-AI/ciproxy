@@ -12,10 +12,7 @@ pub(crate) fn place_own(
     label: &Label,
 ) -> bool {
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        let Some(size) = machine
-            .root_sizing(snapshot.root_sizing)
-            .vm_size(label.size)
-        else {
+        let Some(size) = machine.root_rule(snapshot.root_sizing).vm_size(label.size) else {
             continue;
         };
         if eligible(machine, label, snapshot.root_sizing)
@@ -38,10 +35,7 @@ pub(crate) fn place_own(
 
 pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, label: &Label) {
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        let Some(size) = machine
-            .root_sizing(snapshot.root_sizing)
-            .vm_size(label.size)
-        else {
+        let Some(size) = machine.root_rule(snapshot.root_sizing).vm_size(label.size) else {
             continue;
         };
         if !eligible(machine, label, snapshot.root_sizing) {
@@ -50,7 +44,7 @@ pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, lab
         let mut future = projected_usage(snapshot, plan, index);
         let mut retire = Vec::new();
         for runner in &machine.runners {
-            if future.fits(machine, size) {
+            if future.fits_held(machine, size) {
                 break;
             }
             if warm_candidate(runner)
@@ -61,7 +55,7 @@ pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, lab
                 retire.push(runner);
             }
         }
-        if future.fits(machine, size) {
+        if future.fits_held(machine, size) {
             for runner in retire {
                 plan.stop(runner, StopReason::WarmPreemption);
             }

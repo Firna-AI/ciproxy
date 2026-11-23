@@ -16,9 +16,19 @@ the warm runners.
 - First subtract the image budget from the disk capacity.
 - The default image budget is 140,000,000,000 bytes, or 140 GB, on Linux.
 - It holds two full images and one compressed download during an update.
-- A Mac has its own default image budget, for two full macOS images and
-  one compressed download. Its value is a placeholder until the size of the
-  [macOS image](agent-images.md#the-macos-image) is measured.
+- A Mac has its own default image budget: 100,000,000,000 bytes, or
+  100 GB. It holds one standard
+  [macOS image](agent-images.md#the-macos-image), a 100 GB disk with about
+  77 GB allocated, and headroom. During an update, the new image and its
+  download need space beside the old image. The check of the real free
+  space below stops new macOS VMs while that space is short. A failed
+  extraction, such as on a full volume, removes its download and its
+  partial image, so the old image goes on running jobs.
+- **Decision (23 November 2026):** the default macOS image budget is
+  100 GB, so a Mac with about 176 GB of free disk runs a default job.
+  Rejected for now: a budget for two macOS images and a download, about
+  200 GB, because no 256 GB Mac could then run a job. A space policy from
+  the measured image size is a follow-up item.
 - An explicit image budget override stays separate from the job disk.
 - The host reserve keeps a quarter of the remaining disk for the system
   and filesystem overhead.
@@ -29,19 +39,41 @@ the warm runners.
   Reason: keep all `ubuntu-latest` software and independent writable disks.
 - Each job VM holds its complete root allocation in the job disk until
   the agent removes the VM.
-- That root includes the image, the label's free job disk, and an allowance
-  for the filesystem. On Linux, the allowance covers ext4 metadata growth
-  and its 1% root reserve.
+- On Linux, that root includes the image, the label's free job disk, and
+  an allowance for the filesystem: ext4 metadata growth and its 1% root
+  reserve.
 - On a Mac, the root is an APFS clone of the fixed image disk. The clone
-  takes space only as the job writes, and it can grow by at most about the
-  free bytes of the image.
-- So each macOS job VM holds the measured free bytes of its image in the
-  job disk, whatever the free disk of its label.
-- **Decision:** a macOS job VM holds the free bytes of its image. Rejected:
-  the logical size of the image disk, because the shared blocks of a clone
-  take no space. Rejected: the written bytes of each clone, because the
-  host disk could then fill during a job. This is a proposal until the user
-  decides it.
+  shares the blocks of the image, which the image budget already holds,
+  and takes space only as the job writes.
+- So each macOS job VM holds its label's free job disk and a margin of
+  4 GB in the job disk. The margin covers the swap, the logs, and the
+  runner files that the guest writes beside the job.
+- A macOS label fits a Mac only when its free job disk is at most the
+  measured free bytes inside the Mac's selected image, because the guest
+  cannot use more than the free space of the fixed image disk. The agent
+  reports those free bytes with the image.
+- A Mac whose agent reports no free bytes for its image gets no new macOS
+  job until it does. Its running jobs go on. An older agent counts each VM
+  by the Linux rule, so it would refuse each such start.
+- A clone can still grow past what it holds. A write to a block that the
+  clone still shares with the image takes a new block on the Mac, so a
+  clone can grow up to the logical size of the image disk, also when the
+  guest's own use stays the same.
+- So the agent also refuses a new macOS VM when the real free space of its
+  volume is less than the disk that the VM holds. Placement uses the real
+  free space of the Mac's last report in the same way, so a job goes to a
+  Mac that has the space.
+- When the running jobs of a Mac fill its volume, a job that writes more
+  gets a full disk inside its VM, and that job can fail. The agent removes
+  each VM after its job, which frees the space of its clone.
+- **Decision (23 November 2026):** a macOS job VM holds its label's free
+  job disk and a margin. Rejected: the logical size of the image disk,
+  because the shared blocks of a clone take no space, and a Mac with
+  256 GB could then run no job. Rejected: the free bytes of the image,
+  because a large free space in the image would also keep small Macs from
+  jobs. Reason: a job writes about what its label gives it, and the check
+  of the real free space covers a job that writes more.
+- Linux keeps its rule: each job VM holds its complete ext4 root.
 - Scheduling uses the logical image root length from the same image release
   that the VM starts. Installed file bytes are not that length.
 - The agent reports the exact root length of each local image release.

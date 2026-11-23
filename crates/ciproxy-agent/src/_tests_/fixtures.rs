@@ -193,6 +193,7 @@ pub(super) fn metadata(id: &str, root_disk_bytes: u64) -> ImageMetadata {
     ImageMetadata {
         image_id: ImageId(id.to_owned()),
         root_disk_bytes,
+        free_job_bytes: None,
     }
 }
 
