@@ -1,7 +1,7 @@
 ---
 // The top bar of the public site, after the site header of the mockups.
-// Marketing pages: the wordmark, Pricing and Docs, then the GitHub mark, the
-// Sign in link, and the Start free button. On a phone, the menu button opens
+// Marketing pages: the wordmark, Pricing and Docs, then GitHub, the Sign
+// in link, and the Start free button. On a phone, the menu button opens
 // the links that do not fit. Docs: the wordmark with "Docs", the search box
 // that the Starlight header passes in, Pricing, and the same actions. Every
 // button that opens sign-in says Start free; the link serves people who
@@ -78,13 +78,8 @@ const Bar = docs ? "div" : "header";
           Pricing
         </a>
       )}
-      <a
-        href={githubUrl}
-        class="site-github"
-        aria-label="ciproxy on GitHub"
-        title="ciproxy on GitHub"
-      >
-        <Icon name="github" size={18} strokeWidth={1.75} />
+      <a href={githubUrl} class="site-nav-link site-github">
+        GitHub
       </a>
       <a href={signInUrl} class="site-nav-link site-sign-in">
         Sign in

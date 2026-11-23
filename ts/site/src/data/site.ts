@@ -12,7 +12,7 @@ export const appOrigin = "https://app.ciproxy.dev";
 export const signInUrl = `${appOrigin}/sign-in`;
 
 /**
- * The public repository of ciproxy on GitHub. The GitHub mark of the top bar
+ * The public repository of ciproxy on GitHub. The GitHub link of the top bar
  * opens it.
  */
 export const githubUrl = "https://github.com/Firna-AI/ciproxy";

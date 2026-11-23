@@ -82,16 +82,10 @@ header.site-header {
   margin-left: auto;
 }
 
-/* The GitHub mark: an icon link in the colour of the other links. */
+/* GitHub keeps a wider gap before Sign in, as Pricing does on the docs. */
 
 .site-github {
-  display: inline-flex;
   margin-right: 6px;
-  color: var(--c-ink2);
-}
-
-.site-github:hover {
-  color: var(--c-ink);
 }
 
 /* The menu of a phone: a plain icon button, and the links in a panel under

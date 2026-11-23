@@ -28,12 +28,12 @@ The pages follow the marketing and docs mockups under
 The look is Graphite:
 
 - One top bar serves both parts. The marketing pages show the wordmark,
-  Pricing, Docs, the GitHub mark, Sign in, and Start free. On a phone, a menu
+  Pricing, Docs, GitHub, Sign in, and Start free. On a phone, a menu
   holds the links, with GitHub. The docs show the wordmark with "Docs", the
   Starlight search, Pricing, and the same actions. A narrow docs window hides
-  Pricing, the GitHub mark, and Sign in.
-- The GitHub mark opens the public repository of ciproxy,
-  `https://github.com/Firna-AI/ciproxy`.
+  Pricing, GitHub, and Sign in.
+- The GitHub link is text, with no icon. It opens the public repository of
+  ciproxy, `https://github.com/Firna-AI/ciproxy`.
 - Every marketing page ends with the footer.
 - The docs use a Graphite theme of Starlight. Black is the one accent, and
   Geist and Geist Mono are the faces. Code is in the ink, because colour

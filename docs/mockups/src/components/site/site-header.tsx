@@ -1,11 +1,11 @@
 // The top bar of the public site, shared by the marketing pages and the docs.
-// Marketing: the wordmark, Pricing and Docs, then the GitHub mark, the Sign in
-// link, and the Start free button. The docs: the wordmark with "Docs", the
+// Marketing: the wordmark, Pricing and Docs, then GitHub, the Sign in link,
+// and the Start free button. The docs: the wordmark with "Docs", the
 // search box, Pricing, and the same actions. Every button that opens sign-in
 // says Start free; the link serves people who already use ciproxy. On mobile,
 // a menu button holds the links that do not fit.
 
-import { Command, Github, Menu, Search } from "lucide-react";
+import { Command, Menu, Search } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
 import { Button } from "@firna/ui/button";
 
@@ -92,9 +92,7 @@ function DesktopParts({ section }: { section: SiteSection }) {
             Pricing
           </MockLink>
         ) : null}
-        <span className="site-icon-link" title="ciproxy on GitHub">
-          <Github size={18} strokeWidth={1.75} aria-label="GitHub" />
-        </span>
+        <span className={`${navClass(false)} site-github`}>GitHub</span>
         <MockLink to={paths.signIn} className={navClass(false)}>
           Sign in
         </MockLink>

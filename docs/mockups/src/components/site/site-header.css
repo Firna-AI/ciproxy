@@ -103,10 +103,8 @@
   margin-right: 6px;
 }
 
-.site-icon-link {
-  display: inline-flex;
+.site-github {
   margin-right: 6px;
-  color: var(--c-ink2);
 }
 
 /* The search box of the docs: a button that looks like a field. */
@@ -162,7 +160,7 @@
 
 @media (max-width: 1000px) {
   .site-header-docs .site-actions > .site-nav-link,
-  .site-header-docs .site-icon-link {
+  .site-header-docs .site-github {
     display: none;
   }
 
