@@ -6,7 +6,7 @@ mod live_support;
 use std::path::PathBuf;
 
 use ciproxy_overflow::boat::BoatFactory;
-use ciproxy_overflow::provider::BackendFactory;
+use ciproxy_overflow::provider::ProviderFactory;
 use clap::{Parser, Subcommand};
 
 use live_support::SafeResult;
@@ -62,8 +62,9 @@ enum Command {
 async fn main() -> live_support::Result<()> {
     let args = Arguments::parse();
     let key = live_support::secret(&args.boat_key_file)?;
-    let backend = BoatFactory::new()
-        .backend(&key, &args.wallet)
+    let factory = BoatFactory::new();
+    let backend = factory
+        .capabilities(&key, &args.wallet)
         .safe("configure Boat")?;
-    live_boat::run(backend, args.command).await
+    live_boat::run(&factory, backend, args.command).await
 }

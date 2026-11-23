@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, Retirement, RunnerAuthorityMock};
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use sandbox_interface::{
     BackendManagedSandbox, BackendSandbox, ProviderRef, SandboxLifecycleMock, SandboxState,
@@ -98,7 +98,7 @@ async fn failed_recovered_cleanup_keeps_the_original_bound_after_old_key_rejecti
                 provider_ref: ProviderRef::new("bx_23456789"),
                 state: SandboxState::Ready,
             }))),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, _, _| Err(Error::RejectedKey)),
         SandboxLifecycleMock::destroy_sandbox
@@ -153,7 +153,7 @@ async fn end_destroyed(recovering: bool) {
         SandboxLifecycleMock::list_managed_sandboxes
             .some_call(matching!(_))
             .returns(Ok(vec![listed(SandboxState::Destroyed)])),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .returns(Ok(None)),
         SandboxLifecycleMock::destroy_sandbox

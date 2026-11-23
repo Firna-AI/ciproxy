@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use ciproxy_overflow::maintenance::{GuestInspectionMock, LaunchState};
 use ciproxy_overflow::provider::{
-    AccountFacts, BoatAccountApiMock, Capabilities, GuestLauncherMock,
+    AccountFacts, Capabilities, GuestLauncherMock, ProviderAccountApiMock,
 };
 use ciproxy_store_interface::store::Store;
 use sandbox_interface::{
@@ -106,7 +106,7 @@ impl Provider {
                             .unwrap()
                             .ok_or(ciproxy_overflow::error::Error::ProviderUnavailable)
                     })),
-                BoatAccountApiMock::account
+                ProviderAccountApiMock::account
                     .some_call(matching!())
                     .answers_arc(Arc::new(move |_| {
                         account_label.apply(LabelStage::Account);
@@ -218,7 +218,7 @@ impl Provider {
                         launched_label.apply(LabelStage::Launch);
                         Ok(())
                     })),
-                BoatAccountApiMock::usage
+                ProviderAccountApiMock::usage
                     .some_call(matching!(_, _, _))
                     .answers_arc(Arc::new(move |_, _, _, _| {
                         usage_label.apply(LabelStage::Usage);

@@ -8,7 +8,7 @@ use std::sync::{
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 use sandbox_interface::SandboxLifecycleMock;
@@ -23,7 +23,7 @@ async fn start_reserves_its_own_bound_after_156_dollars_and_waits_when_room_runs
     let creates = Arc::new(AtomicUsize::new(0));
     let creating = creates.clone();
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox
@@ -94,7 +94,7 @@ async fn start_reserves_its_own_bound_after_156_dollars_and_waits_when_room_runs
 #[tokio::test]
 async fn new_start_with_no_fee_bound_never_dispatches_or_saves_an_unbounded_delivery() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account.stub(|each| {
+        ProviderAccountApiMock::account.stub(|each| {
             each.call(matching!())
                 .answers(&|_| {
                     let mut facts = facts();
@@ -130,7 +130,7 @@ async fn dispatch_near_midnight_checks_the_next_months_existing_bounds() {
     let creates = Arc::new(AtomicUsize::new(0));
     let creating = creates.clone();
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox

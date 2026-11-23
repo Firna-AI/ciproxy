@@ -31,17 +31,18 @@ impl OverflowService {
                 self.missing_usage(session, record).await?;
                 continue;
             };
-            let backend = match self.maintenance_backend(workspace_id, account).await {
-                Ok(backend) => backend,
+            let maintenance = match self.maintenance(workspace_id, account).await {
+                Ok(maintenance) => maintenance,
                 Err(_) => {
                     tracing::warn!(
-                        "Boat cost credentials are unavailable; saved metadata remains readable"
+                        provider = account.account.provider.as_str(),
+                        "Cost credentials are unavailable. Saved metadata remains readable."
                     );
                     self.missing_usage(session, record).await?;
                     continue;
                 }
             };
-            self.measure(session, &backend, record).await?;
+            self.measure(session, &maintenance, record).await?;
         }
         Ok(())
     }
@@ -49,7 +50,7 @@ impl OverflowService {
     pub(super) async fn measure(
         &self,
         session: &Session,
-        backend: &MaintenanceCapabilities,
+        maintenance: &MaintenanceCapabilities,
         record: &mut StartRecord,
     ) -> Result<bool> {
         let Some(sandbox) = &record.sandbox else {
@@ -57,7 +58,7 @@ impl OverflowService {
         };
         let id = ProviderRef::new(sandbox.id());
         let now = self.dependencies.clock.now();
-        let total = match backend.usage(id.clone(), None, now).await {
+        let total = match maintenance.usage(id.clone(), None, now).await {
             Ok(Some(total)) => total,
             Ok(None) | Err(_) => return self.missing_usage(session, record).await,
         };
@@ -96,7 +97,7 @@ impl OverflowService {
         let until = record.ends_at.unwrap_or(now).min(now);
         while month < until {
             let end = spend::next_month(month)?.min(until);
-            let usage = match backend.usage(id.clone(), Some(month), end).await {
+            let usage = match maintenance.usage(id.clone(), Some(month), end).await {
                 Ok(Some(usage)) => usage,
                 Ok(None) | Err(_) => return self.missing_usage(session, record).await,
             };

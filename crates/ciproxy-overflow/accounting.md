@@ -74,4 +74,4 @@ Relevant savings reads still return a typed incomplete error.
 Ranges after a confirmed lifecycle end do not include that missing interval.
 
 [Overflow service guide](README.md) gives configuration and integration.
-[Spend limits](../../docs/protocol/overflow.md#spend-limit) gives the protocol.
+[Spend limits](../../docs/protocol/overflow-spend.md) gives the protocol.

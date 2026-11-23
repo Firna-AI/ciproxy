@@ -14,7 +14,7 @@ use crate::catalog;
 use crate::crypto::{KeyContext, SecretPurpose};
 use crate::error::{Error, Result, ResultExt};
 use crate::maintenance::MaintenanceCapabilities;
-use crate::provider::{Capabilities, KeyWallets};
+use crate::provider::{Capabilities, KeyAccounts};
 use crate::secrets::SecretBytes;
 use crate::session::Session;
 use crate::view::OverflowView;
@@ -23,12 +23,13 @@ use super::OverflowService;
 
 #[async_trait]
 impl Overflow for OverflowService {
-    async fn wallets(&self, key: Secret) -> Result<KeyWallets> {
+    async fn wallets(&self, key: Secret) -> Result<KeyAccounts> {
         self.dependencies
+            .providers
+            .get(OverflowProvider::Boat)?
             .factory
-            .backend(&key, "personal")?
-            .account
-            .wallets()
+            .for_key_check(&key)?
+            .check_key()
             .await
     }
 
@@ -49,9 +50,15 @@ impl Overflow for OverflowService {
             .call(move |session| session.begin_connection(key_id))
             .await?
             .ok_or(Error::ConnectionNotPermitted)?;
-        let backend = self.dependencies.factory.backend(&key, &wallet)?;
-        let facts = backend.account.account().await?;
-        let sizes = catalog::offers(backend.capacity.account_capacity().await.internal()?)?;
+        let provider = OverflowProvider::Boat;
+        let capabilities = self
+            .dependencies
+            .providers
+            .get(provider)?
+            .factory
+            .capabilities(&key, &wallet)?;
+        let facts = capabilities.account.account().await?;
+        let sizes = catalog::offers(capabilities.capacity.account_capacity().await.internal()?)?;
         let now = self.dependencies.clock.now();
         let bytes = self
             .dependencies
@@ -67,7 +74,7 @@ impl Overflow for OverflowService {
             .await?;
         let metadata = OverflowProviderAccount {
             id: key_id,
-            provider: OverflowProvider::Boat,
+            provider,
             account_name: facts.name,
             connected_at: now,
             retired_at: None,
@@ -78,7 +85,7 @@ impl Overflow for OverflowService {
             key: EncryptedOverflowKey::new(bytes),
             state: AccountState {
                 provider: metadata.provider,
-                wallet: facts.wallet,
+                wallet: facts.billing_account,
                 checked_at: Some(now),
                 sizes,
                 trial: facts.trial,
@@ -137,7 +144,7 @@ impl Overflow for OverflowService {
 }
 
 impl OverflowService {
-    pub(super) async fn backend(
+    pub(super) async fn capabilities(
         &self,
         workspace_id: Uuid,
         account: &AccountRecord,
@@ -147,17 +154,21 @@ impl OverflowService {
         }
         let key = self.account_key(workspace_id, account).await?;
         self.dependencies
+            .providers
+            .get(account.account.provider)?
             .factory
-            .backend(&key, &account.state.wallet)
+            .capabilities(&key, &account.state.wallet)
     }
 
-    pub(super) async fn maintenance_backend(
+    pub(super) async fn maintenance(
         &self,
         workspace_id: Uuid,
         account: &AccountRecord,
     ) -> Result<MaintenanceCapabilities> {
         let key = self.account_key(workspace_id, account).await?;
         self.dependencies
+            .providers
+            .get(account.account.provider)?
             .factory
             .maintenance(&key, &account.state.wallet)
     }

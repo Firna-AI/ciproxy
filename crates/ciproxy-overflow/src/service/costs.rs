@@ -19,7 +19,8 @@ impl OverflowService {
         record.billing = until;
         if clamped {
             tracing::warn!(
-                "Measured Boat billing interval exceeded its observation bounds and was clamped"
+                provider = record.provider.as_str(),
+                "Clamped the measured billing interval to its observation bounds"
             );
         }
         let changed = record.clone();

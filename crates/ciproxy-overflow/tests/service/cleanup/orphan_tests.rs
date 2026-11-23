@@ -2,7 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, Retirement, RunnerAuthorityMock};
-use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
+use ciproxy_overflow::provider::{ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
@@ -26,7 +26,7 @@ async fn cleanup_deletes_only_an_unneeded_owned_runner_and_preserves_running_job
                 managed(22, 21, "bx_3456789a"),
                 managed(999, 998, "bx_456789ab"),
             ])),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .returns(Ok(None)),
         SandboxLifecycleMock::destroy_sandbox
@@ -72,7 +72,7 @@ async fn omitted_stopped_sandbox_recovers_its_final_bill_before_lifecycle_end() 
                 provider_ref: ProviderRef::new("bx_23456789"),
                 state: SandboxState::Destroyed,
             })),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, since, until| {
                 Ok(Some(RuntimeUsage {
@@ -106,7 +106,7 @@ async fn lost_delete_acknowledgment_never_prices_a_day_of_absent_runtime() {
         SandboxLifecycleMock::list_managed_sandboxes
             .some_call(matching!(_))
             .returns(Ok(Vec::new())),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, _, _| Ok(None)),
         SandboxLifecycleMock::destroy_sandbox

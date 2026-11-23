@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use ciproxy_overflow::api::Overflow;
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::store::Store;
 use sandbox_interface::SandboxAccountCapacityMock;
@@ -27,7 +27,7 @@ async fn revoked_connection(reinstall: bool) {
     let pending = Arc::new(Mutex::new(None::<Arc<dyn Store>>));
     let verifying = pending.clone();
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers_arc(Arc::new(move |_| {
                 let store = verifying.lock().unwrap().take().unwrap();

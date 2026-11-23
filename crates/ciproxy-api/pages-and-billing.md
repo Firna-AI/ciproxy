@@ -21,8 +21,8 @@ fn dashboard(state: ApiState, pages: Arc<PageServices>) -> Router {
 
 Use the existing `BillingService`, `StoredMetering`, and `Overflow` service.
 Supply dated Blacksmith and GitHub USD price lists from trusted configuration.
-Set `PageServices.boat_root_sizing` to the exact `OverflowConfig.root_sizing`
-value before moving that configuration into the overflow service. The live
+Set `PageServices.boat_root_sizing` to the same `ImageSource.root_sizing`
+value that the Boat entry in the provider registry uses. The live
 queue reuses this trusted sizing and the scaler's public size selection. It
 adds no separate root allocation formula. Missing sizing stays unavailable.
 An absent catalog returns `unavailable` for Savings. An absent overflow service

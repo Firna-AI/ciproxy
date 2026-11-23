@@ -2,7 +2,7 @@
 
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
@@ -15,7 +15,7 @@ use super::super::harness::{Harness, Runtime};
 #[tokio::test]
 async fn unsent_create_ends_without_cost_or_authority_and_permits_a_new_delivery() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox

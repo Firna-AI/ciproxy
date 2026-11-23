@@ -15,8 +15,7 @@ use crate::session::Session;
 use crate::spend;
 
 use super::OverflowService;
-use super::execution::create_request;
-use super::provider_preparation::selected_size;
+use super::provider_preparation::{Preparation, selected_size};
 
 pub(super) enum DispatchOutcome {
     Submitted(sandbox_interface::Result<Option<BackendSandbox>>),
@@ -63,24 +62,27 @@ impl OverflowService {
                 self.cancel_unsent(session, record).await?,
             )));
         };
-        if let Some(wait) = self
-            .resume_preparation(session, account, authority.backend())
+        let lifetime_seconds = match self
+            .resume_preparation(session, account, authority.capabilities())
             .await?
         {
-            let delivery = record.delivery_id;
-            if session
-                .call(move |session| session.startup_account(delivery))
-                .await?
-                .is_none()
-            {
-                return Ok(DispatchOutcome::Stopped(Box::new(
-                    self.cancel_unsent(session, record).await?,
-                )));
+            Preparation::Ready { lifetime_seconds } => lifetime_seconds,
+            Preparation::Waiting(wait) => {
+                let delivery = record.delivery_id;
+                if session
+                    .call(move |session| session.startup_account(delivery))
+                    .await?
+                    .is_none()
+                {
+                    return Ok(DispatchOutcome::Stopped(Box::new(
+                        self.cancel_unsent(session, record).await?,
+                    )));
+                }
+                return Ok(DispatchOutcome::Stopped(Box::new(StartOutcome::Waiting(
+                    wait,
+                ))));
             }
-            return Ok(DispatchOutcome::Stopped(Box::new(StartOutcome::Waiting(
-                wait,
-            ))));
-        }
+        };
         let delivery = record.delivery_id;
         let Some(facts) = session
             .call(move |session| session.dispatch_facts(delivery))
@@ -97,7 +99,7 @@ impl OverflowService {
         };
         let parameters = ProviderParameters {
             size,
-            lifetime_seconds: if account.state.trial { 7200 } else { 21600 },
+            lifetime_seconds,
         };
         let mut candidate = record.clone();
         candidate.dispatch = Some(parameters.clone());
@@ -109,7 +111,7 @@ impl OverflowService {
             starts_at: candidate.starts_at,
             budget: required_budget(&snapshot.starts, &candidate)?,
         };
-        let request = create_request(workspace_id, &candidate)?;
+        let request = self.create_request(workspace_id, &candidate)?;
         let pending = record.clone();
         let saved = dispatch.clone();
         match session
@@ -146,7 +148,10 @@ impl OverflowService {
             result,
             Err(sandbox_interface::Error::SandboxCreateNotSent { .. })
         ) {
-            tracing::warn!("Boat create was rejected before dispatch");
+            tracing::warn!(
+                provider = record.provider.as_str(),
+                "Create was rejected before dispatch"
+            );
             record.phase = StartPhase::Refused;
             record.ends_at = Some(self.dependencies.clock.now());
             record.runtime_complete = true;

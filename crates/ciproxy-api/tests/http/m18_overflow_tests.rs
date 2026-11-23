@@ -6,6 +6,7 @@ use axum::http::StatusCode;
 use ciproxy_api::pages::PageServices;
 use ciproxy_overflow::api::OverflowConfig;
 use ciproxy_overflow::clock::ClockMock;
+use ciproxy_overflow::registry::{ImageSource, ProviderRegistry};
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::dashboard::records::Role;
@@ -61,14 +62,19 @@ async fn m18_live_exposes_saved_provider_refusals_without_keys_or_starting_sandb
     let overflow = OverflowService::new(
         OverflowConfig {
             deployment: "http-test".into(),
-            shared_snapshot: "test-image".into(),
-            root_sizing: Default::default(),
             exit_report_url: Secret::new("https://app.ciproxy.example/overflow/end"),
         },
         OverflowDependencies {
             store: pages.fixture.database.store.clone(),
             cipher: Arc::new(Unimock::new(())),
-            factory: Arc::new(Unimock::new(())),
+            providers: ProviderRegistry::default().with_provider(
+                OverflowProvider::Boat,
+                Arc::new(Unimock::new(())),
+                ImageSource {
+                    reference: "test-image".into(),
+                    root_sizing: Default::default(),
+                },
+            ),
             runners: Arc::new(Unimock::new(())),
             tokens: Arc::new(Unimock::new(())),
             clock: Arc::new(Unimock::new(

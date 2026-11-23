@@ -3,7 +3,7 @@
 use chrono::Duration;
 use ciproxy_overflow::api::Overflow;
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
+use ciproxy_overflow::provider::{ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, RuntimeTotal, StartPhase};
 use rust_decimal::Decimal;
@@ -17,7 +17,7 @@ use super::fixtures::{at, capabilities, id, record};
 #[tokio::test]
 async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_replaces_it() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, since, until| {
                 if until == at() + Duration::hours(8) {

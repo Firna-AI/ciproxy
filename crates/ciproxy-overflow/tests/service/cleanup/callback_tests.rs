@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock, RuntimeUsage};
+use ciproxy_overflow::provider::{GuestLauncherMock, ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use rust_decimal::Decimal;
@@ -24,7 +24,7 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
     let deletion = Arc::new(Mutex::new(0));
     let count = deletion.clone();
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, since, until| {
                 Ok(Some(RuntimeUsage {
@@ -41,7 +41,7 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
                 Ok(())
             }))
             .once(),
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox
@@ -165,7 +165,7 @@ async fn callback_skips_provider_calls_when_cleanup_ends_delivery_before_waiting
     let deletes = delete_calls.clone();
     let backend = capabilities(
         Unimock::new((
-            BoatAccountApiMock::usage
+            ProviderAccountApiMock::usage
                 .each_call(matching!(_, _, _))
                 .answers_arc(Arc::new(move |_, _, _, _| {
                     usage.fetch_add(1, Ordering::SeqCst);

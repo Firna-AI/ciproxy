@@ -70,8 +70,9 @@ pub(super) fn snapshot() -> OverflowSnapshot {
 pub(super) fn facts() -> AccountFacts {
     AccountFacts {
         name: "Customer".to_owned(),
-        wallet: "personal".to_owned(),
+        billing_account: "personal".to_owned(),
         trial: false,
+        lifetime_seconds: 21600,
         billing_ready: true,
         start_fee_bound_usd: Some(Decimal::new(3, 2)),
     }

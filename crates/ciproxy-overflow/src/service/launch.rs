@@ -5,7 +5,7 @@ use ciproxy_protocol::identifiers::RunnerId;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::version::ProtocolVersion;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
-use sandbox_interface::{BackendWriteFileRequest, ProviderRef};
+use sandbox_interface::ProviderRef;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -13,7 +13,6 @@ use crate::api::{StartOutcome, StartRequest};
 use crate::crypto::{KeyContext, SecretPurpose};
 use crate::error::{Error, Result, ResultExt};
 use crate::maintenance::MaintenanceCapabilities;
-use crate::provider::registration_root;
 use crate::secrets::SecretBytes;
 use crate::session::Session;
 
@@ -49,7 +48,7 @@ impl OverflowService {
         &self,
         session: &Session,
         workspace_id: Uuid,
-        backend: &MaintenanceCapabilities,
+        maintenance: &MaintenanceCapabilities,
         record: &mut StartRecord,
     ) -> Result<StartOutcome> {
         let sandbox =
@@ -77,31 +76,34 @@ impl OverflowService {
                 .await?
             else {
                 return self
-                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .reconcile_retired(session, workspace_id, maintenance, record.clone())
                     .await;
             };
+            let files = self
+                .dependencies
+                .providers
+                .get(record.provider)?
+                .factory
+                .registration_files(delivery);
             record.phase = StartPhase::Writing;
             let changed = record.clone();
             session
                 .call(move |session| session.save_start(&changed))
                 .await?;
-            let bootstrap = authority
-                .files()
-                .write_file(BackendWriteFileRequest {
-                    sandbox_provider_ref: sandbox.clone(),
-                    root: "/workspace".to_owned(),
-                    path: format!(".ciproxy-bootstrap-{}", delivery.simple()),
-                    bytes: Vec::new(),
-                })
-                .await;
-            self.confirm_write(session, backend, record, bootstrap)
-                .await?;
+            if let Some(target) = files.bootstrap {
+                let write = authority
+                    .files()
+                    .write_file(target.write_request(sandbox.clone(), Vec::new()))
+                    .await;
+                self.confirm_write(session, maintenance, record, write)
+                    .await?;
+            }
             let Some(authority) = self
                 .launch_authority(session, workspace_id, record.delivery_id)
                 .await?
             else {
                 return self
-                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .reconcile_retired(session, workspace_id, maintenance, record.clone())
                     .await;
             };
             authority
@@ -113,19 +115,19 @@ impl OverflowService {
                 .await?
             else {
                 return self
-                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .reconcile_retired(session, workspace_id, maintenance, record.clone())
                     .await;
             };
             let write = authority
                 .files()
-                .write_file(BackendWriteFileRequest {
-                    sandbox_provider_ref: sandbox.clone(),
-                    root: registration_root(delivery),
-                    path: "registration.json".to_owned(),
-                    bytes: bytes.expose().to_vec(),
-                })
+                .write_file(
+                    files
+                        .registration
+                        .write_request(sandbox.clone(), bytes.expose().to_vec()),
+                )
                 .await;
-            self.confirm_write(session, backend, record, write).await?;
+            self.confirm_write(session, maintenance, record, write)
+                .await?;
             record.phase = StartPhase::Launching;
             let changed = record.clone();
             session
@@ -138,7 +140,7 @@ impl OverflowService {
                 .await?
             else {
                 return self
-                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .reconcile_retired(session, workspace_id, maintenance, record.clone())
                     .await;
             };
             authority
@@ -166,7 +168,7 @@ impl OverflowService {
     async fn confirm_write(
         &self,
         session: &Session,
-        backend: &MaintenanceCapabilities,
+        maintenance: &MaintenanceCapabilities,
         record: &mut StartRecord,
         result: sandbox_interface::Result<()>,
     ) -> Result<()> {
@@ -178,7 +180,7 @@ impl OverflowService {
                 session
                     .call(move |session| session.save_start(&changed))
                     .await?;
-                self.delete(session, backend, record).await?;
+                self.delete(session, maintenance, record).await?;
                 Err(Error::ProviderUnavailable)
             }
             result => result.internal(),

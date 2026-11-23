@@ -5,15 +5,20 @@ use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_overflow::api::OverflowConfig;
+use ciproxy_overflow::boat::BoatFactory;
 use ciproxy_overflow::error::Result;
 use ciproxy_overflow::maintenance::MaintenanceCapabilities;
-use ciproxy_overflow::provider::{BackendFactory, Capabilities};
+use ciproxy_overflow::provider::{
+    Capabilities, ProviderAccountApi, ProviderFactory, RegistrationFiles, SandboxStart,
+};
+use ciproxy_overflow::registry::{ImageSource, ProviderRegistry};
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
+use sandbox_interface::BackendCreateSandboxRequest;
 use uuid::Uuid;
 
 use super::database::Database;
@@ -37,8 +42,12 @@ struct Factory {
     capture: Arc<Mutex<Capture>>,
 }
 
-impl BackendFactory for Factory {
-    fn backend(&self, _: &Secret, wallet: &str) -> Result<Capabilities> {
+impl ProviderFactory for Factory {
+    fn for_key_check(&self, key: &Secret) -> Result<Arc<dyn ProviderAccountApi>> {
+        Ok(self.capabilities(key, "personal")?.account)
+    }
+
+    fn capabilities(&self, _: &Secret, wallet: &str) -> Result<Capabilities> {
         assert_eq!(wallet, "personal");
         self.capture.lock().unwrap().active_backends += 1;
         Ok(self.backend.clone())
@@ -47,6 +56,14 @@ impl BackendFactory for Factory {
     fn maintenance(&self, _: &Secret, wallet: &str) -> Result<MaintenanceCapabilities> {
         assert_eq!(wallet, "personal");
         Ok(self.backend.maintenance())
+    }
+
+    fn create_request(&self, start: SandboxStart<'_>) -> BackendCreateSandboxRequest {
+        BoatFactory::new().create_request(start)
+    }
+
+    fn registration_files(&self, delivery_id: Uuid) -> RegistrationFiles {
+        BoatFactory::new().registration_files(delivery_id)
     }
 }
 
@@ -79,10 +96,6 @@ impl Harness {
         let service = OverflowService::new(
             OverflowConfig {
                 deployment: "ciproxy-main".to_owned(),
-                shared_snapshot: "shared-image-v7".to_owned(),
-                root_sizing: RootSizing {
-                    image_root_bytes: 47_000_000_000,
-                },
                 exit_report_url: Secret::new("https://app.ciproxy.dev/api/overflow/end"),
             },
             OverflowDependencies {
@@ -91,10 +104,19 @@ impl Harness {
                     capture: state.clone(),
                 }),
                 cipher: runtime.clone(),
-                factory: Arc::new(Factory {
-                    backend,
-                    capture: state.clone(),
-                }),
+                providers: ProviderRegistry::default().with_provider(
+                    OverflowProvider::Boat,
+                    Arc::new(Factory {
+                        backend,
+                        capture: state.clone(),
+                    }),
+                    ImageSource {
+                        reference: "shared-image-v7".to_owned(),
+                        root_sizing: RootSizing {
+                            image_root_bytes: 47_000_000_000,
+                        },
+                    },
+                ),
                 runners: runtime.clone(),
                 clock: runtime.clone(),
                 tokens: runtime,

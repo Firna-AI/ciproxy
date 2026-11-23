@@ -2,7 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use sandbox_interface::{
     BillingRefusalReason, PlanSizeRefusalReason, SandboxLifecycleMock, SandboxLifetime,
     SandboxStartRefusal, SandboxStartRetry, TemporaryStartRefusalReason,
@@ -34,7 +34,7 @@ async fn refusals_persist_exact_retry_plan_billing_and_trial_state() {
     for refusal in cases {
         let response = refusal.clone();
         let backend = capabilities(Unimock::new((
-            BoatAccountApiMock::account
+            ProviderAccountApiMock::account
                 .some_call(matching!())
                 .answers(&|_| Ok(facts())),
             SandboxLifecycleMock::create_sandbox
@@ -82,7 +82,7 @@ async fn refusals_persist_exact_retry_plan_billing_and_trial_state() {
 #[tokio::test]
 async fn supplied_retry_blocks_new_creates_only_until_its_boundary() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox
@@ -114,7 +114,7 @@ async fn supplied_retry_blocks_new_creates_only_until_its_boundary() {
 #[tokio::test]
 async fn trial_uses_two_hours_and_billing_waits_for_confirmed_recovery() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account.stub(|each| {
+        ProviderAccountApiMock::account.stub(|each| {
             each.call(matching!())
                 .answers(&|_| {
                     let mut facts = facts();
@@ -126,6 +126,7 @@ async fn trial_uses_two_hours_and_billing_waits_for_confirmed_recovery() {
                 .answers(&|_| {
                     let mut facts = facts();
                     facts.trial = true;
+                    facts.lifetime_seconds = 7200;
                     Ok(facts)
                 });
         }),

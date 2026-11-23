@@ -9,7 +9,6 @@ use crate::error::{Error, Result};
 use crate::session::Session;
 
 use super::OverflowService;
-use super::execution::create_request;
 
 impl OverflowService {
     pub(super) async fn cleanup_workspace(&self, workspace_id: Uuid) -> Result<()> {
@@ -25,8 +24,8 @@ impl OverflowService {
             }) {
                 continue;
             }
-            let backend = match self.maintenance_backend(workspace_id, account).await {
-                Ok(backend) => backend,
+            let maintenance = match self.maintenance(workspace_id, account).await {
+                Ok(maintenance) => maintenance,
                 Err(_) => {
                     for mut record in snapshot
                         .starts
@@ -46,11 +45,12 @@ impl OverflowService {
                 }
             };
             let deployment = format!("{}/{}", self.config.deployment, workspace_id);
-            let inventory = match backend.list_managed_sandboxes(deployment).await {
+            let inventory = match maintenance.list_managed_sandboxes(deployment).await {
                 Ok(inventory) => inventory,
                 Err(_) => {
                     tracing::warn!(
-                        "Boat inventory is unavailable; known lifecycle records will be reconciled"
+                        provider = account.account.provider.as_str(),
+                        "Inventory is unavailable. Reconciling known lifecycle records."
                     );
                     Vec::new()
                 }
@@ -73,7 +73,7 @@ impl OverflowService {
                         .is_none()
                 {
                     match self
-                        .reconcile_retired(&session, workspace_id, &backend, record)
+                        .reconcile_retired(&session, workspace_id, &maintenance, record)
                         .await
                     {
                         Ok(StartOutcome::Pending(record)) => {
@@ -90,15 +90,19 @@ impl OverflowService {
                     session
                         .call(move |session| session.save_start(&changed))
                         .await?;
-                    if self.delete(&session, &backend, &mut record).await.is_err() {
+                    if self
+                        .delete(&session, &maintenance, &mut record)
+                        .await
+                        .is_err()
+                    {
                         failed = true;
                     }
                     continue;
                 }
                 let mut observed_state = None;
                 if record.phase == StartPhase::Creating {
-                    let recovered = backend
-                        .recover_sandbox_create(create_request(workspace_id, &record)?)
+                    let recovered = maintenance
+                        .recover_sandbox_create(self.create_request(workspace_id, &record)?)
                         .await;
                     let sandbox = match recovered {
                         Ok(Some(sandbox)) => sandbox,
@@ -121,7 +125,7 @@ impl OverflowService {
                     Some(SandboxState::Destroyed | SandboxState::Failed | SandboxState::Destroying)
                 ) {
                     if self
-                        .request_delete(&session, &backend, &mut record)
+                        .request_delete(&session, &maintenance, &mut record)
                         .await
                         .is_err()
                     {
@@ -134,7 +138,10 @@ impl OverflowService {
                         .iter()
                         .any(|sandbox| sandbox.provider_ref.as_str() == known.id())
                 }) {
-                    match backend.inspect_sandbox(ProviderRef::new(known.id())).await {
+                    match maintenance
+                        .inspect_sandbox(ProviderRef::new(known.id()))
+                        .await
+                    {
                         Err(sandbox_interface::Error::NotFound { .. })
                         | Ok(sandbox_interface::BackendSandbox {
                             state: SandboxState::Destroyed,
@@ -145,7 +152,11 @@ impl OverflowService {
                             session
                                 .call(move |session| session.save_start(&changed))
                                 .await?;
-                            if self.delete(&session, &backend, &mut record).await.is_err() {
+                            if self
+                                .delete(&session, &maintenance, &mut record)
+                                .await
+                                .is_err()
+                            {
                                 failed = true;
                             }
                             continue;
@@ -158,7 +169,11 @@ impl OverflowService {
                                 session
                                     .call(move |session| session.save_start(&changed))
                                     .await?;
-                                if self.delete(&session, &backend, &mut record).await.is_err() {
+                                if self
+                                    .delete(&session, &maintenance, &mut record)
+                                    .await
+                                    .is_err()
+                                {
                                     failed = true;
                                 }
                             } else {
@@ -175,7 +190,7 @@ impl OverflowService {
                         .await?
                         .is_none()
                 {
-                    self.reconcile_retired(&session, workspace_id, &backend, record)
+                    self.reconcile_retired(&session, workspace_id, &maintenance, record)
                         .await?;
                     continue;
                 }
@@ -197,7 +212,11 @@ impl OverflowService {
                 session
                     .call(move |session| session.save_start(&changed))
                     .await?;
-                if self.delete(&session, &backend, &mut record).await.is_err() {
+                if self
+                    .delete(&session, &maintenance, &mut record)
+                    .await
+                    .is_err()
+                {
                     failed = true;
                 }
             }

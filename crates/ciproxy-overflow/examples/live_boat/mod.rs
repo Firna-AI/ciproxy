@@ -3,14 +3,12 @@
 mod runner;
 mod state_io;
 
-use std::{path::Path, time::Duration};
+use std::path::Path;
 
 use chrono::Utc;
-use ciproxy_overflow::provider::Capabilities;
-use sandbox_interface::{
-    BackendCreateSandboxRequest, OperationId, ProviderRef, ResourceOwner, SandboxConsumer,
-    SandboxId, SandboxLifetime, SandboxNetworkPolicy, SandboxSizeSelection,
-};
+use ciproxy_overflow::provider::{Capabilities, ProviderFactory, SandboxStart};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use sandbox_interface::{BackendCreateSandboxRequest, ProviderRef};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -41,21 +39,16 @@ enum Phase {
 }
 
 impl State {
-    fn request(&self) -> BackendCreateSandboxRequest {
-        BackendCreateSandboxRequest {
-            sandbox_id: SandboxId::from_uuid(self.runner_id),
-            operation_id: OperationId::from_uuid(self.delivery_id),
-            owner: ResourceOwner::platform(self.workspace_id),
-            consumer: SandboxConsumer::Runtime,
-            lifetime: SandboxLifetime::OneShot {
-                max_lifetime: Duration::from_secs(u64::from(self.lifetime_seconds)),
-            },
-            size: Some(SandboxSizeSelection::ProviderSize(self.size.clone())),
-            deployment_id: format!("ciproxy-live/{}", self.workspace_id),
-            profile: "ciproxy".to_owned(),
-            network: SandboxNetworkPolicy::Open,
-            snapshot_provider_ref: Some(ProviderRef::new(&self.snapshot)),
-        }
+    fn request(&self, factory: &dyn ProviderFactory) -> BackendCreateSandboxRequest {
+        factory.create_request(SandboxStart {
+            runner_id: self.runner_id,
+            delivery_id: self.delivery_id,
+            workspace_id: self.workspace_id,
+            lifetime_seconds: self.lifetime_seconds,
+            size: &self.size,
+            deployment: &format!("ciproxy-live/{}", self.workspace_id),
+            image: &self.snapshot,
+        })
     }
 
     fn provider(&self) -> Result<ProviderRef> {
@@ -67,7 +60,11 @@ impl State {
     }
 }
 
-pub(crate) async fn run(backend: Capabilities, command: Command) -> Result<()> {
+pub(crate) async fn run(
+    factory: &dyn ProviderFactory,
+    backend: Capabilities,
+    command: Command,
+) -> Result<()> {
     let path = match &command {
         Command::Account => None,
         Command::Create { state_file, .. }
@@ -113,18 +110,18 @@ pub(crate) async fn run(backend: Capabilities, command: Command) -> Result<()> {
                     workspace_id: Uuid::new_v4(),
                     snapshot,
                     size,
-                    lifetime_seconds: if trial { 7200 } else { 21600 },
+                    lifetime_seconds: OverflowProvider::Boat.descriptor().lifetime.seconds(trial),
                     provider: None,
                     phase: Phase::Creating,
                 }
             };
             state_io::save(&state_file, &state)?;
             if existed {
-                recover(&backend, &state_file, &mut state).await?;
+                recover(factory, &backend, &state_file, &mut state).await?;
             } else {
                 let created = backend
                     .lifecycle
-                    .create_sandbox(state.request())
+                    .create_sandbox(state.request(factory))
                     .await
                     .safe("dispatch Boat create")?;
                 state.provider = Some(created.provider_ref.as_str().to_owned());
@@ -135,12 +132,12 @@ pub(crate) async fn run(backend: Capabilities, command: Command) -> Result<()> {
         }
         Command::Recover { state_file } => {
             let mut state = state_io::read(&state_file)?;
-            recover(&backend, &state_file, &mut state).await?;
+            recover(factory, &backend, &state_file, &mut state).await?;
         }
         Command::Runner {
             state_file,
             registration_file,
-        } => runner::launch(&backend, &state_file, &registration_file).await?,
+        } => runner::launch(factory, &backend, &state_file, &registration_file).await?,
         Command::Inspect { state_file } => {
             let state: State = state_io::read(&state_file)?;
             let sandbox = backend
@@ -180,14 +177,19 @@ pub(crate) async fn run(backend: Capabilities, command: Command) -> Result<()> {
     Ok(())
 }
 
-async fn recover(backend: &Capabilities, path: &Path, state: &mut State) -> Result<()> {
+async fn recover(
+    factory: &dyn ProviderFactory,
+    backend: &Capabilities,
+    path: &Path,
+    state: &mut State,
+) -> Result<()> {
     if state.provider.is_some() {
         println!("Sandbox identity is already saved.");
         return Ok(());
     }
     let recovered = backend
         .lifecycle
-        .recover_sandbox_create(state.request())
+        .recover_sandbox_create(state.request(factory))
         .await
         .safe("recover Boat create")?;
     if let Some(sandbox) = recovered {

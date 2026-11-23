@@ -12,7 +12,7 @@ use unimock::unimock;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::provider::{BoatAccountApi, RuntimeUsage};
+use crate::provider::{ProviderAccountApi, RuntimeUsage};
 
 /// Read-only evidence from the fixed launcher's durable marker.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -35,7 +35,7 @@ pub trait GuestInspection: Send + Sync {
 #[derive(Clone)]
 pub struct MaintenanceCapabilities {
     lifecycle: Arc<dyn SandboxLifecycle>,
-    account: Arc<dyn BoatAccountApi>,
+    account: Arc<dyn ProviderAccountApi>,
     inspection: Arc<dyn GuestInspection>,
 }
 
@@ -43,7 +43,7 @@ impl MaintenanceCapabilities {
     /// Restrict the provider objects at the composition boundary.
     pub fn new(
         lifecycle: Arc<dyn SandboxLifecycle>,
-        account: Arc<dyn BoatAccountApi>,
+        account: Arc<dyn ProviderAccountApi>,
         inspection: Arc<dyn GuestInspection>,
     ) -> Self {
         Self {

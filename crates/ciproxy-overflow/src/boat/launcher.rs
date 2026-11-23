@@ -9,10 +9,29 @@ use uuid::Uuid;
 
 use crate::error::{Error, Result, ResultExt};
 use crate::maintenance::{GuestInspection, LaunchState};
-use crate::provider::{GuestLauncher, registration_root};
+use crate::provider::{FileTarget, GuestLauncher, RegistrationFiles};
 
 pub(super) struct ImageLauncher {
     pub(super) runtime: Arc<dyn BoatRuntimeApi>,
+}
+
+const REGISTRATION_FILE: &str = "registration.json";
+
+fn registration_root(delivery_id: Uuid) -> String {
+    format!("/home/sandbox-workload/.ciproxy-{}", delivery_id.simple())
+}
+
+pub(super) fn registration_files(delivery_id: Uuid) -> RegistrationFiles {
+    RegistrationFiles {
+        bootstrap: Some(FileTarget {
+            root: "/workspace".to_owned(),
+            path: format!(".ciproxy-bootstrap-{}", delivery_id.simple()),
+        }),
+        registration: FileTarget {
+            root: registration_root(delivery_id),
+            path: REGISTRATION_FILE.to_owned(),
+        },
+    }
 }
 
 const PREPARE: &str = r#"
@@ -77,7 +96,7 @@ impl GuestLauncher for ImageLauncher {
         let directory = registration_root(delivery_id);
         let marker = format!("/run/ciproxy-overflow/{}", delivery_id.simple());
         let command = format!(
-            "sudo -n /bin/sh -c 'set -eu; install -d -m 0700 /run/ciproxy-overflow; if mkdir {marker} 2>/dev/null; then nohup setsid /bin/bash /opt/ciproxy-image/boat-run.sh {directory}/registration.json </dev/null >/dev/null 2>&1 & fi'"
+            "sudo -n /bin/sh -c 'set -eu; install -d -m 0700 /run/ciproxy-overflow; if mkdir {marker} 2>/dev/null; then nohup setsid /bin/bash /opt/ciproxy-image/boat-run.sh {directory}/{REGISTRATION_FILE} </dev/null >/dev/null 2>&1 & fi'"
         );
         let result = self
             .runtime

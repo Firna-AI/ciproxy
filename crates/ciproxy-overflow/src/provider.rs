@@ -1,4 +1,4 @@
-//! Supported sandbox capabilities and ciproxy's account and root-launch seams.
+//! Shared sandbox capabilities and ciproxy's provider-specific seams.
 
 use std::sync::Arc;
 
@@ -6,29 +6,32 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_protocol::secret::Secret;
 use rust_decimal::Decimal;
-use sandbox_interface::{ProviderRef, SandboxAccountCapacity, SandboxFiles, SandboxLifecycle};
+use sandbox_interface::{
+    BackendCreateSandboxRequest, BackendWriteFileRequest, ProviderRef, SandboxAccountCapacity,
+    SandboxFiles, SandboxLifecycle,
+};
 use unimock::unimock;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::maintenance::{GuestInspection, MaintenanceCapabilities};
 
-/// A verified billing wallet available to the submitted Boat key.
+/// A verified billing account available to the submitted key.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AccountWallet {
-    /// Explicit personal selector or stable Boat organization identity.
-    pub wallet: String,
-    /// Verified personal account or organization name.
+pub struct BillingAccount {
+    /// Provider-specific account selector.
+    pub id: String,
+    /// Verified billing account name.
     pub name: String,
 }
 
-/// Accessible billing wallets and Boat's likely selection for a checked key.
+/// Accessible billing accounts and the provider's suggested selection.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct KeyWallets {
-    /// Each wallet that Boat permits the key to use.
-    pub wallets: Vec<AccountWallet>,
-    /// Boat's active wallet, or the first available wallet when none is active.
-    pub selected_wallet: String,
+pub struct KeyAccounts {
+    /// Each billing account that the key can use.
+    pub accounts: Vec<BillingAccount>,
+    /// Identifier of the suggested billing account.
+    pub selected_account: String,
 }
 
 /// Account facts that the shared capability intentionally does not model.
@@ -36,13 +39,15 @@ pub struct KeyWallets {
 pub struct AccountFacts {
     /// Verified account or organization display name.
     pub name: String,
-    /// Provider-confirmed explicit billing wallet.
-    pub wallet: String,
-    /// Free-trial lifetime policy.
+    /// Provider-confirmed billing account selector.
+    pub billing_account: String,
+    /// Whether the provider reports a free trial.
     pub trial: bool,
+    /// One-shot lifetime allowed for a sandbox of this account.
+    pub lifetime_seconds: u32,
     /// Billing recovery is confirmed independently of temporary capacity.
     pub billing_ready: bool,
-    /// Highest published start fee, with the next-start quote as a fallback.
+    /// Published upper bound on the start fee, when available.
     pub start_fee_bound_usd: Option<Decimal>,
 }
 
@@ -59,13 +64,13 @@ pub struct RuntimeUsage {
     pub running: bool,
 }
 
-/// Narrow Boat reads for account identity, trial lifetime, fees, and runtime.
-#[unimock(api = BoatAccountApiMock)]
+/// Narrow provider reads for key verification, account facts, and runtime cost.
+#[unimock(api = ProviderAccountApiMock)]
 #[async_trait]
-pub trait BoatAccountApi: Send + Sync {
-    /// Check the key's accessible wallets without selecting a billing scope.
-    async fn wallets(&self) -> Result<KeyWallets>;
-    /// Validate the key and wallet, without reserving or starting a sandbox.
+pub trait ProviderAccountApi: Send + Sync {
+    /// Check the key and list its billing accounts without selecting one.
+    async fn check_key(&self) -> Result<KeyAccounts>;
+    /// Read facts for the selected billing account without reserving a sandbox.
     async fn account(&self) -> Result<AccountFacts>;
     /// Read only one sandbox's usage. Confirmed absence returns None.
     async fn usage(
@@ -76,7 +81,7 @@ pub trait BoatAccountApi: Send + Sync {
     ) -> Result<Option<RuntimeUsage>>;
 }
 
-/// Trusted fixed-image operations that need Boat's root-capable controller.
+/// Trusted operations that prepare and launch the guest in the provider image.
 #[unimock(api = GuestLauncherMock)]
 #[async_trait]
 pub trait GuestLauncher: Send + Sync {
@@ -86,7 +91,7 @@ pub trait GuestLauncher: Send + Sync {
     async fn launch(&self, sandbox: ProviderRef, delivery_id: Uuid) -> Result<()>;
 }
 
-/// Explicit capability objects for one decrypted key and fixed wallet.
+/// Explicit capability objects for one decrypted key and billing account.
 #[derive(Clone)]
 pub struct Capabilities {
     /// Shared lifecycle, including recover-only create.
@@ -95,8 +100,8 @@ pub struct Capabilities {
     pub capacity: Arc<dyn SandboxAccountCapacity>,
     /// Shared safe bounded registration-file transfer.
     pub files: Arc<dyn SandboxFiles>,
-    /// Boat-only account and runtime facts.
-    pub account: Arc<dyn BoatAccountApi>,
+    /// Provider-specific account and runtime facts.
+    pub account: Arc<dyn ProviderAccountApi>,
     /// Fixed privileged image invocation.
     pub launcher: Arc<dyn GuestLauncher>,
     /// Read-only evidence for lost launch acknowledgments.
@@ -114,16 +119,63 @@ impl Capabilities {
     }
 }
 
-/// Composition boundary that keeps the account key outside every workload.
-#[unimock(api = BackendFactoryMock)]
-pub trait BackendFactory: Send + Sync {
-    /// Construct all capabilities with the same key, HTTPS origin, and wallet.
-    fn backend(&self, key: &Secret, wallet: &str) -> Result<Capabilities>;
-    /// Construct a restricted backend with no create, file, or launch authority.
-    fn maintenance(&self, key: &Secret, wallet: &str) -> Result<MaintenanceCapabilities>;
+/// A provider's capability composition and request builders.
+#[unimock(api = ProviderFactoryMock)]
+pub trait ProviderFactory: Send + Sync {
+    /// Construct account reads for a key check before choosing a billing account.
+    fn for_key_check(&self, key: &Secret) -> Result<Arc<dyn ProviderAccountApi>>;
+    /// Construct all capabilities for the same key and billing account.
+    fn capabilities(&self, key: &Secret, billing_account: &str) -> Result<Capabilities>;
+    /// Construct restricted capabilities for a retained key.
+    fn maintenance(&self, key: &Secret, billing_account: &str) -> Result<MaintenanceCapabilities>;
+    /// Build the same lifecycle request for the initial create and each recovery read.
+    fn create_request(&self, start: SandboxStart<'_>) -> BackendCreateSandboxRequest;
+    /// Give the file targets for the provider's guest preparation and launch.
+    fn registration_files(&self, delivery_id: Uuid) -> RegistrationFiles;
 }
 
-/// Private input root shared by the file capability and fixed image launcher.
-pub fn registration_root(delivery_id: Uuid) -> String {
-    format!("/home/sandbox-workload/.ciproxy-{}", delivery_id.simple())
+/// Saved identities and fixed parameters of a single sandbox dispatch.
+pub struct SandboxStart<'a> {
+    /// Workspace that holds the sandbox.
+    pub workspace_id: Uuid,
+    /// Runner identity used as the sandbox identity.
+    pub runner_id: Uuid,
+    /// Delivery identity used as the idempotency key.
+    pub delivery_id: Uuid,
+    /// Inventory mark for the deployment and workspace.
+    pub deployment: &'a str,
+    /// Exact provider size.
+    pub size: &'a str,
+    /// Exact image reference saved at admission.
+    pub image: &'a str,
+    /// One-shot lifetime fixed at dispatch.
+    pub lifetime_seconds: u32,
+}
+
+/// Files used by the provider's guest startup.
+pub struct RegistrationFiles {
+    /// Optional empty write required before preparing private input.
+    pub bootstrap: Option<FileTarget>,
+    /// The private registration target prepared by the guest launcher.
+    pub registration: FileTarget,
+}
+
+/// A confined target for the shared file capability.
+pub struct FileTarget {
+    /// Root directory for a file write.
+    pub root: String,
+    /// Path relative to the root.
+    pub path: String,
+}
+
+impl FileTarget {
+    /// Build the bounded file write for this target.
+    pub fn write_request(self, sandbox: ProviderRef, bytes: Vec<u8>) -> BackendWriteFileRequest {
+        BackendWriteFileRequest {
+            sandbox_provider_ref: sandbox,
+            root: self.root,
+            path: self.path,
+            bytes,
+        }
+    }
 }

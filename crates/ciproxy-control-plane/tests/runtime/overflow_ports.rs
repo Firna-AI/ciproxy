@@ -7,12 +7,14 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_github::runtime::Runtime;
+use ciproxy_overflow::boat::BoatFactory;
 use ciproxy_overflow::clock::Clock;
 use ciproxy_overflow::crypto::{KeyCipher, KeyContext};
 use ciproxy_overflow::error::{Error, Result};
 use ciproxy_overflow::maintenance::MaintenanceCapabilities;
 use ciproxy_overflow::provider::{
-    AccountFacts, BackendFactory, BoatAccountApiMock, Capabilities, GuestLauncherMock, RuntimeUsage,
+    AccountFacts, Capabilities, GuestLauncherMock, ProviderAccountApi, ProviderAccountApiMock,
+    ProviderFactory, RegistrationFiles, RuntimeUsage, SandboxStart,
 };
 use ciproxy_overflow::secrets::{SecretBytes, TokenSource};
 use ciproxy_protocol::secret::Secret;
@@ -72,16 +74,18 @@ impl Ports {
         let usage = self.clone();
         let mock = Arc::new(
             Unimock::new((
-                BoatAccountApiMock::account
+                ProviderAccountApiMock::account
                     .some_call(matching!())
                     .answers_arc(Arc::new(move |_| {
                         if account.reject.load(Ordering::SeqCst) {
                             return Err(Error::RejectedKey);
                         }
+                        let trial = account.trial.load(Ordering::SeqCst);
                         Ok(AccountFacts {
                             name: "Customer Boat".to_owned(),
-                            wallet: "personal".to_owned(),
-                            trial: account.trial.load(Ordering::SeqCst),
+                            billing_account: "personal".to_owned(),
+                            trial,
+                            lifetime_seconds: if trial { 7200 } else { 21600 },
                             billing_ready: true,
                             start_fee_bound_usd: Some(Decimal::new(7, 2)),
                         })
@@ -131,7 +135,7 @@ impl Ports {
                         }
                         Ok(())
                     })),
-                BoatAccountApiMock::usage
+                ProviderAccountApiMock::usage
                     .some_call(matching!(_, _, _))
                     .answers_arc(Arc::new(move |_, _, _, until| {
                         Ok(usage.usage_usd.lock().unwrap().map(|usd| RuntimeUsage {
@@ -182,12 +186,21 @@ impl Ports {
 }
 
 pub(super) struct Factory(pub(super) Arc<Ports>);
-impl BackendFactory for Factory {
-    fn backend(&self, _: &Secret, _: &str) -> Result<Capabilities> {
+impl ProviderFactory for Factory {
+    fn for_key_check(&self, _: &Secret) -> Result<Arc<dyn ProviderAccountApi>> {
+        Ok(self.0.backend().account)
+    }
+    fn capabilities(&self, _: &Secret, _: &str) -> Result<Capabilities> {
         Ok(self.0.backend())
     }
     fn maintenance(&self, _: &Secret, _: &str) -> Result<MaintenanceCapabilities> {
         Ok(self.0.backend().maintenance())
+    }
+    fn create_request(&self, start: SandboxStart<'_>) -> BackendCreateSandboxRequest {
+        BoatFactory::new().create_request(start)
+    }
+    fn registration_files(&self, delivery_id: Uuid) -> RegistrationFiles {
+        BoatFactory::new().registration_files(delivery_id)
     }
 }
 

@@ -5,7 +5,7 @@ use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::crypto::SecretPurpose;
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_protocol::identifiers::{LabelName, OrganizationId, WorkspaceId};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
@@ -25,7 +25,7 @@ use ciproxy_protocol::platform::Platform;
 #[tokio::test]
 async fn rejected_key_is_never_encrypted_or_saved() {
     let backend = capabilities(Unimock::new(
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .returns(Err(Error::RejectedKey)),
     ));
@@ -51,7 +51,7 @@ async fn rejected_key_is_never_encrypted_or_saved() {
 #[tokio::test]
 async fn accepted_key_is_workspace_bound_ciphertext_and_requires_a_positive_limit() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxAccountCapacityMock::account_capacity
@@ -95,7 +95,7 @@ async fn accepted_key_is_workspace_bound_ciphertext_and_requires_a_positive_limi
 #[tokio::test]
 async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choices() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts()))
             .once(),
@@ -180,10 +180,10 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
 #[tokio::test]
 async fn newly_rejected_saved_key_stops_starts_and_keeps_its_rejection_time() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .returns(Err(Error::RejectedKey)),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, _, _| Err(Error::RejectedKey)),
     )));

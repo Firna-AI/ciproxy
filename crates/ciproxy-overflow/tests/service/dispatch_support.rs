@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use ciproxy_overflow::provider::{AccountFacts, BoatAccountApiMock, Capabilities};
+use ciproxy_overflow::provider::{AccountFacts, Capabilities, ProviderAccountApiMock};
 use sandbox_interface::{
     BackendCreateSandboxRequest, SandboxAccountCapacityMock, SandboxLifecycleMock,
 };
@@ -21,7 +21,11 @@ pub(super) struct Provider {
 
 impl Provider {
     pub(super) fn new(trial: bool) -> Self {
-        let facts = Arc::new(Mutex::new(AccountFacts { trial, ..facts() }));
+        let facts = Arc::new(Mutex::new(AccountFacts {
+            trial,
+            lifetime_seconds: if trial { 7200 } else { 21600 },
+            ..facts()
+        }));
         let sizes = Arc::new(Mutex::new(vec!["large".to_owned()]));
         let creates = Arc::new(Mutex::new(Vec::new()));
         let recoveries = Arc::new(Mutex::new(Vec::new()));
@@ -34,7 +38,7 @@ impl Provider {
         let capacity_reads = reads.clone();
         let backend = capabilities(
             Unimock::new((
-                BoatAccountApiMock::account
+                ProviderAccountApiMock::account
                     .some_call(matching!())
                     .answers_arc(Arc::new(move |_| {
                         account_reads.lock().unwrap().0 += 1;

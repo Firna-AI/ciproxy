@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_store_interface::overflow::admission::ReservationBudget;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
@@ -19,7 +19,7 @@ async fn limit_lowered_during_encryption_refuses_0502_dollars_under_010_dollars(
     let creates = Arc::new(AtomicUsize::new(0));
     let creating = creates.clone();
     let mut backend = capabilities(Unimock::new(
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| {
                 let mut facts = facts();

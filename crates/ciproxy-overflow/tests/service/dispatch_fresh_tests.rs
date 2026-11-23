@@ -19,6 +19,7 @@ async fn upgrade_during_key_preparation_uses_paid_dispatch_budget_and_lifetime()
         Box::new(move || {
             let mut facts = facts.lock().unwrap();
             facts.trial = false;
+            facts.lifetime_seconds = 21600;
             facts.start_fee_bound_usd = Some(Decimal::new(7, 2));
         }),
     ));

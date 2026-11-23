@@ -17,9 +17,9 @@ impl OverflowService {
         &self,
         session: &Session,
         account: &mut AccountRecord,
-        backend: &Capabilities,
+        capabilities: &Capabilities,
     ) -> Result<AccountFacts> {
-        let facts = match backend.account.account().await {
+        let facts = match capabilities.account.account().await {
             Ok(facts) => facts,
             Err(Error::RejectedKey) => {
                 account.account.rejected_at = Some(self.dependencies.clock.now());
@@ -48,14 +48,14 @@ impl OverflowService {
         workspace_id: Uuid,
         account: &mut AccountRecord,
     ) -> Result<Capabilities> {
-        let backend = self.backend(workspace_id, account).await?;
+        let capabilities = self.capabilities(workspace_id, account).await?;
         let now = self.dependencies.clock.now();
         if account
             .state
             .checked_at
             .is_none_or(|at| now >= at + Duration::minutes(5))
         {
-            let facts = match backend.account.account().await {
+            let facts = match capabilities.account.account().await {
                 Ok(facts) => facts,
                 Err(Error::RejectedKey) => {
                     account.account.rejected_at = Some(now);
@@ -68,7 +68,7 @@ impl OverflowService {
                 Err(error) => return Err(error),
             };
             account.state.sizes =
-                catalog::offers(backend.capacity.account_capacity().await.internal()?)?;
+                catalog::offers(capabilities.capacity.account_capacity().await.internal()?)?;
             account.state.checked_at = Some(now);
             account.state.trial = facts.trial;
             account.state.refused_sizes.clear();
@@ -80,7 +80,7 @@ impl OverflowService {
                 .call(move |session| session.save_account(&changed))
                 .await?;
         }
-        Ok(backend)
+        Ok(capabilities)
     }
 
     pub(super) async fn read_view(&self, workspace_id: Uuid) -> Result<OverflowView> {

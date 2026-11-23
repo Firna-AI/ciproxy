@@ -11,26 +11,26 @@ use super::OverflowService;
 
 /// Only this module can construct authority for create, input, or launch.
 pub(super) struct LaunchAuthority {
-    backend: Capabilities,
+    capabilities: Capabilities,
 }
 
 impl LaunchAuthority {
-    pub(super) fn backend(&self) -> &Capabilities {
-        &self.backend
+    pub(super) fn capabilities(&self) -> &Capabilities {
+        &self.capabilities
     }
     pub(super) async fn create(
         &self,
         request: BackendCreateSandboxRequest,
     ) -> sandbox_interface::Result<BackendSandbox> {
-        self.backend.lifecycle.create_sandbox(request).await
+        self.capabilities.lifecycle.create_sandbox(request).await
     }
 
     pub(super) fn files(&self) -> &dyn SandboxFiles {
-        &*self.backend.files
+        &*self.capabilities.files
     }
 
     pub(super) fn launcher(&self) -> &dyn GuestLauncher {
-        &*self.backend.launcher
+        &*self.capabilities.launcher
     }
 }
 
@@ -47,7 +47,7 @@ impl OverflowService {
         else {
             return Ok(None);
         };
-        let backend = self.backend(workspace_id, &account).await?;
+        let capabilities = self.capabilities(workspace_id, &account).await?;
         if session
             .call(move |session| session.startup_account(delivery_id))
             .await?
@@ -55,6 +55,6 @@ impl OverflowService {
         {
             return Ok(None);
         }
-        Ok(Some(LaunchAuthority { backend }))
+        Ok(Some(LaunchAuthority { capabilities }))
     }
 }

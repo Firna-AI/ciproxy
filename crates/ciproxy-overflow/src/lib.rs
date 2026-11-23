@@ -1,4 +1,4 @@
-//! Hosted execution and cleanup for ciproxy's Boat overflow runners.
+//! Hosted execution and cleanup for ciproxy's overflow runners.
 
 #![warn(unreachable_pub)]
 
@@ -13,6 +13,7 @@ pub mod error;
 pub mod kms;
 pub mod maintenance;
 pub mod provider;
+pub mod registry;
 pub mod secrets;
 pub mod service;
 mod session;

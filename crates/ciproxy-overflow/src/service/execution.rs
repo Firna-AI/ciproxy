@@ -1,45 +1,36 @@
 //! Single-dispatch create, recover-only reconciliation, and lifetime preservation.
 
-use std::time::Duration;
-
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
-use sandbox_interface::{
-    BackendCreateSandboxRequest, OperationId, ProviderRef, ResourceOwner, SandboxConsumer,
-    SandboxId, SandboxLifetime, SandboxNetworkPolicy, SandboxSizeSelection, SandboxState,
-};
+use sandbox_interface::{BackendCreateSandboxRequest, ProviderRef, SandboxState};
 use uuid::Uuid;
 
 use crate::api::{StartOutcome, WaitReason};
 use crate::error::{Error, Result, ResultExt};
+use crate::provider::SandboxStart;
 use crate::session::Session;
 
 use super::OverflowService;
 use super::preparation::DispatchOutcome;
 
-pub(super) fn create_request(
-    workspace_id: Uuid,
-    record: &StartRecord,
-) -> Result<BackendCreateSandboxRequest> {
-    let parameters = record.dispatch.as_ref().ok_or(Error::OwnershipUnknown)?;
-    Ok(BackendCreateSandboxRequest {
-        sandbox_id: SandboxId::from_uuid(record.runner_id),
-        operation_id: OperationId::from_uuid(record.delivery_id),
-        owner: ResourceOwner::platform(workspace_id),
-        consumer: SandboxConsumer::Runtime,
-        lifetime: SandboxLifetime::OneShot {
-            max_lifetime: Duration::from_secs(u64::from(parameters.lifetime_seconds)),
-        },
-        size: Some(SandboxSizeSelection::ProviderSize(
-            parameters.size.name.clone(),
-        )),
-        deployment_id: record.deployment.clone(),
-        profile: "ciproxy".to_owned(),
-        network: SandboxNetworkPolicy::Open,
-        snapshot_provider_ref: Some(ProviderRef::new(&record.snapshot)),
-    })
-}
-
 impl OverflowService {
+    pub(super) fn create_request(
+        &self,
+        workspace_id: Uuid,
+        record: &StartRecord,
+    ) -> Result<BackendCreateSandboxRequest> {
+        let parameters = record.dispatch.as_ref().ok_or(Error::OwnershipUnknown)?;
+        let provider = self.dependencies.providers.get(record.provider)?;
+        Ok(provider.factory.create_request(SandboxStart {
+            workspace_id,
+            runner_id: record.runner_id,
+            delivery_id: record.delivery_id,
+            deployment: &record.deployment,
+            size: &parameters.size.name,
+            image: &record.snapshot,
+            lifetime_seconds: parameters.lifetime_seconds,
+        }))
+    }
+
     pub(super) async fn execute(
         &self,
         session: &Session,
@@ -68,7 +59,7 @@ impl OverflowService {
             .find(|account| account.account.id == record.key_id)
             .ok_or(Error::OwnershipUnknown)?
             .clone();
-        let backend = self.maintenance_backend(workspace_id, &account).await?;
+        let maintenance = self.maintenance(workspace_id, &account).await?;
         let delivery = record.delivery_id;
         if session
             .call(move |session| session.startup_account(delivery))
@@ -79,7 +70,7 @@ impl OverflowService {
                 return self.cancel_unsent(session, &mut record).await;
             }
             return self
-                .reconcile_retired(session, workspace_id, &backend, record)
+                .reconcile_retired(session, workspace_id, &maintenance, record)
                 .await;
         }
         if matches!(record.phase, StartPhase::Deleting | StartPhase::Writing) {
@@ -88,7 +79,7 @@ impl OverflowService {
             session
                 .call(move |session| session.save_start(&changed))
                 .await?;
-            self.delete(session, &backend, &mut record).await?;
+            self.delete(session, &maintenance, &mut record).await?;
             return Ok(StartOutcome::Ended(record));
         }
         if matches!(record.phase, StartPhase::Unsent | StartPhase::Creating) {
@@ -101,8 +92,8 @@ impl OverflowService {
                     DispatchOutcome::Stopped(outcome) => return Ok(*outcome),
                 }
             } else {
-                backend
-                    .recover_sandbox_create(create_request(workspace_id, &record)?)
+                maintenance
+                    .recover_sandbox_create(self.create_request(workspace_id, &record)?)
                     .await
             };
             let sandbox = match result {
@@ -114,7 +105,10 @@ impl OverflowService {
                     return Ok(StartOutcome::Waiting(WaitReason::Refused(refusal)));
                 }
                 Err(_) => {
-                    tracing::warn!("Boat create outcome requires recover-only reconciliation");
+                    tracing::warn!(
+                        provider = record.provider.as_str(),
+                        "Create outcome requires recover-only reconciliation"
+                    );
                     return Ok(StartOutcome::Pending(record));
                 }
             };
@@ -122,7 +116,8 @@ impl OverflowService {
             match state {
                 SandboxState::Ready => {}
                 SandboxState::Failed | SandboxState::Destroyed | SandboxState::Destroying => {
-                    self.request_delete(session, &backend, &mut record).await?;
+                    self.request_delete(session, &maintenance, &mut record)
+                        .await?;
                     return Ok(StartOutcome::Ended(record));
                 }
                 _ => return Ok(StartOutcome::Pending(record)),
@@ -131,7 +126,7 @@ impl OverflowService {
 
         let provider_ref =
             ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
-        let sandbox = match backend.inspect_sandbox(provider_ref).await {
+        let sandbox = match maintenance.inspect_sandbox(provider_ref).await {
             Ok(sandbox) => sandbox,
             Err(sandbox_interface::Error::NotFound { .. }) => {
                 record.phase = StartPhase::Deleting;
@@ -139,7 +134,7 @@ impl OverflowService {
                 session
                     .call(move |session| session.save_start(&changed))
                     .await?;
-                self.delete(session, &backend, &mut record).await?;
+                self.delete(session, &maintenance, &mut record).await?;
                 return Ok(StartOutcome::Ended(record));
             }
             result => result.internal()?,
@@ -152,12 +147,12 @@ impl OverflowService {
                 session
                     .call(move |session| session.save_start(&changed))
                     .await?;
-                self.delete(session, &backend, &mut record).await?;
+                self.delete(session, &maintenance, &mut record).await?;
                 return Ok(StartOutcome::Ended(record));
             }
             _ => return Ok(StartOutcome::Pending(record)),
         }
-        self.launch(session, workspace_id, &backend, &mut record)
+        self.launch(session, workspace_id, &maintenance, &mut record)
             .await
     }
 }

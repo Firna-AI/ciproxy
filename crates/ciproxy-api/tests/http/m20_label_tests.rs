@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use axum::http::StatusCode;
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
@@ -35,7 +35,7 @@ async fn m20_labels_supply_current_placement_allocations_and_retained_thirty_day
     attach_with_account(
         &mut pages,
         Arc::new(Unimock::new(
-            BoatAccountApiMock::account
+            ProviderAccountApiMock::account
                 .some_call(matching!())
                 .answers(&|_| Err(Error::ProviderUnavailable)),
         )),

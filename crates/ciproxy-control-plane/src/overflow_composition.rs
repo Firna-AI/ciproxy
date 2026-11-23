@@ -1,4 +1,4 @@
-//! Construct the shared Boat executor with KMS and the deployed image release.
+//! Construct the overflow service with KMS and the deployed provider images.
 
 use std::sync::Arc;
 
@@ -10,9 +10,11 @@ use ciproxy_overflow::boat::BoatFactory;
 use ciproxy_overflow::clock::SystemClock;
 use ciproxy_overflow::kms::cipher::CloudKmsCipher;
 use ciproxy_overflow::kms::transport::{CloudKmsRest, MetadataAccessTokens};
+use ciproxy_overflow::registry::{ImageSource, ProviderRegistry};
 use ciproxy_overflow::secrets::RandomTokens;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::store::Store;
 
 use crate::boat_authority::{BoatRegistrationRetirement, BoatRunnerAuthority};
@@ -52,8 +54,6 @@ pub(crate) fn compose(
     let service = Arc::new(OverflowService::new(
         OverflowConfig {
             deployment: config.public_url.trim_end_matches('/').to_owned(),
-            shared_snapshot: snapshot.clone(),
-            root_sizing,
             exit_report_url: Secret::new(format!(
                 "{}/hooks/boat/runner-exit",
                 config.public_url.trim_end_matches('/')
@@ -62,7 +62,14 @@ pub(crate) fn compose(
         OverflowDependencies {
             store: store.clone(),
             cipher: Arc::new(CloudKmsCipher::new(transport)),
-            factory: Arc::new(BoatFactory::new()),
+            providers: ProviderRegistry::default().with_provider(
+                OverflowProvider::Boat,
+                Arc::new(BoatFactory::new()),
+                ImageSource {
+                    reference: snapshot.clone(),
+                    root_sizing,
+                },
+            ),
             runners: retirement.clone(),
             clock: Arc::new(SystemClock),
             tokens: Arc::new(RandomTokens),

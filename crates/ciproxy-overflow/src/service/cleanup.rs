@@ -34,7 +34,7 @@ impl OverflowService {
             .ok_or(Error::InvalidToken)?;
         let delivery_id = record.delivery_id;
         if let Err(error) = self.delete_reported(workspace_id, delivery_id).await {
-            tracing::warn!(%workspace_id, %delivery_id, %error, "Boat exit report saved; cleanup deferred");
+            tracing::warn!(%workspace_id, %delivery_id, %error, "Exit report saved. Cleanup deferred.");
         }
         Ok(())
     }
@@ -54,27 +54,30 @@ impl OverflowService {
             .iter()
             .find(|account| account.account.id == record.key_id)
             .ok_or(Error::OwnershipUnknown)?;
-        let backend = self.maintenance_backend(workspace_id, account).await?;
-        self.delete(&session, &backend, &mut record).await?;
+        let maintenance = self.maintenance(workspace_id, account).await?;
+        self.delete(&session, &maintenance, &mut record).await?;
         self.collect(&session).await
     }
 
     pub(super) async fn delete(
         &self,
         session: &Session,
-        backend: &MaintenanceCapabilities,
+        maintenance: &MaintenanceCapabilities,
         record: &mut StartRecord,
     ) -> Result<()> {
         let sandbox =
             ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
-        let measured = match self.measure(session, backend, record).await {
+        let measured = match self.measure(session, maintenance, record).await {
             Ok(measured) => measured,
             Err(_) => {
-                tracing::warn!("Boat runtime observation failed before durable sandbox deletion");
+                tracing::warn!(
+                    provider = record.provider.as_str(),
+                    "Runtime observation failed before durable sandbox deletion"
+                );
                 false
             }
         };
-        let destroyed = backend.destroy_sandbox(sandbox).await;
+        let destroyed = maintenance.destroy_sandbox(sandbox).await;
         if destroyed.is_err() {
             let still_billing = measured
                 && record
@@ -99,7 +102,7 @@ impl OverflowService {
     pub(super) async fn request_delete(
         &self,
         session: &Session,
-        backend: &MaintenanceCapabilities,
+        maintenance: &MaintenanceCapabilities,
         record: &mut StartRecord,
     ) -> Result<()> {
         record.phase = StartPhase::Deleting;
@@ -107,6 +110,6 @@ impl OverflowService {
         session
             .call(move |session| session.save_start(&changed))
             .await?;
-        self.delete(session, backend, record).await
+        self.delete(session, maintenance, record).await
     }
 }

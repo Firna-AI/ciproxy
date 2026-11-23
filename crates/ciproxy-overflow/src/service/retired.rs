@@ -10,23 +10,22 @@ use crate::maintenance::{LaunchState, MaintenanceCapabilities};
 use crate::session::Session;
 
 use super::OverflowService;
-use super::execution::create_request;
 
 impl OverflowService {
     pub(super) async fn reconcile_retired(
         &self,
         session: &Session,
         workspace_id: Uuid,
-        backend: &MaintenanceCapabilities,
+        maintenance: &MaintenanceCapabilities,
         mut record: StartRecord,
     ) -> Result<StartOutcome> {
         if record.phase == StartPhase::Deleting {
-            self.delete(session, backend, &mut record).await?;
+            self.delete(session, maintenance, &mut record).await?;
             return Ok(StartOutcome::Ended(record));
         }
         if record.phase == StartPhase::Creating {
-            let recovered = backend
-                .recover_sandbox_create(create_request(workspace_id, &record)?)
+            let recovered = maintenance
+                .recover_sandbox_create(self.create_request(workspace_id, &record)?)
                 .await;
             match recovered {
                 Ok(Some(sandbox)) => {
@@ -35,7 +34,8 @@ impl OverflowService {
                         state,
                         SandboxState::Failed | SandboxState::Destroyed | SandboxState::Destroying
                     ) {
-                        self.request_delete(session, backend, &mut record).await?;
+                        self.request_delete(session, maintenance, &mut record)
+                            .await?;
                         return Ok(StartOutcome::Ended(record));
                     }
                 }
@@ -44,9 +44,10 @@ impl OverflowService {
         }
         let sandbox =
             ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
-        match backend.inspect_sandbox(sandbox.clone()).await {
+        match maintenance.inspect_sandbox(sandbox.clone()).await {
             Err(sandbox_interface::Error::NotFound { .. }) => {
-                self.request_delete(session, backend, &mut record).await?;
+                self.request_delete(session, maintenance, &mut record)
+                    .await?;
                 return Ok(StartOutcome::Ended(record));
             }
             Ok(sandbox)
@@ -55,7 +56,8 @@ impl OverflowService {
                     SandboxState::Failed | SandboxState::Destroyed | SandboxState::Destroying
                 ) =>
             {
-                self.request_delete(session, backend, &mut record).await?;
+                self.request_delete(session, maintenance, &mut record)
+                    .await?;
                 return Ok(StartOutcome::Ended(record));
             }
             Ok(_) => {}
@@ -70,13 +72,17 @@ impl OverflowService {
         if record.phase == StartPhase::Running {
             return Ok(StartOutcome::Started(record));
         }
-        match backend.inspect_launch(sandbox, record.delivery_id).await {
+        match maintenance
+            .inspect_launch(sandbox, record.delivery_id)
+            .await
+        {
             Ok(LaunchState::Started) => {
                 self.save_confirmed_launch(session, &mut record).await?;
                 Ok(StartOutcome::Started(record))
             }
             Ok(LaunchState::NotStarted) => {
-                self.request_delete(session, backend, &mut record).await?;
+                self.request_delete(session, maintenance, &mut record)
+                    .await?;
                 Ok(StartOutcome::Ended(record))
             }
             Err(_) => Ok(StartOutcome::Pending(record)),

@@ -1,6 +1,6 @@
 //! Production capability composition with one verified HTTPS origin and wallet.
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use ciproxy_protocol::secret::Secret;
 use sandbox_boat::control::client::ReqwestBoatControlApi;
@@ -9,14 +9,23 @@ use sandbox_boat::runtime::configured::BoatTrustedRuntime;
 use sandbox_boat::transport::http::ReqwestBoatHttpTransport;
 use sandbox_boat::transport::settings::BoatHttpSettings;
 use sandbox_boat::{BoatAdapterConfig, BoatProfile, BoatSandboxBackend};
+use sandbox_interface::{
+    BackendCreateSandboxRequest, OperationId, ProviderRef, ResourceOwner, SandboxConsumer,
+    SandboxId, SandboxLifetime, SandboxNetworkPolicy, SandboxSizeSelection,
+};
+use uuid::Uuid;
 
 use crate::error::{Result, ResultExt};
 use crate::maintenance::MaintenanceCapabilities;
-use crate::provider::{BackendFactory, Capabilities};
+use crate::provider::{
+    Capabilities, ProviderAccountApi, ProviderFactory, RegistrationFiles, SandboxStart,
+};
 
 use super::account::AccountApi;
 use super::http::BoatReads;
-use super::launcher::ImageLauncher;
+use super::launcher::{ImageLauncher, registration_files};
+
+const PROFILE: &str = "ciproxy";
 
 /// Composition root for the reviewed Boat adapter and fixed ciproxy image.
 pub struct BoatFactory {
@@ -48,10 +57,14 @@ impl BoatFactory {
     }
 }
 
-impl BackendFactory for BoatFactory {
-    fn backend(&self, key: &Secret, wallet: &str) -> Result<Capabilities> {
+impl ProviderFactory for BoatFactory {
+    fn for_key_check(&self, key: &Secret) -> Result<Arc<dyn ProviderAccountApi>> {
+        Ok(self.capabilities(key, "personal")?.account)
+    }
+
+    fn capabilities(&self, key: &Secret, wallet: &str) -> Result<Capabilities> {
         let profiles = BTreeMap::from([(
-            "ciproxy".to_owned(),
+            PROFILE.to_owned(),
             BoatProfile {
                 provider_size: "default".to_owned(),
                 allow_public_egress: true,
@@ -94,6 +107,27 @@ impl BackendFactory for BoatFactory {
     }
 
     fn maintenance(&self, key: &Secret, wallet: &str) -> Result<MaintenanceCapabilities> {
-        Ok(self.backend(key, wallet)?.maintenance())
+        Ok(self.capabilities(key, wallet)?.maintenance())
+    }
+
+    fn create_request(&self, start: SandboxStart<'_>) -> BackendCreateSandboxRequest {
+        BackendCreateSandboxRequest {
+            sandbox_id: SandboxId::from_uuid(start.runner_id),
+            operation_id: OperationId::from_uuid(start.delivery_id),
+            owner: ResourceOwner::platform(start.workspace_id),
+            consumer: SandboxConsumer::Runtime,
+            lifetime: SandboxLifetime::OneShot {
+                max_lifetime: Duration::from_secs(u64::from(start.lifetime_seconds)),
+            },
+            size: Some(SandboxSizeSelection::ProviderSize(start.size.to_owned())),
+            deployment_id: start.deployment.to_owned(),
+            profile: PROFILE.to_owned(),
+            network: SandboxNetworkPolicy::Open,
+            snapshot_provider_ref: Some(ProviderRef::new(start.image)),
+        }
+    }
+
+    fn registration_files(&self, delivery_id: Uuid) -> RegistrationFiles {
+        registration_files(delivery_id)
     }
 }

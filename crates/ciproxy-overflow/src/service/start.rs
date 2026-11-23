@@ -1,6 +1,7 @@
 //! Durable acceptance of a scaler Boat action before provider dispatch.
 
 use ciproxy_scaler::actions::{Destination, StartReason};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use uuid::Uuid;
@@ -24,6 +25,7 @@ impl OverflowService {
         let Destination::Boat(_) = &request.action.destination else {
             return Err(Error::NotBoatAction);
         };
+        let provider = OverflowProvider::Boat;
         let session =
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
         let mut snapshot = session.call(|session| session.snapshot()).await?;
@@ -50,7 +52,9 @@ impl OverflowService {
             .accounts
             .iter()
             .find(|account| {
-                account.account.retired_at.is_none() && account.account.rejected_at.is_none()
+                account.account.provider == provider
+                    && account.account.retired_at.is_none()
+                    && account.account.rejected_at.is_none()
             })
             .cloned()
         else {
@@ -59,18 +63,18 @@ impl OverflowService {
         if !snapshot.enabled {
             return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
         }
-        let Some(required_root_disk_bytes) = self
-            .config
+        let image = &self.dependencies.providers.get(provider)?.image;
+        let Some(required_root_disk_bytes) = image
             .root_sizing
             .root_bytes(request.action.requested_size.disk_bytes)
         else {
             return Ok(StartOutcome::Waiting(WaitReason::SizeUnavailable));
         };
-        let backend = match self
+        let capabilities = match self
             .refresh_catalog(&session, workspace_id, &mut account)
             .await
         {
-            Ok(backend) => backend,
+            Ok(capabilities) => capabilities,
             Err(Error::RejectedKey) => return Ok(StartOutcome::Waiting(WaitReason::Disconnected)),
             Err(error) => return Err(error),
         };
@@ -82,7 +86,7 @@ impl OverflowService {
             return Ok(StartOutcome::Waiting(wait));
         }
         let facts = match self
-            .refresh_start_account(&session, &mut account, &backend)
+            .refresh_start_account(&session, &mut account, &capabilities)
             .await
         {
             Ok(facts) => facts,
@@ -92,9 +96,11 @@ impl OverflowService {
         if let Some(wait) = preparation_wait(&account.state, self.dependencies.clock.now()) {
             return Ok(StartOutcome::Waiting(wait));
         }
-        if facts.start_fee_bound_usd.is_none() {
-            return Err(Error::AccountingIncomplete);
-        }
+        let start_fee_bound_usd = provider
+            .descriptor()
+            .start_fee
+            .admission_bound(facts.start_fee_bound_usd)
+            .ok_or(Error::AccountingIncomplete)?;
         let token = self.dependencies.tokens.token();
         let input = self.launch_input(&request, token.clone())?;
         let ciphertext = self
@@ -125,7 +131,7 @@ impl OverflowService {
                 request.action.requested_size.disk_bytes / 1_000_000_000,
             )
             .internal()?,
-            image_root_bytes: self.config.root_sizing.image_root_bytes,
+            image_root_bytes: image.root_sizing.image_root_bytes,
             required_root_disk_bytes,
             own_machine_fits: matches!(
                 request.action.reason,
@@ -134,14 +140,14 @@ impl OverflowService {
             dispatch: None,
             key_id: account.account.id,
             deployment: format!("{}/{}", self.config.deployment, workspace_id),
-            snapshot: self.config.shared_snapshot.clone(),
+            snapshot: image.reference.clone(),
             phase: StartPhase::Unsent,
             sandbox: None,
             starts_at: now,
             launched_at: None,
             ends_at: None,
             billing: None,
-            start_fee_bound_usd: facts.start_fee_bound_usd,
+            start_fee_bound_usd: Some(start_fee_bound_usd),
             start_usd: None,
             reported_at: None,
             runtime: Vec::new(),

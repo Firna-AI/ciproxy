@@ -6,6 +6,9 @@ Create those files outside Git with mode 0600.
 The scripts read paths from environment variables and never print contents.
 `--help` runs without credentials or network access.
 
+The Boat probe uses the production factory for sandbox requests and guest
+file targets. It uses the Boat descriptor for the lifetime of a new sandbox.
+
 Put `--wallet` before the command name.
 The flag defaults to the personal wallet.
 For an organization wallet, pass its organization ID with `--wallet`.

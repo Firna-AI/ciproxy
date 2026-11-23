@@ -2,7 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome};
-use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
+use ciproxy_overflow::provider::{ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase, StartRecord};
 use rust_decimal::Decimal;
@@ -44,7 +44,7 @@ async fn missing_monthly_usage_invalidates_saved_running_completeness() {
 }
 
 async fn missing_usage(missing_total: bool) {
-    let backend = capabilities(Unimock::new(BoatAccountApiMock::usage.stub(|each| {
+    let backend = capabilities(Unimock::new(ProviderAccountApiMock::usage.stub(|each| {
         if !missing_total {
             each.call(matching!(_, None, _))
                 .answers(&|_, _, _, until| {
@@ -94,7 +94,7 @@ async fn absent_resume_recovers_the_final_bill_without_charging_recovery_time() 
                 .returns(Err(sandbox_interface::Error::NotFound {
                     resource: ResourceKind::Sandbox,
                 })),
-            BoatAccountApiMock::usage
+            ProviderAccountApiMock::usage
                 .some_call(matching!(_, _, _))
                 .answers_arc(std::sync::Arc::new(move |_, _, since, until| {
                     Ok(Some(RuntimeUsage {
@@ -138,7 +138,7 @@ async fn expired_known_sandbox_ends_after_rejected_reads_without_an_invented_bil
             .returns(Err(sandbox_interface::Error::BackendUnavailable {
                 backend_id: "boat".to_owned(),
             })),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, _, _| Err(ciproxy_overflow::error::Error::RejectedKey)),
         SandboxLifecycleMock::destroy_sandbox
@@ -161,7 +161,7 @@ async fn expired_known_sandbox_ends_after_rejected_reads_without_an_invented_bil
 #[tokio::test]
 async fn failed_retained_key_cost_read_keeps_replacement_metadata_and_saved_costs() {
     let backend = capabilities(Unimock::new(
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .returns(Err(ciproxy_overflow::error::Error::ProviderUnavailable)),
     ));

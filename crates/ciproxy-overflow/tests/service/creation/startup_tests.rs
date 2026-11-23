@@ -6,7 +6,7 @@ use std::time;
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::crypto::SecretPurpose;
-use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock};
+use ciproxy_overflow::provider::{GuestLauncherMock, ProviderAccountApiMock};
 use ciproxy_store_interface::overflow::record::StartPhase;
 use sandbox_interface::{
     BackendSandbox, SandboxFilesMock, SandboxLifecycleMock, SandboxLifetime, SandboxState,
@@ -27,7 +27,7 @@ async fn paid_start_sends_private_input_and_persists_identity_before_launch() {
     let clock_slot = Arc::new(OnceLock::<Arc<Mutex<DateTime<Utc>>>>::new());
     let launch_clock = clock_slot.clone();
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox

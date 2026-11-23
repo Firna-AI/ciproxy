@@ -2,7 +2,6 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::StartRunner;
 use ciproxy_store_interface::overflow::record::StartRecord;
@@ -12,18 +11,14 @@ use unimock::unimock;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::provider::KeyWallets;
+use crate::provider::KeyAccounts;
 use crate::view::OverflowView;
 
-/// Deployment-owned image and callback configuration.
+/// Shared deployment configuration for inventory and guest callbacks.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OverflowConfig {
     /// Stable deployment prefix. Workspace identity is added to every mark.
     pub deployment: String,
-    /// Shared saved-snapshot name or share code, never an account key.
-    pub shared_snapshot: String,
-    /// Root geometry for that same image release, shared with scaler snapshots.
-    pub root_sizing: RootSizing,
     /// HTTPS control-plane route that accepts the guest's sandbox-only token.
     pub exit_report_url: Secret,
 }
@@ -108,7 +103,7 @@ pub trait RunnerAuthority: Send + Sync {
 #[async_trait]
 pub trait Overflow: Send + Sync {
     /// Verify a key and offer its named wallets without saving the key.
-    async fn wallets(&self, key: Secret) -> Result<KeyWallets>;
+    async fn wallets(&self, key: Secret) -> Result<KeyAccounts>;
     /// Grant a pending connection before verification and encryption.
     /// Return ConnectionNotPermitted after last-App removal invalidates that grant.
     async fn connect(

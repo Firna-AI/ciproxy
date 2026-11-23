@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_overflow::api::Overflow;
-use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
+use ciproxy_overflow::provider::{ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
@@ -20,7 +20,7 @@ async fn expired_cross_month_total_retains_unallocated_cost_without_a_measured_i
     let month = "2026-12-01T00:00:00Z".parse().unwrap();
     let now = month + Duration::hours(1);
     let backend = capabilities(Unimock::new(
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers_arc(Arc::new(move |_, _, from, until| {
                 if from == Some(month) {

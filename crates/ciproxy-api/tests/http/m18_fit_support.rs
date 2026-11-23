@@ -7,7 +7,8 @@ use ciproxy_api::pages::PageServices;
 use ciproxy_overflow::api::OverflowConfig;
 use ciproxy_overflow::clock::ClockMock;
 use ciproxy_overflow::crypto::KeyCipherMock;
-use ciproxy_overflow::provider::{BackendFactoryMock, BoatAccountApi, Capabilities};
+use ciproxy_overflow::provider::{Capabilities, ProviderAccountApi, ProviderFactoryMock};
+use ciproxy_overflow::registry::{ImageSource, ProviderRegistry};
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
@@ -25,7 +26,7 @@ pub(super) fn attach(pages: &mut Pages) {
     attach_with_account(pages, Arc::new(Unimock::new(())));
 }
 
-pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn BoatAccountApi>) {
+pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn ProviderAccountApi>) {
     pages
         .fixture
         .database
@@ -59,8 +60,6 @@ pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn BoatAccoun
     let overflow = OverflowService::new(
         OverflowConfig {
             deployment: "fit-test".into(),
-            shared_snapshot: "test-image".into(),
-            root_sizing: sizing,
             exit_report_url: Secret::new("https://app.ciproxy.example/overflow/end"),
         },
         OverflowDependencies {
@@ -70,11 +69,18 @@ pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn BoatAccoun
                     .each_call(matching!())
                     .answers(&|_, _, _| Ok(SecretBytes::new(b"offline-fit-test".to_vec()))),
             )),
-            factory: Arc::new(Unimock::new(
-                BackendFactoryMock::backend
-                    .each_call(matching!())
-                    .answers_arc(Arc::new(move |_, _, _| Ok(capabilities.clone()))),
-            )),
+            providers: ProviderRegistry::default().with_provider(
+                OverflowProvider::Boat,
+                Arc::new(Unimock::new(
+                    ProviderFactoryMock::capabilities
+                        .each_call(matching!())
+                        .answers_arc(Arc::new(move |_, _, _| Ok(capabilities.clone()))),
+                )),
+                ImageSource {
+                    reference: "test-image".into(),
+                    root_sizing: sizing,
+                },
+            ),
             runners: Arc::new(Unimock::new(())),
             tokens: Arc::new(Unimock::new(())),
             clock: Arc::new(Unimock::new(

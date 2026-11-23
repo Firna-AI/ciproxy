@@ -2,11 +2,14 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use rust_decimal::Decimal;
 use sandbox_interface::ProviderRef;
 
 use crate::error::{Error, Result};
-use crate::provider::{AccountFacts, AccountWallet, BoatAccountApi, KeyWallets, RuntimeUsage};
+use crate::provider::{
+    AccountFacts, BillingAccount, KeyAccounts, ProviderAccountApi, RuntimeUsage,
+};
 
 use super::http::{BoatReads, valid_sandbox};
 use super::wire::{Identity, Limits, Usage, WalletKind, Wallets};
@@ -16,8 +19,8 @@ pub(super) struct AccountApi {
 }
 
 #[async_trait]
-impl BoatAccountApi for AccountApi {
-    async fn wallets(&self) -> Result<KeyWallets> {
+impl ProviderAccountApi for AccountApi {
+    async fn check_key(&self) -> Result<KeyAccounts> {
         let identity: Identity = self
             .reads
             .unscoped_get("/me")
@@ -32,7 +35,7 @@ impl BoatAccountApi for AccountApi {
         {
             return Err(Error::InvalidProviderData);
         }
-        let selected_wallet = wallets
+        let selected_account = wallets
             .orgs
             .iter()
             .find(|wallet| wallet.active)
@@ -45,20 +48,20 @@ impl BoatAccountApi for AccountApi {
             .display_name
             .filter(|name| !name.trim().is_empty())
             .unwrap_or(identity.user.login);
-        let wallets = wallets
+        let accounts = wallets
             .orgs
             .into_iter()
-            .map(|wallet| AccountWallet {
-                wallet: wallet.selector().to_owned(),
+            .map(|wallet| BillingAccount {
+                id: wallet.selector().to_owned(),
                 name: match wallet.kind {
                     WalletKind::Personal => personal_name.clone(),
                     WalletKind::Organization => wallet.name,
                 },
             })
             .collect();
-        Ok(KeyWallets {
-            wallets,
-            selected_wallet,
+        Ok(KeyAccounts {
+            accounts,
+            selected_account,
         })
     }
 
@@ -129,8 +132,9 @@ impl BoatAccountApi for AccountApi {
         };
         Ok(AccountFacts {
             name,
-            wallet: self.reads.wallet.clone(),
+            billing_account: self.reads.wallet.clone(),
             trial,
+            lifetime_seconds: OverflowProvider::Boat.descriptor().lifetime.seconds(trial),
             billing_ready: limits.billing_status == "active"
                 && start_fee_bound_usd.is_some()
                 && !billing_block(limits.blocked_reason.as_deref())

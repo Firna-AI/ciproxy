@@ -3,7 +3,7 @@
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
+use ciproxy_overflow::provider::{ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{PlanSizeRefusalReason, SandboxLifecycleMock, SandboxStartRefusal};
@@ -16,7 +16,7 @@ use super::fixtures::{at, capabilities, facts, id, record, request};
 #[tokio::test]
 async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_them() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .answers(&|_, _, since, until| {
                 Ok(Some(RuntimeUsage {
@@ -26,7 +26,7 @@ async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_the
                     running: true,
                 }))
             }),
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox

@@ -167,8 +167,12 @@ async fn paid_dispatch_replaces_trial_lifetime_and_keeps_fixed_recovery_paramete
         Err(Error::KmsHttp { status: 503 })
     ));
     let pending = harness.start(id(11));
-    provider.facts.lock().unwrap().trial = false;
-    provider.facts.lock().unwrap().start_fee_bound_usd = Some(Decimal::new(7, 2));
+    {
+        let mut facts = provider.facts.lock().unwrap();
+        facts.trial = false;
+        facts.lifetime_seconds = 21600;
+        facts.start_fee_bound_usd = Some(Decimal::new(7, 2));
+    }
     *harness.now.lock().unwrap() = at() + Duration::minutes(5);
     harness.set_limit(300_000);
     assert_eq!(
@@ -204,7 +208,11 @@ async fn paid_dispatch_replaces_trial_lifetime_and_keeps_fixed_recovery_paramete
         max_lifetime: std::time::Duration::from_secs(21600),
     };
     assert_eq!(provider.creates.lock().unwrap()[0].lifetime, lifetime);
-    provider.facts.lock().unwrap().trial = true;
+    {
+        let mut facts = provider.facts.lock().unwrap();
+        facts.trial = true;
+        facts.lifetime_seconds = 7200;
+    }
     assert!(matches!(
         harness.service.resume(id(1), id(11)).await.unwrap(),
         StartOutcome::Pending(_)
@@ -234,7 +242,11 @@ async fn paid_retry_inside_catalog_window_uses_fresh_trial_facts() {
         Err(Error::KmsHttp { status: 503 })
     ));
     let pending = harness.start(id(11));
-    provider.facts.lock().unwrap().trial = false;
+    {
+        let mut facts = provider.facts.lock().unwrap();
+        facts.trial = false;
+        facts.lifetime_seconds = 21600;
+    }
     *harness.now.lock().unwrap() = at() + Duration::seconds(60);
     harness.set_limit(300_000);
     assert_eq!(

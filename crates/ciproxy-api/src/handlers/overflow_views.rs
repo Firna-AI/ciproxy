@@ -2,7 +2,7 @@
 
 use chrono::Datelike;
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::KeyWallets;
+use ciproxy_overflow::provider::KeyAccounts;
 use ciproxy_store_interface::settings::OverflowWait;
 use rust_decimal::{Decimal, RoundingStrategy};
 use uuid::Uuid;
@@ -14,17 +14,17 @@ use crate::wire::overflow::{
     BoatAccountView, BoatSpendView, BoatWallet, BoatWallets, OverflowSettings,
 };
 
-pub(super) fn wallets(value: KeyWallets) -> BoatWallets {
+pub(super) fn wallets(value: KeyAccounts) -> BoatWallets {
     BoatWallets {
         wallets: value
-            .wallets
+            .accounts
             .into_iter()
             .map(|wallet| BoatWallet {
-                wallet: wallet.wallet,
+                wallet: wallet.id,
                 name: wallet.name,
             })
             .collect(),
-        selected_wallet: value.selected_wallet,
+        selected_wallet: value.selected_account,
     }
 }
 

@@ -18,6 +18,11 @@ use crate::session::Session;
 
 use super::OverflowService;
 
+pub(super) enum Preparation {
+    Ready { lifetime_seconds: u32 },
+    Waiting(WaitReason),
+}
+
 pub(super) fn preparation_wait(state: &AccountState, now: DateTime<Utc>) -> Option<WaitReason> {
     if let Some(at) = state.retry_at.filter(|at| *at > now) {
         return Some(WaitReason::RetryAt(at));
@@ -68,14 +73,15 @@ impl OverflowService {
         &self,
         session: &Session,
         account: &mut AccountRecord,
-        backend: &Capabilities,
-    ) -> Result<Option<WaitReason>> {
+        capabilities: &Capabilities,
+    ) -> Result<Preparation> {
         let now = self.dependencies.clock.now();
         if let Some(wait @ WaitReason::RetryAt(_)) = preparation_wait(&account.state, now) {
-            return Ok(Some(wait));
+            return Ok(Preparation::Waiting(wait));
         }
         let refreshed = async {
-            self.refresh_start_account(session, account, backend)
+            let facts = self
+                .refresh_start_account(session, account, capabilities)
                 .await?;
             let now = self.dependencies.clock.now();
             if account
@@ -84,7 +90,7 @@ impl OverflowService {
                 .is_none_or(|at| now >= at + Duration::minutes(5))
             {
                 account.state.sizes =
-                    catalog::offers(backend.capacity.account_capacity().await.internal()?)?;
+                    catalog::offers(capabilities.capacity.account_capacity().await.internal()?)?;
                 account.state.checked_at = Some(now);
                 account.state.refused_sizes.clear();
                 let saved = account.clone();
@@ -92,17 +98,21 @@ impl OverflowService {
                     .call(move |session| session.save_account(&saved))
                     .await?;
             }
-            Ok(())
+            Ok(facts)
         }
         .await;
-        match refreshed {
-            Ok(()) => {}
-            Err(Error::RejectedKey) => return Ok(Some(WaitReason::Disconnected)),
+        let facts = match refreshed {
+            Ok(facts) => facts,
+            Err(Error::RejectedKey) => return Ok(Preparation::Waiting(WaitReason::Disconnected)),
             Err(error) => return Err(error),
-        }
-        Ok(preparation_wait(
-            &account.state,
-            self.dependencies.clock.now(),
-        ))
+        };
+        Ok(
+            match preparation_wait(&account.state, self.dependencies.clock.now()) {
+                Some(wait) => Preparation::Waiting(wait),
+                None => Preparation::Ready {
+                    lifetime_seconds: facts.lifetime_seconds,
+                },
+            },
+        )
     }
 }

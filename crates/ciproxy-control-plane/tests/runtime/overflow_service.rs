@@ -6,8 +6,10 @@ use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_control_plane::boat_authority::BoatRunnerAuthority;
 use ciproxy_github::registrations::RunnerRegistrations;
 use ciproxy_overflow::api::{Overflow, OverflowConfig};
+use ciproxy_overflow::registry::{ImageSource, ProviderRegistry};
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 
 use super::overflow_ports::{Factory, Ports};
 use super::support::Fixture;
@@ -33,14 +35,19 @@ pub(super) fn service(
     Arc::new(OverflowService::new(
         OverflowConfig {
             deployment: "runtime-integration".to_owned(),
-            shared_snapshot: "shared-image".to_owned(),
-            root_sizing: RootSizing::default(),
             exit_report_url: Secret::new("https://app.ciproxy.example/hooks/boat/runner-exit"),
         },
         OverflowDependencies {
             store: fixture.store.clone(),
             cipher: ports.clone(),
-            factory: Arc::new(Factory(ports.clone())),
+            providers: ProviderRegistry::default().with_provider(
+                OverflowProvider::Boat,
+                Arc::new(Factory(ports.clone())),
+                ImageSource {
+                    reference: "shared-image".to_owned(),
+                    root_sizing: RootSizing::default(),
+                },
+            ),
             runners: authority(fixture, ports, registrations),
             clock: ports.clone(),
             tokens: ports.clone(),

@@ -1,15 +1,16 @@
 # ciproxy-overflow
 
-Execute Boat overflow actions for the hosted ciproxy control plane.
-Use this crate after the scaler selects a Boat runner start.
+Execute overflow actions for the hosted ciproxy control plane.
+Use this crate after the scaler selects an overflow runner start.
 The crate owns sandbox delivery, encrypted keys, cost facts, and cleanup.
+Boat is its first provider.
 It has no open licence.
 
 ## Responsibilities
 
-The scaler decides where a runner is needed and proposes a Boat size.
-The shared scaler rule selects its current Boat size at dispatch.
-This crate supplies the account catalog and applies accepted Boat actions.
+The scaler decides where a runner is needed and proposes a size.
+The service uses the same size rule with the current catalog at dispatch.
+This crate supplies the account catalog and executes accepted actions.
 GitHub still assigns each job to a runner.
 A workspace can have several GitHub organizations.
 Each delivery keeps its organization, label, and scale-set identity.
@@ -23,11 +24,20 @@ The control plane must keep own-machine routing available when Boat fails.
 
 ## What This Crate Does
 
+The control plane supplies a registry of provider factories and images.
+The registry includes each provider with its deployment settings.
+The service selects capabilities from the provider of the saved account.
+It uses the saved delivery to build the create, recovery, and launch inputs.
+The shared service owns delivery phases, budget checks, and cleanup.
+`ProviderAccountApi` checks keys and reads account and usage facts.
+`GuestLauncher` prepares private input and starts the guest.
+`GuestInspection` reads the launch marker.
+
 The dependency revision is
 `ac412fc52f201c9571531f08e4ada9a3ad837203` of `futex-ai/sandbox`.
 `BoatFactory` constructs the pinned lifecycle, capacity, and file capabilities.
 All capabilities use the same explicit personal or organization wallet.
-Account reads supply the verified name, trial state, and start-fee bound.
+Account reads supply the verified name, lifetime, billing state, and fee bound.
 Key checks list accessible wallets and Boat's likely selection without saving
 the key. An organization key offers its own wallet. Account keys can choose
 their personal wallet or an organization wallet.
@@ -42,11 +52,11 @@ Each workspace has one PostgreSQL session lock.
 Synchronous queries run on blocking workers.
 The service saves the delivery, callback digest, and encrypted input before
 the first provider mutation.
-Each saved delivery identifies its provider. The service uses Boat.
+Each saved delivery identifies its provider and the exact image reference.
 The durable `Unsent` phase keeps pending demand and permits preparation retries.
 It holds no fixed provider parameters and counts no provider cost bound.
 Both key preparations finish before an atomic `Creating` transition.
-Dispatch reads current account trial and billing facts on each attempt.
+Dispatch reads current account lifetime and billing facts on each attempt.
 This read also runs inside the five-minute catalog refresh window.
 It selects size, lifetime, dispatch time, and required budget together.
 The transition rechecks current authority and monthly amounts.
@@ -88,13 +98,12 @@ That retry selects the current size and lifetime and keeps its saved fee.
 After `Creating`, recovery keeps the exact committed provider parameters.
 `canStart` does not decide whether create will succeed.
 
-Every sandbox restores the shared snapshot with ciproxy marks.
+Boat restores the shared snapshot with ciproxy marks.
 The snapshot setting can be a saved snapshot name or a share code.
 The pinned adapter sends that exact source in each create.
 Its recovery labels hold only a hash of a share code.
-The pinned adapter sets `noEnv`, disables monitoring and snapshots, and sets
-a six-hour lifetime.
-A free trial gets two hours.
+The pinned adapter sets `noEnv` and disables monitoring and snapshots.
+The Boat descriptor gives a six-hour lifetime, or two hours on a trial.
 The runner input contains `AgentToGuest::ConfigureRunner`, the callback URL,
 and a sandbox-only callback token.
 It contains no Boat key and no machine-cache connection.
@@ -189,15 +198,16 @@ cargo test --package ciproxy-overflow
 
 Construct `OverflowService` with `OverflowConfig` and
 `OverflowDependencies` at the control-plane composition root.
-Set `OverflowConfig.root_sizing` from the same image release as
-`shared_snapshot`. Share that value with the scaler snapshot.
+Register `BoatFactory` with the shared snapshot reference and its
+`ImageSource.root_sizing` in `ProviderRegistry`.
+Share that sizing value with the scaler snapshot.
 The agent library defines the complete root allocation from free label bytes.
 Each accepted delivery saves the image length and required root allocation.
 Retries keep those facts when the deployment selects a newer image.
 The largest-size fallback must still hold the complete saved image.
 Inject the store as `Arc<dyn OverflowStore>`.
 Inject `CloudKmsCipher` over `CloudKmsRest` and `MetadataAccessTokens`.
-Inject `BoatFactory`, `SystemClock`, `RandomTokens`, and the caller's
+Inject the registry, `SystemClock`, `RandomTokens`, and the caller's
 `RunnerAuthority`.
 Consume the result as `Arc<dyn Overflow>`.
 
@@ -257,6 +267,28 @@ They keep certificate and host verification enabled.
 They check a create from a share code and the delete confirmation header.
 The cipher unit tests use a mocked KMS transport.
 
+### Add a provider
+
+1. Add the lifecycle, capacity, and file adapter to the shared sandbox
+   library. [futex-ai/sandbox](https://github.com/futex-ai/sandbox)
+2. Add the `OverflowProvider` value and its fixed descriptor. Add the
+   stored value and wire value with it.
+   [Provider facts](../ciproxy-store-interface/src/overflow/provider.rs)
+3. Implement `ProviderFactory`, `ProviderAccountApi`, `GuestLauncher`, and
+   `GuestInspection` under `src/<provider>/`. Use the shared sandbox
+   capabilities for lifecycle, capacity, and file transfer.
+   [Boat implementation](src/boat)
+4. Build the provider image and register its source and root sizing in the
+   control-plane composition. Register it when its deployment settings
+   are present. [Agent images](../../docs/protocol/agent-images.md)
+5. Add the provider's connect form and product copy to the dashboard app.
+   [Dashboard](../../ts/app/README.md)
+6. Add the provider's rules to the protocol and its connection steps to
+   the site guide. [Overflow protocol](../../docs/protocol/overflow.md)
+   [Boat guide](../../ts/site/src/content/docs/docs/guides/connect-boat.md)
+7. Add live probes for the account, image, launch, runtime, recovery, and
+   deletion. [Boat probes](LIVE.md)
+
 ### Live commands
 
 The [live-probe guide](LIVE.md) gives credential setup and probe commands.
@@ -265,6 +297,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
 ### Key Code
 
 - [src/api.rs](src/api.rs) defines `Overflow` and its caller contracts.
+- [src/provider.rs](src/provider.rs) defines the provider factory and seams.
+- [src/registry.rs](src/registry.rs) holds deployed factories and images.
 - [src/service](src/service) owns durable execution and cleanup.
 - [src/service/authority.rs](src/service/authority.rs) obtains current
   startup authority for each saved delivery.

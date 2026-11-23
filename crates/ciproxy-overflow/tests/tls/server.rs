@@ -1,6 +1,6 @@
 //! The production Boat capabilities use the shared local HTTPS peer.
 
-use ciproxy_overflow::provider::{BackendFactory, Capabilities};
+use ciproxy_overflow::provider::{Capabilities, ProviderFactory};
 use ciproxy_protocol::secret::Secret;
 
 use super::peer::{Peer, Step};
@@ -16,7 +16,7 @@ impl Server {
         let peer = Peer::new(steps).await;
         let backend = peer
             .factory
-            .backend(&Secret::new("fixture-key"), "personal")
+            .capabilities(&Secret::new("fixture-key"), "personal")
             .unwrap();
         Self { backend, peer }
     }

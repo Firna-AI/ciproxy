@@ -3,6 +3,10 @@
 These traits and types form the overflow area of
 [ciproxy-store-interface](../../README.md).
 
+`OverflowProvider` identifies saved accounts, deliveries, and costs.
+Each value has a descriptor for fixed provider facts such as platforms,
+billing account choice, lifetime, and start fees.
+
 OverflowStore adds exclusive workspace sessions for overflow execution.
 Pending connections use fresh store-issued grants before external work.
 Last-App removal revokes these grants, and activation consumes one live grant.

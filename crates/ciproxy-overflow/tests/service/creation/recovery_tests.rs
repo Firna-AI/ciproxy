@@ -5,7 +5,7 @@ use std::time;
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::error::Error;
-use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock};
+use ciproxy_overflow::provider::{GuestLauncherMock, ProviderAccountApiMock};
 use ciproxy_store_interface::overflow::record::StartPhase;
 use sandbox_interface::{
     BackendSandbox, SandboxFilesMock, SandboxLifecycleMock, SandboxLifetime, SandboxState,
@@ -19,7 +19,7 @@ use super::super::fixtures::{at, capabilities, facts, id, record, request};
 #[tokio::test]
 async fn ambiguous_create_uses_recovery_after_the_provider_idempotency_window() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::account
+        ProviderAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox
@@ -98,7 +98,7 @@ async fn uncertain_file_write_destroys_the_sandbox_before_any_replacement() {
             .some_call(matching!(_))
             .returns(Err(sandbox_interface::Error::FileWriteUnconfirmed))
             .once(),
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .returns(Ok(None)),
         SandboxLifecycleMock::destroy_sandbox
@@ -129,7 +129,7 @@ async fn uncertain_file_write_destroys_the_sandbox_before_any_replacement() {
 #[tokio::test]
 async fn write_crash_recovery_deletes_without_replaying_the_file_transfer() {
     let backend = capabilities(Unimock::new((
-        BoatAccountApiMock::usage
+        ProviderAccountApiMock::usage
             .some_call(matching!(_, _, _))
             .returns(Ok(None)),
         SandboxLifecycleMock::destroy_sandbox

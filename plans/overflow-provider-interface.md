@@ -530,25 +530,27 @@ Depends on: 3
 `ciproxy-overflow` gets the provider interface of the design, with Boat as
 its only provider. All Boat tests pass with no change of behaviour.
 
-- [ ] Add `OverflowProvider` and the provider descriptor to the lowest crate
+- [x] Add `OverflowProvider` and the provider descriptor to the lowest crate
       that the store, the overflow service, metering, and the API share.
-- [ ] Replace `BoatAccountApi` with `ProviderAccountApi`. Replace
+- [x] Replace `BoatAccountApi` with `ProviderAccountApi`. Replace
       `KeyWallets` and `AccountWallet` with `KeyAccounts` and
       `BillingAccount`. Add the lifetime to `AccountFacts`.
-- [ ] Replace `BackendFactory` with `ProviderFactory` and the provider
+- [x] Replace `BackendFactory` with `ProviderFactory` and the provider
       registry. Replace `OverflowConfig.shared_snapshot` with an image
       source for each provider.
-- [ ] Move the Boat-only rules of "The provider interface" into the Boat
+- [x] Move the Boat-only rules of "The provider interface" into the Boat
       seams and descriptor.
-- [ ] Move the Boat code behind the new seams in `src/boat/`. Keep its
+- [x] Move the Boat code behind the new seams in `src/boat/`. Keep its
       tests, the Boat live examples, and `LIVE.md` working.
-- [ ] Repoint the `overflow.md#spend-limit` link of
+- [x] Repoint the `overflow.md#spend-limit` link of
       `crates/ciproxy-overflow/accounting.md` to `overflow-spend.md`.
-- [ ] Add "Add a provider" to the `ciproxy-overflow` README: the adapter in
+- [x] Add "Add a provider" to the `ciproxy-overflow` README: the adapter in
       `futex-ai/sandbox`, the enum value and descriptor, the seams under
       `src/<provider>/`, the image source, the connect form and copy, the
       protocol sections, the site guide, and the live probes.
-- [ ] Update the README of the overflow crate.
+- [x] Update the README of the overflow crate.
+
+Evidence: `.context/providers-interface/m5/`.
 
 ## Milestone 6: Scaler: provider-neutral types and the label order
 

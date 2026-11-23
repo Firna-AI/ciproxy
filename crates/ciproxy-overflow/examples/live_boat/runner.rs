@@ -2,10 +2,9 @@
 
 use std::{fs, path::Path};
 
-use ciproxy_overflow::provider::{Capabilities, registration_root};
+use ciproxy_overflow::provider::{Capabilities, ProviderFactory};
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::secret::Secret;
-use sandbox_interface::BackendWriteFileRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::live_support::{Result, SafeResult};
@@ -20,6 +19,7 @@ struct Registration {
 }
 
 pub(super) async fn launch(
+    factory: &dyn ProviderFactory,
     backend: &Capabilities,
     state_path: &Path,
     registration_path: &Path,
@@ -55,29 +55,23 @@ pub(super) async fn launch(
         }
         state.phase = Phase::Writing;
         state_io::save(state_path, &state)?;
-        backend
-            .files
-            .write_file(BackendWriteFileRequest {
-                sandbox_provider_ref: sandbox.clone(),
-                root: "/workspace".to_owned(),
-                path: format!(".ciproxy-bootstrap-{}", state.delivery_id.simple()),
-                bytes: Vec::new(),
-            })
-            .await
-            .safe("bootstrap sandbox runtime")?;
+        let files = factory.registration_files(state.delivery_id);
+        if let Some(target) = files.bootstrap {
+            backend
+                .files
+                .write_file(target.write_request(sandbox.clone(), Vec::new()))
+                .await
+                .safe("bootstrap sandbox runtime")?;
+        }
         backend
             .launcher
             .prepare(sandbox.clone(), state.delivery_id)
             .await
             .safe("prepare private input")?;
+        let bytes = serde_json::to_vec(&registration).safe("encode private input")?;
         let result = backend
             .files
-            .write_file(BackendWriteFileRequest {
-                sandbox_provider_ref: sandbox.clone(),
-                root: registration_root(state.delivery_id),
-                path: "registration.json".to_owned(),
-                bytes: serde_json::to_vec(&registration).safe("encode private input")?,
-            })
+            .write_file(files.registration.write_request(sandbox.clone(), bytes))
             .await;
         if matches!(result, Err(sandbox_interface::Error::FileWriteUnconfirmed)) {
             state.phase = Phase::Deleting;

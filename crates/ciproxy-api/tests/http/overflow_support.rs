@@ -5,7 +5,8 @@ use std::sync::Arc;
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_api::runtime::Runtime;
 use ciproxy_overflow::api::{OverflowConfig, StartRequest};
-use ciproxy_overflow::provider::BackendFactory;
+use ciproxy_overflow::provider::ProviderFactory;
+use ciproxy_overflow::registry::{ImageSource, ProviderRegistry};
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::identifiers::{LabelName, OrganizationId};
 use ciproxy_protocol::resources::VmSize;
@@ -13,6 +14,7 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::BoatSizeId;
 use ciproxy_scaler::registration::RegistrationTarget;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use unimock::Unimock;
 use uuid::Uuid;
 
@@ -26,27 +28,32 @@ pub(super) fn service(fixture: &mut Fixture) -> Arc<Ports> {
     ports
 }
 
-pub(super) fn with_factory(fixture: &mut Fixture, factory: Arc<dyn BackendFactory>) -> Arc<Ports> {
+pub(super) fn with_factory(fixture: &mut Fixture, factory: Arc<dyn ProviderFactory>) -> Arc<Ports> {
     let ports = Ports::new();
     attach(fixture, ports.clone(), factory);
     ports
 }
 
-fn attach(fixture: &mut Fixture, ports: Arc<Ports>, factory: Arc<dyn BackendFactory>) {
+fn attach(fixture: &mut Fixture, ports: Arc<Ports>, factory: Arc<dyn ProviderFactory>) {
     *ports.now.lock().unwrap() = fixture.runtime.now();
     fixture.state.overflow = Some(Arc::new(OverflowService::new(
         OverflowConfig {
             deployment: "api-integration".to_owned(),
-            shared_snapshot: "shared-image".to_owned(),
-            root_sizing: RootSizing {
-                image_root_bytes: fixture.state.config.image_disk_bytes,
-            },
             exit_report_url: Secret::new("https://app.ciproxy.example/hooks/boat/runner-exit"),
         },
         OverflowDependencies {
             store: fixture.database.store.clone(),
             cipher: ports.clone(),
-            factory,
+            providers: ProviderRegistry::default().with_provider(
+                OverflowProvider::Boat,
+                factory,
+                ImageSource {
+                    reference: "shared-image".to_owned(),
+                    root_sizing: RootSizing {
+                        image_root_bytes: fixture.state.config.image_disk_bytes,
+                    },
+                },
+            ),
             runners: Arc::new(Unimock::new(())),
             clock: ports.clone(),
             tokens: ports.clone(),
