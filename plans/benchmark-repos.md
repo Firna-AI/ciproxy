@@ -206,18 +206,23 @@ The user creates the accounts. The agent checks each step.
 
 Depends on: 1
 
-- [ ] Create the private repository `bench-source`. Copy the suite at a
-      pinned commit, with its `LICENSE` and `NOTICE`.
-- [ ] Add the gate of this repository as the extra project.
-- [ ] Add the step that records `nproc`, the memory, and the free disk.
-- [ ] Write the README: the legs, the projects, the method, the metrics,
+- [x] Copy the suite at a pinned commit, with its `LICENSE` and `NOTICE`,
+      into a local repository `bench-source`.
+- [x] Add the gate of this repository as the extra project.
+- [x] Add the step that records `nproc`, the memory, and the free disk.
+- [x] Write the README: the legs, the projects, the method, the metrics,
       and the commands.
+- [ ] Review the local repository with the `implementation-review` skill,
+      and apply the fix rule.
+- [ ] Create the private repository `bench-source` in the organization of
+      item 6, and push the reviewed commits.
 
 ## Milestone 3: The leg repositories and labels
 
 Depends on: 2
 
-- [ ] Write the sync script, and create the four leg repositories with it.
+- [x] Write the sync script.
+- [ ] Create the four leg repositories with the sync script.
 - [ ] Turn off the Boat switch of `ciproxy`. Add the label `ciproxy-boat`.
 - [ ] Run one project once on each leg as a smoke check.
 
@@ -232,11 +237,11 @@ Depends on: 1
 
 ## Milestone 5: The collector
 
-Depends on: 2
+Depends on: none
 
-- [ ] Write the collector: dispatch, wait, read the jobs API and the job
+- [x] Write the collector: dispatch, wait, read the jobs API and the job
       view, drop the wrong-place samples, and write the results.
-- [ ] Add tests for the parse and the sample rules with stand-in responses.
+- [x] Add tests for the parse and the sample rules with stand-in responses.
 
 ## Milestone 6: The first round
 
