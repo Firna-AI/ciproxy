@@ -1,13 +1,18 @@
-//! Cloud CDN signed image URLs issued at each agent delivery.
+//! Image URL signers: Cloud CDN for Linux, and the signer of each platform.
+
+use std::sync::Arc;
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE;
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::images::ImageDownload;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
 use hmac::{Hmac, KeyInit, Mac};
 use sha1::Sha1;
 
 use crate::error::{ErrorResultExt, Result};
+use crate::image_offers::ImageOffer;
 
 /// Delivery-time image URL signing, independent from release metadata.
 pub trait ImageSigning: Send + Sync {
@@ -43,6 +48,42 @@ impl ImageSigning for CdnSigning {
         mac.update(input.as_bytes());
         let signature = URL_SAFE.encode(mac.finalize().into_bytes());
         Ok(Secret::new(format!("{input}&Signature={signature}")))
+    }
+}
+
+/// The URL signer of the release of each platform.
+pub struct PlatformSigning {
+    /// Signs Linux archive URLs with the CDN key.
+    pub linux: Arc<dyn ImageSigning>,
+    /// Signs macOS archive URLs for the private R2 store, while macOS images are on.
+    pub macos: Option<Arc<dyn ImageSigning>>,
+}
+
+impl PlatformSigning {
+    /// Offer each release with the signer of its platform.
+    ///
+    /// The macOS store is private, so a macOS release without its signer is
+    /// left out. An unsigned URL would only fail at the store.
+    pub fn offers(&self, images: &[ImageDownload]) -> Vec<ImageOffer> {
+        images
+            .iter()
+            .filter_map(|download| {
+                let signing = match download.platform {
+                    Platform::LinuxX64 => self.linux.clone(),
+                    Platform::MacosArm64 => {
+                        let Some(signing) = self.macos.clone() else {
+                            tracing::warn!("the macOS release has no R2 signer and is not offered");
+                            return None;
+                        };
+                        signing
+                    }
+                };
+                Some(ImageOffer {
+                    download: download.clone(),
+                    signing: Some(signing),
+                })
+            })
+            .collect()
     }
 }
 

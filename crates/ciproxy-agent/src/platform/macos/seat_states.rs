@@ -25,7 +25,7 @@ use super::vm_files::{
 };
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::guest_transport::framed;
-use crate::macos::guests::{GUEST_PORT, VmFolders};
+use crate::macos::guests::{GUEST_PORT, HELPER_START_WAIT, VmFolders, wait_for_helper};
 use crate::macos::seats::StartKind;
 use crate::macos::seats::{SAVED_STATE_FORMAT, SavedState, SeatNeeds};
 use crate::macos::vm_control::ControlError;
@@ -136,6 +136,7 @@ impl SeatStates {
         };
         write_helper_files(&self.folders, local_id, &spec)?;
         self.launchd.bootstrap_vm(local_id).await?;
+        wait_for_helper(&self.folders, local_id, HELPER_START_WAIT).await?;
         self.wait_for_hello(local_id).await?;
         let client = self.folders.client(local_id);
         client.save().await?;

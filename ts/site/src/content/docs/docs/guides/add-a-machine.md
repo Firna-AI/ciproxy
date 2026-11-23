@@ -33,13 +33,14 @@ Docker disks are disposable.
 A Mac runs the jobs of macOS labels, each in a fresh macOS VM with Xcode. A
 Mac needs:
 
-<!-- The macOS version and the disk are placeholders until the macOS image
-is settled. -->
+<!-- The disk is a placeholder until the size of the macOS image is
+measured. -->
 
 - A Mac with Apple Silicon, M1 or later.
-- macOS 26.7.2 or later. A macOS VM cannot run a newer macOS than its Mac,
+- macOS 26.7.3 or later. A macOS VM cannot run a newer macOS than its Mac,
   so the Mac needs the macOS of the job image.
-- 16 GB of memory and 512 GB of disk or more.
+- 16 GB of memory and 512 GB of disk or more. The disk can be an external
+  APFS SSD, as [Use an external disk](#use-an-external-disk) says.
 - Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The Mac
   opens no inbound port.
 
@@ -54,6 +55,22 @@ Run the same install command in Terminal on the Mac. The agent runs as a
 launchd service, and it keeps the Mac awake, so the Mac needs no sleep
 setting. In **System Settings**, under **Energy**, turn on **Start up
 automatically after a power failure**.
+
+### Use an external disk
+
+A Mac with a small internal disk can keep the disk area of the agent on an
+external SSD. Format the SSD as APFS in Disk Utility, and connect it. Then
+add `env CIPROXY_AREA_DISK=/Volumes/NAME` after `sudo` in the install
+command, with the name of the SSD:
+
+```sh title="Terminal"
+curl -fsSL https://get.ciproxy.dev | sudo env CIPROXY_AREA_DISK=/Volumes/NAME sh -s -- install --token <install token>
+```
+
+Keep the SSD connected. While it is unplugged, the Mac takes no jobs, and
+its running jobs fail. When you connect it again, the Mac takes jobs again.
+The setting applies to the first install only. To move the disk area,
+uninstall the agent first.
 
 :::caution[FileVault stops jobs after a restart]
 With FileVault on, macOS starts no service after a restart until a person
@@ -93,7 +110,7 @@ command does on the machine.
 - **No KVM:** the machine connects, but it cannot start VMs, so it gets no
   slots. Turn on virtualization for the machine, then run the command again.
 - **A Mac with an older macOS:** the Mac connects, but it cannot start VMs,
-  so it gets no slots. Update the Mac to macOS 26.7.2 or later, then run the
+  so it gets no slots. Update the Mac to macOS 26.7.3 or later, then run the
   command again.
 - **Too little CPU or memory:** a machine without room for one slot after
   the host reserve connects and gets no slots. ciproxy says why.

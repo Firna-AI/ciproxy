@@ -1,4 +1,7 @@
 //! Reserve images first. Keep XFS overhead in the remaining host quarter.
+//!
+//! The image budget setting is shared: macOS reads it too, but has no XFS
+//! area, so only the setting applies there.
 
 use ciproxy_protocol::resources::{DEFAULT_IMAGE_BUDGET_BYTES, Resources};
 
@@ -8,6 +11,8 @@ pub(crate) const DEFAULT_IMAGE_BYTES: u64 = DEFAULT_IMAGE_BUDGET_BYTES;
 pub(crate) const MINIMUM_DISK_BYTES: u64 = 250_000_000_000;
 pub(crate) const SUPPORT_BYTES: u64 = 16 * 1024 * 1024;
 pub(crate) const BLOCK: u64 = 4096;
+/// The image budget setting of Linux and macOS.
+pub(crate) const IMAGE_BUDGET_SETTING: &str = "CIPROXY_IMAGE_BUDGET_BYTES";
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct AreaSizing {
@@ -46,6 +51,19 @@ impl AreaSizing {
 
     pub(crate) fn metadata_safety(self) -> u64 {
         self.job() / 32 + SUPPORT_BYTES
+    }
+}
+
+/// Read `CIPROXY_IMAGE_BUDGET_BYTES` from the environment. `None` means that
+/// the setting is absent, so the platform default applies.
+pub(crate) fn requested_image_budget() -> Result<Option<u64>> {
+    match std::env::var(IMAGE_BUDGET_SETTING) {
+        Ok(value) => setting(Some(&value)),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(std::env::VarError::NotUnicode(_)) => Err(repair(
+            "image budget setting",
+            "Set CIPROXY_IMAGE_BUDGET_BYTES to an integer byte count.",
+        )),
     }
 }
 

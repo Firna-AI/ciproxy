@@ -27,9 +27,12 @@ Items marked **Check** still need a run on a real Mac.
 
 The parts with no macOS-only dependency live in [`src/macos/`](src/macos/).
 They build on macOS and in the tests of every target, so the Linux gate
-tests them. The parts that use `ciproxy-vz`, `launchctl`, `pfctl`, or
-`diskutil` live in [`src/platform/macos/`](src/platform/macos.rs) and build
-only on macOS. The `rust-macos` gate phase type-checks and lints them.
+tests them. They can use the pure types of `ciproxy-vz`, such as
+`VmSettings`, because the tests have `ciproxy-vz` as a dev dependency.
+`VmSpec::settings` in [`src/macos/vm_spec.rs`](src/macos/vm_spec.rs) builds
+the settings of each VM there. The parts that start VMs or use
+`launchctl`, `pfctl`, or `diskutil` live in
+[`src/platform/macos/`](src/platform/macos.rs) and build only on macOS. The `rust-macos` gate phase type-checks and lints them.
 
 ## Processes
 
@@ -51,8 +54,21 @@ its own VM helper, as each Linux VM runs in its own systemd unit.
 - The VM helper reads `area/vms/LOCAL_ID/vm.json`. This file holds no
   secret: the bundle path, the CPU count, the memory size, the seat, and
   the start kind. The helper refuses an inconsistent file.
+- The memory size in `vm.json` is the label size in decimal bytes, such as
+  8,000,000,000 for 8 GB. Virtualization.framework needs whole MiB, so the
+  helper rounds it down to a whole MiB. The VM never uses more memory than
+  the label and its slots reserve.
 - The VM helper listens on `area/vms/LOCAL_ID/control.sock`. The socket has
   mode `0600`, and its folder has mode `0700`, both owned by root.
+- `launchctl bootstrap` returns before the helper binds this socket. So a
+  start waits up to 60 s until the helper answers on it, and only then
+  attaches the guest bridge. The bridge reads a missing socket with no
+  `exit.json` as a VM that is gone. A helper that already wrote
+  `exit.json` fails the start at once.
+- `launchctl bootout` can return before the helper process ends. So a stop
+  waits up to 40 s until the helper no longer answers on its socket, and
+  only then frees the seat. A new VM on that seat has the same MAC address
+  and machine identifier, so it must not start while the old VM runs.
 - When the VM stops, the VM helper writes `exit.json` with a rename, then
   exits. SIGTERM makes the VM helper stop the VM at once, as a
   `systemctl stop` of a Firecracker unit does.
@@ -154,7 +170,9 @@ launchd sends early output, such as a panic, to the same file.
 ## Storage
 
 The agent keeps images and VM bundles on one APFS volume of its own,
-named `ciproxy`, in the container of the data volume.
+named `ciproxy`. By default, the volume is in the container of the data
+volume. `CIPROXY_AREA_DISK` puts it on another APFS disk, as
+[Area on another disk](#area-on-another-disk) says.
 
 - The volume has a quota, so jobs and images cannot fill the disk of the
   Mac. This replaces the XFS file of Linux. The default quota is three
@@ -169,18 +187,79 @@ BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
   (`tmutil addexclusion -v`).
 - Daemon start mounts the recorded volume when it is not mounted. Install
   and uninstall act only on the volume with the recorded UUID and the name
-  `ciproxy`.
+  `ciproxy`. For a volume on another disk, `area.json` also records the
+  UUID of the volume's container, so uninstall deletes the volume only in
+  that container.
+- Each mount by the agent (daemon start, install, `prepare-host`, and
+  `import-image`) checks that the volume uses file owners
+  (`GlobalPermissionsEnabled`). macOS can ignore owners on an external
+  volume, and then any user could write the root-only files of the agent.
+  The agent runs `diskutil enableOwnership`, and refuses a volume where
+  owners stay off.
 - APFS clones work inside the volume. A clone takes 1 ms and no space at
   first.
 - **Check:** the quota syntax, and that the fstab line mounts the volume at
   boot before the agent starts.
 
-| Path in the area      | Use                                         |
-| --------------------- | ------------------------------------------- |
-| `images/index.json`   | The published images and the newest one     |
-| `images/NAME/bundle/` | A checked image bundle                      |
-| `vms/LOCAL_ID/`       | The VM bundle clone, `vm.json`, socket      |
-| `seats/N/identity/`   | The seat identity, in the `ciproxy-vz` form |
+| Path in the area               | Use                                         |
+| ------------------------------ | ------------------------------------------- |
+| `images/index.json`            | The published images and the newest one     |
+| `images/NAME/bundle/`          | A checked image bundle                      |
+| `images/NAME.tar.partial`      | The bytes of a download so far              |
+| `images/NAME.tar.partial.json` | The image ID, SHA-256, and size of them     |
+| `vms/LOCAL_ID/`                | The VM bundle clone, `vm.json`, socket      |
+| `seats/N/identity/`            | The seat identity, in the `ciproxy-vz` form |
+
+### Area on another disk
+
+A Mac with a small internal disk can keep the area on another APFS disk,
+such as an external SSD. Set `CIPROXY_AREA_DISK` for `prepare-host` or the
+first install:
+
+```sh
+sudo env CIPROXY_AREA_DISK=/Volumes/NAME /usr/local/bin/ciproxy-agent install --token TOKEN
+```
+
+- The value is a mounted path, such as `/Volumes/NAME`, or an APFS
+  container reference, such as `disk5`. With no value, the agent uses the
+  startup disk, as before, and the record keeps its older form.
+- The agent reads the container and its free space from the target with
+  `diskutil info -plist` and `diskutil apfs list -plist`. It reads the
+  disk facts from the container's physical store.
+- It refuses a volume that is not APFS, a read-only volume or disk, a
+  target that `diskutil` does not know, such as a network share, and a
+  disk image, which can be on a network share. Each refusal gives a repair
+  line.
+- It warns, and goes on, when the disk is external or removable. The
+  record keeps this fact, and `prepare-host` prints it.
+- The setting applies only to a new volume. With a recorded volume, the
+  agent keeps that volume and warns when the setting names another disk.
+  To move the area, uninstall first.
+
+The disk must stay connected. The agent then acts as follows:
+
+- **At boot, before the disk is there:** daemon start finds no volume with
+  the recorded UUID. It stops with the repair line "The ciproxy volume is
+  missing. Connect the disk that holds it." launchd starts the daemon again
+  every 5 s. When the disk comes, macOS mounts the volume from the fstab
+  line, and the next start goes on as normal. A disk that mounts late gives
+  the same result. A mount by the agent and by fstab at the same time is
+  not an error: the agent checks the mount point again.
+- **When the disk is unplugged while the agent runs:** the mount point is
+  again a bare folder on the startup disk. The agent sees this from the
+  device number of the folder. The hardware report then has no disk, so
+  the Mac has no job disk, and the control plane sends it no job. A VM
+  start refuses with the same repair line. Within 10 s, the guard stops
+  every VM, because their disks are gone, and their jobs fail. When the
+  disk is back, macOS mounts the volume again, and the Mac takes jobs
+  again with no restart.
+- **Uninstall with the disk gone:** with no recorded VM, uninstall goes on.
+  It warns that the volume stays on its disk. It removes the bare mount
+  folder with any file in it, then the fstab line, and the record last.
+  When `diskutil` finds the volume but not its container, uninstall stops
+  and keeps the record, so a retry decides. Delete the volume later with
+  `diskutil apfs deleteVolume UUID`. With a recorded VM, uninstall needs
+  the disk, because it drains the VMs first.
 
 `NAME` is the hex SHA-256 of the image ID, so an ID never names a path.
 
@@ -190,8 +269,23 @@ I owns the image format. One `macos.tar` holds `bundle/disk.img.zst`,
 `bundle/aux.img`, `bundle/hardware-model.bin`, `manifest.json`, three other
 metadata files, and `macos-content.sha256`.
 
-1. The download streams to `images/NAME.tar`. The agent checks its byte
-   count and SHA-256 against the `ImageDownload`.
+1. The download streams to `images/NAME.tar.partial`. Its sidecar
+   `images/NAME.tar.partial.json` holds the image ID, the SHA-256, and the
+   byte size of the `ImageDownload`. A broken stream retries with
+   `Range: bytes=LENGTH-` three times, 5 s apart, and each new byte resets
+   the count. A `5xx` or a `429` retries in the same way. A `429` waits for
+   the seconds of its `Retry-After` header instead, at most 60 s. Another
+   HTTP error status, such as `403` for an expired URL, ends the command
+   and keeps the partial file. A later `FetchImage` with the
+   same sidecar values hashes the bytes on disk and continues them. Other
+   values, or a file longer than the image, start again from zero, and so
+   does a `200` answer to a `Range` request. A `206` from another start, or
+   a `416`, empties the file, and the retry asks for the whole archive
+   without `Range`. A download removes the partial
+   files of other images. One download runs at a time, so a second
+   `FetchImage` for the same image waits and then finds the image known.
+   After the byte count and the SHA-256 match, the partial file becomes
+   `images/NAME.tar`. A mismatch deletes the partial file and its sidecar.
 2. Extraction refuses links, other paths, and duplicate members. It
    decompresses the disk and writes each all-zero 1 MiB block as a hole. It
    hashes each file as it writes it, so the content check needs no second
@@ -201,6 +295,33 @@ metadata files, and `macos-content.sha256`.
 4. A rename publishes `images/NAME/`. The index names it the newest image.
    Each image that is neither the newest nor held is removed.
 
+#### Image import, a test and operator path
+
+The hidden command `import-image` publishes a local `macos.tar` with no
+image host. It is for tests, such as the first end-to-end run, and for an
+operator who moves an image by hand. `--help` does not list it.
+
+```sh
+sudo /usr/local/bin/ciproxy-agent import-image --archive PATH \
+  --image-id ID --sha256 HEX --root-disk-bytes N
+```
+
+1. Run it as root after `prepare-host` and before `install`. It needs the
+   area volume, and it takes the runtime lock, so it refuses to run while
+   the daemon runs. The daemon then loads the image when it starts.
+2. It copies the archive to `images/NAME.tar`, owned by root with mode
+   `0600`. The copy is an APFS clone when the archive is on the area
+   volume, and a full copy when it is not. Stage the archive at the area
+   root, such as `/var/db/ciproxy/area/macos.tar`. The command refuses an
+   archive in `images/`, because recovery removes each `.tar` file there.
+3. It checks the byte count and the SHA-256 of the copy, not of the
+   source, so a later change of the source cannot reach extraction.
+4. Then it runs the same steps 2 to 4 as a download. A failed check or
+   extraction removes the copy and the pending folder. When the command
+   is stopped, the next import or daemon start removes them.
+
+An image ID that the index already lists is not imported again.
+
 ### Job disk
 
 Cal's decision 17 is open. P and A recommend option (b): the image disk
@@ -209,6 +330,14 @@ has a fixed size of 200 GB, and each VM holds the image's measured
 and one saved state per seat serves every label. The agent keeps
 `free_job_bytes` in its image index. The core uses it once P adds the field
 to the protocol.
+
+The image budget is the space of the volume that the job disk does not
+use: the job disk is (volume capacity − image budget) × 3/4. The default
+budget is 200 GiB. `CIPROXY_IMAGE_BUDGET_BYTES` sets another value, with
+the same rule as on Linux: an integer greater than 16,777,216. Each command
+reads the setting again, so put it in `/etc/ciproxy-agent/environment` for
+the daemon. A Mac records no budget, so a change applies at the next start.
+`prepare-host` prints the budget in use.
 
 ## VM seats and saved states
 
@@ -338,7 +467,7 @@ first of:
   no call for `VZVirtualMachine.isSupported` yet.
 - `entitlement_missing` when `codesign` shows no
   `com.apple.security.virtualization` for the running binary.
-- `operating_system_too_old` when the Mac's macOS is older than 26.7.2 or
+- `operating_system_too_old` when the Mac's macOS is older than 26.7.3 or
   than the `minimum_host_macos` of the newest image.
 - `available` otherwise.
 
@@ -348,7 +477,7 @@ Seats follow `Slots::for_machine` with P's rule, then
 ## Install
 
 1. Refuse a user other than root, a processor other than arm64, and a
-   macOS older than 26.7.2, the macOS of the planned image. The message
+   macOS older than 26.7.3, the macOS of the macOS image. The message
    names the minimum, the current version, and the repair.
 2. Create the control folder, the area volume, and the area folders. Load
    the pf rules.
@@ -385,6 +514,10 @@ Seats follow `Slots::for_machine` with P's rule, then
   launchd file and folder.
 - Daemon start stops each loaded helper with no record and removes each VM
   launchd file and folder with no record. Unreadable state keeps them all.
+- Daemon start keeps each partial download whose sidecar decodes and whose
+  file is not longer than its image. It removes every other partial file
+  and sidecar, each checked `images/NAME.tar` that waits for extraction,
+  and each `.pending` part.
 - After a reboot, no VM helper runs, so every recorded VM ends as above.
   With FileVault on, macOS starts no daemon until a person logs in once.
 
@@ -398,4 +531,7 @@ runs a macOS VM. The start fails, and the core reports it.
   drains.
 - **Check** on a real install: the `diskutil` quota syntax, the volume
   mount at boot, and the `pfctl` output that the agent reads.
+- **Check** on a Mac with an external disk: the `diskutil` keys that the
+  area disk checks read, the file-owner check, and the behaviour when the
+  disk is missing at boot or unplugged.
 - The machine cache on macOS.

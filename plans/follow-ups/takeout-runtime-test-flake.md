@@ -35,6 +35,12 @@
   - The pull-request CI run for the same commit passed. The failed push
     job passed on its single rerun. This branch changes neither test nor
     the control-plane runtime that they call.
+  - On 22 November 2026, the registration-retention test failed again in
+    the push CI run 45066565974 for commit `13a4163`, with the same panic
+    at line 135. The pull-request run 45066621971 of that commit passed.
+    Both runs of the next commit, a merge of `main`, passed. The branch
+    `calummoore/default-labels-rename` changes neither test nor the
+    control-plane runtime.
 - **Problem:** The tests depend on an order or a timing that load can
   change. The source is not proven. Async ordering between the lifecycle
   call and a runtime tick, or shared fixture state, is the likely source.

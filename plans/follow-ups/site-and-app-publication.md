@@ -21,13 +21,15 @@
     organizations can install it only after it is public.
 - **Task:**
   1. Check that these items are done: `legal-pages-approval.md`,
-     `cost-claim-prices.md` for its check before the launch,
-     `boat-customer-use-confirmation.md`, and `production-smoke-test.md`.
+     `cost-claim-prices.md` for its check before the launch, and
+     `production-smoke-test.md`. Boat confirmed the customer use of
+     ciproxy runners on customer Boat accounts, as the user reported on
+     21 November 2026.
   2. Check that `https://ciproxy.dev` serves the current site.
   3. Make the production GitHub App public in its GitHub settings.
 - **Impact if no action:** No customer can find the product or install
   the App.
-- **Needs:** The four items above done. The owner access of the user to
+- **Needs:** The three items above done. The owner access of the user to
   the App settings.
 - **Done when:** `https://ciproxy.dev` serves the approved site, and the
   production App is public.

@@ -1,8 +1,12 @@
 //! The macOS image store on the area volume.
 //!
-//! `images/index.json` lists the published images. A download goes to
-//! `images/NAME.tar`, extracts into `images/NAME.pending/`, and a rename
-//! publishes `images/NAME/`. Recovery removes every pending part.
+//! `images/index.json` lists the published images. A download writes
+//! `images/NAME.tar.partial`, which becomes `images/NAME.tar` after its
+//! check. The archive extracts into `images/NAME.pending/`, and a rename
+//! publishes `images/NAME/`. Recovery removes every pending part, and keeps
+//! a partial download that its sidecar describes. `import-image` puts a
+//! local archive at `images/NAME.tar` instead of the download, and then
+//! publishes it in the same way.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -12,9 +16,6 @@ use async_trait::async_trait;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::{ImageDownload, ImageMetadata, ImageReport};
 use ciproxy_protocol::platform::Platform;
-use futures_util::StreamExt;
-use sha2::{Digest, Sha256};
-use tokio::io::AsyncWriteExt;
 
 use super::host::NewestImage;
 use crate::boundaries::{ImageLease, Images};
@@ -23,6 +24,7 @@ use crate::macos::hardware::{ImageNeeds, MacosVersion};
 use crate::macos::image_bundle::{ImageIndex, IndexedImage, folder_name};
 use crate::macos::image_extract::extract;
 use crate::persistence::{atomic_private_write, private_directory};
+use crate::resumable_download::{self, ResumableDownload, Retry};
 
 pub(crate) struct MacImages {
     inner: Arc<Inner>,
@@ -30,7 +32,10 @@ pub(crate) struct MacImages {
 
 struct Inner {
     folder: PathBuf,
-    client: reqwest::Client,
+    download: ResumableDownload,
+    /// One download at a time, so that two commands never write the same
+    /// partial file.
+    fetching: tokio::sync::Mutex<()>,
     state: Mutex<State>,
 }
 
@@ -46,7 +51,8 @@ impl MacImages {
         Self {
             inner: Arc::new(Inner {
                 folder: area.join("images"),
-                client,
+                download: ResumableDownload::new(client, Retry::BROKEN_STREAM),
+                fetching: tokio::sync::Mutex::new(()),
                 state: Mutex::new(State::default()),
             }),
         }
@@ -86,6 +92,7 @@ impl Images for MacImages {
     fn recover(&self) -> Result<()> {
         let folder = &self.inner.folder;
         private_directory(folder)?;
+        resumable_download::recover(folder)?;
         for entry in std::fs::read_dir(folder).context("list images")? {
             let name = entry.context("read an image entry")?.file_name();
             let name = name.to_string_lossy();
@@ -135,77 +142,66 @@ impl Images for MacImages {
         if image.platform != Platform::MacosArm64 {
             return Err(Error::PlatformMismatch);
         }
-        if self
-            .inner
+        let _fetching = self.inner.fetching.lock().await;
+        if self.known(&image.image_id) {
+            return Ok(());
+        }
+        if !image.download_url.expose_secret().starts_with("https://") {
+            return Err(Error::HttpsRequired);
+        }
+        let archive = self.archive(&image.image_id);
+        self.inner.download.fetch(image, &archive).await?;
+        self.publish(&image.image_id, image.root_disk_bytes, &archive)
+            .await
+    }
+}
+
+impl MacImages {
+    /// The index already lists this image.
+    pub(super) fn known(&self, image: &ImageId) -> bool {
+        self.inner
             .state()
             .index
             .images
             .iter()
-            .any(|known| known.image_id == image.image_id)
-        {
-            return Ok(());
-        }
-        let name = folder_name(&image.image_id);
-        let archive = self.inner.folder.join(format!("{name}.tar"));
+            .any(|known| known.image_id == *image)
+    }
+
+    /// `images/NAME.tar`: where a checked archive waits for extraction.
+    /// Recovery removes it.
+    pub(super) fn archive(&self, image: &ImageId) -> PathBuf {
+        self.inner
+            .folder
+            .join(format!("{}.tar", folder_name(image)))
+    }
+
+    /// Extract a checked archive, publish `images/NAME/`, and make it the
+    /// newest image. The download and `import-image` both end here.
+    pub(super) async fn publish(
+        &self,
+        image_id: &ImageId,
+        root: u64,
+        archive: &std::path::Path,
+    ) -> Result<()> {
+        let name = folder_name(image_id);
         let pending = self.inner.folder.join(format!("{name}.pending"));
-        self.download(image, &archive).await?;
-        let root = image.root_disk_bytes;
-        let (archive_path, pending_path) = (archive.clone(), pending.clone());
+        let (archive_path, pending_path) = (archive.to_path_buf(), pending.clone());
         let manifest =
             tokio::task::spawn_blocking(move || extract(&archive_path, &pending_path, root))
                 .await
                 .context("join image extraction")??;
-        std::fs::remove_file(&archive).context("remove the image download")?;
+        std::fs::remove_file(archive).context("remove the image download")?;
         let target = self.inner.folder.join(&name);
         remove_folder(&target)?;
         std::fs::rename(&pending, &target).context("publish the image")?;
         let mut state = self.inner.state();
         state.index.publish(IndexedImage {
-            image_id: image.image_id.clone(),
+            image_id: image_id.clone(),
             root_disk_bytes: root,
             minimum_host_macos: manifest.minimum_host_macos,
             free_job_bytes: manifest.free_job_bytes,
         });
         self.inner.reclaim(&mut state)
-    }
-}
-
-impl MacImages {
-    /// Stream the archive to disk, then check its byte count and SHA-256.
-    async fn download(&self, image: &ImageDownload, archive: &PathBuf) -> Result<()> {
-        let url = image.download_url.expose_secret();
-        if !url.starts_with("https://") {
-            return Err(Error::HttpsRequired);
-        }
-        let response = self
-            .inner
-            .client
-            .get(url)
-            .send()
-            .await
-            .context("download image")?
-            .error_for_status()
-            .context("image download response")?;
-        let mut file = tokio::fs::File::create(archive)
-            .await
-            .context("create download")?;
-        let mut stream = response.bytes_stream();
-        let (mut digest, mut bytes) = (Sha256::new(), 0_u64);
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk.context("receive image bytes")?;
-            bytes = bytes.saturating_add(chunk.len() as u64);
-            if bytes > image.size_bytes {
-                return Err(Error::ImageVerification);
-            }
-            digest.update(&chunk);
-            file.write_all(&chunk).await.context("write image bytes")?;
-        }
-        file.sync_all().await.context("sync the image download")?;
-        let matches = hex::encode(digest.finalize()).eq_ignore_ascii_case(&image.sha256);
-        if bytes != image.size_bytes || !matches {
-            return Err(Error::ImageVerification);
-        }
-        Ok(())
     }
 }
 

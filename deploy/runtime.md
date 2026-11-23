@@ -70,6 +70,7 @@ supplies this interface:
 | Database          | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password.                                                                                                                                                                                                                                                                                  |
 | Settings          | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`.                                                                                                                                                                                                                                      |
 | Boat snapshot     | Read the optional `BOAT_SHARED_SNAPSHOT` pod variable from a Kubernetes Secret. See [Boat setup](#boat-shared-snapshot).                                                                                                                                                                                                                                                                      |
+| macOS images      | Read the optional `MACOS_IMAGE_URL_PREFIX` and `MACOS_IMAGE_MANIFEST_PATH` pod variables from this environment's GitHub variables, and the optional `R2_IMAGES_KEY` pod variable from a Kubernetes Secret. See [macOS images](#macos-images).                                                                                                                                                 |
 | GitHub App        | Read the pod variables `GITHUB_APP_ID`, `GITHUB_OAUTH_CLIENT_ID`, and `GITHUB_APP_SLUG`. Deploy maps them from this environment's `CIPROXY_APP_ID`, `CIPROXY_APP_CLIENT_ID`, and `CIPROXY_APP_SLUG` GitHub variables. Build the installation URL from the slug. The OAuth secret stays in `github-oauth-secret`.                                                                              |
 | Job image         | Read `JOB_IMAGE_MANIFEST_PATH` from this environment's GitHub variable. It pins one immutable path relative to `IMAGE_URL_PREFIX`, such as `<release>/manifest.json`.                                                                                                                                                                                                                         |
 | Build and install | Read `BUILD_ID` from the trusted deployment source commit. Read `DOWNLOAD_URL` from the HTTPS origin of this environment's release host. Deploy derives both values.                                                                                                                                                                                                                          |
@@ -79,7 +80,9 @@ supplies this interface:
 The runtime signs and fetches the manifest and its sibling `downloads.json`
 with the existing CDN key. It reads `root_disk_bytes` and `image_id` only
 from the manifest. It reads artifact names, hashes, and download bytes only
-from `downloads.json`. It signs fresh artifact URLs for each send.
+from `downloads.json`. It signs fresh artifact URLs for each send. Each of
+the two files may hold at most 1 MiB. A larger file stops the start, as a
+malformed manifest does.
 
 The GitHub variable `CDN_SIGNING_KEY_NAME` is the one selector of the CDN
 key. From it, the chart sets both the key name and the secret version N of
@@ -188,3 +191,86 @@ This role supplies `cloudkms.cryptoKeyVersions.useToEncrypt` and
 The runtime gets access tokens from the GKE metadata service through its
 [UID binding](runtime-identity.md). Offline checks cannot prove live IAM
 access or a real Boat start.
+
+## macOS images
+
+The settings `MACOS_IMAGE_URL_PREFIX`, `MACOS_IMAGE_MANIFEST_PATH`, and
+`R2_IMAGES_KEY` turn on the
+[macOS image](../docs/protocol/agent-images.md#the-macos-image).
+When one of them is absent or empty, the runtime offers no macOS image and
+logs that once. Linux machines and Boat run as before.
+
+- `MACOS_IMAGE_URL_PREFIX` is a GitHub environment variable. It holds the
+  R2 endpoint and the bucket in path style:
+  `https://785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com/ciproxy-macos-images`.
+  It must start with `https://`. Otherwise the runtime logs a warning that
+  names the setting, and macOS images stay off.
+- `MACOS_IMAGE_MANIFEST_PATH` is a GitHub environment variable. It pins one
+  release, `releases/<image_id>/manifest.json`, relative to the prefix.
+  Keep it empty until the first publish.
+- `R2_IMAGES_KEY` comes from the Secret Manager secret
+  `ciproxy-<env>-r2-images`. Each version holds one JSON object with two
+  strings: `access_key_id`, the token ID, and `secret_access_key`, the
+  SHA-256 hex of the token value.
+
+At start, the runtime reads the manifest and its sibling `downloads.json`
+with presigned URLs that expire after 5 minutes. It reads `image_id` and
+`root_disk_bytes` from the manifest, and the `macos` artifact from
+`downloads.json`. Each of the two files may hold at most 1 MiB. A failed
+read, a file over that limit, or a malformed setting logs a warning, and the
+runtime starts without a macOS image. It does not read again until the next
+pod start. For each send to a Mac, it signs a new URL that expires after 2
+hours. A customer Mac must reach
+`785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com` over HTTPS.
+
+The `deploy/terraform/data` root creates the parent
+`ciproxy-<env>-r2-images` for each environment, with no version. Each
+`ciproxy-<env>-deploy` identity gets `roles/secretmanager.secretAccessor` on
+its own parent, as for the Boat snapshot. Add a version only after that data
+apply. A parent made by hand conflicts with the apply.
+
+After the data apply succeeds, create the R2 API token
+`ciproxy-<env>-macos-images-read` in Cloudflare account
+`785233830ca9dfa2eb7c3561dd52f675`. Give it Object Read only, on the bucket
+`ciproxy-macos-images`. Then run these commands as the operator. Repeat them
+for `DEPLOY_ENV=production`. The prompts keep the token out of shell
+arguments, files, and logs. Both prompts hide what you type, because the
+here-document already uses standard input. The script turns off the HTTP
+and file logs of the Cloud SDK for its own `gcloud` call. It stores the
+SHA-256 of the token value, which is the S3 secret access key of R2:
+
+```sh
+export DEPLOY_ENV=main-preview
+gcloud secrets describe "ciproxy-$DEPLOY_ENV-r2-images" \
+  --project=ciproxy --format='value(name)'
+python3 - <<'PY'
+import getpass
+import hashlib
+import json
+import os
+import subprocess
+
+key = json.dumps({
+    "access_key_id": getpass.getpass("R2 token ID: ").strip(),
+    "secret_access_key": hashlib.sha256(
+        getpass.getpass("R2 token value: ").strip().encode()).hexdigest(),
+})
+quiet = {"CLOUDSDK_CORE_LOG_HTTP": "false",
+         "CLOUDSDK_CORE_DISABLE_FILE_LOGGING": "true"}
+subprocess.run([
+    "gcloud", "secrets", "versions", "add",
+    f"ciproxy-{os.environ['DEPLOY_ENV']}-r2-images",
+    "--project=ciproxy", "--data-file=-",
+], input=key, text=True, check=True, env={**os.environ, **quiet})
+PY
+```
+
+Set the two GitHub variables in the same environment, then deploy. Deploy
+copies the latest version into the Kubernetes Secret `r2-images`, with the
+key `R2_IMAGES_KEY`, on the same path as the
+[Boat snapshot](#boat-shared-snapshot). Helm receives only the revision of
+that Secret, and a changed revision restarts the control-plane pods. A new
+Secret Manager version reaches the pods at the next deploy. Without a
+version, deploy applies an empty Secret and continues, and macOS images stay
+off. An access denial or an apply failure stops the deploy with no payload
+in the log.

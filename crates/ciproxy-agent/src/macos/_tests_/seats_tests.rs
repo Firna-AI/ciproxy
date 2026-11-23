@@ -15,7 +15,7 @@ fn saved() -> SavedState {
     SavedState {
         format: SAVED_STATE_FORMAT,
         seat: 1,
-        image: "macos-26.7.2-1".to_owned(),
+        image: "macos-26.7.3-1".to_owned(),
         mac_address: "02:ab:cd:00:00:01".to_owned(),
         cpus: 4,
         memory_bytes: 8 << 30,
@@ -27,7 +27,7 @@ fn saved() -> SavedState {
 fn needs(now: u64) -> SeatNeeds<'static> {
     SeatNeeds {
         seat: 1,
-        newest_image: "macos-26.7.2-1",
+        newest_image: "macos-26.7.3-1",
         mac_address: "02:ab:cd:00:00:01",
         cpus: 4,
         memory_bytes: 8 << 30,
@@ -64,7 +64,7 @@ fn any_mismatch_or_age_boots_cold() {
     other.seat = 0;
     cases.push((saved(), other));
     for change in [
-        |state: &mut SavedState| state.image = "macos-26.7.2-2".to_owned(),
+        |state: &mut SavedState| state.image = "macos-26.7.3-2".to_owned(),
         |state: &mut SavedState| state.mac_address = "02:ab:cd:00:00:02".to_owned(),
         |state: &mut SavedState| state.agent_version = "0.5.1".to_owned(),
         |state: &mut SavedState| state.format = 2,
@@ -174,4 +174,39 @@ fn the_exit_file_uses_the_control_words() {
         format!("{{\"reason\":\"{}\"}}", StopReason::GuestShutdown.word())
     );
     assert_eq!(serde_json::from_str::<VmExit>(&text).expect("decode"), exit);
+}
+
+#[test]
+fn the_vm_settings_round_a_decimal_label_down_to_a_whole_mib() {
+    const MIB: u64 = 1024 * 1024;
+    let limits = ciproxy_vz::Limits {
+        min_cpus: 1,
+        max_cpus: 16,
+        min_memory_bytes: MIB,
+        max_memory_bytes: 64 << 30,
+    };
+    let label = VmSpec {
+        memory_bytes: 8_000_000_000,
+        ..spec()
+    };
+    let settings = label.settings();
+    assert_eq!(settings.memory_bytes, 7_629 * MIB);
+    assert_eq!(settings.cpus, label.cpus);
+    assert_eq!(settings.display, None);
+    settings.check(limits).unwrap();
+    assert!(
+        ciproxy_vz::VmSettings {
+            memory_bytes: label.memory_bytes,
+            ..settings
+        }
+        .check(limits)
+        .is_err()
+    );
+    let large = VmSpec {
+        memory_bytes: 16_000_000_000,
+        ..spec()
+    };
+    // 15,258.79 MiB: rounding to the nearest MiB would exceed the label.
+    assert_eq!(large.settings().memory_bytes, 15_258 * MIB);
+    assert_eq!(spec().settings().memory_bytes, 8 << 30);
 }

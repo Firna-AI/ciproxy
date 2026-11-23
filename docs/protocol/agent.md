@@ -176,6 +176,17 @@ runs on own machines.
 - **Decision:** each job runs in a fresh VM. Rejected: a VM that runs
   several jobs, because a job must not read the secrets or the files of
   another job.
+- On a Mac, a start fails when the VM helper of the new VM has not
+  answered on its control socket after 60 s. The agent then stops the
+  helper and reports a failed start. A stop frees the seat of a macOS VM
+  only after its helper has ended, so no new VM uses the same MAC address
+  and machine identifier while the old VM runs.
+- **Decision (22 November 2026):** one 60 s deadline for a macOS VM
+  helper to answer. Rejected: no limit while launchd shows the helper
+  running, because a stuck helper would then hold its seat until a stop;
+  and a start progress signal from the helper, because it adds a helper
+  protocol message for a start that takes about 1 s. Reason: a bounded
+  wait lets the agent clean up a hung helper.
 
 ## The image
 

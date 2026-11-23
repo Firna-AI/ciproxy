@@ -11,8 +11,7 @@ printf 'runner ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/ciproxy-runner
 chmod 0440 /etc/sudoers.d/ciproxy-runner
 printf '%s  /tmp/ciproxy-runner.tar.gz\n' "$RUNNER_SHA256" | sha256sum --check
 tar -xzf /tmp/ciproxy-runner.tar.gz -C /opt/actions-runner
-install -m 0644 /opt/actions-runner/bin/Runner.Worker.dll /opt/actions-runner/bin/Runner.Worker.stock.dll
-install -m 0644 /tmp/ciproxy-worker.dll /opt/actions-runner/bin/Runner.Worker.own.dll
+bash "$definition/runner-patch/install-worker.sh" /opt/actions-runner /tmp/ciproxy-worker
 chown -R runner:runner /opt/actions-runner
 install -m 0755 /tmp/ciproxy-guest /usr/local/bin/ciproxy-guest
 install -m 0755 /tmp/ciproxy-cache-sidecar /usr/local/bin/ciproxy-cache-sidecar
@@ -48,8 +47,8 @@ find /opt/post-generation -maxdepth 1 -type f -name '*.sh' -exec bash {} \;
 rm -f /etc/apt/preferences.d/ciproxy-software
 if [[ $mode == boat ]]; then
     usermod --append --groups sudo,docker runner
-    rm -f /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-guest \
-        /tmp/ciproxy-cache-sidecar /tmp/ciproxy-worker.dll
+    rm -f /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-guest /tmp/ciproxy-cache-sidecar
+    rm -rf /tmp/ciproxy-worker
     exit 0
 fi
 bash "$definition/boat-build-clean-image.sh"
@@ -67,4 +66,5 @@ DNS=1.1.1.1
 EOF
 systemctl enable systemd-networkd systemd-resolved
 rm -f /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-guest /tmp/vmlinux-ciproxy \
-    /tmp/ciproxy-cache-sidecar /tmp/ciproxy-worker.dll
+    /tmp/ciproxy-cache-sidecar
+rm -rf /tmp/ciproxy-worker

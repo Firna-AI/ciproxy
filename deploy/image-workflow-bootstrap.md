@@ -5,30 +5,57 @@ Two cloud identities serve the control-plane image jobs:
 through workload identity federation. Each identity has one provider,
 `github`, in the workload identity pool of the same name. Each provider
 admits only the jobs of one reusable workflow, through its
-`job_workflow_ref` claim. Until launch, that workflow is on the primary
-branch `calummoore/ci-proxy-load-balancer`. Both providers require this
-exact claim:
+`job_workflow_ref` claim. That workflow is on protected `main`. Both
+providers require this exact claim:
 
 ```text
-Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer
+Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main
 ```
 
-The preview caller calls the workflow on that branch, also when the caller
-runs on `main`. Each provider maps `attribute.job_workflow_ref` from the
-signed GitHub token. An ordinary job, such as the npm workload job, has no
-such claim. A call of another workflow file or another branch has a
-different claim. The binding changes no role permission.
+The caller `deploy-main-preview.yml` chooses its reference by the branch
+of the run:
+
+- A run on `main` calls the image workflow with a local reference. GitHub
+  takes the workflow file from the run's own reviewed commit and resolves
+  no branch or tag name.
+- A run on the primary branch `calummoore/ci-proxy-load-balancer` calls
+  the workflow on `main` with the remote reference `@main`.
+
+When a Git tag and a branch share a name, GitHub selects the tag for a
+remote reference. So a tag named `main` could replace the workflow behind
+`@main`. Runs on `main` never use that reference, and production follows
+only runs on `main`. A primary-branch run gets the image identities only
+when its jobs carry the claim above. The binding changes no role
+permission.
+
+Each provider maps `attribute.job_workflow_ref` from the signed GitHub
+token. An ordinary job, such as the npm workload job, has no such claim. A
+call of another workflow file or another branch has a different claim.
 [GitHub OIDC claims][oidc-claims] define `job_workflow_ref` and
 `job_workflow_sha`. [Build and reuse](control-plane-images.md#build-and-reuse)
 gives the job boundaries.
 
-The primary branch has no ruleset. A push to it can change this workflow
-and the tools that the workflow checks out. So this binding is a prelaunch
-trust root, not protected `main`. Keep production off until
-[the move to `main`](#move-the-binding-to-main-at-launch). Preview needs
-no change on `main`.
+The prelaunch binding named the workflow on the primary branch. That branch
+has no ruleset. A push to it can change that workflow and the tools that
+the workflow checks out. So the prelaunch binding was a trust root outside
+protected `main`.
+
+Both providers keep the prelaunch claim until a bootstrap from protected
+`main` applies [the move](#move-the-binding-to-main-at-launch). Until the
+[launch retirement](launch.md#retire-prelaunch-authority), a rerun of a
+`main` push from before the move can apply the prelaunch claim again. Keep
+production off until the move and its launch checks pass.
 
 ## Activate the primary binding
+
+These steps activate the prelaunch binding. After the move to `main`, do
+not apply the bootstrap of a primary-branch revision. That bootstrap
+applies the prelaunch claim again. Use the bootstrap and the provider read
+of [the move](#move-the-binding-to-main-at-launch) instead.
+
+For a fresh project, run that bootstrap with `--image-registry` after
+shared core exists. Keep the variable setup below. Set the claim on `main`
+as the move does, then [read both providers](#read-both-providers).
 
 Run these steps after the reviewed image workflow change merges into the
 primary branch. They change nothing on `main`. They need no pull request,
@@ -68,25 +95,18 @@ creates the registry `ciproxy-shared-runtime`.
    ```
 
    Review the plan before you accept it. Both image providers must end with
-   the claim above. The script reads the remote bootstrap outputs. It keeps
-   the launch phase and the captured runtime UIDs. So the outputs
-   `production_enabled` and `runtime_service_account_uids` do not change.
+   the primary claim that the next step sets. The script reads the remote
+   bootstrap outputs. It keeps the launch phase and the captured runtime
+   UIDs. So the outputs `production_enabled` and
+   `runtime_service_account_uids` do not change.
    `--image-registry` sets `control_plane_registry_ready` to true. Later
    operator retries and protected-main CI plans keep that value. The
    primary preview branch cannot apply bootstrap.
 
-4. Check both providers. The command prints `true` once for each provider:
+4. Set the primary claim. Then [read both providers](#read-both-providers):
 
    ```sh
-   CLAIM="Firna-AI/ciproxy/$WORKFLOW@refs/heads/$PRIMARY"
-   for pool in ciproxy-image-lookup ciproxy-image-publish; do
-     gcloud iam workload-identity-pools providers describe github \
-       --workload-identity-pool="$pool" --location=global --project=ciproxy \
-       --format=json \
-       | jq -e --arg condition "assertion.job_workflow_ref == '$CLAIM'" \
-         '(.attributeCondition | contains($condition)) and
-          .attributeMapping["attribute.job_workflow_ref"] == "assertion.job_workflow_ref"'
-   done
+   CLAIM=Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer
    ```
 
 5. Set or keep the four image variables of the `main-preview` GitHub
@@ -130,15 +150,16 @@ rerun.
 
 ## Move the binding to main at launch
 
-The launch merge puts the complete tree on protected `main`. Until the
-move, preview runs on `main` still call the primary workflow. Production
-promotes the images that this workflow publishes. So move the binding
-before you enable production:
+The launch merge puts the complete tree on protected `main`. Preview runs
+of `main` commits from before the move call the primary workflow.
+Production promotes the images that the trusted workflow publishes. So move
+the binding before you enable production:
 
 1. Merge one reviewed change into protected `main`. It switches these
    values from the primary branch to `main` together:
 
-   - the caller reference in `deploy-main-preview.yml`
+   - the caller in `deploy-main-preview.yml`, with a local call for runs on
+     `main` and the remote call `@main` for the primary branch
    - the expected claim inside `deploy-control-plane-image.yml`
    - the claim of both image providers in `terraform/bootstrap`
    - the offline tests that pin these values
@@ -154,21 +175,82 @@ before you enable production:
    bash deploy/scripts/bootstrap.sh main-preview --existing-state
    ```
 
-   Before the launch handoff, the trust jobs of the `main` preview run can
-   apply the same plan first. The operator plan then shows no provider
-   change.
+   Before the launch handoff, the trust jobs of the preview run of that
+   commit can apply the same plan first. The operator plan then shows no
+   provider change.
 
-3. Repeat the provider check of [activation](#activate-the-primary-binding)
-   with this claim:
+3. Set the claim on `main`. Then [read both providers](#read-both-providers):
 
    ```sh
    CLAIM=Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main
    ```
 
-4. Rerun all jobs of a preview push on `main`. A preview run that still
-   calls the primary workflow now fails image authentication.
+4. Set `COMMIT` to the current reviewed `main` commit. Fetch `main` again,
+   so that no older checkout selects the run:
+
+   ```sh
+   git fetch origin main
+   COMMIT="$(git rev-parse origin/main)"
+   ```
+
+   Then [rerun its main push](#rerun-a-reviewed-main-push). This run calls
+   the image workflow of its own commit, so its image jobs test the new
+   claim.
+
+   Do not rerun a `main` push from before the move. Its caller calls the
+   workflow on the primary branch by name. A rerun of all jobs runs the
+   current code of that unprotected branch. Until the
+   [retirement](launch.md#retire-prelaunch-authority), its trust jobs also
+   apply the bootstrap of its own commit before its image job. That
+   bootstrap restores the prelaunch claim, so the run can pass without a
+   test of the move.
+
+   A push run on the primary branch applies no bootstrap. While both
+   providers keep the claim on `main`, a run that calls the primary
+   workflow fails image authentication.
 
 Enable production only after these steps. The [launch guide](launch.md)
-gives the separate, irreversible trust handoff.
+gives the separate, irreversible trust handoff. It repeats the provider
+read after its last operator bootstrap, before the production switch.
+After the switch, it reruns a reviewed `main` push with the same block as
+the move. After the retirement, no preview run can change the providers.
+
+## Shared operator blocks
+
+Several steps reuse these blocks. Each block takes its input from the step
+that runs it. A block never sets or overwrites that input.
+
+### Read both providers
+
+Set `CLAIM` in your step first. The read prints `true` once for each
+provider when its condition contains that claim:
+
+```sh
+for pool in ciproxy-image-lookup ciproxy-image-publish; do
+  gcloud iam workload-identity-pools providers describe github \
+    --workload-identity-pool="$pool" --location=global --project=ciproxy \
+    --format=json \
+    | jq -e --arg condition "assertion.job_workflow_ref == '$CLAIM'" \
+      '(.attributeCondition | contains($condition)) and
+       .attributeMapping["attribute.job_workflow_ref"] == "assertion.job_workflow_ref"'
+done
+```
+
+### Rerun a reviewed main push
+
+Set `COMMIT` in your step first. The block lists the preview push runs of
+that commit on `main`. Select one of them. The block reruns all its jobs
+only when the `headSha` of the selected run equals `COMMIT`:
+
+```sh
+gh run list --repo=Firna-AI/ciproxy --workflow=deploy-main-preview.yml \
+  --branch=main --event=push --commit="$COMMIT" \
+  --json databaseId,headSha,event,status,conclusion
+RUN_ID=SELECTED_RUN_ID
+test "$(gh run view "$RUN_ID" --repo=Firna-AI/ciproxy --json headSha --jq .headSha)" = "$COMMIT" \
+  && gh run rerun "$RUN_ID" --repo=Firna-AI/ciproxy
+```
+
+Then [check the image run](control-plane-images.md#check-the-image-run).
 
 [oidc-claims]: https://docs.github.com/en/actions/reference/security/oidc
