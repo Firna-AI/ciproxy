@@ -1,16 +1,18 @@
 // Where the waiting jobs of each label can start now, from the facts that the
-// API gives and the time of the read. Own machines run a label when one of
-// them fits it. Boat starts a job of a label when the label allows Boat, a
-// Boat size fits it, and Boat takes new jobs now. Boat starts the job at once
-// when no own machine runs its label, and otherwise after the overflow wait.
-// Each notice of the live queue reads these places, so no notice promises a
-// start that the facts do not confirm. A fact that the API leaves out
-// promises nothing.
+// API gives and the time of the read. Own machines run a label when the
+// order holds them and one of them fits it. A provider starts a job of a
+// label when the order holds it, one of its sizes fits, and it takes new
+// jobs now. A job goes to the first place of its order that can take it:
+// a provider before own machines starts it at once, and a provider after own
+// machines that fit starts it after the overflow wait. Each notice of the
+// live queue reads these places, so no notice promises a start that the
+// facts do not confirm. A fact that the API leaves out promises nothing.
 //
 // The fit of each place comes from the label and its resources only, never
-// from a hold of Boat. A hold of Boat comes from the overflow facts at the
-// time of the read: a saved retry time holds new starts only while it is
-// after the read, as the overflow service waits only until that time.
+// from a hold of a provider. A hold comes from the overflow facts of its
+// provider at the time of the read: a saved retry time holds new starts only
+// while it is after the read, as the overflow service waits only until that
+// time.
 
 import type {
   JobOverflow,
@@ -18,13 +20,18 @@ import type {
   JobsLivePage,
   WaitingLabelFit,
 } from "../api/jobs-types.ts";
-import { boatLabelFit, hasMachines } from "./settings-label-places.ts";
+import type {
+  LabelRouting,
+  OverflowProvider,
+  ProviderLabelFit,
+} from "../api/schema.ts";
+import { hasMachines } from "./settings-label-places.ts";
 
 /** Whether an own machine runs the label now, or why none does. */
 export type OwnFit =
-  /** An allowed own machine fits the label. */
+  /** The order holds own machines, and one of them fits the label. */
   | "fits"
-  /** The label does not run on own machines. */
+  /** The order of the label does not hold own machines. */
   | "forbidden"
   /** No own machine takes jobs now. */
   | "no-machine"
@@ -33,13 +40,11 @@ export type OwnFit =
   /** The API leaves out the facts of the own machines. */
   | "unknown";
 
-/** Whether a Boat size fits the label, from its permission and the catalog. */
-export type BoatFit =
-  /** The label does not run on Boat. */
-  | { kind: "forbidden" }
-  /** No Boat size fits the label. */
+/** Whether a size of a provider of the order fits the label. */
+export type ProviderFit =
+  /** No size of the provider fits the label. */
   | { kind: "no-fit" }
-  /** The API leaves out the Boat facts. */
+  /** The API leaves out the facts of the provider. */
   | { kind: "unknown" }
   /** A size fits, or the largest size when the label asks for it. */
   | {
@@ -47,51 +52,67 @@ export type BoatFit =
       sizeName: string;
       size: JobVmSize;
       largest: boolean;
-      /** Boat refused this size, so it starts no job on it now. */
+      /** The provider refused this size, so it starts no job on it now. */
       refused: boolean;
     };
 
-/** Whether Boat takes new jobs now, for every label, at the read time. */
-export type BoatHold = {
-  /** Boat starts new jobs, a hold stops them, or a fact lacks. */
+/** Whether a provider takes new jobs now, for every label, at the read time. */
+export type ProviderHoldState = {
+  /** It starts new jobs, a hold stops them, or a fact lacks. */
   state: "takes" | "held" | "uncounted" | "unknown";
   /** The saved retry time, only while it is after the read. */
   retryUntil: string | null;
 };
 
-/** Whether Boat starts the jobs of the label now, and on which size. */
-export type BoatStart =
-  /** The label does not run on Boat. */
-  | { kind: "not-allowed" }
-  /** No Boat size fits the label. */
+/** Whether a provider starts the jobs of the label now, and on which size. */
+export type ProviderStart =
+  /** No size of the provider fits the label. */
   | { kind: "no-size" }
-  /** The API leaves out the Boat facts. */
+  /** The API leaves out the facts of the provider. */
   | { kind: "unknown" }
-  /** The Boat costs have no safe count, so Boat starts no new sandbox. */
+  /** The costs have no safe count, so the provider starts no new sandbox. */
   | { kind: "uncounted" }
-  /** A hold of Boat stops every new start now. */
+  /** A hold of the provider stops every new start now. */
   | { kind: "held" }
-  /** Boat refused the size of this label only. */
+  /** The provider refused the size of this label only. */
   | { kind: "size-refused" }
-  /** Boat starts the jobs, on the largest size when nothing else fits. */
+  /** It starts the jobs, on its largest size when nothing else fits. */
   | { kind: "starts"; sizeName: string; size: JobVmSize; largest: boolean };
+
+/** One provider of the order of a label, with its fit and its start. */
+export type ProviderPlace = {
+  provider: OverflowProvider;
+  fit: ProviderFit;
+  start: ProviderStart;
+  /** The provider comes before own machines in the order. */
+  beforeOwn: boolean;
+};
 
 export type LabelPlace = {
   fit: WaitingLabelFit;
   jobs: number;
   own: OwnFit;
-  boatFit: BoatFit;
-  boat: BoatStart;
+  /** The providers of the order, in order. */
+  providers: readonly ProviderPlace[];
+  /** Where the API routes the label now, when the label still exists. */
+  routing: LabelRouting | null;
 };
 
-/** Select the provider used by the current live notices. */
-export function boatObservation(page: JobsLivePage): JobOverflow | null {
-  return page.overflow.find((provider) => provider.provider === "boat") ?? null;
+/** The observation of one provider in the live queue, if the API has one. */
+export function observation(
+  page: JobsLivePage,
+  provider: OverflowProvider,
+): JobOverflow | null {
+  return page.overflow.find((item) => item.provider === provider) ?? null;
 }
 
-/** The hold of Boat at `readAt`, the browser time when the read arrived. */
-export function boatHold(page: JobsLivePage, readAt: number): BoatHold {
-  const overflow = boatObservation(page);
+/** The hold of a provider at `readAt`, the browser time of the read. */
+export function providerHold(
+  page: JobsLivePage,
+  provider: OverflowProvider,
+  readAt: number,
+): ProviderHoldState {
+  const overflow = observation(page, provider);
   const retry = overflow?.retry_at ?? null;
   const retryUntil =
     retry !== null && Date.parse(retry) > readAt ? retry : null;
@@ -121,32 +142,30 @@ function ownFit(fit: WaitingLabelFit): OwnFit {
   return current.fit.eligible_machines === 0 ? "no-machine" : "no-fit";
 }
 
-function boatFit(fit: WaitingLabelFit): BoatFit {
-  const boat = boatLabelFit(fit.providers)?.fit;
-  if (boat === undefined) return { kind: "unknown" };
-  switch (boat.state) {
+function providerFit(fit: ProviderLabelFit["fit"]): ProviderFit {
+  switch (fit.state) {
     case "disabled":
-      return { kind: "forbidden" };
-    case "no_size_fits":
-      return { kind: "no-fit" };
     case "unavailable":
       return { kind: "unknown" };
+    case "no_size_fits":
+      return { kind: "no-fit" };
     case "fitting":
     case "largest_fallback":
       return {
         kind: "fits",
-        sizeName: boat.size_name,
-        size: boat.size,
-        largest: boat.state === "largest_fallback",
-        refused: boat.refused,
+        sizeName: fit.size_name,
+        size: fit.size,
+        largest: fit.state === "largest_fallback",
+        refused: fit.refused,
       };
   }
 }
 
-function boatStart(fit: BoatFit, hold: BoatHold): BoatStart {
+function providerStart(
+  fit: ProviderFit,
+  hold: ProviderHoldState,
+): ProviderStart {
   switch (fit.kind) {
-    case "forbidden":
-      return { kind: "not-allowed" };
     case "no-fit":
       return { kind: "no-size" };
     case "unknown":
@@ -163,33 +182,46 @@ function boatStart(fit: BoatFit, hold: BoatHold): BoatStart {
   }
 }
 
-/** The place of each waiting label, in the order of the API. */
-export function labelPlaces(page: JobsLivePage, hold: BoatHold): LabelPlace[] {
-  return page.waiting_labels.map((fit) => {
-    const physical = boatFit(fit);
-    return {
-      fit,
-      jobs: Number(fit.waiting_jobs),
-      own: ownFit(fit),
-      boatFit: physical,
-      boat: boatStart(physical, hold),
-    };
+/**
+ * The providers of the order of a label, in order. The API lists the
+ * providers of the order first and marks every other provider as disabled.
+ */
+function orderedProviders(
+  fit: WaitingLabelFit,
+  holds: (provider: OverflowProvider) => ProviderHoldState,
+): ProviderPlace[] {
+  const order = fit.current?.label.order ?? null;
+  const machineIndex =
+    order?.findIndex((place) => place.kind === "machine") ?? -1;
+  return fit.providers.flatMap((item) => {
+    if (item.fit.state === "disabled") return [];
+    const index =
+      order?.findIndex(
+        (place) =>
+          place.kind === "overflow" && place.provider === item.provider,
+      ) ?? -1;
+    if (order !== null && index < 0) return [];
+    const physical = providerFit(item.fit);
+    return [
+      {
+        provider: item.provider,
+        fit: physical,
+        start: providerStart(physical, holds(item.provider)),
+        beforeOwn: machineIndex >= 0 && index >= 0 && index < machineIndex,
+      },
+    ];
   });
 }
 
-/** No own machine runs the label: it forbids them, or none takes or fits it. */
-export function noOwnMachine(own: OwnFit): boolean {
-  return own === "forbidden" || own === "no-machine" || own === "no-fit";
-}
-
-/**
- * When Boat starts the jobs of a label: at once when no own machine runs the
- * label, after the overflow wait when one does, and never a promise when the
- * own fit is unknown.
- */
-export function boatTiming(place: LabelPlace): "at-once" | "after-wait" | null {
-  if (place.boat.kind !== "starts") return null;
-  if (noOwnMachine(place.own)) return "at-once";
-  if (place.own === "fits") return "after-wait";
-  return null;
+/** The place of each waiting label, in the order of the API. */
+export function labelPlaces(page: JobsLivePage, readAt: number): LabelPlace[] {
+  const holds = (provider: OverflowProvider) =>
+    providerHold(page, provider, readAt);
+  return page.waiting_labels.map((fit) => ({
+    fit,
+    jobs: Number(fit.waiting_jobs),
+    own: ownFit(fit),
+    providers: orderedProviders(fit, holds),
+    routing: fit.current?.fit.routing ?? null,
+  }));
 }

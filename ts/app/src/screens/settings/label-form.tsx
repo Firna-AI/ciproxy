@@ -1,49 +1,29 @@
 // The fields of the label dialog: the name and the platform, which an edit
 // shows read-only because a label keeps both, the size, the line that says
-// where jobs of the size run, the switches "Your machines" and "Boat", and
-// "When nothing fits". A macOS label runs on the Macs only, so it has no
-// switches and no "When nothing fits": its jobs wait for a free Mac. The
-// size fields hold the typed text, and each shows its error once it has text
-// or after a save.
+// where jobs of the size run, the order of places, and "When nothing fits".
+// A macOS label runs on the Macs only, so its order holds own machines only
+// and it has no "When nothing fits": its jobs wait for a free Mac. The size
+// fields hold the typed text, and each shows its error once it has text or
+// after a save.
 
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Input } from "@firna/ui/input";
 import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 import { SegmentedControl } from "@firna/ui/segmented";
-import { Switch } from "@firna/ui/switch";
 
-import type { Platform } from "../../api/schema.ts";
-import { text } from "../../components/text.ts";
+import type { OverflowProvider, Platform } from "../../api/schema.ts";
 import { platformName } from "../../view/platform.ts";
-import type { LabelDraft, SizeField } from "../../view/settings-label-form.ts";
-import { largestBoatText } from "../../view/settings-label-sizes.ts";
-
-function Toggle({
-  label,
-  caption,
-  value,
-  onChange,
-}: {
-  label: string;
-  caption: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <View style={styles.toggle}>
-      <View style={styles.toggleText}>
-        <Text style={[text.small, text.strong]}>{label}</Text>
-        <Text style={text.caption}>{caption}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        accessibilityLabel={label}
-      />
-    </View>
-  );
-}
+import {
+  withOrder,
+  type LabelDraft,
+  type SizeField,
+} from "../../view/settings-label-form.ts";
+import {
+  machinePlace,
+  orderProviders,
+} from "../../view/settings-label-places.ts";
+import { LabelOrder, type OrderFacts } from "./label-order.tsx";
 
 const platformOptions = (["linux_x64", "macos_arm64"] as const).map(
   (value) => ({ value, label: platformName[value] }),
@@ -90,8 +70,8 @@ const sizeFields: readonly { field: SizeField; label: string }[] = [
   { field: "disk", label: "Free disk, GB" },
 ];
 
-/** Where the jobs of a Linux label may run, and what they do then. */
-function LinuxPlaces({
+/** What the jobs of a Linux label do when no place of its order fits. */
+function WhenNothingFits({
   draft,
   onChange,
 }: {
@@ -99,38 +79,36 @@ function LinuxPlaces({
   onChange: (next: LabelDraft) => void;
 }) {
   return (
-    <>
-      <Toggle
-        label="Your machines"
-        caption="Jobs start here first"
-        value={draft.allowMachines}
-        onChange={(allowMachines) => onChange({ ...draft, allowMachines })}
+    <RadioCardGroup label="When nothing fits">
+      <RadioCard
+        title="Wait"
+        body="Jobs stay queued until a place of the order fits them."
+        checked={draft.whenNothingFits === "wait"}
+        onPress={() => onChange({ ...draft, whenNothingFits: "wait" })}
       />
-      <Toggle
-        label="Boat"
-        caption="When your machines are busy, or none of them fits"
-        value={draft.allowBoat}
-        onChange={(allowBoat) => onChange({ ...draft, allowBoat })}
+      <RadioCard
+        title="Run on the largest size"
+        body={
+          orderProviders(draft.order).length > 0
+            ? "Jobs run on the largest size of the first provider of the order that can take jobs."
+            : "Add a provider to the order to use this choice."
+        }
+        checked={draft.whenNothingFits === "largest_overflow"}
+        onPress={() =>
+          onChange({ ...draft, whenNothingFits: "largest_overflow" })
+        }
       />
-      <RadioCardGroup label="When nothing fits">
-        <RadioCard
-          title="Wait"
-          body="Jobs stay queued until a machine or a Boat size fits."
-          checked={draft.whenNothingFits === "wait"}
-          onPress={() => onChange({ ...draft, whenNothingFits: "wait" })}
-        />
-        <RadioCard
-          title="Run on the largest Boat size"
-          body={largestBoatText}
-          checked={draft.whenNothingFits === "largest_overflow"}
-          onPress={() =>
-            onChange({ ...draft, whenNothingFits: "largest_overflow" })
-          }
-        />
-      </RadioCardGroup>
-    </>
+    </RadioCardGroup>
   );
 }
+
+/** The facts of the order rows and the places that Add a place offers. */
+export type OrderInput = OrderFacts & {
+  /** The offered providers, or null while the overflow settings are unknown. */
+  offered: readonly OverflowProvider[] | null;
+  /** Settings under Overflow, where a provider connects. */
+  overflowHref: string;
+};
 
 export function LabelForm({
   draft,
@@ -139,6 +117,7 @@ export function LabelForm({
   nameError,
   sizeErrors,
   fit,
+  order,
   onChange,
 }: {
   draft: LabelDraft;
@@ -152,8 +131,10 @@ export function LabelForm({
   sizeErrors: Partial<Record<SizeField, string>>;
   /** The line that says where jobs of the size run. */
   fit: ReactNode;
+  order: OrderInput;
   onChange: (next: LabelDraft) => void;
 }) {
+  const mac = draft.platform === "macos_arm64";
   return (
     <View style={styles.form}>
       {edit ? (
@@ -199,14 +180,16 @@ export function LabelForm({
         ))}
       </View>
       {fit}
-      {draft.platform === "macos_arm64" ? (
-        <Text style={text.small}>
-          Jobs run on your Macs only, never on Boat. When no Mac is free, they
-          wait.
-        </Text>
-      ) : (
-        <LinuxPlaces draft={draft} onChange={onChange} />
-      )}
+      <LabelOrder
+        order={mac ? [machinePlace] : draft.order}
+        mac={mac}
+        facts={order}
+        offered={order.offered}
+        overflowHref={order.overflowHref}
+        name={draft.name}
+        onChange={(places) => onChange(withOrder(draft, places))}
+      />
+      {mac ? null : <WhenNothingFits draft={draft} onChange={onChange} />}
     </View>
   );
 }
@@ -215,11 +198,4 @@ const styles = StyleSheet.create({
   form: { gap: 16 },
   sizes: { flexDirection: "row", gap: 12 },
   size: { flex: 1, minWidth: 0 },
-  toggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-  },
-  toggleText: { flexShrink: 1, gap: 2 },
 });

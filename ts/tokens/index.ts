@@ -68,12 +68,13 @@ export const statusColors = {
 export type StatusTone = keyof typeof statusColors;
 
 /**
- * Chart colours: the two series of the starts chart, and the emphasis bars of
- * the cost chart. The context grey is 3.3:1 on white.
+ * Chart colours: the two series of the starts chart, own machines and the
+ * overflow of every provider, and the emphasis bars of the cost chart. The
+ * context grey is 3.3:1 on white.
  */
 export const chartColors = {
   own: "#171717",
-  boat: "#A8A8A8",
+  overflow: "#A8A8A8",
   accent: ink,
   context: "#8F8F8F",
 } as const;

@@ -3,8 +3,8 @@
 // none. It is a page read: a failed first read shows with Try again, and a
 // failed refresh keeps the last summary and shows the failure with Try again.
 // Neither hides the machines. The summary reads again only when a page asks,
-// never on an interval, because each read asks Boat for the costs of the
-// open starts.
+// never on an interval, because each read asks the providers for the costs
+// of the open starts.
 
 import type { ApiResult } from "../api/client.ts";
 import type { MachineEndpoints } from "../api/machine-endpoints.ts";

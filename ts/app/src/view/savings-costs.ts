@@ -1,8 +1,10 @@
-// The cost table and the notices of the savings report. A cost that the API
-// knows only in part shows its known part as "At least", a machine cost that
-// nobody set says "Not set", and a plan price that ciproxy lacks says
-// "Unknown". The total of an incomplete report says "Incomplete". Totals of
-// starts and minutes add both places exactly.
+// The cost table and the notices of the savings report: own machines, one
+// row for the overflow of each provider that ran jobs or charged for
+// sandboxes in the range, and the plan. A cost that the API knows only in
+// part shows its known part as "At least", a machine cost that nobody set
+// says "Not set", and a plan price that ciproxy lacks says "Unknown". The
+// total of an incomplete report says "Incomplete". Totals of starts and
+// minutes add every place exactly.
 
 import type {
   SavingsComparison,
@@ -18,7 +20,8 @@ import {
   sumDecimals,
 } from "./exact-format.ts";
 import { formatGigabytes, joinWords } from "./format.ts";
-import { boatRuntime, totalStarts } from "./savings-report.ts";
+import { providerName } from "./providers.ts";
+import { totalStarts } from "./savings-report.ts";
 
 export type CostRow = {
   key: string;
@@ -51,10 +54,14 @@ export function costRows(page: SavingsPage): CostRow[] {
   );
   const planGap = gapped(page, new Set(["plan_price", "workspace_start"]));
   const total = page.total_cents ?? null;
-  const boat = boatRuntime(page);
-  const boatCost =
-    page.providers.find((provider) => provider.provider === "boat")
-      ?.cost_cents ?? "0";
+  const providers: CostRow[] = page.providers.map((provider) => ({
+    key: provider.provider,
+    label: `${providerName(provider.provider)} overflow`,
+    jobs: formatCount(provider.usage.starts),
+    minutes: formatWhole(provider.usage.minutes),
+    cost: formatCents(provider.cost_cents, "column"),
+    total: false,
+  }));
   return [
     {
       key: "machines",
@@ -68,14 +75,7 @@ export function costRows(page: SavingsPage): CostRow[] {
       ),
       total: false,
     },
-    {
-      key: "boat",
-      label: "Boat overflow",
-      jobs: formatCount(boat.starts),
-      minutes: formatWhole(boat.minutes),
-      cost: formatCents(boatCost, "column"),
-      total: false,
-    },
+    ...providers,
     {
       key: "plan",
       label: "ciproxy plan",
@@ -88,7 +88,12 @@ export function costRows(page: SavingsPage): CostRow[] {
       key: "total",
       label: "Total",
       jobs: formatCount(totalStarts(page)),
-      minutes: formatWhole(sumDecimals([page.machines.minutes, boat.minutes])),
+      minutes: formatWhole(
+        sumDecimals([
+          page.machines.minutes,
+          ...page.providers.map((provider) => provider.usage.minutes),
+        ]),
+      ),
       cost: total === null ? "Incomplete" : formatCents(total, "column"),
       total: true,
     },

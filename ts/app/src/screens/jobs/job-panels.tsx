@@ -12,7 +12,7 @@ import {
   DetailStack,
 } from "../../components/detail-list.tsx";
 import {
-  BoatIcon,
+  CloudIcon,
   DashedCircleIcon,
   MachinesIcon,
 } from "../../components/icons.tsx";
@@ -22,8 +22,8 @@ import type { DetailRowModel, JobDetailModel } from "../../view/jobs-detail.ts";
 
 function PlaceIcon({ model }: { model: JobDetailModel }) {
   const Icon =
-    model.place.kind === "boat"
-      ? BoatIcon
+    model.place.kind === "provider"
+      ? CloudIcon
       : model.place.kind === "machine"
         ? MachinesIcon
         : DashedCircleIcon;

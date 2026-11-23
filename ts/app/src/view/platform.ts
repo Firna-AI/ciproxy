@@ -1,7 +1,8 @@
 // The platform of a label or a machine, as the dashboard names it. A Linux
 // machine is an x64 computer that runs Linux, and a Mac is an Apple Silicon
 // computer that runs macOS. A label keeps its platform, and its jobs run only
-// on machines of that platform. The jobs of a macOS label never run on Boat.
+// on machines of that platform. The jobs of a macOS label never run on an
+// overflow provider.
 
 import type {
   LabelInput,

@@ -11,8 +11,10 @@ import type {
   JobView,
   JobVmSize,
 } from "../api/jobs-types.ts";
+import type { OverflowProvider } from "../api/schema.ts";
 import { dotJoin, unbroken } from "./exact-format.ts";
 import { formatGigabytes } from "./format.ts";
+import { providerName } from "./providers.ts";
 
 export const unknownText = "Unknown";
 
@@ -119,11 +121,19 @@ export function vmText(size: JobVmSize): string {
   );
 }
 
-/** "Boat large · 8 vCPU · 16 GB · 111 GB disk": the Boat size that ran it. */
-export function boatText(name: string, size: JobVmSize | null): string {
-  if (size === null) return `Boat ${name}`;
+/**
+ * "Boat large · 8 vCPU · 16 GB · 111 GB disk": the size of the provider that
+ * ran a job.
+ */
+export function providerSizeText(
+  provider: OverflowProvider,
+  name: string,
+  size: JobVmSize | null,
+): string {
+  const named = `${providerName(provider)} ${name}`;
+  if (size === null) return named;
   return dotJoin(
-    unbroken(`Boat ${name}`),
+    unbroken(named),
     unbroken(`${size.vcpus} vCPU`),
     unbroken(formatGigabytes(size.memory_bytes)),
     unbroken(`${formatGigabytes(size.disk_bytes)} disk`),
@@ -132,7 +142,7 @@ export function boatText(name: string, size: JobVmSize | null): string {
 
 export type Place =
   | { kind: "machine"; name: string; slot: string | null }
-  | { kind: "boat" }
+  | { kind: "provider"; provider: OverflowProvider }
   | { kind: "none" }
   | { kind: "unknown" };
 
@@ -147,7 +157,9 @@ export function placeOf(
   if (location === null || location === undefined) {
     return countsAsStart ? { kind: "unknown" } : { kind: "none" };
   }
-  if (location.kind === "overflow") return { kind: "boat" };
+  if (location.kind === "overflow") {
+    return { kind: "provider", provider: location.provider };
+  }
   const slot = location.first_slot;
   return {
     kind: "machine",

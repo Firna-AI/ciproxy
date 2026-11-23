@@ -28,7 +28,7 @@ pub(crate) async fn list(
     .await?;
     Ok(Json(MembersView { open_requests: members.iter().filter(|member| member.role.is_none()).count().try_into().unwrap_or(u32::MAX),
         members: members.into_iter().map(views::member).collect(),
-        admin_notice: "An Admin can add machines and connect Boat. These run jobs and their secrets for every organization in this workspace.".to_owned() }))
+        admin_notice: "An Admin can add machines and connect overflow providers. These run jobs and their secrets for every organization in this workspace.".to_owned() }))
 }
 
 #[utoipa::path(operation_id = "members_save", put, path = "/workspaces/{workspace_id}/members/{member_id}", params(MemberPath), request_body = RoleChange, responses((status = 200, body = Success)), security(("session" = [])))]

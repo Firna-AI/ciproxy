@@ -3,7 +3,13 @@ import type {
   JobsLivePage,
   WaitingLabelFit,
 } from "../src/api/jobs-types.ts";
-import type { ProviderLabelFit, ProviderSizeFit } from "../src/api/schema.ts";
+import type {
+  LabelPlace,
+  LabelRouting,
+  ProviderHold,
+  ProviderLabelFit,
+  ProviderSizeFit,
+} from "../src/api/schema.ts";
 import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
 import { fixtureJob } from "../scripts/fixtures-jobs.ts";
 import { liveJobs } from "../scripts/fixtures-jobs-live.ts";
@@ -20,7 +26,19 @@ export type OwnFacts = "fits" | "none" | "no-machine" | "forbidden";
 export type LabelExtra = {
   size?: { vcpus: number; memory_gb: number; disk_gb: number };
   whenNothingFits?: "wait" | "largest_overflow";
+  /** The order of the label, when it is not own machines, then Boat. */
+  order?: LabelPlace[];
+  /** The hold of Boat for this label, which the API routes the label by. */
+  hold?: ProviderHold;
 };
+
+/** The label waits for a hold of Boat, as the routing of the API says. */
+export function heldBy(hold: ProviderHold): LabelRouting {
+  return {
+    kind: "waits",
+    reason: { kind: "provider", provider: "boat", hold },
+  };
+}
 
 /**
  * A waiting label with its own fit and its Boat fit. Its `nothing_fits`
@@ -39,11 +57,21 @@ export function waitingLabel(
   const boatFits =
     boat.state === "fitting" || boat.state === "largest_fallback";
   const boatOut = boat.state === "disabled" || boat.state === "no_size_fits";
-  const providers: ProviderLabelFit[] = [{ provider: "boat", fit: boat }];
+  const hold = extra.hold ?? null;
+  const providers: ProviderLabelFit[] = [{ provider: "boat", fit: boat, hold }];
   const places = [
     ...(fits ? [machinePlace] : []),
     ...(boatFits ? [boatPlace] : []),
   ];
+  const routable = places.filter(
+    (place) => place.kind === "machine" || hold === null,
+  );
+  const routing: LabelRouting =
+    routable.length > 0
+      ? { kind: "places", places: routable }
+      : hold !== null && boatFits
+        ? heldBy(hold)
+        : { kind: "waits", reason: { kind: "nothing_fits" } };
   return {
     label_id: `label-${name}`,
     label_name: name,
@@ -56,7 +84,7 @@ export function waitingLabel(
       label: {
         name,
         ...size,
-        order: [
+        order: extra.order ?? [
           ...(own === "forbidden" ? [] : [machinePlace]),
           ...(boat.state === "disabled" ? [] : [boatPlace]),
         ],
@@ -74,10 +102,7 @@ export function waitingLabel(
         providers,
         machines: [],
         fitting_places: places,
-        routing:
-          places.length > 0
-            ? { kind: "places", places }
-            : { kind: "waits", reason: { kind: "nothing_fits" } },
+        routing,
       },
     },
     providers,

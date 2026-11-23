@@ -164,18 +164,21 @@ export function withoutBoat(fit: Fit): Fit {
 }
 
 /**
- * The fit of a label with the switches of `input`, as the API places it: a
- * label without "Your machines" fits no machine, one without "Boat" has no
- * Boat fit, and the placement follows from what still fits.
+ * The fit of a label with the order of `input`, as the API places it: an
+ * order without own machines fits no machine, and one without Boat has no
+ * Boat fit. The routing names the places that still fit, in the order, and
+ * otherwise the hold of Boat or why the label waits.
  */
-export function switchedFit(fit: Fit, input: Schemas["LabelInput"]): Fit {
+export function orderedFit(fit: Fit, input: Schemas["LabelInput"]): Fit {
   const machines =
     input.order.some((place) => place.kind === "machine") &&
     fit.fitting_machines > 0;
   const allowsBoat = input.order.some((place) => place.kind === "overflow");
   const providers = fit.providers.map(
     (provider): Schemas["ProviderLabelFit"] =>
-      allowsBoat ? provider : { ...provider, fit: { state: "disabled" } },
+      allowsBoat
+        ? provider
+        : { ...provider, fit: { state: "disabled" }, hold: null },
   );
   const boatFits = providers.some(
     ({ fit }) => fit.state === "fitting" || fit.state === "largest_fallback",
@@ -183,6 +186,22 @@ export function switchedFit(fit: Fit, input: Schemas["LabelInput"]): Fit {
   const places = input.order.filter((place) =>
     place.kind === "machine" ? machines : boatFits,
   );
+  const hold = allowsBoat
+    ? (providers.find((provider) => provider.hold != null)?.hold ?? null)
+    : null;
+  const routable = places.filter(
+    (place) => place.kind === "machine" || hold === null,
+  );
+  let routing: Fit["routing"];
+  if (routable.length > 0) routing = { kind: "places", places: routable };
+  else if (input.order.length === 0) {
+    routing = { kind: "waits", reason: { kind: "empty_order" } };
+  } else if (hold !== null) {
+    routing = {
+      kind: "waits",
+      reason: { kind: "provider", provider: "boat", hold },
+    };
+  } else routing = { kind: "waits", reason: { kind: "nothing_fits" } };
   return {
     ...fit,
     providers,
@@ -191,15 +210,7 @@ export function switchedFit(fit: Fit, input: Schemas["LabelInput"]): Fit {
     maximum_jobs: machines ? (fit.maximum_jobs ?? null) : null,
     no_machine_fits: !machines,
     fitting_places: places,
-    routing:
-      places.length > 0
-        ? { kind: "places", places }
-        : {
-            kind: "waits",
-            reason: {
-              kind: input.order.length === 0 ? "empty_order" : "nothing_fits",
-            },
-          },
+    routing,
   };
 }
 

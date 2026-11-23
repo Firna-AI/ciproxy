@@ -10,7 +10,7 @@ import {
   previewDelay,
 } from "../src/state/settings-preview.ts";
 import { deferred, manualSchedule, settled } from "./support.ts";
-import { hasBoat } from "../src/view/settings-label-places.ts";
+import { placeKey } from "../src/view/settings-label-places.ts";
 import { fit, labelInput } from "./settings-support.ts";
 
 function previewWith() {
@@ -96,7 +96,7 @@ test("a draft with no valid size and a closed dialog ask for nothing", async () 
   assert.equal(preview.state.get().shown, null);
 });
 
-test("a change of the Boat switch or of When nothing fits asks again, and a new name does not", async () => {
+test("a change of the order or of When nothing fits asks again, and a new name does not", async () => {
   const { preview, schedule, asked, answers } = previewWith();
   const saved = labelInput();
   preview.request(saved);
@@ -107,18 +107,24 @@ test("a change of the Boat switch or of When nothing fits asks again, and a new 
   assert.equal(schedule.pending(), 0, "a new name reuses the shown fit");
   preview.request({ ...saved, order: [machinePlace] });
   schedule.fire();
+  preview.request({ ...saved, order: [boatPlace, machinePlace] });
+  schedule.fire();
   preview.request({ ...saved, when_nothing_fits: "largest_overflow" });
   schedule.fire();
   assert.deepEqual(
-    asked.map((input) => [hasBoat(input.order), input.when_nothing_fits]),
+    asked.map((input) => [
+      input.order.map(placeKey).join(","),
+      input.when_nothing_fits,
+    ]),
     [
-      [true, "wait"],
-      [false, "wait"],
-      [true, "largest_overflow"],
+      ["machine,boat", "wait"],
+      ["machine", "wait"],
+      ["boat,machine", "wait"],
+      ["machine,boat", "largest_overflow"],
     ],
   );
   const fallback = fit({ fitting_places: [boatPlace] });
-  answers[2]?.resolve({ ok: true, value: fallback });
+  answers[3]?.resolve({ ok: true, value: fallback });
   await settled();
   assert.deepEqual(preview.state.get(), {
     shown: {

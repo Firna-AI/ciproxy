@@ -151,9 +151,9 @@ export const SearchIcon = icon(
 
 export const ChevronDownIcon = icon("ChevronDown", <path d="M6 9l6 6 6-6" />);
 
-/** Boat, where overflow jobs run: a cloud. */
-export const BoatIcon = icon(
-  "Boat",
+/** An overflow provider, where jobs run when the machines are busy: a cloud. */
+export const CloudIcon = icon(
+  "Cloud",
   <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" />,
 );
 

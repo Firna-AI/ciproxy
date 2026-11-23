@@ -81,9 +81,10 @@ node ts/app/scripts/m20-browser-smoke.ts
 
 The shell smoke, `browser-smoke.ts`, covers the sign-in page, the terms
 step with the address of its Continue with GitHub, the Setup pages and their
-states, Settings under Overflow, the shell, and the reload after a build
-change. Its Setup states include a machine that gets its first job image,
-and a first job that waits for that machine after Skip for now.
+states with the provider step, Settings under Overflow with the panel of
+Boat, the shell, and the reload after a build change. Its Setup states
+include a machine that gets its first job image, and a first job that waits
+for that machine after Skip for now.
 Its late approval journeys sign in again after an owner approves an install
 request, then open the workspace of that install. In one, Check again on the
 install page opens the terms step, which shows the terms notice, and its
@@ -107,7 +108,9 @@ action.
 
 The Machines and Settings smoke, `m20-browser-smoke.ts`, runs against the
 second harness. It covers the Machines pages, the Settings tabs with their
-dialogs, and the recovery after a failed read or change. It follows the
+dialogs, and the recovery after a failed read or change. Its label order
+journeys remove, add, and move a place of an order with the keyboard, save
+it, and check an empty order and a macOS label. It follows the
 links to History, a job, and Plans, and Back. On the machine page, it checks
 the Docker disks in each machine state and for each role. It also checks
 them while the first read waits, after a failed first read and its Try
@@ -302,8 +305,9 @@ or a disconnect works.
   keeps its evidence.
 - [m20-browser-smoke.ts](m20-browser-smoke.ts) runs the Machines and Settings
   smoke, with the cases of
-  [m20-browser-machines.ts](m20-browser-machines.ts) and
-  [m20-browser-settings.ts](m20-browser-settings.ts).
+  [m20-browser-machines.ts](m20-browser-machines.ts),
+  [m20-browser-settings.ts](m20-browser-settings.ts), and
+  [m20-browser-label-order.ts](m20-browser-label-order.ts).
   [m20-fixtures-statistics.ts](m20-fixtures-statistics.ts) gives the machines
   with unavailable figures, which
   [m20-browser-machine-figures.ts](m20-browser-machine-figures.ts) checks.

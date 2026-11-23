@@ -1,10 +1,11 @@
-// The four steps of Setup: the GitHub App, a machine, Boat, and the first
-// job. Every fact comes from the API: the organizations, the machines that
-// joined with their state, the Boat account, and the first job with its phase
-// and its result. A job counts as passed only when GitHub reports success.
-// The Boat step can be skipped, and it never holds Setup open: Setup is
-// complete when the first job finished, because the API keeps no record of a
-// skip. A machine that gets its first job image still completes its step.
+// The four steps of Setup: the GitHub App, a machine, an overflow provider,
+// and the first job. Every fact comes from the API: the organizations, the
+// machines that joined with their state, the provider accounts, and the
+// first job with its phase and its result. A job counts as passed only when
+// GitHub reports success. The provider step can be skipped, and it never
+// holds Setup open: Setup is complete when the first job finished, because
+// the API keeps no record of a skip. A machine that gets its first job image
+// still completes its step.
 
 import type { MachineView, SetupJob, SetupView } from "../api/schema.ts";
 import {
@@ -22,6 +23,7 @@ import {
   isMac,
   virtualizationProblem,
 } from "./platform.ts";
+import { providerName } from "./providers.ts";
 
 /** The most job VMs of a machine at once: 2 on a Mac, else no limit. */
 function vmLimitOf(machine: MachineView): number {
@@ -31,7 +33,7 @@ function vmLimitOf(machine: MachineView): number {
 export type StepStatus = "done" | "active" | "todo" | "skipped";
 
 export type SetupStep = {
-  key: "github" | "machine" | "boat" | "job";
+  key: "github" | "machine" | "provider" | "job";
   title: string;
   status: StepStatus;
   /** The line of a closed step: what it did, or what it asks for. */
@@ -47,11 +49,11 @@ export type ConnectedMachine = {
   preparing: boolean;
 };
 
-/** What Setup knows of Boat: the line of a connected account, or a skip. */
-export type BoatProgress = {
-  /** Set while a Boat account with an accepted key is connected. */
+/** What Setup knows of the providers: the line of a connection, or a skip. */
+export type ProviderProgress = {
+  /** Set while a provider account with an accepted key is connected. */
   connected: string | null;
-  /** Skip for now in this tab, which counts only while Boat is not connected. */
+  /** Skip for now in this tab, which counts only while none is connected. */
   skipped: boolean;
 };
 
@@ -84,7 +86,9 @@ const outcomes: Readonly<Record<string, string>> = {
 
 function placeText(job: SetupJob): string {
   if (job.place?.kind === "machine") return " on your machine";
-  if (job.place?.kind === "overflow") return " on Boat";
+  if (job.place?.kind === "overflow") {
+    return ` on ${providerName(job.place.provider)}`;
+  }
   return "";
 }
 
@@ -158,19 +162,19 @@ function machineSummary(machine: MachineView): string {
 /**
  * The machine that the first job waits for while it gets its first job
  * image, or null. The job waits for it only while it waits for a runner, no
- * other machine takes jobs, and Boat is not connected. With Boat connected,
- * routing starts the job on Boat at once.
+ * other machine takes jobs, and no provider is connected. With a provider
+ * connected, routing starts the job on that provider at once.
  */
 function imageWait(
   setup: SetupView,
   machine: MachineView | undefined,
   machines: readonly MachineView[],
-  boat: BoatProgress,
+  provider: ProviderProgress,
 ): string | null {
   if (setup.first_job?.phase !== "available") return null;
   if (machine === undefined || machineStatus(machine) !== "preparing")
     return null;
-  if (boat.connected !== null || otherMachineTakesJobs(machine, machines))
+  if (provider.connected !== null || otherMachineTakesJobs(machine, machines))
     return null;
   return machine.hostname;
 }
@@ -180,13 +184,16 @@ function jobSummary(job: FirstJob): string {
   return job.passed ? "Your first job passed." : "Your first job finished.";
 }
 
-function boatStatus(boat: BoatProgress, machineDone: boolean): StepStatus {
-  if (boat.connected !== null) return "done";
-  if (boat.skipped) return "skipped";
+function providerStatus(
+  provider: ProviderProgress,
+  machineDone: boolean,
+): StepStatus {
+  if (provider.connected !== null) return "done";
+  if (provider.skipped) return "skipped";
   return machineDone ? "active" : "todo";
 }
 
-/** Setup is complete when the first job finished, with or without Boat. */
+/** Setup is complete when the first job finished, with or without overflow. */
 export function setupComplete(
   setup: SetupView,
   machines: readonly MachineView[],
@@ -201,13 +208,14 @@ export function setupComplete(
 /**
  * The model of Setup. `holdMachine` keeps the machine step open after a
  * machine joined while the page was open, until the person continues. The
- * first job opens after the Boat step, or at once when a job already runs.
+ * first job opens after the provider step, or at once when a job already
+ * runs.
  */
 export function setupModel(
   setup: SetupView,
   machines: readonly MachineView[],
   holdMachine: boolean,
-  boat: BoatProgress,
+  provider: ProviderProgress,
 ): SetupModel {
   const active = setup.organizations.filter((item) => item.state === "active");
   const suspended = setup.organizations
@@ -223,9 +231,9 @@ export function setupModel(
   const githubDone = active.length > 0;
   const machineDone = ready !== undefined && !holdMachine;
   const jobDone = job.kind === "finished";
-  const boatStep = boatStatus(boat, machineDone);
+  const providerStep = providerStatus(provider, machineDone);
   const jobOpen =
-    machineDone && (boatStep !== "active" || job.kind === "moving");
+    machineDone && (providerStep !== "active" || job.kind === "moving");
   const steps: SetupStep[] = [
     {
       key: "github",
@@ -247,14 +255,14 @@ export function setupModel(
         : "Run one command on a Linux machine or a Mac.",
     },
     {
-      key: "boat",
-      title: "Connect Boat for overflow",
-      status: boatStep,
+      key: "provider",
+      title: "Connect an overflow provider",
+      status: providerStep,
       summary:
-        boat.connected ??
-        (boat.skipped
+        provider.connected ??
+        (provider.skipped
           ? "Skipped for now."
-          : "Jobs start on Boat when your machines are busy."),
+          : "Jobs start on a provider when your machines are busy."),
     },
     {
       key: "job",
@@ -275,6 +283,6 @@ export function setupModel(
         : { host: blocked.hostname, fix },
     suspended,
     job,
-    imageWait: imageWait(setup, ready, machines, boat),
+    imageWait: imageWait(setup, ready, machines, provider),
   };
 }

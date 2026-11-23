@@ -1,8 +1,10 @@
 // The wallet choice of a Boat connection, after the key check: the personal
 // wallet and each Boat organization wallet that the key can use, with the
-// likely wallet of the API answer picked. Setup and Settings under Overflow
-// use this one component, for a first connection, a reconnect, and Change
-// key. It shows only the answer of the key check that its form holds.
+// likely wallet of the API answer picked. Only the Boat branch of the
+// provider form shows it, because only Boat bills one of several wallets.
+// Setup and Settings under Overflow use this one component, for a first
+// connection, a reconnect, and Change key. It shows only the answer of the
+// key check that its form holds.
 
 import { StyleSheet, Text, View } from "react-native";
 import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
@@ -10,7 +12,7 @@ import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 import { colors } from "@ciproxy/tokens";
 
 import { text } from "../../components/text.ts";
-import type { WalletOption } from "../../view/boat.ts";
+import type { WalletOption } from "../../view/boat-wallets.ts";
 
 export function WalletChoice({
   options,
@@ -24,7 +26,7 @@ export function WalletChoice({
   value: string | null;
   /** Connect Boat found no chosen wallet. */
   error: string | null;
-  /** A Boat change of the workspace runs, so the choice waits. */
+  /** A change of the workspace runs, so the choice waits. */
   disabled: boolean;
   onChange: (value: string) => void;
 }) {

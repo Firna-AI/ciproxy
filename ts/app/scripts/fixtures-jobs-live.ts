@@ -3,6 +3,7 @@ import {
   fixtureTemporaryRetryAt,
   fullQueueJobs,
 } from "./fixtures-jobs-polling.ts";
+import { heldModes, heldQueue, type HeldMode } from "./fixtures-jobs-held.ts";
 import {
   fixtureJob,
   fixtureJobIds,
@@ -23,10 +24,24 @@ export const jobsModes = [
   "boat-refused",
   "temporary-retry",
   "overflow-unknown",
+  ...heldModes,
 ] as const;
 export type JobsMode = (typeof jobsModes)[number];
 
+function isHeld(mode: JobsMode): mode is HeldMode {
+  return (heldModes as readonly string[]).includes(mode);
+}
+
 export function liveJobs(
+  mode: JobsMode,
+  role: components["schemas"]["WorkspaceRole"],
+  banner: components["schemas"]["PageBanner"] | null,
+): components["schemas"]["JobsLivePage"] {
+  const page = baseJobs(isHeld(mode) ? "live" : mode, role, banner);
+  return isHeld(mode) ? heldQueue(mode, page) : page;
+}
+
+function baseJobs(
   mode: JobsMode,
   role: components["schemas"]["WorkspaceRole"],
   banner: components["schemas"]["PageBanner"] | null,

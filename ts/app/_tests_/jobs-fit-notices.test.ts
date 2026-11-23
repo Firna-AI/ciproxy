@@ -3,8 +3,10 @@ import test from "node:test";
 
 import type { WaitingLabelFit } from "../src/api/jobs-types.ts";
 import { liveNotices } from "../src/view/jobs-notices.ts";
+import { boatPlace } from "../scripts/m20-fixtures-labels.ts";
 import {
   connectedBoat,
+  fitting,
   largest,
   queue,
   readAt,
@@ -30,15 +32,15 @@ const fitCases: {
     ),
     notice: [
       "fits-label-ciproxy-disk",
-      "No machine of yours and no Boat size fits a job of 2 vCPU, 8 GB of memory, and 500 GB of free disk. Change the label, or let it run on the largest Boat size.",
+      "No machine of yours and no Boat size fits a job of 2 vCPU, 8 GB of memory, and 500 GB of free disk. Change the label, or let it run on the largest size.",
     ],
   },
   {
-    name: "a label that does not run on Boat",
+    name: "a label whose order holds own machines only",
     label: waitingLabel("ciproxy-own", 2, "none", { state: "disabled" }),
     notice: [
       "fits-label-ciproxy-own",
-      `No machine of yours fits a job of ${request}, and the label does not run on Boat. Change the label.`,
+      `No machine of yours fits a job of ${request}, and the label runs on your machines only. Change the label.`,
     ],
   },
   {
@@ -48,23 +50,23 @@ const fitCases: {
     }),
     notice: [
       "fits-label-ciproxy-boat",
-      `The label does not run on your machines, and no Boat size fits a job of ${request}. Change the label, or let it run on the largest Boat size.`,
+      `The label does not run on your machines, and no Boat size fits a job of ${request}. Change the label, or let it run on the largest size.`,
     ],
   },
   {
-    name: "a label that runs on neither place",
+    name: "a label with an empty order",
     label: waitingLabel("ciproxy-off", 2, "forbidden", { state: "disabled" }),
     notice: [
       "fits-label-ciproxy-off",
-      "The label runs neither on your machines nor on Boat. Change the label.",
+      "The order of the label has no place. Change the label.",
     ],
   },
   {
-    name: "no own machine that takes jobs, and no Boat",
+    name: "no own machine that takes jobs, and no provider in the order",
     label: waitingLabel("ciproxy-own", 2, "no-machine", { state: "disabled" }),
     notice: [
       "fits-label-ciproxy-own",
-      "None of your machines takes jobs now, and the label does not run on Boat. Change the label.",
+      "None of your machines takes jobs now, and the label runs on your machines only. Change the label.",
     ],
   },
   {
@@ -85,7 +87,7 @@ const fitCases: {
     name: "the largest Boat size beside own machines that do not fit",
     label: waitingLabel("ciproxy-big", 2, "none", largest),
     notice: [
-      "largest-label-ciproxy-big",
+      "largest-boat-label-ciproxy-big",
       `No machine of yours and no Boat size fits a job of ${request}, so ciproxy starts them on ${largestSize}.`,
     ],
   },
@@ -93,7 +95,7 @@ const fitCases: {
     name: "the largest Boat size while no own machine takes jobs",
     label: waitingLabel("ciproxy-big", 2, "no-machine", largest),
     notice: [
-      "largest-label-ciproxy-big",
+      "largest-boat-label-ciproxy-big",
       `None of your machines takes jobs now, and no Boat size fits a job of ${request}, so ciproxy starts them on ${largestSize}.`,
     ],
   },
@@ -101,7 +103,7 @@ const fitCases: {
     name: "the largest Boat size for a label that does not run on own machines",
     label: waitingLabel("ciproxy-big", 2, "forbidden", largest),
     notice: [
-      "largest-label-ciproxy-big",
+      "largest-boat-label-ciproxy-big",
       `The label does not run on your machines, and no Boat size fits a job of ${request}, so ciproxy starts them on ${largestSize}.`,
     ],
   },
@@ -118,5 +120,53 @@ test("a fit notice names the permitted places and the full request, and never a 
       ).map((notice) => [notice.key, notice.body]),
     ]),
     fitCases.map((item) => [item.name, [item.notice]]),
+  );
+});
+
+test("a label that waits for a hold of a place that fits it gives that reason once", () => {
+  const offLabel = waitingLabel("ciproxy-16vcpu", 2, "forbidden", fitting, {
+    order: [boatPlace],
+    hold: "off",
+  });
+  const off = liveNotices(
+    { ...queue([offLabel], connectedBoat, 2), overflow_enabled: false },
+    "/settings?workspace=w",
+    readAt,
+  );
+  assert.deepEqual(off, [
+    {
+      key: "held-label-ciproxy-16vcpu",
+      tone: "warning",
+      title: "2 jobs with the label ciproxy-16vcpu wait",
+      body: "Overflow providers are off. No other place of its order can take them now.",
+      action: {
+        kind: "go",
+        label: "Turn on overflow",
+        href: "/settings?workspace=w",
+      },
+    },
+  ]);
+  const atLimit = {
+    ...connectedBoat,
+    counted_cents: "10000",
+    limit_reached: true,
+  };
+  const largestHeld = waitingLabel("ciproxy-32vcpu", 2, "none", largest, {
+    hold: "spend_limit",
+  });
+  assert.deepEqual(
+    liveNotices(
+      queue([largestHeld], atLimit, 2),
+      "/settings?workspace=w",
+      readAt,
+    ).map((notice) => [notice.key, notice.body, notice.action]),
+    [
+      [
+        "held-label-ciproxy-32vcpu",
+        "Boat reached its spend limit. No other place of its order can take them now.",
+        { kind: "go", label: "Raise the limit", href: "/settings?workspace=w" },
+      ],
+    ],
+    "the reason of the provider that would run it, not that nothing fits",
   );
 });

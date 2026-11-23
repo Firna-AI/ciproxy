@@ -84,6 +84,7 @@ test("a connection sends the key, the limit, and the chosen wallet with the CSRF
   const store = app.overflow(workspaceId);
   let callsAtAccept = -1;
   const result = await store.connect(
+    "boat",
     {
       api_key: "typed-key",
       spend_limit_cents: "20000",
@@ -124,7 +125,7 @@ test("an accepted change whose read fails is never sent again: Try again only re
     response(overflowSettings()),
   );
   const store = app.overflow(workspaceId);
-  const result = await store.connect({
+  const result = await store.connect("boat", {
     api_key: "k",
     spend_limit_cents: "100",
     wallet: "personal",
@@ -132,13 +133,16 @@ test("an accepted change whose read fails is never sent again: Try again only re
   assert.equal(result.ok, true);
   const failed = store.state.get();
   assert.equal(failed.status, "failed");
-  assert.equal(
-    failed.status === "failed" ? failed.accepted : null,
-    "connected",
-  );
+  assert.deepEqual(failed.status === "failed" ? failed.accepted : null, {
+    kind: "connected",
+    provider: "boat",
+  });
   await store.load();
   const still = store.state.get();
-  assert.equal(still.status === "failed" ? still.accepted : null, "connected");
+  assert.deepEqual(still.status === "failed" ? still.accepted : null, {
+    kind: "connected",
+    provider: "boat",
+  });
   await store.load();
   assert.equal(store.state.get().status, "ready");
   assert.deepEqual(
@@ -165,7 +169,7 @@ test("a refused connection saves nothing and reads nothing", async () => {
     spend_limit_cents: "100",
     wallet: "personal",
   };
-  const result = await store.connect(request, () => {
+  const result = await store.connect("boat", request, () => {
     accepted = true;
   });
   assert.deepEqual(result, {
@@ -197,7 +201,7 @@ test("a policy save sends the complete policy, and a disconnect then reads again
   assert.equal(calls[0]?.url, route);
   assert.equal(calls[0]?.init.method, "PUT");
   assert.deepEqual(sent(calls[0]?.init), policy);
-  await store.disconnect();
+  await store.disconnect("boat");
   assert.equal(calls[2]?.url, `${route}/providers/boat/connection`);
   assert.equal(calls[2]?.init.method, "DELETE");
   assert.equal(calls[3]?.init.method, "GET");
@@ -246,7 +250,7 @@ test("a key check sends only the key in the shared order, retries a stale CSRF t
   await app.session.ensure();
   const store = app.overflow(workspaceId);
   await store.ensure();
-  const checking = store.checkKey("typed-key");
+  const checking = store.checkKey("boat", "typed-key");
   assert.equal(store.pending.get(), true, "The check holds the pending mark");
   answer.resolve(response(boatWallets()));
   assert.deepEqual(await checking, { ok: true, value: boatWallets() });

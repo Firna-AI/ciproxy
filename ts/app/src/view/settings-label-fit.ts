@@ -1,17 +1,27 @@
 // The fit line of the label dialog, which says, before the save, where jobs
-// of the size run now. The placement, the job counts, the Boat fit, and
-// whether the workspace has a Boat account come from the API fit; this module
-// only puts them into words. A size that no machine fits is named by its full
-// request, never by what a machine or a Boat size offers. Without a Boat
-// account, the line keeps the fit of the machines and says that Boat is not
-// connected; it never says that a Boat size does not fit unless the Boat
-// catalog says so. A macOS label counts the Macs only, and never Boat, so
-// its line names Macs. The sizes in words are in settings-label-sizes.ts.
+// of the size run now: how many fit on one machine at a time, or that no
+// machine fits the size, with the place of the order that runs it, why that
+// place cannot take a job now, or that no machine and no size of a provider
+// of the order fits it. The job counts, the provider fits, and the routing
+// of the label come from the API fit; this module only puts them into words.
+// The routing gives the same place and the same wait reason as the label
+// list and the Jobs notices. A size that no machine fits is named by its
+// full request, never by what a machine or a provider size offers. A
+// provider that is not connected or not available has no known sizes, so
+// the line never says that its sizes do not fit. When the order leaves own
+// machines out, the line says so in place of their fit. A macOS label counts
+// the Macs only. The sizes in words are in settings-label-sizes.ts.
 
-import type { LabelFit, LabelInput } from "../api/schema.ts";
+import type { LabelFit, LabelInput, ProviderLabelFit } from "../api/schema.ts";
 import { isMacLabel } from "./platform.ts";
-import { boatLabelFit, hasBoat, hasMachines } from "./settings-label-places.ts";
-import { largestBoatText, requestPhrase } from "./settings-label-sizes.ts";
+import {
+  capitalized,
+  holdText,
+  providerName,
+  providerNames,
+} from "./providers.ts";
+import { hasMachines, placeName } from "./settings-label-places.ts";
+import { requestPhrase } from "./settings-label-sizes.ts";
 
 /** A caption, or a warning whose title can stand alone. */
 export type FitLine =
@@ -81,116 +91,94 @@ function macFit(label: LabelInput, fit: LabelFit): FitLine {
   };
 }
 
-const onlyBoat = "Only Boat may run jobs with this label.";
-const noBoatFit = "Its Boat fit is not known yet.";
-const notConnected = "Boat is not connected.";
 const noMachine = "No connected machine can run jobs now.";
-const waitForMachine =
-  "Jobs with this label wait until a machine that fits connects.";
 
-/** The label allows Boat, and the API saw that the workspace has no account. */
-function boatNotConnected(label: LabelInput, fit: LabelFit): boolean {
+/** The sentence, after the fact that no machine is connected when none is. */
+function afterMachines(fit: LabelFit, sentence: string | null): string | null {
+  if (fit.eligible_machines > 0) return sentence;
+  return sentence === null ? noMachine : `${noMachine} ${sentence}`;
+}
+
+/** A provider of the order whose sizes ciproxy reads now. */
+function sizesKnown(provider: ProviderLabelFit): boolean {
+  const hold = provider.hold ?? null;
+  if (hold === "not_connected" || hold === "unavailable") return false;
   return (
-    hasBoat(label.order) && boatLabelFit(fit.providers)?.connected === false
+    provider.fit.state !== "unavailable" && provider.fit.state !== "disabled"
   );
 }
 
-/** The title of a size that no machine fits, with its full request. */
-function noMachineFits(label: LabelInput): string {
-  return `No machine of yours fits a job of ${requestPhrase(label)}`;
+/** A provider of the order whose sizes are not known yet. */
+function sizesUnknown(provider: ProviderLabelFit): boolean {
+  const hold = provider.hold ?? null;
+  return (
+    provider.fit.state === "unavailable" &&
+    hold !== "not_connected" &&
+    hold !== "unavailable" &&
+    hold !== "off"
+  );
 }
 
-/** The title of a size that no machine and no Boat size fits. */
-function nothingFits(label: LabelInput): string {
-  return `No machine of yours and no Boat size fits a job of ${requestPhrase(label)}`;
+/** The line of a Linux size that no own machine fits. */
+function noMachineFits(label: LabelInput, fit: LabelFit): FitLine {
+  const request = requestPhrase(label);
+  const title = `No machine of yours fits a job of ${request}`;
+  const warning = (heading: string, body: string | null): FitLine => ({
+    kind: "warning",
+    title: heading,
+    body,
+  });
+  const { routing } = fit;
+  if (routing.kind === "places") {
+    const [first] = routing.places;
+    const place = first ? placeName(first, "linux_x64") : "a provider";
+    return warning(title, `Jobs with this label run on ${place}.`);
+  }
+  if (routing.kind === "waits" && routing.reason.kind === "provider") {
+    const reason = holdText(routing.reason.provider, routing.reason.hold);
+    return warning(
+      title,
+      `${capitalized(reason)}, so jobs with this label wait.`,
+    );
+  }
+  const unknown = fit.providers.filter(sizesUnknown);
+  if (unknown.length > 0) {
+    const names = providerNames(
+      unknown.map((item) => item.provider),
+      "and",
+    );
+    return warning(title, `${names} sizes are not known yet.`);
+  }
+  const known = fit.providers.filter(sizesKnown);
+  if (known.length === 0) {
+    return warning(
+      title,
+      afterMachines(
+        fit,
+        "Jobs with this label wait until a machine that fits connects.",
+      ),
+    );
+  }
+  const names = providerNames(known.map((item) => item.provider));
+  return warning(
+    `No machine of yours and no ${names} size fits a job of ${request}`,
+    routing.kind === "largest"
+      ? `Jobs with this label run on the largest size of ${providerName(routing.provider)}.`
+      : afterMachines(fit, null),
+  );
 }
 
-/** The sentence, after the fact that no machine is connected when none is. */
-function afterMachines(fit: LabelFit, sentence: string): string {
-  return fit.eligible_machines === 0 ? `${noMachine} ${sentence}` : sentence;
-}
-
-function boatOnly(label: LabelInput, fit: LabelFit): FitLine {
-  const fallback =
-    boatLabelFit(fit.providers)?.fit.state === "largest_fallback";
+/** The line of the dialog that says, before the save, where jobs run. */
+export function fitLine(label: LabelInput, fit: LabelFit): FitLine {
+  if (isMacLabel(label)) return macFit(label, fit);
   if (!hasMachines(label.order)) {
     return {
       kind: "caption",
-      text: fallback ? `${onlyBoat} ${largestBoatText}` : onlyBoat,
+      text: "Your machines are not in the order of this label.",
     };
-  }
-  return fallback
-    ? { kind: "warning", title: nothingFits(label), body: largestBoatText }
-    : {
-        kind: "warning",
-        title: noMachineFits(label),
-        body: "Jobs with this label run on Boat.",
-      };
-}
-
-function waits(label: LabelInput, fit: LabelFit): FitLine {
-  const machines = hasMachines(label.order);
-  const boat = hasBoat(label.order);
-  if (!machines && !boat) {
-    return {
-      kind: "warning",
-      title: "Turn on Your machines or Boat",
-      body: "Jobs with this label wait until one of them is on.",
-    };
-  }
-  if (boatNotConnected(label, fit)) {
-    return machines
-      ? {
-          kind: "warning",
-          title: noMachineFits(label),
-          body: afterMachines(
-            fit,
-            "Boat is not connected, so jobs with this label wait until a machine that fits connects.",
-          ),
-        }
-      : {
-          kind: "warning",
-          title: "Boat is not connected",
-          body: "Only Boat may run jobs with this label, so they wait until you connect Boat.",
-        };
-  }
-  if (!boat) {
-    return {
-      kind: "warning",
-      title: noMachineFits(label),
-      body: afterMachines(fit, waitForMachine),
-    };
-  }
-  // A wait whose Boat fit the catalog does not give names only what is known.
-  if (boatLabelFit(fit.providers)?.fit.state !== "no_size_fits") {
-    return machines
-      ? {
-          kind: "warning",
-          title: noMachineFits(label),
-          body: afterMachines(fit, noBoatFit),
-        }
-      : { kind: "caption", text: `${onlyBoat} ${noBoatFit}` };
-  }
-  if (!machines) {
-    return {
-      kind: "warning",
-      title: `No Boat size fits a job of ${requestPhrase(label)}`,
-      body: null,
-    };
-  }
-  return {
-    kind: "warning",
-    title: nothingFits(label),
-    body: fit.eligible_machines === 0 ? noMachine : null,
-  };
-}
-
-function unavailable(label: LabelInput, fit: LabelFit): FitLine {
-  if (!hasMachines(label.order)) {
-    return { kind: "caption", text: `${onlyBoat} ${noBoatFit}` };
   }
   if (fit.fitting_machines > 0) {
-    return { kind: "caption", text: `${machineFit(fit)} ${noBoatFit}` };
+    return { kind: "caption", text: machineFit(fit) };
   }
   if (fit.unavailable_machines > 0) {
     return {
@@ -198,26 +186,5 @@ function unavailable(label: LabelInput, fit: LabelFit): FitLine {
       text: "The capacity of your machines is not known yet.",
     };
   }
-  if (fit.eligible_machines === 0) {
-    return { kind: "caption", text: `${noMachine} ${noBoatFit}` };
-  }
-  return { kind: "warning", title: noMachineFits(label), body: noBoatFit };
-}
-
-/** The line of the dialog that says, before the save, where jobs run. */
-export function fitLine(label: LabelInput, fit: LabelFit): FitLine {
-  if (isMacLabel(label)) return macFit(label, fit);
-  const places = fit.fitting_places ?? null;
-  if (places === null) return unavailable(label, fit);
-  if (hasMachines(places)) {
-    return {
-      kind: "caption",
-      text:
-        !hasBoat(places) && boatNotConnected(label, fit)
-          ? `${machineFit(fit)} ${notConnected}`
-          : machineFit(fit),
-    };
-  }
-  if (hasBoat(places)) return boatOnly(label, fit);
-  return waits(label, fit);
+  return noMachineFits(label, fit);
 }

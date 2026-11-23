@@ -4,7 +4,8 @@
 // organization: no new job of it starts on ciproxy, its running jobs finish,
 // its jobs stay in the job history, and it can join a workspace again with a
 // new install. Turn on asks first, because the organization then uses the
-// machines, the labels, the settings, and the Boat account of the workspace.
+// machines, the labels, the settings, and the overflow providers of the
+// workspace.
 
 import { useState, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -13,7 +14,7 @@ import { Input } from "@firna/ui/input";
 import type { ApiResult } from "../../api/client.ts";
 import type { OrganizationView, Success } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
-import { FeatureDialog } from "../../components/feature-parts.tsx";
+import { FeatureDialog } from "../../components/feature-dialog.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { text } from "../../components/text.ts";
 import type { FailureCopy } from "../../view/claim.ts";
@@ -172,7 +173,7 @@ export function TurnOnDialog({
     >
       <Text style={text.small}>
         The jobs of {login} then run on the machines of this workspace, with its
-        labels, settings, and Boat account.
+        labels, settings, and overflow providers.
       </Text>
       <Text style={text.small}>{addedByText(organization)}</Text>
     </ChangeDialog>

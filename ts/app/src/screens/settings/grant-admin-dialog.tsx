@@ -1,6 +1,6 @@
 // The dialog before an Admin gives a person the Admin role. The Admin role
-// alone adds machines and connects Boat, which run the jobs and their
-// secrets of every organization of the workspace. So the dialog shows the
+// alone adds machines and connects overflow providers, which run the jobs
+// and their secrets of every organization of the workspace. So the dialog shows the
 // trust notice of the API, and says that an organization whose runners other
 // people should control uses a workspace of its own. It also names the power
 // of each Admin to accept new versions of the terms for the customer that
@@ -13,7 +13,7 @@ import { StyleSheet, Text, View } from "react-native";
 import type { ApiResult } from "../../api/client.ts";
 import type { Success } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
-import { FeatureDialog } from "../../components/feature-parts.tsx";
+import { FeatureDialog } from "../../components/feature-dialog.tsx";
 import { InlineLink } from "../../components/inline-link.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { text } from "../../components/text.ts";

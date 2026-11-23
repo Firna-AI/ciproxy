@@ -6,7 +6,7 @@ import { setupWaits } from "../src/state/setup.ts";
 import {
   firstJob,
   setupModel,
-  type BoatProgress,
+  type ProviderProgress,
 } from "../src/view/setup-steps.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import {
@@ -17,16 +17,16 @@ import {
 } from "../scripts/fixtures-setup.ts";
 import { appWith, response, settled } from "./support.ts";
 
-const noBoat: BoatProgress = { connected: null, skipped: false };
+const noProvider: ProviderProgress = { connected: null, skipped: false };
 
 test("Setup uses actual machine capacity and KVM for its steps", () => {
-  const initial = setupModel(setup(), [], false, noBoat);
+  const initial = setupModel(setup(), [], false, noProvider);
   assert.deepEqual(
     initial.steps.map((step) => [step.key, step.status]),
     [
       ["github", "done"],
       ["machine", "active"],
-      ["boat", "todo"],
+      ["provider", "todo"],
       ["job", "todo"],
     ],
   );
@@ -44,7 +44,7 @@ test("Setup uses actual machine capacity and KVM for its steps", () => {
       }),
     ],
     false,
-    noBoat,
+    noProvider,
   );
   assert.equal(unavailable.cannotStartVms?.host, "no-kvm");
   assert.equal(unavailable.connected, null);
@@ -52,7 +52,7 @@ test("Setup uses actual machine capacity and KVM for its steps", () => {
     setup({ machines: 1, waiting_for_machine: false }),
     [machine()],
     false,
-    noBoat,
+    noProvider,
   );
   assert.deepEqual(ready.connected, {
     name: "forge-01",
@@ -65,7 +65,7 @@ test("Setup uses actual machine capacity and KVM for its steps", () => {
     setup({ machines: 1, waiting_for_machine: false }),
     [machine({ state: "preparing" })],
     false,
-    noBoat,
+    noProvider,
   );
   assert.equal(preparing.connected?.preparing, true);
   assert.deepEqual(
@@ -78,7 +78,7 @@ test("Setup uses actual machine capacity and KVM for its steps", () => {
     ["done", "done", "active", "todo"],
   );
   assert.equal(
-    setupModel(setup({ machines: 1 }), [machine()], true, noBoat).steps[1]
+    setupModel(setup({ machines: 1 }), [machine()], true, noProvider).steps[1]
       ?.status,
     "active",
   );
@@ -87,7 +87,7 @@ test("Setup uses actual machine capacity and KVM for its steps", () => {
       setup({ organizations: [organization({ state: "suspended" })] }),
       [],
       false,
-      noBoat,
+      noProvider,
     ).suspended,
     ["northstar-labs"],
   );
@@ -118,6 +118,15 @@ test("first job follows GitHub phases and only its success result reports a pass
     title: "Your first job passed",
     text: "Build and test in northstar-labs/control passed in 6m 12s on your machine.",
   });
+  assert.deepEqual(
+    firstJob(
+      job({ phase: "started", place: { kind: "overflow", provider: "boat" } }),
+    ),
+    {
+      kind: "moving",
+      text: "Build and test in northstar-labs/control is running on Boat…",
+    },
+  );
   for (const result of ["failure", "cancelled", "timed_out", "skipped", null]) {
     const finished = firstJob(job({ phase: "completed", result }));
     assert.equal(finished.kind === "finished" ? finished.passed : null, false);
@@ -128,7 +137,10 @@ test("first job follows GitHub phases and only its success result reports a pass
     first_job: passed,
   });
   assert.equal(setupWaits(complete), false);
-  assert.equal(setupModel(complete, [machine()], false, noBoat).complete, true);
+  assert.equal(
+    setupModel(complete, [machine()], false, noProvider).complete,
+    true,
+  );
 });
 
 test("a waiting first job names the machine whose job image it waits for, only when nothing else takes it", () => {
@@ -144,22 +156,22 @@ test("a waiting first job names the machine whose job image it waits for, only w
     id: "30000000-0000-4000-8000-000000000002",
     hostname: "forge-02",
   };
-  const skipped: BoatProgress = { connected: null, skipped: true };
-  const boat: BoatProgress = {
+  const skipped: ProviderProgress = { connected: null, skipped: true };
+  const boat: ProviderProgress = {
     connected: "Connected to the Boat account northstar",
     skipped: false,
   };
   const wait = (
     view: typeof available,
     machines: Parameters<typeof setupModel>[1],
-    progress: BoatProgress = skipped,
+    progress: ProviderProgress = skipped,
   ) => setupModel(view, machines, false, progress).imageWait;
   assert.equal(wait(available, [preparing]), "forge-01");
-  assert.equal(wait(available, [preparing], noBoat), "forge-01");
+  assert.equal(wait(available, [preparing], noProvider), "forge-01");
   assert.equal(
     wait(available, [preparing], boat),
     null,
-    "with Boat connected, routing starts the job on Boat",
+    "with a provider connected, routing starts the job on it",
   );
   assert.equal(
     wait(available, [preparing, machine(second)]),

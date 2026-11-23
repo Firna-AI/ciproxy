@@ -5,9 +5,13 @@
 // routing reads too. A fact that the API does not give stays out, or shows as
 // not reported. machines-cache.ts gives the cache figures.
 
-import type { MachineView, SlotState, SlotView } from "../api/schema.ts";
+import type {
+  MachineView,
+  OverflowProvider,
+  SlotState,
+  SlotView,
+} from "../api/schema.ts";
 import type { OverflowSettings } from "../api/machine-schema.ts";
-import { boatProvider } from "./boat.ts";
 import { cacheHits, type CacheHits } from "./machines-cache.ts";
 import {
   elsewhereCopy,
@@ -25,6 +29,7 @@ import {
   unbroken,
 } from "./machines-format.ts";
 import { canStartVms, isMac, platformName } from "./platform.ts";
+import { providerNames } from "./providers.ts";
 
 export type MachineStatus = keyof typeof statusWords;
 
@@ -166,18 +171,20 @@ export function machineFigures(
   };
 }
 
-/** Whether Boat takes new jobs now, by the overflow summary. */
-export function boatTakesJobs(summary: OverflowSettings | null): boolean {
-  if (summary === null) return false;
-  const provider = boatProvider(summary);
-  const account = provider?.account ?? null;
-  return (
-    provider?.available === true &&
-    summary.enabled &&
-    account !== null &&
-    (account.rejected_at ?? null) === null &&
-    provider.spend?.limit_reached !== true
-  );
+/** The providers that take new jobs now, by the overflow summary. */
+export function providersTakingJobs(
+  summary: OverflowSettings | null,
+): OverflowProvider[] {
+  if (summary === null || !summary.enabled) return [];
+  return summary.providers
+    .filter(
+      (provider) =>
+        provider.available &&
+        provider.account != null &&
+        (provider.account.rejected_at ?? null) === null &&
+        provider.spend?.limit_reached !== true,
+    )
+    .map((provider) => provider.provider);
 }
 
 /** Whether a machine other than `machine` takes new jobs now. */
@@ -192,8 +199,8 @@ export function otherMachineTakesJobs(
 
 /**
  * The sentence of where jobs go while `machine` takes none: the other
- * machines that take jobs now, and Boat when it takes jobs. Null when no
- * other place takes them.
+ * machines that take jobs now, and the providers that take jobs now. Null
+ * when no other place takes them.
  */
 function elsewhereSentence(
   machine: MachineView,
@@ -201,10 +208,15 @@ function elsewhereSentence(
   summary: OverflowSettings | null,
 ): ((subject: string) => string) | null {
   const others = otherMachineTakesJobs(machine, machines);
-  const boat = boatTakesJobs(summary);
-  if (others && boat) return elsewhereCopy.machinesAndBoat;
+  const taking = providersTakingJobs(summary);
+  const names = providerNames(taking, "and");
+  if (others && taking.length > 0) {
+    return (subject) => elsewhereCopy.machinesAndProviders(subject, names);
+  }
   if (others) return elsewhereCopy.machines;
-  if (boat) return elsewhereCopy.boat;
+  if (taking.length > 0) {
+    return (subject) => elsewhereCopy.providers(subject, names);
+  }
   return null;
 }
 

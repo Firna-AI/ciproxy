@@ -13,11 +13,8 @@ import { StyleSheet, Text, View } from "react-native";
 import type { ApiFailure } from "../../api/client.ts";
 import type { CacheView, MachineView } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
-import {
-  DetailRow,
-  FeatureDialog,
-  Panel,
-} from "../../components/feature-parts.tsx";
+import { FeatureDialog } from "../../components/feature-dialog.tsx";
+import { DetailRow, Panel } from "../../components/feature-parts.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { text } from "../../components/text.ts";
 import {

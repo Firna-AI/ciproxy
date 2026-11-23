@@ -18,7 +18,7 @@ export const roleOrder: readonly Role[] = ["admin", "billing", "viewer"];
 export const roles: Readonly<Record<Role, { name: string; can: string }>> = {
   admin: {
     name: "Admin",
-    can: "Can do everything: the machines, labels, settings, Boat, roles, and billing.",
+    can: "Can do everything: the machines, labels, settings, overflow providers, roles, and billing.",
   },
   billing: {
     name: "Billing",

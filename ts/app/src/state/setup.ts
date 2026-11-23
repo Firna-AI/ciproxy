@@ -75,7 +75,7 @@ export function createSetupStore(options: {
       machines: machines.value,
       refreshFailure: null,
     });
-    // A first job can end on Boat while a machine still gets its image.
+    // A first job can end on a provider while a machine still gets its image.
     return (
       setupWaits(setup.value) ||
       machines.value.some((machine) => machine.state === "preparing")

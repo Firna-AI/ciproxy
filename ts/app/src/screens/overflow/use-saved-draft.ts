@@ -1,8 +1,8 @@
-// One field over a saved value, for both spend-limit forms: the Boat
-// connection form and the limit panel of Settings under Overflow. The field
-// shows the latest saved value until the person types, and the typed text
-// stays until an accepted save of its own form. `state/saved-draft.ts` holds
-// the rules.
+// One field over a saved value, for both spend-limit forms of a provider:
+// the connection form, and the limit of its panel on Settings under
+// Overflow. The field shows the latest saved value until the person types,
+// and the typed text stays until an accepted save of its own form.
+// `state/saved-draft.ts` holds the rules.
 
 import { useCallback, useState } from "react";
 

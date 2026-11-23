@@ -1,12 +1,14 @@
 // The live queue as a model: the figures, the waiting and running rows, and
 // the quiet state. A figure that the API leaves out says "Unknown", and the
 // waiting figure leaves the row while ciproxy cannot see every waiting job.
-// A waiting job shows its label, not a machine, because GitHub gives it to
-// whichever runner is idle first.
+// Each connected provider, and each provider that runs jobs now, has a
+// figure of its running jobs. A waiting job shows its label, not a machine,
+// because GitHub gives it to whichever runner is idle first.
 
 import type { JobView, JobsLivePage } from "../api/jobs-types.ts";
 import type { Figure } from "../components/figures.tsx";
 import { formatCount } from "./exact-format.ts";
+import { providerName } from "./providers.ts";
 import {
   contextText,
   durationText,
@@ -44,6 +46,25 @@ function slotsText(page: JobsLivePage): string {
   return `${formatCount(used)} of ${formatCount(total)}`;
 }
 
+/**
+ * The running jobs on each provider that is connected or runs jobs now, in
+ * the order of the API. A provider that the API sees as not connected and
+ * that runs nothing has no figure.
+ */
+function providerFigures(page: JobsLivePage): Figure[] {
+  return page.running_by_provider
+    .filter((count) => {
+      const seen = page.overflow.find(
+        (item) => item.provider === count.provider,
+      );
+      return seen?.connected === true || BigInt(count.running) > 0n;
+    })
+    .map((count) => ({
+      label: `On ${providerName(count.provider)}`,
+      value: formatCount(count.running),
+    }));
+}
+
 function waitingRow(job: JobView, readAt: number): LiveRow {
   return {
     id: job.id,
@@ -76,13 +97,7 @@ export function liveModel(page: JobsLivePage, readAt: number): LiveModel {
   }
   figures.push(
     { label: "Own slots in use", value: slotsText(page) },
-    {
-      label: "On Boat",
-      value: formatCount(
-        page.running_by_provider.find((item) => item.provider === "boat")
-          ?.running ?? "0",
-      ),
-    },
+    ...providerFigures(page),
   );
   const warm = BigInt(page.warm_runners);
   const idle = page.running.length === 0 && page.waiting.length === 0;

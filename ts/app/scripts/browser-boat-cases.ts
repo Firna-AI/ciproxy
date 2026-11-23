@@ -1,7 +1,7 @@
-// The Boat states that the browser checks for layout at each width: each
-// opens its page, shows its one fact, and keeps every control inside the
-// viewport. Their copy and rules are Node tests; the journeys that act are
-// in browser-boat.ts.
+// The provider states that the browser checks for layout at each width, with
+// Boat as the provider: each opens its page, shows its one fact, and keeps
+// every control inside the viewport. Their copy and rules are Node tests;
+// the journeys that act are in browser-boat.ts.
 import { overflowHref, workspaceHref } from "../src/routing/pages.ts";
 import type { SmokeCase } from "./browser-cases.ts";
 import { workspaceId } from "./fixtures-core.ts";
@@ -22,14 +22,14 @@ export const boatCases: readonly SmokeCase[] = [
     scenario: "boat-setup-unavailable",
     path: setup,
     heading: "Set up ciproxy",
-    text: "Boat is unavailable right now",
+    text: "No overflow provider is available right now",
   },
   {
     name: "boat-setup-load-failure",
     scenario: "boat-setup-load-failure",
     path: setup,
     heading: "Set up ciproxy",
-    text: "Unable to load Boat",
+    text: "Unable to load the overflow providers",
   },
   {
     name: "boat-setup-job-running",
@@ -69,6 +69,13 @@ export const boatCases: readonly SmokeCase[] = [
   {
     name: "overflow-unavailable",
     scenario: "overflow-unavailable",
+    path: overflow,
+    heading: "Settings",
+    text: "No overflow provider is available right now",
+  },
+  {
+    name: "overflow-connected-unavailable",
+    scenario: "overflow-connected-unavailable",
     path: overflow,
     heading: "Settings",
     text: "Boat is unavailable right now",

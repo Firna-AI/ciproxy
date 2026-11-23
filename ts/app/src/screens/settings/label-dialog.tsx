@@ -1,16 +1,20 @@
-// The dialog that adds a label or edits one. While the person types, it
-// asks the API how many jobs of the size fit on each machine. A save goes to
-// GitHub first for a new name, and the dialog shows the refusal of GitHub
-// under the name. An edit keeps the name and the platform, and every label
-// but `ciproxy` offers Delete label, which a rename uses with a new label.
+// The dialog that adds a label or edits one. While the person types or
+// changes the order, it asks the API how many jobs of the size fit on each
+// machine and what each place of the order does with them. It reads the
+// overflow settings for the overflow wait and the offered providers that Add
+// a place offers. A save goes to GitHub first for a new name, and the dialog
+// shows the refusal of GitHub under the name. An edit keeps the name and the
+// platform, and every label but `ciproxy` offers Delete label, which a rename
+// uses with a new label.
 
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import type { LabelView } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
-import { FeatureDialog } from "../../components/feature-parts.tsx";
+import { FeatureDialog } from "../../components/feature-dialog.tsx";
 import { Notice } from "../../components/notice.tsx";
+import { overflowHref } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import { createLabelPreview, fitKey } from "../../state/settings-preview.ts";
@@ -27,27 +31,49 @@ import {
   type SizeField,
 } from "../../view/settings-label-form.ts";
 import { canDelete } from "../../view/settings-labels.ts";
+import { placeFacts } from "../../view/settings-label-order.ts";
+import {
+  defaultOrder,
+  offeredProviders,
+} from "../../view/settings-label-places.ts";
 import { LabelFitLine } from "./label-fit.tsx";
 import { LabelForm } from "./label-form.tsx";
 
 export type LabelTarget = { kind: "add" } | { kind: "edit"; label: LabelView };
 
 export function LabelDialog({
+  workspaceId,
   store,
   target,
   labels,
   onClose,
 }: {
+  workspaceId: string;
   store: SettingsStore;
   target: LabelTarget;
   labels: readonly LabelView[];
   onClose: () => void;
 }) {
-  const { timers } = useServices().env;
+  const services = useServices();
+  const { timers } = services.env;
+  const overflow = services.overflow(workspaceId);
+  const overflowState = useValue(overflow.state);
+  useEffect(() => {
+    void overflow.ensure();
+  }, [overflow]);
+  const settings =
+    overflowState.status === "ready" ? overflowState.settings : null;
+  const offered =
+    settings === null ? null : offeredProviders(settings.providers);
   const saved = target.kind === "edit" ? target.label : null;
-  const [draft, setDraft] = useState<LabelDraft>(() =>
-    saved === null ? newDraft(labels) : editDraft(saved.label),
+  const [typed, setDraft] = useState<LabelDraft>(() =>
+    saved === null ? newDraft(labels, []) : editDraft(saved.label),
   );
+  // A new label shows the order of a new label until the person changes it,
+  // also when the offered providers arrive after the dialog opened.
+  const draft = typed.defaultOrder
+    ? { ...typed, order: defaultOrder(offered ?? []) }
+    : typed;
   const [showErrors, setShowErrors] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [failure, setFailure] = useState<FailureCopy | null>(null);
@@ -98,7 +124,7 @@ export function LabelDialog({
     setBusy("save");
     setFailure(null);
     const result = await (saved === null
-      ? store.saveLabel(null, createRequest(check.input))
+      ? store.saveLabel(null, createRequest(check.input, draft))
       : store.saveLabel(saved.id, check.input));
     setBusy(null);
     if (result.ok) return onClose();
@@ -173,6 +199,13 @@ export function LabelDialog({
           nameError={nameError}
           sizeErrors={sizeErrors}
           fit={<LabelFitLine check={check} preview={previewState} />}
+          order={{
+            label: check.ok ? check.input : null,
+            fit: check.ok ? placeFacts(check.input, previewState.shown) : null,
+            waitSeconds: settings?.wait_seconds ?? null,
+            offered,
+            overflowHref: overflowHref(workspaceId),
+          }}
           onChange={change}
         />
       </View>
@@ -183,7 +216,7 @@ export function LabelDialog({
 const styles = StyleSheet.create({
   body: { gap: 16 },
   footer: {
-    flex: 1,
+    alignSelf: "stretch",
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",

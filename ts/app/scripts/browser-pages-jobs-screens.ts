@@ -58,7 +58,7 @@ export function jobsScreenRuns(origin: string) {
       async layoutCheck(page, width) {
         await insideViewport(
           page.getByText(
-            "No machine of yours and no Boat size fits a job of 128 vCPU, 256 GB of memory, and 1000 GB of free disk. Change the label, or let it run on the largest Boat size.",
+            "No machine of yours and no Boat size fits a job of 128 vCPU, 256 GB of memory, and 1000 GB of free disk. Change the label, or let it run on the largest size.",
             { exact: true },
           ),
           width,
@@ -109,6 +109,40 @@ export function jobsScreenRuns(origin: string) {
       scenario: "m21-jobs-overflow-unknown",
       path: live,
       text: "Waiting build",
+    },
+    {
+      name: "jobs-held-off",
+      scenario: "m21-jobs-held-off",
+      path: live,
+      text: "1 job with the label ciproxy-16vcpu waits",
+      async layoutCheck(page, width) {
+        await insideViewport(
+          page.getByText(
+            "Overflow providers are off. No other place of its order can take them now.",
+            { exact: true },
+          ),
+          width,
+        );
+        await visible(
+          page.getByRole("link", { name: "Turn on overflow", exact: true }),
+        );
+      },
+    },
+    {
+      name: "jobs-largest-held",
+      scenario: "m21-jobs-largest-held",
+      path: live,
+      text: "1 job with the label ciproxy-32vcpu waits",
+      async layoutCheck(page, width) {
+        await insideViewport(
+          page.getByText(
+            "Boat reached its spend limit. No other place of its order can take them now.",
+            { exact: true },
+          ),
+          width,
+        );
+        await absent(page.getByText(/Boat reached its \$100 limit/));
+      },
     },
     {
       name: "jobs-history",

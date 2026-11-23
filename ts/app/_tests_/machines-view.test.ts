@@ -149,7 +149,7 @@ test("the figures count live slots, unique warm runners, and measured cache rest
   });
 });
 
-test("jobs elsewhere name only machines and a Boat account that take jobs now", () => {
+test("jobs elsewhere name only machines and providers that take jobs now", () => {
   const offline = machine({ id: "off", offline: true });
   const healthy = machine({ id: "ok" });
   const draining = machine({ id: "drain", draining: true });

@@ -30,7 +30,7 @@ export const listCopy = {
   legend: { job: "Running a job", warm: "Warm runner", free: "Free" },
   emptyTitle: "Add your first machine",
   emptyBody:
-    "Run one command on a Linux machine or a Mac. Jobs start there first. When it is busy, Linux jobs run on Boat.",
+    "Run one command on a Linux machine or a Mac. Jobs start there first. When it is busy, Linux jobs can run on an overflow provider.",
   loading: "Loading machines…",
   subject: "machines",
   refreshTitle: "Unable to refresh machines",
@@ -81,10 +81,11 @@ export const elsewhereCopy = {
   jobs: "Jobs",
   newJobs: "New jobs",
   untilReady: "Until then, jobs",
-  machinesAndBoat: (subject: string) =>
-    `${subject} run on your other machines and on Boat.`,
+  machinesAndProviders: (subject: string, providers: string) =>
+    `${subject} run on your other machines and on ${providers}.`,
   machines: (subject: string) => `${subject} run on your other machines.`,
-  boat: (subject: string) => `${subject} run on Boat.`,
+  providers: (subject: string, providers: string) =>
+    `${subject} run on ${providers}.`,
   wait: (subject: string) => `${subject} wait until a machine can take them.`,
   macs: (subject: string) =>
     `${subject} of macOS labels wait until a Mac has a free slot.`,
@@ -219,25 +220,24 @@ export const costCopy = {
 export const overflowCopy = {
   title: "Overflow",
   settings: "Overflow settings",
-  boat: "Boat",
-  connected: (account: string, wait: string) =>
-    dotJoin(
-      `Connected to the account ${account}`,
-      wait === "At once"
-        ? "jobs start there at once"
-        : `jobs start there after ${wait}`,
-    ),
-  machinesOnly: "Jobs run on your machines only.",
-  notConnected: "Boat is not connected. Jobs run on your machines only.",
-  off: "Overflow is off, so jobs run on your machines only.",
-  rejected: (day: string) =>
-    `Boat rejected the API key on ${day}. Jobs run on your machines only until you connect Boat with a new key.`,
-  limit: (limit: string | null, nextMonth: string) =>
-    `Boat spend reached ${limit === null ? "its limit" : `the ${limit} limit`}. Jobs run on your machines only. Boat takes jobs again on ${nextMonth}.`,
-  spent: "Spent this month",
-  spentOf: (spent: string, limit: string) => `${spent} of ${limit}`,
-  pending: (amount: string) => `${amount} still pending`,
-  noSpend: "Boat spend shows here when Boat reports it.",
+  connected: (account: string) => `Connected to the account ${account}`,
+  machinesOnly: "Jobs run on your machines only",
+  connectLead:
+    "Connect an overflow provider to run jobs when your machines are busy.",
+  connect: "Connect a provider",
+  wait: (seconds: number, wait: string) =>
+    seconds === 0
+      ? "When your machines are full, jobs go to the next place of their label at once."
+      : `Jobs wait ${wait} for a free slot on your machines, then go to the next place of their label.`,
+  off: "Overflow providers are off, so jobs run on your machines only.",
+  rejected: (name: string, day: string) =>
+    `${name} rejected the API key on ${day}. ciproxy starts no new jobs on ${name} until you connect a new key.`,
+  unavailable: (name: string) =>
+    `${name} is unavailable right now, so jobs skip it.`,
+  limit: (name: string, limit: string | null, nextMonth: string) =>
+    `${name} spend reached ${limit === null ? "its limit" : `the ${limit} limit`}. ciproxy starts no new jobs on ${name} until ${nextMonth}.`,
+  noSpend: (name: string) =>
+    `${name} spend shows here when ${name} reports it.`,
   loading: "Loading overflow…",
   failed: "Unable to load overflow",
   refreshTitle: "Unable to refresh overflow",

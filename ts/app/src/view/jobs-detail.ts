@@ -7,10 +7,10 @@
 import type { JobView } from "../api/jobs-types.ts";
 import { formatCount } from "./exact-format.ts";
 import {
-  boatText,
   durationText,
   jobLook,
   placeOf,
+  providerSizeText,
   requestText,
   subtitleText,
   unknownText,
@@ -18,6 +18,7 @@ import {
   type Place,
   type ResultLook,
 } from "./jobs-format.ts";
+import { providerName } from "./providers.ts";
 
 export type DetailRowModel = {
   label: string;
@@ -39,7 +40,7 @@ export type JobDetailModel = {
   subtitle: string;
   githubUrl: string | null;
   place: Place;
-  /** The place as a title, such as "forge-01 · slot 3", "Boat", or "No runner". */
+  /** The place as a title: "forge-01 · slot 3", "Boat", or "No runner". */
   placeTitle: string;
   reason: string;
   timeline: readonly TimelineEvent[];
@@ -61,8 +62,8 @@ function placeTitle(place: Place): string {
   switch (place.kind) {
     case "machine":
       return place.slot === null ? place.name : `${place.name} · ${place.slot}`;
-    case "boat":
-      return "Boat";
+    case "provider":
+      return providerName(place.provider);
     case "none":
       return "No runner";
     case "unknown":
@@ -74,10 +75,11 @@ function vmRow(job: JobView, place: Place): DetailRowModel {
   const request = requestText(job.label);
   const actual = job.actual_size ?? null;
   if (job.location?.kind === "overflow") {
+    const { provider, size } = job.location;
     return {
       label: "VM size",
-      value: boatText(job.location.size, actual),
-      caption: "Boat bills this size.",
+      value: providerSizeText(provider, size, actual),
+      caption: `${providerName(provider)} bills this size.`,
     };
   }
   if (place.kind === "machine" && request !== null) {
@@ -164,8 +166,8 @@ function timeline(job: JobView, place: Place, timeZone?: string) {
   add(job.queued_at, "Queued on GitHub");
   if (place.kind === "machine")
     add(job.started_at, "Taken by a runner on", place.name);
-  else if (place.kind === "boat")
-    add(job.started_at, "Taken by a runner on Boat");
+  else if (place.kind === "provider")
+    add(job.started_at, `Taken by a runner on ${providerName(place.provider)}`);
   else add(job.started_at, "Taken by a runner");
   if (job.status === "completed") add(job.completed_at, jobLook(job).label);
   return events;

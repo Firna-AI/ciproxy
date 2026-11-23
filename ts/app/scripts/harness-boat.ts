@@ -19,6 +19,7 @@ export const boatScenarios = [
   "overflow-unknown-costs",
   "overflow-spend-unavailable",
   "overflow-unavailable",
+  "overflow-connected-unavailable",
   "overflow-load-failure",
   "overflow-save-failure",
   "overflow-connect-failure",
@@ -83,6 +84,8 @@ function settingsFor(name: BoatScenario): OverflowSettings {
     case "boat-setup-unavailable":
     case "overflow-unavailable":
       return notConnected(false);
+    case "overflow-connected-unavailable":
+      return overflowSettings({ available: false });
     case "boat-setup":
     case "boat-setup-load-failure":
     case "boat-setup-job-running":

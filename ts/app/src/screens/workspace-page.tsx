@@ -21,7 +21,7 @@ import { useRedirect, useSession, useValue } from "../services/hooks.ts";
 import type { OverflowSnapshot } from "../state/overflow.ts";
 import { createStore } from "../state/store.ts";
 import type { SetupSnapshot } from "../state/setup.ts";
-import { boatProgress } from "../view/boat.ts";
+import { providerProgress } from "../view/overflow.ts";
 import { setupComplete, setupModel } from "../view/setup-steps.ts";
 import type { SetupProgress } from "../view/shell.ts";
 import { NoRoleScreen } from "./no-role.tsx";
@@ -37,8 +37,8 @@ const noOverflow = createStore<OverflowSnapshot>({ status: "loading" });
 const noSkip = createStore<string | null>(null);
 
 /**
- * The progress of Setup for the navigation of an Admin. The Boat settings
- * load only while Setup is open, because only its count needs them.
+ * The progress of Setup for the navigation of an Admin. The overflow
+ * settings load only while Setup is open, because only its count needs them.
  */
 function useSetupProgress(
   workspaceId: string | null,
@@ -47,9 +47,9 @@ function useSetupProgress(
   const services = useServices();
   const store = workspaceId === null ? null : services.setup(workspaceId);
   const overflow = workspaceId === null ? null : services.overflow(workspaceId);
-  const skip = workspaceId === null ? null : services.boatSkip(workspaceId);
+  const skip = workspaceId === null ? null : services.providerSkip(workspaceId);
   const snapshot = useValue(store?.state ?? noSetup);
-  const boat = useValue(overflow?.state ?? noOverflow);
+  const providers = useValue(overflow?.state ?? noOverflow);
   const skippedBy = useValue(skip?.state ?? noSkip);
   const open =
     snapshot.status === "ready" &&
@@ -65,7 +65,7 @@ function useSetupProgress(
     snapshot.setup,
     snapshot.machines,
     false,
-    boatProgress(boat, skippedBy, login ?? ""),
+    providerProgress(providers, skippedBy, login ?? ""),
   );
   return { done: model.done, total: model.total, complete: model.complete };
 }

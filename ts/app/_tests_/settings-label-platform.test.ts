@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { machinePlace } from "../scripts/m20-fixtures-labels.ts";
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
 
 import { parseSettings } from "../src/api/settings-parse.ts";
 import {
@@ -18,16 +18,15 @@ const nbsp = " ";
 const mac = { platform: "macos_arm64", name: "ciproxy-macos" } as const;
 
 test("a new label is Linux, and an edit keeps the saved platform", () => {
-  assert.equal(newDraft([]).platform, "linux_x64");
+  assert.equal(newDraft([], []).platform, "linux_x64");
   assert.equal(editDraft(labelInput()).platform, "linux_x64");
   assert.equal(editDraft(labelInput(mac)).platform, "macos_arm64");
 });
 
-test("a macOS label always goes to the API with Boat off and Wait", () => {
+test("a macOS label always goes to the API with an order of own machines and Wait", () => {
   const draft = {
     ...editDraft(labelInput(mac)),
-    allowBoat: true,
-    allowMachines: false,
+    order: [boatPlace],
     whenNothingFits: "largest_overflow" as const,
   };
   const check = checkDraft(draft);

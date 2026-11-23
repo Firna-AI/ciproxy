@@ -1,6 +1,8 @@
-// Settings under Overflow while its settings load: its three panels with
-// grey bars in place of their content, as the loading state of the Settings
-// mockups shows, so the page keeps its layout when the settings arrive.
+// Settings under Overflow while its settings load: the panel of the switch
+// and the wait, and one provider panel, with grey bars in place of their
+// content, as the loading state of the Settings mockups shows, so the page
+// keeps its layout when the settings arrive. The providers are not known
+// yet, so the provider panel has no title.
 
 import { StyleSheet, View } from "react-native";
 
@@ -8,11 +10,7 @@ import { colors, radii } from "@ciproxy/tokens";
 
 import { Panel } from "../../components/panel.tsx";
 
-const titles = [
-  "Boat",
-  "When jobs start on Boat",
-  "Monthly spend limit",
-] as const;
+const titles = ["When jobs start on a provider", undefined] as const;
 
 export function OverflowLoading() {
   return (
@@ -22,8 +20,8 @@ export function OverflowLoading() {
       aria-label="Loading Overflow"
       aria-busy
     >
-      {titles.map((title) => (
-        <Panel key={title} title={title}>
+      {titles.map((title, index) => (
+        <Panel key={title ?? index} title={title}>
           <View style={styles.bars}>
             <View style={[styles.bar, styles.long]} />
             <View style={[styles.bar, styles.short]} />

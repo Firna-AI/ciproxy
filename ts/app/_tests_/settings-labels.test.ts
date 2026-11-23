@@ -3,7 +3,11 @@ import test from "node:test";
 
 import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
 
-import type { Problem } from "../src/api/schema.ts";
+import type {
+  LabelWaitReason,
+  Problem,
+  ProviderHold,
+} from "../src/api/schema.ts";
 import {
   checkDraft,
   editDraft,
@@ -16,14 +20,14 @@ import {
   jobsCaption,
   labelRows,
 } from "../src/view/settings-labels.ts";
-import { label, labelInput, providerFit } from "./settings-support.ts";
+import { label, labelInput } from "./settings-support.ts";
 
-test("the label list says where jobs run now, as the API places them, and the jobs of 30 days", () => {
-  const noBoat = {
-    providers: [
-      providerFit({ fit: { state: "unavailable" }, connected: false }),
-    ],
-  };
+test("the label list says where jobs run now, as the routing of the API places them, and the jobs of 30 days", () => {
+  const waits = (reason: LabelWaitReason) => ({
+    routing: { kind: "waits", reason } as const,
+  });
+  const held = (hold: ProviderHold) =>
+    waits({ kind: "provider", provider: "boat", hold });
   const rows = labelRows([
     label("a", { name: "ciproxy" }),
     label(
@@ -32,35 +36,22 @@ test("the label list says where jobs run now, as the API places them, and the jo
       { fitting_places: [machinePlace] },
     ),
     label("c", { name: "huge" }, { fitting_places: [boatPlace] }),
-    label("d", { name: "giant" }, { fitting_places: [] }),
+    label(
+      "d",
+      { name: "boat-first", order: [boatPlace, machinePlace] },
+      { fitting_places: [boatPlace, machinePlace] },
+    ),
     label(
       "e",
-      { name: "giant-own", order: [machinePlace] },
-      { fitting_places: [] },
+      { name: "giant", when_nothing_fits: "largest_overflow" },
+      { routing: { kind: "largest", provider: "boat" } },
     ),
-    label(
-      "f",
-      { name: "giant-boat", order: [boatPlace] },
-      { fitting_places: [] },
-    ),
-    label("g", { name: "off", order: [] }, { fitting_places: [] }),
-    label("h", { name: "new-box" }, { fitting_places: null }),
-    label(
-      "i",
-      { name: "unknown" },
-      { fitting_places: null, fitting_machines: 0 },
-    ),
-    label(
-      "j",
-      { name: "no-boat" },
-      { ...noBoat, fitting_places: [machinePlace] },
-    ),
-    label("k", { name: "no-boat-big" }, { ...noBoat, fitting_places: [] }),
-    label(
-      "l",
-      { name: "no-boat-only", order: [boatPlace] },
-      { ...noBoat, fitting_places: [] },
-    ),
+    label("f", { name: "giant-wait" }, waits({ kind: "nothing_fits" })),
+    label("g", { name: "empty", order: [] }, waits({ kind: "empty_order" })),
+    label("h", { name: "held-off" }, held("off")),
+    label("i", { name: "held-limit" }, held("spend_limit")),
+    label("j", { name: "held-new" }, held("not_connected")),
+    label("k", { name: "unknown" }, waits({ kind: "unavailable" })),
   ]);
   assert.deepEqual(
     rows.map((row) => [
@@ -68,22 +59,20 @@ test("the label list says where jobs run now, as the API places them, and the jo
       row.isDefault,
       row.where.text,
       row.where.warn,
-      row.where.note,
     ]),
     // Every label has the same size, so the list orders them by name.
     [
-      ["ciproxy", true, "Your machines, then Boat", false, null],
-      ["giant", false, "Waits: nothing fits", true, null],
-      ["giant-boat", false, "Waits: no Boat size fits", true, null],
-      ["giant-own", false, "Waits: no machine fits", true, null],
-      ["huge", false, "Boat only", false, null],
-      ["new-box", false, "Your machines", false, "Boat fit not known yet"],
-      ["no-boat", false, "Your machines only", false, null],
-      ["no-boat-big", false, "Waits: no machine fits", true, null],
-      ["no-boat-only", false, "Waits: Boat is not connected", true, null],
-      ["off", false, "Waits: Your machines and Boat are off", true, null],
-      ["own", false, "Your machines only", false, null],
-      ["unknown", false, "Not known yet", false, null],
+      ["boat-first", false, "Boat, then Your machines", false],
+      ["ciproxy", true, "Your machines, then Boat", false],
+      ["empty", false, "Waits: no place", true],
+      ["giant", false, "Boat, largest size", false],
+      ["giant-wait", false, "Waits: nothing fits", true],
+      ["held-limit", false, "Waits: Boat reached its spend limit", true],
+      ["held-new", false, "Waits: Boat is not connected", true],
+      ["held-off", false, "Waits: overflow providers are off", true],
+      ["huge", false, "Boat only", false],
+      ["own", false, "Your machines only", false],
+      ["unknown", false, "Not known yet", false],
     ],
   );
   const counted = labelRows([
@@ -160,7 +149,7 @@ test("an edit sends the saved name unchanged with the new size", () => {
 });
 
 test("a size needs whole numbers of at least 1", () => {
-  const draft = newDraft([]);
+  const draft = newDraft([], []);
   assert.deepEqual(
     [draft.name, draft.vcpus, draft.memory, draft.disk],
     ["", "", "", ""],
@@ -173,7 +162,7 @@ test("a size needs whole numbers of at least 1", () => {
     checkDraft({ ...draft, vcpus: "2147483648", memory: "8", disk: "1" }),
     { ok: false, errors: { vcpus: sizeError } },
   );
-  const started = newDraft([label("a", { name: "ciproxy", vcpus: 2 })]);
+  const started = newDraft([label("a", { name: "ciproxy", vcpus: 2 })], []);
   assert.deepEqual(
     [started.vcpus, started.memory, started.disk, started.whenNothingFits],
     ["2", "32", "60", "wait"],

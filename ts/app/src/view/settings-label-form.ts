@@ -3,9 +3,12 @@
 // requires. The name goes to the API as typed, because GitHub decides which
 // names work in runs-on, and the dialog shows the refusal of GitHub. A label
 // keeps its platform, as it keeps its name. A macOS label runs on the Macs
-// only, so it always goes to the API with Boat off and "Wait". The free disk
-// of a label can have a most value, such as the free space of the macOS
-// image, when the API gives one.
+// only, so it always goes to the API with an order of own machines and
+// "Wait". A new label starts with the order that the API gives a new label:
+// own machines, then each offered provider. Until the person changes that
+// order, Add label leaves it to the API. The free disk of a label can have a
+// most value, such as the free space of the macOS image, when the API gives
+// one.
 
 import type { ApiFailure } from "../api/client.ts";
 import type {
@@ -14,11 +17,12 @@ import type {
   LabelPlace,
   LabelView,
   NothingFits,
+  OverflowProvider,
   Platform,
 } from "../api/schema.ts";
 import type { FailureCopy } from "./claim.ts";
 import { labelPlatform } from "./platform.ts";
-import { hasBoat, hasMachines } from "./settings-label-places.ts";
+import { defaultOrder, machinePlace } from "./settings-label-places.ts";
 import { protectedLabelName } from "./settings-labels.ts";
 
 export type LabelDraft = {
@@ -27,10 +31,11 @@ export type LabelDraft = {
   vcpus: string;
   memory: string;
   disk: string;
-  allowMachines: boolean;
-  allowBoat: boolean;
+  /** The places of a Linux label, in order. */
+  order: LabelPlace[];
+  /** A new label keeps the order that the API gives a new label. */
+  defaultOrder: boolean;
   whenNothingFits: NothingFits;
-  order?: LabelPlace[];
 };
 
 export type SizeField = "vcpus" | "memory" | "disk";
@@ -66,15 +71,20 @@ export function editDraft(label: LabelInput): LabelDraft {
     vcpus: String(label.vcpus),
     memory: String(label.memory_gb),
     disk: String(label.disk_gb),
-    allowMachines: hasMachines(label.order),
-    allowBoat: hasBoat(label.order),
     order: label.order,
+    defaultOrder: false,
     whenNothingFits: label.when_nothing_fits,
   };
 }
 
-/** A new label starts with the size of `ciproxy`, when the workspace has it. */
-export function newDraft(labels: readonly LabelView[]): LabelDraft {
+/**
+ * A new label starts with the size of `ciproxy`, when the workspace has it,
+ * and with own machines, then each offered provider.
+ */
+export function newDraft(
+  labels: readonly LabelView[],
+  offered: readonly OverflowProvider[],
+): LabelDraft {
   const base = labels.find((view) => view.label.name === protectedLabelName);
   return {
     name: "",
@@ -82,10 +92,15 @@ export function newDraft(labels: readonly LabelView[]): LabelDraft {
     vcpus: base ? String(base.label.vcpus) : "",
     memory: base ? String(base.label.memory_gb) : "",
     disk: base ? String(base.label.disk_gb) : "",
-    allowMachines: true,
-    allowBoat: true,
+    order: defaultOrder(offered),
+    defaultOrder: true,
     whenNothingFits: "wait",
   };
+}
+
+/** The draft with a new order, which the person chose. */
+export function withOrder(draft: LabelDraft, order: LabelPlace[]): LabelDraft {
+  return { ...draft, order, defaultOrder: false };
 }
 
 /** The free disk, or its error: below 1 GB, or above the most free disk. */
@@ -102,20 +117,19 @@ function diskOf(
 }
 
 function draftOrder(draft: LabelDraft): LabelPlace[] {
-  if (draft.platform === "macos_arm64") return [{ kind: "machine" }];
-  const order = (draft.order ?? []).filter((place) =>
-    place.kind === "machine" ? draft.allowMachines : draft.allowBoat,
-  );
-  if (draft.allowMachines && !hasMachines(order))
-    order.unshift({ kind: "machine" });
-  if (draft.allowBoat && !hasBoat(order))
-    order.push({ kind: "overflow", provider: "boat" });
-  return order;
+  return draft.platform === "macos_arm64" ? [machinePlace] : draft.order;
 }
 
-/** A new label with both current switches on uses the workspace default. */
-export function createRequest(input: LabelInput): LabelCreate {
-  if (hasMachines(input.order) && hasBoat(input.order)) {
+/**
+ * The request of Add label. A Linux label whose order the person did not
+ * change leaves the order to the API, which gives own machines, then each
+ * offered provider.
+ */
+export function createRequest(
+  input: LabelInput,
+  draft: Pick<LabelDraft, "defaultOrder" | "platform">,
+): LabelCreate {
+  if (draft.defaultOrder && draft.platform !== "macos_arm64") {
     return { ...input, order: undefined };
   }
   return input;

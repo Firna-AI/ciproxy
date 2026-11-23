@@ -6,7 +6,7 @@ import { fields, problem, success } from "./harness-state.ts";
 import {
   fixtureFit,
   nothingFits,
-  switchedFit,
+  orderedFit,
   withoutBoat,
 } from "./m20-fixtures-labels.ts";
 import { labelInput } from "./m20-harness-input.ts";
@@ -15,7 +15,7 @@ import { macFit } from "./m20-fixtures-macs.ts";
 
 type Schemas = components["schemas"];
 
-/** The fit of a draft: the fit of the scenario, with the switches of it. */
+/** The fit of a draft: the fit of the scenario, with the order of the draft. */
 function preview(
   state: M20State,
   input: Schemas["LabelInput"],
@@ -23,12 +23,12 @@ function preview(
   if (input.platform === "macos_arm64") return macFit();
   const root = String((60 + input.disk_gb + 1) * 1_000_000_000);
   if (state.scenario === "label-no-fit")
-    return switchedFit(nothingFits(root), input);
+    return orderedFit(nothingFits(root), input);
   if (state.scenario === "label-partial-fit")
-    return switchedFit(fixtureFit(root, ["1", "0"]), input);
+    return orderedFit(fixtureFit(root, ["1", "0"]), input);
   if (state.scenario === "overflow-unconnected")
-    return switchedFit(withoutBoat(fixtureFit(root)), input);
-  return switchedFit(fixtureFit(root), input);
+    return orderedFit(withoutBoat(fixtureFit(root)), input);
+  return orderedFit(fixtureFit(root), input);
 }
 
 export async function settingsReply(

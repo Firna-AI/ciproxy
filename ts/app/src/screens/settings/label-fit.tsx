@@ -1,7 +1,7 @@
 // The fit of the label dialog: the VM disk of a job of the size, and the line
 // that says where jobs of the size run. Both show once the API answers for
-// the size and the switches in the fields; until then the dialog says that
-// it checks, so it never shows the fit of an older draft.
+// the size and the order in the fields; until then the dialog says that it
+// checks, so it never shows the fit of an older draft.
 
 import { StyleSheet, Text, View } from "react-native";
 

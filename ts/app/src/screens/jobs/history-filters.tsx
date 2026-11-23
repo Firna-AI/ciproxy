@@ -1,7 +1,9 @@
 // The filters of History: the search, the place, and the date choice. Each
 // change replaces the address, so a reload keeps the filters. The search
-// applies after a short pause or at Enter. The date choices are Today and
-// each history window of the tiers up to the history of the plan.
+// applies after a short pause or at Enter. The place offers All, Own
+// machines, and one choice for each provider, and its choices wrap on a
+// narrow screen. The date choices are Today and each history window of the
+// tiers up to the history of the plan.
 
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -14,21 +16,17 @@ import { ChevronDownIcon, SearchIcon } from "../../components/icons.tsx";
 import { useServices } from "../../services/context.tsx";
 import {
   jobsHref,
+  placeChoices,
   windowChoices,
   windowLabels,
   type HistoryFilters,
+  type PlaceChoice,
 } from "../../view/jobs-links.ts";
 
 /** The pause after the last key before a search applies. */
 export const searchPause = 400;
 
-const places = [
-  { label: "All", value: "all" },
-  { label: "Own machines", value: "machine" },
-  { label: "Boat", value: "boat" },
-] as const;
-
-type PlaceValue = (typeof places)[number]["value"];
+type PlaceValue = PlaceChoice["value"];
 
 export function HistoryFiltersView({
   workspaceId,
@@ -92,14 +90,17 @@ export function HistoryFiltersView({
           returnKeyType="search"
         />
       </View>
-      <SegmentedControl<PlaceValue>
-        options={places}
-        value={filters.place ?? "all"}
-        onChange={(value) =>
-          apply({ ...filters, place: value === "all" ? null : value })
-        }
-        accessibilityLabel="Where the job ran"
-      />
+      <View style={styles.place}>
+        <SegmentedControl<PlaceValue>
+          options={[...placeChoices]}
+          wrap
+          value={filters.place ?? "all"}
+          onChange={(value) =>
+            apply({ ...filters, place: value === "all" ? null : value })
+          }
+          accessibilityLabel="Where the job ran"
+        />
+      </View>
       <DropdownMenu
         entries={entries}
         accessibilityLabel="Finished"
@@ -126,4 +127,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   search: { flexGrow: 1, flexBasis: 220, minWidth: 220 },
+  // The place choice keeps to the width of the row, so its choices wrap.
+  place: { flexShrink: 1, minWidth: 0, maxWidth: "100%" },
 });

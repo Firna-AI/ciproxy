@@ -8,6 +8,7 @@ import type {
 } from "../src/api/jobs-types.ts";
 import { liveNotices } from "../src/view/jobs-notices.ts";
 import { liveJobs } from "../scripts/fixtures-jobs-live.ts";
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
 import {
   connectedBoat,
   fitting,
@@ -130,12 +131,14 @@ const placeCases: {
     name: "the Boat limit while a label that only Boat runs waits",
     labels: [
       waitingLabel("ciproxy", 3, "fits", fitting),
-      waitingLabel("ciproxy-16vcpu", 2, "none", fitting),
+      waitingLabel("ciproxy-16vcpu", 2, "none", fitting, {
+        hold: "spend_limit",
+      }),
     ],
     overflow: { ...connectedBoat, counted_cents: "10000", limit_reached: true },
     notices: [
       [
-        "spend-limit",
+        "boat-spend-limit",
         "Jobs whose label fits your machines wait there for a free slot. Boat takes jobs again on 1 December.",
       ],
     ],
@@ -152,6 +155,19 @@ const placeCases: {
         "machines-full",
         "3 jobs wait for a free slot. Each one starts on Boat when it has waited 30 seconds. 2 jobs start on Boat at once.",
       ],
+    ],
+  },
+  {
+    name: "a label whose order puts Boat before own machines",
+    labels: [
+      waitingLabel("ciproxy", 3, "fits", fitting),
+      waitingLabel("ciproxy-large", 2, "fits", fitting, {
+        order: [boatPlace, machinePlace],
+      }),
+    ],
+    overflow: connectedBoat,
+    notices: [
+      ["machines-full", `${boatEveryOne} 2 jobs start on Boat at once.`],
     ],
   },
   {
@@ -192,7 +208,7 @@ const placeCases: {
     overflow: { ...connectedBoat, refused_sizes: ["large"] },
     notices: [
       [
-        "size-refused-label-ciproxy-16vcpu",
+        "size-refused-boat-label-ciproxy-16vcpu",
         "Its jobs wait, and ciproxy tries Boat again.",
       ],
       ["machines-full", boatEveryOne],
@@ -207,7 +223,7 @@ const placeCases: {
     overflow: { ...connectedBoat, refused_sizes: ["large"] },
     notices: [
       [
-        "size-refused-label-ciproxy-large",
+        "size-refused-boat-label-ciproxy-large",
         "Its jobs take the first free slot on your machines, and ciproxy tries Boat again.",
       ],
       [

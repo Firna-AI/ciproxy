@@ -1,17 +1,20 @@
-// The form of one Boat connection: Check key first, then the wallet choice
-// and Connect Boat. The key check saves nothing and lists the wallets of the
-// key, with the likely wallet picked. A key edit drops the wallets, and the
-// answer of an older check never applies. Connect Boat sends the generated
-// request with the checked key, the limit, and the chosen wallet, and the
-// form drops the key as soon as the API accepted it. One change runs at a
-// time, and while another Boat change of the workspace runs, the form waits
-// for the pending mark of the store. Until the person types a limit, the
-// field shows the latest saved limit, so a reconnect or a key change sends
-// the newest saved limit. A typed limit stays until the API accepts the
-// connection.
+// The form of one provider connection. A provider whose key can bill one of
+// several accounts, which today is Boat with its wallets, takes two phases:
+// Check key first, then the wallet choice and Connect. The key check saves
+// nothing and lists the wallets of the key, with the likely wallet picked.
+// A key edit drops the wallets, and the answer of an older check never
+// applies. A provider with no such choice connects in one step. Connect
+// sends the generated request with the key, the limit, and the chosen
+// wallet when there is one, and the form drops the key as soon as the API
+// accepted it. One change runs at a time, and while another change of the
+// workspace runs, the form waits for the pending mark of the store. Until
+// the person types a limit, the field shows the latest saved limit of the
+// provider, so a reconnect or a key change sends the newest saved limit. A
+// typed limit stays until the API accepts the connection.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { ProviderSettings } from "../../api/schema.ts";
 import { useValue } from "../../services/hooks.ts";
 import {
   chooseWallet,
@@ -23,19 +26,25 @@ import {
 } from "../../state/key-check.ts";
 import type { OverflowStore } from "../../state/overflow.ts";
 import {
+  walletMissing,
+  walletOptions,
+  type WalletOption,
+} from "../../view/boat-wallets.ts";
+import type { FailureCopy } from "../../view/claim.ts";
+import { dollarsText, parseDollars } from "../../view/money.ts";
+import {
   checkProblem,
   connectProblem,
   keyMissing,
   limitInvalid,
-  walletMissing,
   type FieldProblem,
-} from "../../view/boat-failures.ts";
-import { walletOptions, type WalletOption } from "../../view/boat.ts";
-import type { FailureCopy } from "../../view/claim.ts";
-import { dollarsText, parseDollars } from "../../view/money.ts";
+} from "../../view/overflow-failures.ts";
+import { providerName } from "../../view/providers.ts";
 import { useSavedDraft } from "./use-saved-draft.ts";
 
 export type ConnectForm = {
+  /** The provider that the form connects. */
+  provider: ProviderSettings;
   apiKey: string;
   setApiKey(value: string): void;
   limit: string;
@@ -53,18 +62,21 @@ export type ConnectForm = {
   failure: FailureCopy | null;
   /** This form's check or connection runs. */
   busy: boolean;
-  /** Another Boat change of the workspace runs, so the form waits. */
+  /** Another change of the workspace runs, so the form waits. */
   locked: boolean;
-  /** Check key before the check answered, and Connect Boat after it. */
+  /** "Check key" before the wallets of the key, else "Connect Boat". */
+  submitLabel: string;
+  /** Check key before the check answered, and Connect after it. */
   submit(): Promise<void>;
 };
 
 export function useConnectForm(
   store: OverflowStore,
-  savedLimitCents: string | null,
+  provider: ProviderSettings,
   onConnected?: () => void,
 ): ConnectForm {
-  const saved = savedLimitCents === null ? "" : dollarsText(savedLimitCents);
+  const savedCents = provider.spend_limit_cents ?? null;
+  const saved = savedCents === null ? "" : dollarsText(savedCents);
   const pending = useValue(store.pending);
   const [apiKey, setApiKey] = useState("");
   const {
@@ -80,6 +92,8 @@ export function useConnectForm(
   const [failure, setFailure] = useState<FailureCopy | null>(null);
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
+  const key = provider.provider;
+  const choice = provider.has_billing_account_choice;
 
   const update = useCallback((next: KeyCheck) => {
     latest.current = next;
@@ -101,29 +115,32 @@ export function useConnectForm(
   }, []);
 
   const checkKey = useCallback(
-    async (key: string) => {
+    async (typed: string) => {
       const started = nextAttempt(latest.current);
       update(started);
-      const result = await store.checkKey(key);
+      const result = await store.checkKey(key, typed);
       if (latest.current.attempt !== started.attempt) return;
       if (result.ok)
         update(finishCheck(latest.current, started.attempt, result.value));
-      else show(checkProblem(result.failure));
+      else show(checkProblem(result.failure, key));
     },
-    [show, store, update],
+    [key, show, store, update],
   );
 
   const connect = useCallback(
-    async (key: string, checked: CheckedKey) => {
+    async (typed: string, checked: CheckedKey | null) => {
       const amount = parseDollars(limitText);
+      const noWallet = checked !== null && checked.chosen === null;
       setLimitError(amount.ok ? null : limitInvalid);
-      setWalletError(checked.chosen === null ? walletMissing : null);
-      if (!amount.ok || checked.chosen === null) return;
+      setWalletError(noWallet ? walletMissing : null);
+      if (!amount.ok || noWallet) return;
+      const wallet = checked?.chosen ?? null;
       const result = await store.connect(
+        key,
         {
-          api_key: key,
+          api_key: typed,
           spend_limit_cents: amount.cents,
-          wallet: checked.chosen,
+          ...(wallet === null ? {} : { wallet }),
         },
         () => {
           setApiKey("");
@@ -135,32 +152,33 @@ export function useConnectForm(
         onConnected?.();
         return;
       }
-      const problem = connectProblem(result.failure);
+      const problem = connectProblem(result.failure, key);
       if (problem.field === "key") update(nextAttempt(latest.current));
       show(problem);
     },
-    [limitText, onConnected, settleLimit, show, store, update],
+    [key, limitText, onConnected, settleLimit, show, store, update],
   );
 
   const submit = useCallback(async () => {
     if (running.current) return;
-    const key = apiKey.trim();
-    setKeyError(key === "" ? keyMissing : null);
+    const typed = apiKey.trim();
+    setKeyError(typed === "" ? keyMissing(key) : null);
     setFailure(null);
-    if (key === "") return;
+    if (typed === "") return;
     const checked = latest.current.checked;
     running.current = true;
     setBusy(true);
     try {
-      if (checked === null) await checkKey(key);
-      else await connect(key, checked);
+      if (choice && checked === null) await checkKey(typed);
+      else await connect(typed, checked);
     } finally {
       running.current = false;
       setBusy(false);
     }
-  }, [apiKey, checkKey, connect]);
+  }, [apiKey, checkKey, choice, connect, key]);
 
   return {
+    provider,
     apiKey,
     setApiKey(value) {
       setApiKey(value);
@@ -187,6 +205,10 @@ export function useConnectForm(
     failure,
     busy,
     locked: pending && !busy,
+    submitLabel:
+      choice && check.checked === null
+        ? "Check key"
+        : `Connect ${providerName(key)}`,
     submit,
   };
 }

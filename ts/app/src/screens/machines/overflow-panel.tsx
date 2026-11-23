@@ -1,41 +1,39 @@
-// The Overflow panel of Machines: where jobs go when the own machines are
-// busy, and the Boat spend of the month against its limit. Every role sees
-// it; only an Admin gets the link to the overflow settings. A failed read
-// shows in the panel with Try again, and the machines stay on the page. A
-// failed refresh keeps the last summary, with a warning and Try again above
-// it.
+// The Overflow panel of Machines: a row for each connected provider, with its
+// account and the spend of the month against its own limit, the confirmed and
+// the unconfirmed costs apart, and the overflow wait under the rows. With no
+// connected provider, the panel says that jobs run on the machines only.
+// Every role sees it; only an Admin gets the link to the overflow settings
+// and Connect a provider. A failed read shows in the panel with Try again,
+// and the machines stay on the page. A failed refresh keeps the last
+// summary, with a warning and Try again above it.
 
+import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
+import type { IconComponent } from "@firna/ui";
 
 import { colors, radii } from "@ciproxy/tokens";
 
 import type { OverflowSettings } from "../../api/machine-schema.ts";
-import { ActionButton } from "../../components/actions.tsx";
+import { ActionButton, ActionLink } from "../../components/actions.tsx";
 import { Panel, TextLink } from "../../components/feature-parts.tsx";
+import { CloudIcon, CloudOffIcon } from "../../components/icons.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import { text } from "../../components/text.ts";
 import type { OverflowSnapshot } from "../../state/machines-overflow.ts";
 import { listCopy, overflowCopy } from "../../view/machines-copy.ts";
-import { overflowModel } from "../../view/machines-overflow.ts";
+import {
+  overflowModel,
+  type ProviderRow,
+} from "../../view/machines-overflow.ts";
 import { overflowSettingsHref } from "../../view/machines-routes.ts";
-import { Meter } from "./machine-figures.tsx";
+import { SpendFiguresView } from "../overflow/spend-figures.tsx";
 
-function CloudIcon() {
+function Tile({ icon: Icon }: { icon: IconComponent }) {
   return (
-    <svg
-      aria-hidden="true"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={colors.ink2}
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5a4.25 4.25 0 0 1-.5 8.5z" />
-    </svg>
+    <View style={styles.tile}>
+      <Icon size={16} color={colors.ink2} />
+    </View>
   );
 }
 
@@ -53,60 +51,81 @@ function RefreshFailure({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function Body({
-  snapshot,
-  onRetry,
+function Row({ row, compact }: { row: ProviderRow; compact: boolean }) {
+  return (
+    <View style={[styles.row, compact && styles.rowCompact]}>
+      <Tile icon={CloudIcon} />
+      <View style={styles.text}>
+        <Text style={[text.body, text.strong]}>{row.name}</Text>
+        <Text style={text.caption}>{row.account}</Text>
+        {row.hold ? <Text style={text.caption}>{row.hold}</Text> : null}
+        {row.note ? <Text style={text.caption}>{row.note}</Text> : null}
+      </View>
+      {row.spend ? (
+        <View style={[styles.meter, compact && styles.meterCompact]}>
+          <SpendFiguresView figures={row.spend} compact />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function NoProvider({
+  workspaceId,
+  admin,
   compact,
 }: {
-  snapshot: OverflowSnapshot;
-  onRetry: () => void;
+  workspaceId: string;
+  admin: boolean;
   compact: boolean;
 }) {
-  if (snapshot.status === "loading") {
-    return <WaitingLine>{overflowCopy.loading}</WaitingLine>;
-  }
-  if (snapshot.status === "failed") {
-    return (
-      <Notice
-        tone="danger"
-        title={overflowCopy.failed}
-        actions={
-          <ActionButton label={listCopy.tryAgain} size="sm" onPress={onRetry} />
-        }
-      />
-    );
-  }
-  return <Summary summary={snapshot.page} compact={compact} />;
+  return (
+    <View style={[styles.row, compact && styles.rowCompact]}>
+      <Tile icon={CloudOffIcon} />
+      <View style={styles.text}>
+        <Text style={[text.body, text.strong]}>
+          {overflowCopy.machinesOnly}
+        </Text>
+        <Text style={text.caption}>{overflowCopy.connectLead}</Text>
+      </View>
+      {admin ? (
+        <Link href={overflowSettingsHref(workspaceId)} asChild>
+          <ActionLink
+            label={overflowCopy.connect}
+            href={overflowSettingsHref(workspaceId)}
+            size="sm"
+          />
+        </Link>
+      ) : null}
+    </View>
+  );
 }
 
 function Summary({
   summary,
+  workspaceId,
+  admin,
   compact,
 }: {
   summary: OverflowSettings;
+  workspaceId: string;
+  admin: boolean;
   compact: boolean;
 }) {
   const model = overflowModel(summary);
+  if (model.kind === "none") {
+    return (
+      <NoProvider workspaceId={workspaceId} admin={admin} compact={compact} />
+    );
+  }
   return (
-    <View style={[styles.row, compact && styles.rowCompact]}>
-      <View style={styles.tile}>
-        <CloudIcon />
-      </View>
-      <View style={styles.text}>
-        <Text style={[text.body, text.strong]}>{overflowCopy.boat}</Text>
-        <Text style={text.caption}>{model.caption}</Text>
-        {model.note ? <Text style={text.caption}>{model.note}</Text> : null}
-      </View>
-      {model.meter ? (
-        <View style={[styles.meter, compact && styles.meterCompact]}>
-          <Meter
-            label={overflowCopy.spent}
-            ratio={model.meter.ratio}
-            value={model.meter.value}
-            detail={model.meter.detail}
-          />
+    <View style={styles.rows}>
+      {model.rows.map((row, index) => (
+        <View key={row.provider} style={index > 0 ? styles.divided : undefined}>
+          <Row row={row} compact={compact} />
         </View>
-      ) : null}
+      ))}
+      <Text style={text.caption}>{model.caption}</Text>
     </View>
   );
 }
@@ -124,6 +143,29 @@ export function OverflowPanel({
   compact: boolean;
   onRetry: () => void;
 }) {
+  let body;
+  if (snapshot.status === "loading") {
+    body = <WaitingLine>{overflowCopy.loading}</WaitingLine>;
+  } else if (snapshot.status === "failed") {
+    body = (
+      <Notice
+        tone="danger"
+        title={overflowCopy.failed}
+        actions={
+          <ActionButton label={listCopy.tryAgain} size="sm" onPress={onRetry} />
+        }
+      />
+    );
+  } else {
+    body = (
+      <Summary
+        summary={snapshot.page}
+        workspaceId={workspaceId}
+        admin={admin}
+        compact={compact}
+      />
+    );
+  }
   return (
     <Panel
       title={overflowCopy.title}
@@ -139,12 +181,18 @@ export function OverflowPanel({
       {snapshot.status === "ready" && snapshot.refreshFailure !== null ? (
         <RefreshFailure onRetry={onRetry} />
       ) : null}
-      <Body snapshot={snapshot} onRetry={onRetry} compact={compact} />
+      {body}
     </Panel>
   );
 }
 
 const styles = StyleSheet.create({
+  rows: { gap: 12 },
+  divided: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   rowCompact: { flexWrap: "wrap" },
   tile: {

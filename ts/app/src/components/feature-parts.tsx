@@ -1,20 +1,14 @@
 // Generic parts of the feature pages, after the mockups: a panel with a
 // hairline border, a detail row, a status dot beside its word, a text link,
-// the page header with its breadcrumb and actions, and a dialog that becomes
-// a bottom sheet on a phone. Machines and Settings share them. A removal uses
+// and the page header with its breadcrumb and actions. Machines and Settings
+// share them, and the dialog in feature-dialog.tsx. A removal uses
 // ActionButton with the danger tone. Colours, fonts, and radii come from the
 // token package.
 
-import {
-  useState,
-  type MouseEvent,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { useFocusRing } from "@firna/ui/focusRing";
-import { WebModalFrame, type Focusable } from "@firna/ui/modal";
 import { StatusDot } from "@firna/ui/status-dot";
 
 import {
@@ -26,7 +20,6 @@ import {
 } from "@ciproxy/tokens";
 
 import { text } from "./text.ts";
-import { useViewport } from "./viewport.ts";
 
 export function Panel({
   title,
@@ -191,46 +184,6 @@ export function FeatureHeader({
       </View>
       {actions ? <View style={styles.actions}>{actions}</View> : null}
     </View>
-  );
-}
-
-/**
- * A dialog over the page, and a bottom sheet on a phone. While its change
- * runs, it cannot close. Point `initialFocusRef` at the safe action of a
- * destructive confirmation.
- */
-export function FeatureDialog({
-  title,
-  visible,
-  busy = false,
-  onClose,
-  footer,
-  initialFocusRef,
-  children,
-}: {
-  title: string;
-  visible: boolean;
-  busy?: boolean;
-  onClose: () => void;
-  footer: ReactNode;
-  initialFocusRef?: RefObject<Focusable | null>;
-  children: ReactNode;
-}) {
-  const viewport = useViewport();
-  return (
-    <WebModalFrame
-      title={title}
-      visible={visible}
-      onClose={onClose}
-      closeDisabled={busy}
-      dismissible={!busy}
-      placement={viewport === "mobile" ? "bottom-sheet" : "center"}
-      size="sm"
-      footer={footer}
-      initialFocusRef={initialFocusRef}
-    >
-      {children}
-    </WebModalFrame>
   );
 }
 

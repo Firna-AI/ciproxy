@@ -22,7 +22,7 @@ export const roleOrder: readonly WorkspaceRole[] = [
 
 export const roleDescriptions: Readonly<Record<WorkspaceRole, string>> = {
   admin:
-    "Can do everything: the machines, labels, settings, Boat, roles, and billing.",
+    "Can do everything: the machines, labels, settings, overflow providers, roles, and billing.",
   billing:
     "Sees what a Viewer sees, and manages the plan, the add-ons, and the invoices.",
   viewer: "Sees the jobs, the machines, the savings, and Plan and usage.",

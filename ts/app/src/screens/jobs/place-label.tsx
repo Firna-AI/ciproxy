@@ -1,14 +1,16 @@
 // Where a job runs or ran: an own machine in the monospace face, with its
-// slot while the job runs, or Boat. A finished job that no runner took says
-// so, and a place that the API leaves out says "Unknown".
+// slot while the job runs, or the provider that runs it, such as Boat. A
+// finished job that no runner took says so, and a place that the API leaves
+// out says "Unknown".
 
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors } from "@ciproxy/tokens";
 
-import { BoatIcon, MachinesIcon } from "../../components/icons.tsx";
+import { CloudIcon, MachinesIcon } from "../../components/icons.tsx";
 import { text } from "../../components/text.ts";
 import type { Place } from "../../view/jobs-format.ts";
+import { providerName } from "../../view/providers.ts";
 
 export function PlaceLabel({ place, slot }: { place: Place; slot: boolean }) {
   switch (place.kind) {
@@ -24,11 +26,11 @@ export function PlaceLabel({ place, slot }: { place: Place; slot: boolean }) {
           ) : null}
         </View>
       );
-    case "boat":
+    case "provider":
       return (
         <View style={styles.row}>
-          <BoatIcon size={14} color={colors.muted} />
-          <Text style={text.small}>Boat</Text>
+          <CloudIcon size={14} color={colors.muted} />
+          <Text style={text.small}>{providerName(place.provider)}</Text>
         </View>
       );
     case "none":

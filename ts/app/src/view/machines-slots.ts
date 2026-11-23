@@ -157,7 +157,7 @@ export function slotsModel(
     };
   }
   if (status === "no-slots") {
-    // A Mac runs macOS jobs only, which never run on Boat.
+    // A Mac runs macOS jobs only, which never run on a provider.
     const elsewhere = isMac(machine)
       ? elsewhereCopy.macs(elsewhereCopy.jobs)
       : elsewhereText(machine, machines, summary);

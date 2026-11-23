@@ -16,10 +16,6 @@ import type {
   ProviderSpendLimit,
 } from "./schema.ts";
 
-/** The current Boat form sends the wallet that the customer chose. */
-export type BoatConnectionWithWallet = BoatConnection &
-  Required<Pick<BoatConnection, "wallet">>;
-
 export function createOverflowEndpoints(client: ApiClient) {
   const overflow = (workspace_id: string) =>
     routePath("/workspaces/{workspace_id}/overflow", { workspace_id });

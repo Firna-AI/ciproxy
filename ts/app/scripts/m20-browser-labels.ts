@@ -12,8 +12,9 @@ import {
   type M20Case,
 } from "./m20-browser-fixture.ts";
 
-/** The choice "Run on the largest Boat size", which names no size. */
-const largestBoat = "Jobs run on the largest size of your Boat account.";
+/** The choice "Run on the largest size", which names no provider size. */
+const largestChoice =
+  "Jobs run on the largest size of the first provider of the order that can take jobs.";
 
 async function addLabelDialog(
   page: Page,
@@ -30,8 +31,9 @@ async function addLabelDialog(
 
 /**
  * Without a Boat account, the labels keep the fit of the machines: the list
- * says Your machines only, and the dialog says that Boat is not connected,
- * never that a Boat size does not fit. The largest Boat size stays unnamed.
+ * says Your machines only, and the order row of Boat says that Boat is not
+ * connected, never that a Boat size does not fit. The largest size stays
+ * unnamed.
  */
 async function labelsWithoutBoat(page: Page, origin: string): Promise<void> {
   await open(
@@ -52,9 +54,11 @@ async function labelsWithoutBoat(page: Page, origin: string): Promise<void> {
   const dialog = within(
     page.getByRole("dialog", { name: "Edit ciproxy-large", exact: true }),
   );
-  await visible(dialog.getByText(/ Boat is not connected\.$/));
+  await visible(
+    dialog.getByText("Boat is not connected, so jobs skip it", { exact: true }),
+  );
   assert.equal(await dialog.getByText(/no Boat size fits/i).count(), 0);
-  await visible(dialog.getByText(largestBoat, { exact: true }));
+  await visible(dialog.getByText(largestChoice, { exact: true }));
 }
 
 export function labelCases(origin: string, output: string): M20Case[] {
@@ -134,7 +138,7 @@ export function labelCases(origin: string, output: string): M20Case[] {
             /^No machine of yours and no Boat size fits a job of 64\svCPU, 256\sGB of memory, and 200\sGB of free disk$/,
           ),
         );
-        await visible(dialog.getByText(largestBoat, { exact: true }));
+        await visible(dialog.getByText(largestChoice, { exact: true }));
         assert.equal(await dialog.getByText(/ offers? /).count(), 0);
         await visible(dialog.getByText(/each VM has a disk of 261\sGB\.$/));
         await capture(page, width, output, "label-no-fit-dialog");

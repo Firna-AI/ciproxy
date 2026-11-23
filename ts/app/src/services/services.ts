@@ -1,6 +1,6 @@
 // The services of one document: one API client, one build gate, one
 // navigator, one session, and one Setup, install-command, overflow, and
-// Boat-skip store for each workspace. A full-document navigation drops them
+// provider-skip store for each workspace. A full-document navigation drops them
 // all, so nothing private outlives a sign-out.
 
 import {
@@ -12,7 +12,6 @@ import {
 import { createEndpoints, type Endpoints } from "../api/endpoints.ts";
 import { createOverflowEndpoints } from "../api/overflow-endpoints.ts";
 import type { InstallLink } from "../api/schema.ts";
-import { createBoatSkipStore, type BoatSkipStore } from "../state/boat-skip.ts";
 import { createBuildGate, type BuildGate } from "../state/build-gate.ts";
 import {
   createInstallCommandStore,
@@ -26,6 +25,10 @@ import {
 } from "../state/navigation.ts";
 import { createOverflowStore, type OverflowStore } from "../state/overflow.ts";
 import type { Timers, Visibility } from "../state/poller.ts";
+import {
+  createProviderSkipStore,
+  type ProviderSkipStore,
+} from "../state/provider-skip.ts";
 import { createSessionStore, type SessionStore } from "../state/session.ts";
 import { createSetupStore, type SetupStore } from "../state/setup.ts";
 import { storageKeys, type KeyValueStorage } from "../state/storage.ts";
@@ -54,10 +57,10 @@ export type AppServices = {
   readonly session: SessionStore;
   setup(workspaceId: string): SetupStore;
   installCommand(workspaceId: string): InstallCommandStore;
-  /** The Boat settings of Setup and Settings under Overflow. */
+  /** The overflow settings of Setup, Settings, and the label dialog. */
   overflow(workspaceId: string): OverflowStore;
-  /** Skip for now on the Boat step of Setup, in this tab. */
-  boatSkip(workspaceId: string): BoatSkipStore;
+  /** Skip for now on the provider step of Setup, in this tab. */
+  providerSkip(workspaceId: string): ProviderSkipStore;
   /** Save installation evidence before leaving for GitHub. */
   startInstallation(): Promise<ApiResult<InstallLink>>;
   /** Remember that this tab follows an install link to GitHub. */
@@ -134,8 +137,8 @@ export function createAppServices(env: AppEnvironment): AppServices {
         mutate: sessionStore.mutate,
       }),
     ),
-    boatSkip: cached((workspaceId) =>
-      createBoatSkipStore(env.tab, workspaceId),
+    providerSkip: cached((workspaceId) =>
+      createProviderSkipStore(env.tab, workspaceId),
     ),
     async startInstallation() {
       const result = await sessionStore.mutate(() =>

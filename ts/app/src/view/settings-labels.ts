@@ -1,21 +1,24 @@
 // The Labels tab: each label with its platform and size, where its jobs run
-// now, and the
-// jobs that it ran in the last 30 days. A macOS label runs on the Macs only.
-// The placement, the count, and whether
-// the workspace has a Boat account come from the API; the switches of a label
-// only choose the words of a wait. When the API knows the fit of the machines
-// but not the Boat fit, the row names both. The fit of the label dialog is in
-// settings-label-fit.ts. The list shows the Linux labels first, then the
-// macOS labels, each from the smallest size to the largest.
+// now, and the jobs that it ran in the last 30 days. Where jobs run names the
+// places of its order that can run the label now, in order, so a provider
+// that cannot take a job or has no size that fits drops out. A label that no
+// place can run now waits, with the reason of the first place of its order
+// that fits its size. The API decides the places and the reason with the
+// routing of the label, which the Jobs notices read too; this module only
+// puts them into words. A macOS label runs on the Macs only. The fit of the
+// label dialog is in settings-label-fit.ts. The list shows the Linux labels
+// first, then the macOS labels, each from the smallest size to the largest.
 
 import type {
-  LabelFit,
   LabelInput,
+  LabelRouting,
   LabelView,
+  LabelWaitReason,
   Platform,
 } from "../api/schema.ts";
-import { isMacLabel, labelPlatform, platformName } from "./platform.ts";
-import { boatLabelFit, hasBoat, hasMachines } from "./settings-label-places.ts";
+import { labelPlatform, platformName } from "./platform.ts";
+import { holdText, providerName } from "./providers.ts";
+import { orderText } from "./settings-label-places.ts";
 
 /**
  * The one label that cannot be deleted, because the warm runners serve it,
@@ -41,54 +44,41 @@ export type Placement = {
   /** Where the jobs of the label run now, or why they wait. */
   text: string;
   warn: boolean;
-  /** A fact under the placement that the API does not know yet. */
-  note: string | null;
 };
 
-/** The reason of a wait, by the switches of the label and the account. */
-function waitReason(label: LabelInput, fit: LabelFit): string {
-  if (!hasMachines(label.order) && !hasBoat(label.order)) {
-    return "Your machines and Boat are off";
+/** Why the jobs of a label wait, after "Waits: ". */
+export function waitText(reason: LabelWaitReason, platform: Platform): string {
+  switch (reason.kind) {
+    case "empty_order":
+      return "no place";
+    case "nothing_fits":
+      return platform === "macos_arm64" ? "no Mac fits" : "nothing fits";
+    case "unavailable":
+      return "some facts are not known yet";
+    case "provider":
+      return holdText(reason.provider, reason.hold);
   }
-  if (!hasBoat(label.order)) return "no machine fits";
-  if (boatLabelFit(fit.providers)?.connected === false) {
-    return hasMachines(label.order)
-      ? "no machine fits"
-      : "Boat is not connected";
-  }
-  if (!hasMachines(label.order)) return "no Boat size fits";
-  return "nothing fits";
 }
 
-/** Where the jobs of a macOS label run now: on the Macs only, or they wait. */
-function macPlacement(fit: LabelFit): Placement {
-  if (fit.fitting_places?.length === 0) {
-    return { text: "Waits: no Mac fits", warn: true, note: null };
+/** Where the jobs of a label run now, as the routing of the API says. */
+export function placement(
+  routing: LabelRouting,
+  platform: Platform,
+): Placement {
+  switch (routing.kind) {
+    case "places":
+      return { text: orderText(routing.places, platform), warn: false };
+    case "largest":
+      return {
+        text: `${providerName(routing.provider)}, largest size`,
+        warn: false,
+      };
+    case "waits":
+      // A missing fact gives no reason to name, so the row says so plainly.
+      return routing.reason.kind === "unavailable"
+        ? { text: "Not known yet", warn: false }
+        : { text: `Waits: ${waitText(routing.reason, platform)}`, warn: true };
   }
-  if (fit.fitting_places == null && fit.fitting_machines === 0) {
-    return { text: "Not known yet", warn: false, note: null };
-  }
-  return { text: "Your Macs only", warn: false, note: null };
-}
-
-/** Where the jobs of a label run now, as the API places them. */
-export function placement(label: LabelInput, fit: LabelFit): Placement {
-  if (isMacLabel(label)) return macPlacement(fit);
-  const places = fit.fitting_places ?? null;
-  if (places === null) {
-    return hasMachines(label.order) && fit.fitting_machines > 0
-      ? { text: "Your machines", warn: false, note: "Boat fit not known yet" }
-      : { text: "Not known yet", warn: false, note: null };
-  }
-  if (hasMachines(places)) {
-    return {
-      text: hasBoat(places) ? "Your machines, then Boat" : "Your machines only",
-      warn: false,
-      note: null,
-    };
-  }
-  if (hasBoat(places)) return { text: "Boat only", warn: false, note: null };
-  return { text: `Waits: ${waitReason(label, fit)}`, warn: true, note: null };
 }
 
 export type LabelRow = {
@@ -137,7 +127,7 @@ export function labelRows(labels: readonly LabelView[]): LabelRow[] {
       name: view.label.name,
       isDefault: view.label.name === protectedLabelName,
       size: `${platformName[labelPlatform(view.label)]}${nbsp}· ${sizeText(view.label)}`,
-      where: placement(view.label, view.fit),
+      where: placement(view.fit.routing, labelPlatform(view.label)),
       jobs: jobs === null ? null : grouped.format(BigInt(jobs)),
     };
   });

@@ -13,6 +13,8 @@ export const pageScenarios = [
   "m21-jobs-spend-limit",
   "m21-jobs-boat-refused",
   "m21-jobs-overflow-unknown",
+  "m21-jobs-held-off",
+  "m21-jobs-largest-held",
   "m21-jobs-history",
   "m21-jobs-history-empty",
   "m21-jobs-detail",
@@ -113,6 +115,12 @@ export function applyPageScenario(scenario: Scenario): void {
       break;
     case "m21-jobs-overflow-unknown":
       pages.jobs = "overflow-unknown";
+      break;
+    case "m21-jobs-held-off":
+      pages.jobs = "held-off";
+      break;
+    case "m21-jobs-largest-held":
+      pages.jobs = "largest-held";
       break;
     case "m21-jobs-history-empty":
       pages.history = "empty";

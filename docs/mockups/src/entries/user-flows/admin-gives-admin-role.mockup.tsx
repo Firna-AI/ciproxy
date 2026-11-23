@@ -19,7 +19,7 @@ export const adminGivesAdminRole = defineUseCase({
       screenPath: paths.grantAdmin,
       title: "What the Admin role controls",
       description:
-        "The dialog says that an Admin can add machines and connect Boat, which run the jobs of mokly-ai and mokly-labs with their secrets, and that an organization whose runners other people should control gets a workspace of its own. It also says that an Admin accepts new versions of the ciproxy Terms for the customer that holds the workspace. Cal gives the role.",
+        "The dialog says that an Admin can add machines and connect overflow providers, which run the jobs of mokly-ai and mokly-labs with their secrets, and that an organization whose runners other people should control gets a workspace of its own. It also says that an Admin accepts new versions of the ciproxy Terms for the customer that holds the workspace. Cal gives the role.",
     },
   ],
 });

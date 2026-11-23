@@ -7,6 +7,7 @@
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { LabelFit, LabelInput } from "../api/schema.ts";
+import { placeKey } from "../view/settings-label-places.ts";
 import type { Timers } from "./poller.ts";
 import { createStore, type Store } from "./store.ts";
 
@@ -37,7 +38,8 @@ export const previewDelay = 300;
 
 /**
  * The parts of a label that its fit depends on: the platform, the size, the
- * order of places and "When nothing fits", which decide where the jobs run. A change of the name needs no new fit.
+ * order of places, and "When nothing fits", which decide where the jobs run.
+ * A change of the name needs no new fit.
  */
 export function fitKey(input: LabelInput): string {
   return [
@@ -45,9 +47,7 @@ export function fitKey(input: LabelInput): string {
     input.vcpus,
     input.memory_gb,
     input.disk_gb,
-    input.order
-      .map((place) => (place.kind === "machine" ? "machine" : place.provider))
-      .join(","),
+    input.order.map(placeKey).join(","),
     input.when_nothing_fits,
   ].join("/");
 }

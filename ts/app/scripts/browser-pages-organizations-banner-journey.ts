@@ -213,7 +213,7 @@ export function organizationsBannerJourney(
       await visible(dialog);
       await visible(
         dialog.getByText(
-          "The jobs of orbit-labs then run on the machines of this workspace, with its labels, settings, and Boat account.",
+          "The jobs of orbit-labs then run on the machines of this workspace, with its labels, settings, and overflow providers.",
           { exact: true },
         ),
       );

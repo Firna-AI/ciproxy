@@ -9,11 +9,31 @@ import { workspaceId } from "../scripts/fixtures-core.ts";
 import { nbsp, summary } from "./machines-fixtures.ts";
 import { appWith, response } from "./support.ts";
 
-test("a connected Boat account shows its wait and the confirmed spend against the limit", () => {
+const steadySpend = {
+  name: "Boat",
+  confirmed: "$61.20",
+  unconfirmed: "$0",
+  settled: null,
+  limit: "$200",
+  confirmedShare: 0.306,
+  unconfirmedShare: 0,
+  reached: false,
+};
+
+test("each connected provider has a row with its account and its spend, and the wait shows once under the rows", () => {
   assert.deepEqual(overflowModel(summary()), {
-    caption: `Connected to the account mokly${nbsp}· jobs start there after 30${nbsp}seconds`,
-    meter: { ratio: 0.306, value: "$61.20 of $200", detail: null },
-    note: null,
+    kind: "providers",
+    rows: [
+      {
+        provider: "boat",
+        name: "Boat",
+        account: "Connected to the account mokly",
+        hold: null,
+        spend: steadySpend,
+        note: null,
+      },
+    ],
+    caption: `Jobs wait 30${nbsp}seconds for a free slot on your machines, then go to the next place of their label.`,
   });
   const pending = overflowModel(
     summary({
@@ -28,25 +48,31 @@ test("a connected Boat account shows its wait and the confirmed spend against th
     }),
   );
   assert.equal(
-    pending.caption,
-    `Connected to the account mokly${nbsp}· jobs start there at once`,
+    pending.kind === "providers" ? pending.caption : null,
+    "When your machines are full, jobs go to the next place of their label at once.",
   );
-  assert.equal(pending.meter?.detail, "$4.10 still pending");
+  assert.equal(
+    pending.kind === "providers" ? pending.rows[0]?.spend?.unconfirmed : null,
+    "$4.10",
+  );
 });
 
-test("Boat that takes no jobs says why, and jobs run on the machines only", () => {
+test("a provider that takes no jobs says why, and no connected provider leaves the machines only", () => {
+  const holdOf = (model: ReturnType<typeof overflowModel>) =>
+    model.kind === "providers" ? model.rows[0]?.hold : "no rows";
+  assert.deepEqual(overflowModel(summary({ account: null })), {
+    kind: "none",
+  });
   assert.equal(
-    overflowModel(summary({ account: null })).caption,
-    "Boat is not connected. Jobs run on your machines only.",
+    holdOf(overflowModel(summary({ available: false }))),
+    "Boat is unavailable right now, so jobs skip it.",
   );
+  const off = overflowModel(summary({ enabled: false }));
   assert.equal(
-    overflowModel(summary({ available: false })).caption,
-    "Jobs run on your machines only.",
+    off.kind === "providers" ? off.caption : null,
+    "Overflow providers are off, so jobs run on your machines only.",
   );
-  assert.equal(
-    overflowModel(summary({ enabled: false })).caption,
-    "Overflow is off, so jobs run on your machines only.",
-  );
+  assert.equal(holdOf(off), null);
   const rejected = summary({
     account: {
       connected_at: "2026-09-15T09:00:00Z",
@@ -55,8 +81,8 @@ test("Boat that takes no jobs says why, and jobs run on the machines only", () =
     },
   });
   assert.equal(
-    overflowModel(rejected).caption,
-    `Boat rejected the API key on 12${nbsp}November. Jobs run on your machines only until you connect Boat with a new key.`,
+    holdOf(overflowModel(rejected)),
+    `Boat rejected the API key on 12${nbsp}November. ciproxy starts no new jobs on Boat until you connect a new key.`,
   );
   const limit = summary({
     spend: {
@@ -68,14 +94,16 @@ test("Boat that takes no jobs says why, and jobs run on the machines only", () =
     },
   });
   assert.equal(
-    overflowModel(limit).caption,
-    `Boat spend reached the $200 limit. Jobs run on your machines only. Boat takes jobs again on 1${nbsp}December.`,
+    holdOf(overflowModel(limit)),
+    `Boat spend reached the $200 limit. ciproxy starts no new jobs on Boat until 1${nbsp}December.`,
   );
-  assert.deepEqual(overflowModel(summary({ spend: null })), {
-    caption: `Connected to the account mokly${nbsp}· jobs start there after 30${nbsp}seconds`,
-    meter: null,
-    note: "Boat spend shows here when Boat reports it.",
-  });
+  const unread = overflowModel(summary({ spend: null }));
+  assert.deepEqual(
+    unread.kind === "providers"
+      ? [unread.rows[0]?.spend, unread.rows[0]?.note]
+      : null,
+    [null, "Boat spend shows here when Boat reports it."],
+  );
 });
 
 test("the overflow summary reader keeps nulls and refuses a negative wait", () => {

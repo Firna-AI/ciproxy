@@ -6,7 +6,12 @@ import {
   noRunnerReason,
   unavailableReason,
 } from "../src/view/jobs-detail.ts";
-import { filtersOf, historyQuery, jobsHref } from "../src/view/jobs-links.ts";
+import {
+  filtersOf,
+  historyQuery,
+  jobsHref,
+  placeChoices,
+} from "../src/view/jobs-links.ts";
 import { liveModel } from "../src/view/jobs-live.ts";
 import { fixtureJob } from "../scripts/fixtures-jobs.ts";
 import { liveJobs } from "../scripts/fixtures-jobs-live.ts";
@@ -147,6 +152,25 @@ test("live figures keep unknown slots and a hidden waiting count apart from zero
   ]);
 });
 
+test("the live queue counts the running jobs of each connected provider, and of a provider that still runs jobs", () => {
+  const base = liveJobs("live", "admin", null);
+  const [seen] = base.overflow;
+  assert.notEqual(seen, undefined);
+  const page = (connected: boolean, running: string, observed = true) =>
+    liveModel(
+      {
+        ...base,
+        overflow: observed && seen ? [{ ...seen, connected }] : [],
+        running_by_provider: [{ provider: "boat", running }],
+      },
+      0,
+    ).figures.filter((figure) => figure.label.startsWith("On "));
+  assert.deepEqual(page(true, "0"), [{ label: "On Boat", value: "0" }]);
+  assert.deepEqual(page(false, "0"), []);
+  assert.deepEqual(page(false, "2"), [{ label: "On Boat", value: "2" }]);
+  assert.deepEqual(page(true, "0", false), []);
+});
+
 test("History filters round-trip through the address and ask the API from the UTC date", () => {
   const filters = filtersOf({
     tab: "history",
@@ -170,4 +194,16 @@ test("History filters round-trip through the address and ask the API from the UT
     place: null,
     days: 1,
   });
+});
+
+test("the History place filter offers All, Own machines, and one choice for each provider", () => {
+  assert.deepEqual(
+    placeChoices.map((choice) => [choice.label, choice.value]),
+    [
+      ["All", "all"],
+      ["Own machines", "machine"],
+      ["Boat", "boat"],
+    ],
+  );
+  assert.deepEqual(filtersOf({ place: "second" }).place, null);
 });

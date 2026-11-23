@@ -15,7 +15,7 @@ import {
 
 const nbsp = "\u00a0";
 const request = `8${nbsp}vCPU, 32${nbsp}GB of memory, and 60${nbsp}GB of free disk`;
-const largestBoat = "Jobs run on the largest size of your Boat account.";
+const largestOnBoat = "Jobs with this label run on the largest size of Boat.";
 
 test("the fit line gives one count, a range, or the machines that fit", () => {
   const cases = [
@@ -61,7 +61,7 @@ test("the fit line gives one count, a range, or the machines that fit", () => {
   }
 });
 
-test("a size that fits no machine says where its jobs go: Boat, the largest Boat size, or a wait", () => {
+test("a size that fits no machine says where its jobs go: a place of the order, the largest size of a provider, or a wait", () => {
   const none = {
     fitting_machines: 0,
     minimum_jobs: null,
@@ -91,13 +91,14 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
       "Jobs with this label run on Boat.",
     ],
     [
-      {},
+      { when_nothing_fits: "largest_overflow" },
       {
         fitting_places: [boatPlace],
+        routing: { kind: "largest", provider: "boat" },
         providers: [providerFit({ fit: fallback })],
       },
       `No machine of yours and no Boat size fits a job of ${request}`,
-      largestBoat,
+      largestOnBoat,
     ],
     [
       {},
@@ -127,24 +128,6 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
       },
       `No machine of yours fits a job of ${request}`,
       "No connected machine can run jobs now. Jobs with this label wait until a machine that fits connects.",
-    ],
-    [
-      { order: [boatPlace] },
-      {
-        fitting_places: [],
-        providers: [providerFit({ fit: { state: "no_size_fits" } })],
-      },
-      `No Boat size fits a job of ${request}`,
-      null,
-    ],
-    [
-      { order: [] },
-      {
-        fitting_places: [],
-        providers: [providerFit({ fit: { state: "disabled" } })],
-      },
-      "Turn on Your machines or Boat",
-      "Jobs with this label wait until one of them is on.",
     ],
     [
       {},
@@ -182,16 +165,15 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
       title,
     );
   }
-  assert.deepEqual(
-    line({ order: [boatPlace] }, { fitting_places: [boatPlace] }),
-    {
+  for (const order of [[boatPlace], []]) {
+    assert.deepEqual(line({ order }, { fitting_places: order }), {
       kind: "caption",
-      text: "Only Boat may run jobs with this label.",
-    },
-  );
+      text: "Your machines are not in the order of this label.",
+    });
+  }
 });
 
-test("the dialog names the VM disk of the size, and never a size of the Boat account", () => {
+test("the dialog names the VM disk of the size, and never a size of a provider", () => {
   assert.equal(
     vmDiskLine(fit()),
     `With the current image, each VM has a disk of 122${nbsp}GB.`,
@@ -208,6 +190,7 @@ test("the dialog names the VM disk of the size, and never a size of the Boat acc
     minimum_jobs: null,
     maximum_jobs: null,
     no_machine_fits: true,
+    routing: { kind: "largest", provider: "boat" },
     providers: [
       providerFit({
         fit: {
@@ -222,11 +205,12 @@ test("the dialog names the VM disk of the size, and never a size of the Boat acc
   const nothingFits = {
     kind: "warning",
     title: `No machine of yours and no Boat size fits a job of ${request}`,
-    body: largestBoat,
+    body: largestOnBoat,
   };
-  assert.deepEqual(fitLine(labelInput(), fallback), nothingFits);
+  const largest = labelInput({ when_nothing_fits: "largest_overflow" });
+  assert.deepEqual(fitLine(largest, fallback), nothingFits);
   assert.deepEqual(
-    fitLine(labelInput(), {
+    fitLine(largest, {
       ...fallback,
       providers: fallback.providers.map((provider) => ({
         ...provider,
@@ -235,8 +219,4 @@ test("the dialog names the VM disk of the size, and never a size of the Boat acc
     }),
     nothingFits,
   );
-  assert.deepEqual(fitLine(labelInput({ order: [boatPlace] }), fallback), {
-    kind: "caption",
-    text: `Only Boat may run jobs with this label. ${largestBoat}`,
-  });
 });

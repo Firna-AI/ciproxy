@@ -1,6 +1,6 @@
 // The Organizations tab: the name of the workspace, and its GitHub
 // organizations with their repository access. The workspace owns the plan,
-// the members, the machines, the labels, and the Boat account, and each
+// the members, the machines, the labels, and the overflow providers, and each
 // machine runs the jobs of every organization. Add an organization opens
 // GitHub for every Admin. When the API says that a new organization would
 // need Team, the caption says that it stays inactive until Team, and with one
@@ -60,7 +60,8 @@ function WorkspacePanel({
           <Text style={[text.body, text.strong]}>{name}</Text>
           <Text style={text.caption}>
             Its organizations share its plan, members, machines, labels, and
-            Boat account. Each machine runs the jobs of every organization.
+            overflow providers. Each machine runs the jobs of every
+            organization.
           </Text>
         </View>
         <ActionButton label="Rename" size="sm" onPress={onRename} />

@@ -3,15 +3,16 @@
 The private ciproxy dashboard, built with Expo Router and React Native Web.
 It targets web only and has no open licence.
 A person signs in with GitHub, installs the ciproxy GitHub App, adds
-organizations to a workspace, and follows Setup. Its Boat step connects the
-Boat account of the customer, which takes jobs when the machines of the
-workspace are busy.
+organizations to a workspace, and follows Setup. Its provider step connects
+the account of the customer at an overflow provider, such as Boat, which
+takes jobs when the machines of the workspace are busy.
 Machines shows the machines of the workspace, and an Admin adds and manages
-them there. In Settings, an Admin manages the labels, the organizations, the
-workspace name, and the members. On Settings under Overflow, an Admin
-connects Boat, changes its key, or disconnects it. The same page sets the
-overflow switch, the wait, and the monthly spend limit, and shows the spend
-of the month.
+them there. In Settings, an Admin manages the labels with the order of their
+places, the organizations, the workspace name, and the members. On Settings
+under Overflow, an Admin connects each provider, changes its key, or
+disconnects it. The same page sets the overflow switch and the wait, which
+hold for every provider, and the monthly spend limit of each provider, and
+shows the spend of the month.
 Jobs shows the live queue, the history of finished jobs, and a page for each
 job. Savings compares the cost of the jobs with ciproxy against the same jobs
 on Blacksmith and on GitHub-hosted runners. Plan and usage, Plans, and the
@@ -45,10 +46,10 @@ The static export holds one HTML file for each route.
 | `/personal-account`  | An install on a personal account                     |
 | `/app-removed`       | The App left the last organization of the workspace  |
 | `/access-ended`      | GitHub no longer lists the person                    |
-| `/setup`             | For Admins: the App, a machine, Boat, the first job  |
+| `/setup`             | For Admins: the App, a machine, a provider, a job    |
 | `/machines`          | The machines, one machine, or Add a machine          |
 | `/settings`          | For Admins: labels, organizations, and members       |
-| `/settings/overflow` | For Admins: Boat, the overflow wait, the spend limit |
+| `/settings/overflow` | For Admins: the providers, the wait, the limits      |
 | `/jobs`              | Jobs: the live queue, or History of finished jobs    |
 | `/job`               | One job, opened from History                         |
 | `/savings`           | The savings report of one UTC range                  |
@@ -62,12 +63,13 @@ The app takes the ID from the session and never builds one, and the API
 checks it on each request.
 `/?workspace=<id>` opens Setup for an Admin until it is done, else Jobs.
 Setup is done after the App, a machine, and the first job, with or without
-Boat. After Skip for now, the Boat step links to Settings under Overflow.
+a provider. After Skip for now, the provider step links to Settings under
+Overflow.
 The API keeps no record of a skip, so it lasts only for the tab, the
 workspace, and the person who skipped.
 While the machine of Setup gets its first job image, its step says so, and
 Setup goes on. A first job that waits for a runner then says that it waits
-for that machine, while no other machine takes jobs and Boat is not
+for that machine, while no other machine takes jobs and no provider is
 connected. Setup reads again while a machine gets its image, also after the
 first job ended.
 `?reason=github` or `?reason=ended` on `/sign-in` adds a notice.
@@ -98,7 +100,8 @@ The other choices of a page are in its query too, so a reload or a shared
 link keeps them. A value that a page does not know falls back to its default.
 
 - `/jobs`: `tab=history` opens History, with `search=<text>`,
-  `place=machine` or `place=boat`, and `days=7`, `days=30`, or `days=90`.
+  `place=machine` or the value of a provider, such as `place=boat`, and
+  `days=7`, `days=30`, or `days=90`.
   With no `days`, History shows today. A tab change adds an entry to the
   browser history, so Back opens the last tab. A filter change replaces the
   address.
@@ -125,8 +128,8 @@ limit.
 ### Settings
 
 [Settings pages](src/screens/settings/README.md) gives the rules of the
-Labels, Organizations, and Members tabs, the label dialog, and Settings under
-Overflow with its Boat form.
+Labels, Organizations, and Members tabs, the label dialog with the order of
+places, and Settings under Overflow with the panel of each provider.
 
 - On the Organizations tab, the shell shows the banner of the Organizations
   scope, in which inactive organizations come before a passed limit. For one
@@ -169,7 +172,7 @@ Overflow with its Boat form.
 - [Dashboard API use](src/api/README.md) gives the rules of sign-in, the
   claims of the session, the install, the account menu, and a new API build.
 - The [Settings guide](src/screens/settings/README.md#settings-under-overflow)
-  gives the rules of the Boat settings and of the Boat form.
+  gives the rules of the overflow settings and of the provider form.
 
 ## Development
 
@@ -236,7 +239,7 @@ check, which reads the Boat settings of a deployed dashboard.
   tab checks the session again. With `bannerScope`, the Organizations tab
   asks the shell for the banner of its scope.
 - [src/screens/setup/setup-screen.tsx](src/screens/setup/setup-screen.tsx) is
-  Setup, with its Boat step in `boat-step.tsx`.
+  Setup, with its provider step in `provider-step.tsx`.
   `src/screens/add-organization` is the workspace choice.
 - The guides of [Machines](src/screens/machines/README.md#key-code),
   [Settings](src/screens/settings/README.md#key-code),
@@ -271,7 +274,13 @@ check, which reads the Boat settings of a deployed dashboard.
   [src/view/exact-format.ts](src/view/exact-format.ts) formats counts, cents,
   and UTC dates without floating-point loss.
 - [src/components/feature-parts.tsx](src/components/feature-parts.tsx) holds
-  the panel, the page header, and the dialog that both features share.
+  the panel and the page header that both features share, and
+  [feature-dialog.tsx](src/components/feature-dialog.tsx) their dialog, whose
+  body scrolls between the title and the footer.
+- [src/view/providers.ts](src/view/providers.ts) holds the copy of each
+  overflow provider: its brand name, the line of the provider choice, and
+  the placeholder, hint, and error of its key field. A new provider adds its
+  copy there, and the compiler then asks for each place that needs it.
 - [scripts](scripts/README.md) holds the fixture harnesses, the browser
   smokes, and the live checks.
 - [app.json](app.json) limits Expo to web and enables static export.
@@ -282,8 +291,9 @@ check, which reads the Boat settings of a deployed dashboard.
 - [Sign-in and access](../../docs/protocol/security.md#sign-in-and-access),
   [Add an organization](../../docs/protocol/workspaces.md#add-an-organization),
   and [Removing the App](../../docs/protocol/app-removal.md#removing-the-app).
-- [Overflow](../../docs/protocol/overflow.md), with the Boat account and the
-  spend limit, and
+- [Overflow](../../docs/protocol/overflow.md), with the provider accounts,
+  the [spend limit](../../docs/protocol/overflow-spend.md) of each provider,
+  [the label order](../../docs/protocol/labels-order.md), and
   [the overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait).
 - [Job routing](../../docs/protocol/job-routing.md#what-the-dashboard-shows),
   the [savings report](../../docs/protocol/metering.md#savings-report), and

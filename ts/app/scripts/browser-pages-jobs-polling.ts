@@ -1,8 +1,7 @@
-import { boatObservation } from "../src/view/jobs-places.ts";
-import { boatLabelFit } from "../src/view/settings-label-places.ts";
 import assert from "node:assert/strict";
 
 import { parseJobsLive } from "../src/api/jobs-live-parse.ts";
+import { observation } from "../src/view/jobs-places.ts";
 import { jobsHref } from "../src/view/jobs-links.ts";
 import { control, facts, visible } from "./browser-fixture.ts";
 import type { BrowserResponse } from "./browser-driver.ts";
@@ -16,11 +15,11 @@ async function readLive(response: BrowserResponse) {
   assert.equal(response.request().method(), "GET");
   const queue = parseJobsLive(await response.json());
   assert.ok(queue !== undefined, "The browser must read a valid live queue.");
-  assert.equal(boatObservation(queue)?.retry_at, fixtureTemporaryRetryAt);
-  assert.deepEqual(boatObservation(queue)?.refused_sizes, []);
+  assert.equal(observation(queue, "boat")?.retry_at, fixtureTemporaryRetryAt);
+  assert.deepEqual(observation(queue, "boat")?.refused_sizes, []);
   const waiting = queue.waiting_labels[0];
   assert.ok(waiting !== undefined);
-  const fit = boatLabelFit(waiting.providers)?.fit;
+  const fit = waiting.providers.find((item) => item.provider === "boat")?.fit;
   assert.ok(fit?.state === "fitting");
   assert.equal(fit.refused, false);
   return queue;
@@ -108,8 +107,8 @@ export function jobsPollingRuns(
         await refreshed.finished();
         const current = await readLive(refreshed);
         assert.equal(
-          boatObservation(current)?.retry_at,
-          boatObservation(initial)?.retry_at,
+          observation(current, "boat")?.retry_at,
+          observation(initial, "boat")?.retry_at,
         );
         await visible(
           page.getByText("Your machines are full", { exact: true }),

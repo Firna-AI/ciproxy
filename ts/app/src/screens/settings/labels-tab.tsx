@@ -58,8 +58,8 @@ export function LabelsTab({ context }: { context: WorkspaceContext }) {
     <>
       <Text style={[text.small, styles.intro]}>
         A workflow picks a label in <Text style={text.mono}>runs-on</Text>. Each
-        label starts a fresh VM of its platform and size, on your machines first
-        and on Boat when they are busy. Jobs of a macOS label run on your Macs
+        label starts a fresh VM of its platform and size at the first place of
+        its order that can take the job. Jobs of a macOS label run on your Macs
         only.
       </Text>
       <SettingsRead
@@ -105,6 +105,7 @@ export function LabelsTab({ context }: { context: WorkspaceContext }) {
               {target ? (
                 <LabelDialog
                   key={opened?.kind === "edit" ? opened.labelId : "add"}
+                  workspaceId={context.workspace.id}
                   store={store}
                   target={target}
                   labels={settings.labels}

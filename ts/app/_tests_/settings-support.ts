@@ -208,7 +208,7 @@ export function member(
 export function membersView(members: MemberView[]): MembersView {
   return {
     admin_notice:
-      "An Admin can add machines and connect Boat. These run jobs and their secrets for every organization in this workspace.",
+      "An Admin can add machines and connect overflow providers. These run jobs and their secrets for every organization in this workspace.",
     members,
     open_requests: members.filter((item) => item.role === null).length,
   } satisfies MembersView;

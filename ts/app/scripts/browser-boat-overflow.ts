@@ -1,11 +1,13 @@
 // The journeys of Settings under Overflow: the switch, the wait, and the
-// limit save at once and stay after a reload; a connection, a reconnect, a
-// change of key, and a disconnect move focus to the Boat panel; a change of
-// key keeps a limit that the limit panel saved while it was open; failed
-// changes keep the typed values; an accepted connection is never sent again.
+// limit of Boat save at once and stay after a reload; a connection, a
+// reconnect, and a change of key move focus to the Boat panel, and a
+// disconnect of the last provider to the connection panel; a change of key
+// keeps a limit that the Boat panel saved while it was open; failed changes
+// keep the typed values; an accepted connection is never sent again.
 import assert from "node:assert/strict";
 
 import {
+  connectionLimit,
   connections,
   fieldFocused,
   fillConnection,
@@ -18,7 +20,10 @@ import type { SmokeRun } from "./browser-registry.ts";
 import type { ScenarioName } from "./harness-scenarios.ts";
 import { fixtureBoatKey } from "./fixtures-boat.ts";
 
-const limitLabel = "Monthly spend limit, US dollars";
+/** The limit field of the panel of a connected provider. */
+const panelLimit = "Monthly spend limit, US dollars";
+const switchName = "Use overflow providers";
+const waitName = "Wait for a free slot on your machines";
 
 /** Another width with the same frame: phone, or desktop with its sidebar. */
 function sameFrameWidth(width: number): number {
@@ -37,35 +42,20 @@ async function policy(page: Page, origin: string, width: number) {
   await visible(page.getByText(connected, { exact: true }));
   await viewportControls(page, width);
   const toggle = (checked: boolean) =>
-    page.getByRole("switch", {
-      name: "Use Boat when your machines are busy",
-      checked,
-    });
+    page.getByRole("switch", { name: switchName, checked });
   await toggle(true).click();
   await visible(toggle(false));
-  await page
-    .getByRole("button", {
-      name: "Start on Boat after a job waits, 30 seconds",
-    })
-    .click();
+  await page.getByRole("button", { name: `${waitName}, 30 seconds` }).click();
   await page.getByRole("option", { name: "1 minute", exact: true }).click();
-  await visible(
-    page.getByRole("button", {
-      name: "Start on Boat after a job waits, 1 minute",
-    }),
-  );
-  await page.getByLabel("Limit, US dollars", { exact: true }).fill("250.50");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await visible(page.getByRole("button", { name: `${waitName}, 1 minute` }));
+  await page.getByLabel(panelLimit, { exact: true }).fill("250.50");
+  await page.getByRole("button", { name: "Save limit", exact: true }).click();
   await visible(page.getByText("Limit $250.50", { exact: true }));
-  await focusedOn(page, "Save");
+  await focusedOn(page, "Save limit");
   await page.reload({ waitUntil: "domcontentloaded" });
   await visible(page.getByText("Limit $250.50", { exact: true }));
   await visible(toggle(false));
-  await visible(
-    page.getByRole("button", {
-      name: "Start on Boat after a job waits, 1 minute",
-    }),
-  );
+  await visible(page.getByRole("button", { name: `${waitName}, 1 minute` }));
 }
 
 async function connect(page: Page, origin: string, width: number) {
@@ -81,12 +71,12 @@ async function connect(page: Page, origin: string, width: number) {
 
 async function reconnect(page: Page, origin: string) {
   await open(page, origin, "overflow-rejected");
-  const limit = page.getByLabel(limitLabel, { exact: true });
+  const limit = page.getByLabel(connectionLimit, { exact: true });
   await visible(limit);
   assert.equal(await limit.inputValue(), "200", "The saved limit stays");
   await visible(
     page.getByText(
-      "Your saved limit. At the limit, jobs run on your machines only until the next month.",
+      "Your saved limit. At the limit, ciproxy starts no new jobs on Boat until the next month.",
       { exact: true },
     ),
   );
@@ -106,10 +96,15 @@ async function changeKey(page: Page, origin: string) {
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await focusedOn(page, "Boat");
   await change.click();
-  // The limit panel saves a lower limit while the key change stays open.
-  await page.getByLabel("Limit, US dollars", { exact: true }).fill("100");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  // The key change takes the place of the limit in the Boat panel, so a
+  // limit saved before it is the limit that the change starts with.
+  await visible(page.getByLabel("New Boat API key", { exact: true }));
+  assert.equal(await page.getByLabel(panelLimit, { exact: true }).count(), 0);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByLabel(panelLimit, { exact: true }).fill("100");
+  await page.getByRole("button", { name: "Save limit", exact: true }).click();
   await visible(page.getByText("Limit $100", { exact: true }));
+  await change.click();
   await fillConnection(page, "New Boat API key", fixtureBoatKey, null);
   await visible(page.getByText(connected, { exact: true }));
   await focusedOn(page, "Boat");
@@ -143,17 +138,17 @@ async function disconnect(page: Page, origin: string, width: number) {
   await focusedOn(page, "Cancel");
   await button.click();
   await dialog.waitFor({ state: "hidden" });
-  const limit = page.getByLabel(limitLabel, { exact: true });
+  const limit = page.getByLabel(connectionLimit, { exact: true });
   await visible(limit);
   assert.equal(await limit.inputValue(), "200");
-  await focusedOn(page, "Boat");
+  await focusedOn(page, "Connect an overflow provider");
 }
 
 async function saveFailure(page: Page, origin: string) {
   await open(page, origin, "overflow-save-failure");
-  const limit = page.getByLabel("Limit, US dollars", { exact: true });
+  const limit = page.getByLabel(panelLimit, { exact: true });
   await limit.fill("300");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "Save limit", exact: true }).click();
   await visible(page.getByText("Unable to save the limit", { exact: true }));
   assert.equal(await limit.inputValue(), "300");
 }

@@ -34,7 +34,7 @@ const signInNotices: Readonly<Record<SignInReason, NoticeModel>> = {
 export function signInPage(reason: SignInReason | null): AuthPageModel {
   return {
     title: "Run GitHub Actions on your own machines",
-    lead: "ciproxy starts each job on your machines first, and on Boat when they are busy.",
+    lead: "ciproxy starts each job on your machines first, and on an overflow provider when they are busy.",
     notice: reason === null ? null : signInNotices[reason],
     list: null,
     actions: [leave("Sign in with GitHub", githubSignInHref, "primary")],
@@ -168,7 +168,7 @@ export function appRemovedPage(
   timeZone?: string,
 ): AuthPageModel {
   const after =
-    "Each machine then needs the install command again, and Boat a new connection.";
+    "Each machine then needs the install command again, and each overflow provider a new connection.";
   return {
     title:
       removed === null

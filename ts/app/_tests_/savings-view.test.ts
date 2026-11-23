@@ -5,6 +5,7 @@ import type { SavingsPage } from "../src/api/savings-types.ts";
 import { costRows, savingsNotices } from "../src/view/savings-costs.ts";
 import {
   costBars,
+  overflowName,
   priceListNote,
   savingsHero,
   savingsSubtitle,
@@ -94,6 +95,27 @@ test("a missing machine cost hides the savings figure but keeps the known costs"
   );
 });
 
+test("the cost table has one overflow row for each provider of the range, and none without one", () => {
+  const rows = (page: SavingsPage) =>
+    costRows(page).map((row) => [row.key, row.label, row.jobs, row.minutes]);
+  assert.deepEqual(rows(report(quietDay)), [
+    ["machines", "Own machines", "102", "498"],
+    ["boat", "Boat overflow", "7", "41"],
+    ["plan", "ciproxy plan", "", ""],
+    ["total", "Total", "109", "539"],
+  ]);
+  const own = report({ ...quietDay, providers: [] });
+  assert.deepEqual(rows(own), [
+    ["machines", "Own machines", "102", "498"],
+    ["plan", "ciproxy plan", "", ""],
+    ["total", "Total", "102", "498"],
+  ]);
+  assert.deepEqual(
+    [overflowName(report(quietDay)), overflowName(own)],
+    ["Boat", "Overflow"],
+  );
+});
+
 test("an alternative without a complete price shows no lead and names the size", () => {
   const page = report({
     lead: null,
@@ -143,7 +165,7 @@ test("the report names its range with the last included UTC day", () => {
   assert.equal(plain(savingsSubtitle(oneDay)), "This month · 1 November");
 });
 
-test("the daily chart keeps own and Boat starts apart, and the note names each price list once in date order", () => {
+test("the daily chart keeps own and overflow starts apart, and the note names each price list once in date order", () => {
   const page = report({
     ...quietDay,
     days: [
@@ -166,7 +188,7 @@ test("the daily chart keeps own and Boat starts apart, and the note names each p
   assert.deepEqual(startsSeries(page), {
     days: ["3", "4"],
     machines: [40, 62],
-    boat: [3, 4],
+    overflow: [3, 4],
   });
   const lists = (dates: [string, string]) =>
     plain(

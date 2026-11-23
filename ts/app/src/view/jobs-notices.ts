@@ -1,22 +1,21 @@
 // The notices of the live queue: each reason why jobs wait that the API
 // reports. A notice names only the facts that the API gives, and each notice
-// about a waiting label reads the same place of that label, so no notice
-// promises a Boat start that the facts do not confirm. An action that changes
-// a setting goes to a caller that the API says may manage it, and everyone
-// else reads "Ask an Admin". A link to GitHub is for everyone, because GitHub
-// decides who may act there.
+// about a waiting label reads the same places of that label, so no notice
+// promises a provider start that the facts do not confirm. A notice about a
+// provider names that provider. An action that changes a setting goes to a
+// caller that the API says may manage it, and everyone else reads "Ask an
+// Admin". A link to GitHub is for everyone, because GitHub decides who may
+// act there. A hold of a provider shows once: in one notice for every job,
+// or, when each waiting label waits for that hold alone and none fits own
+// machines, in the notice of each label.
 
 import type { JobsLivePage } from "../api/jobs-types.ts";
+import type { OverflowProvider, ProviderHold } from "../api/schema.ts";
 import type { NoticeTone } from "./page-model.ts";
-import { boatNotices } from "./jobs-boat-notices.ts";
-import { jobsText, labelNotices } from "./jobs-label-notices.ts";
-import {
-  boatHold,
-  boatObservation,
-  boatTiming,
-  labelPlaces,
-  type LabelPlace,
-} from "./jobs-places.ts";
+import { fullNotice } from "./jobs-full-notice.ts";
+import { labelNotices, routedHold } from "./jobs-label-notices.ts";
+import { labelPlaces, providerHold, type LabelPlace } from "./jobs-places.ts";
+import { providerNotices, type HoldNotice } from "./jobs-provider-notices.ts";
 
 export type NoticeAction =
   | { kind: "go"; label: string; href: string }
@@ -54,107 +53,30 @@ function recovery(place: LabelPlace, settings: string): NoticeAction | null {
 }
 
 /**
- * "when it has waited 30 seconds", "when they have waited 30 seconds", or "at
- * once": the saved overflow wait, for one job or for several.
+ * Whether the notices of the waiting labels state a hold in place of its
+ * notice for every job: each waiting label waits for that hold alone, and no
+ * waiting label fits own machines.
  */
-function waitText(seconds: number, several = false): string {
-  if (seconds === 0) return "at once";
-  const waited = several ? "when they have waited" : "when it has waited";
-  if (seconds % 60 === 0) {
-    const minutes = seconds / 60;
-    return `${waited} ${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
-  }
-  return `${waited} ${seconds} seconds`;
-}
-
-function sumJobs(places: readonly LabelPlace[]): number {
-  return places.reduce((sum, place) => sum + place.jobs, 0);
-}
-
-/**
- * What Boat does for the jobs that wait for a free slot: it starts each one,
- * or some of them, after the overflow wait, or the Boat costs hold every
- * start. A label that Boat does not start now gets no Boat sentence.
- */
-function slotBoat(
-  page: JobsLivePage,
-  forSlot: readonly LabelPlace[],
-  slot: number,
-): string[] {
-  const afterWait = sumJobs(
-    forSlot.filter((place) => boatTiming(place) === "after-wait"),
-  );
-  const wait = page.overflow_wait_seconds;
-  if (afterWait === slot) return [`Each one starts on Boat ${waitText(wait)}.`];
-  if (afterWait > 0) {
-    const verb = afterWait === 1 ? "starts" : "start";
-    return [
-      `${afterWait} of them ${verb} on Boat ${waitText(wait, afterWait > 1)}.`,
-    ];
-  }
-  if (forSlot.some((place) => place.boat.kind === "uncounted")) {
-    return ["Boat starts no new sandbox until ciproxy can count its costs."];
-  }
-  return [];
-}
-
-/**
- * The notice of a full queue. It counts the jobs that wait for a free own
- * slot, and promises Boat only to the jobs of a label that Boat starts now:
- * after the overflow wait, or at once when no own machine runs the label.
- */
-function fullNotice(
-  page: JobsLivePage,
+function statedByLabels(
   places: readonly LabelPlace[],
-  settings: string,
-  boat: boolean,
-): LiveNotice | null {
-  const used = page.own_slots_used ?? null;
-  const total = page.own_slots_total ?? null;
-  if (used === null || total === null) return null;
-  if (BigInt(total) === 0n || BigInt(used) < BigInt(total)) return null;
-  const forSlot = places.filter((place) => place.own === "fits");
-  const slot = sumJobs(forSlot);
-  const atOnce = sumJobs(
-    places.filter((place) => boatTiming(place) === "at-once"),
+  entry: HoldNotice,
+): boolean {
+  return (
+    places.length > 0 &&
+    places.every((place) => {
+      const held = routedHold(place);
+      return (
+        place.own !== "fits" &&
+        held?.provider === entry.provider &&
+        held.hold === entry.hold
+      );
+    })
   );
-  if (slot === 0 && atOnce === 0) return null;
-  const manage = manager(page, settings);
-  const lead = `${jobsText(slot)} ${slot === 1 ? "waits" : "wait"} for a free slot.`;
-  const notice = (
-    sentences: readonly string[],
-    action: NoticeAction | null,
-  ): LiveNotice => ({
-    key: "machines-full",
-    tone: "info",
-    title: "Your machines are full",
-    body: sentences.join(" "),
-    action,
-  });
-  if (!page.overflow_enabled) {
-    return notice(
-      [lead, "Boat overflow is off, so each one starts when a slot is free."],
-      manage("Turn on Boat"),
-    );
-  }
-  if (boatObservation(page)?.connected === false) {
-    return notice(
-      [lead, "Boat is not connected, so each one starts when a slot is free."],
-      manage("Connect Boat"),
-    );
-  }
-  if (boat) return null;
-  const sentences = slot > 0 ? [lead, ...slotBoat(page, forSlot, slot)] : [];
-  if (atOnce > 0) {
-    const verb = atOnce === 1 ? "starts" : "start";
-    sentences.push(`${jobsText(atOnce)} ${verb} on Boat at once.`);
-  }
-  return notice(sentences, null);
 }
 
 /**
  * The notices of a live queue that the browser read at `readAt`. The read time
- * decides whether a saved retry time of Boat still holds new starts.
+ * decides whether a saved retry time of a provider still holds new starts.
  */
 export function liveNotices(
   page: JobsLivePage,
@@ -186,18 +108,35 @@ export function liveNotices(
           },
         },
   );
-  const hold = boatHold(page, readAt);
-  const places = labelPlaces(page, hold);
-  const overflow = boatObservation(page);
-  const boat =
-    overflow === null
-      ? []
-      : boatNotices(overflow, hold, places, manager(page, settingsHref));
-  notices.push(...boat);
+  const places = labelPlaces(page, readAt);
+  const manage = manager(page, settingsHref);
+  const holds = page.overflow
+    .flatMap((overflow) =>
+      providerNotices(
+        overflow,
+        providerHold(page, overflow.provider, readAt),
+        places,
+        manage,
+      ),
+    )
+    .filter((entry) => !statedByLabels(places, entry));
+  notices.push(...holds.map((entry) => entry.notice));
+  const shown = (provider: OverflowProvider, hold: ProviderHold) =>
+    holds.some((entry) => entry.provider === provider && entry.hold === hold);
   for (const place of places) {
-    notices.push(...labelNotices(place, recovery(place, settingsHref)));
+    notices.push(
+      ...labelNotices(place, recovery(place, settingsHref), manage, shown),
+    );
   }
-  const full = fullNotice(page, places, settingsHref, boat.length > 0);
+  const othersStart = places.some((place) =>
+    place.providers.some((item) => item.start.kind === "starts"),
+  );
+  const full = fullNotice(
+    page,
+    places,
+    manage,
+    holds.length > 0 && !othersStart,
+  );
   if (full) notices.push(full);
   return notices;
 }

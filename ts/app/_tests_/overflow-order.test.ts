@@ -30,7 +30,7 @@ test("a wait save after an accepted key change waits for its read, then keeps th
   );
   const store = app.overflow(workspaceId);
   await store.ensure();
-  const connecting = store.connect({
+  const connecting = store.connect("boat", {
     api_key: "replacement-key",
     spend_limit_cents: "10000",
     wallet: "personal",
@@ -75,7 +75,7 @@ test("the pending mark covers a change through the read after it", async () => {
   const store = app.overflow(workspaceId);
   await store.ensure();
   assert.equal(store.pending.get(), false);
-  const disconnecting = store.disconnect();
+  const disconnecting = store.disconnect("boat");
   assert.equal(store.pending.get(), true);
   await settled();
   assert.equal(store.pending.get(), true, "The read keeps the mark");
@@ -94,7 +94,7 @@ test("a page visit during a change reads only after the change and its read", as
   );
   const store = app.overflow(workspaceId);
   await store.ensure();
-  const connecting = store.connect({
+  const connecting = store.connect("boat", {
     api_key: "key",
     spend_limit_cents: "10000",
     wallet: "personal",
@@ -129,7 +129,7 @@ test("a provider limit save leaves the workspace switch and wait alone", async (
   );
   const store = app.overflow(workspaceId);
   await store.ensure();
-  await store.save({ spend_limit_cents: "25050" });
+  await store.save({ provider: "boat", spend_limit_cents: "25050" });
   assert.equal(
     calls[1]?.url,
     `/api/workspaces/${workspaceId}/overflow/providers/boat/spend-limit`,

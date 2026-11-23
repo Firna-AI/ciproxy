@@ -1,159 +1,44 @@
-// Settings under Overflow, for Admins: the Boat account, the overflow switch
-// and wait, and the monthly spend limit with the spend of the month. The page
-// reads the settings at each visit. A change that the API accepted is never
-// sent again: when the read after it fails, the page names the change and
-// offers only Try again, which reads. Each workspace gets a fresh page, so
-// no typed key or limit passes to another workspace. The tabs are those of
-// Settings, and Members counts the open requests from the settings of the
-// workspace, which this page also reads at each visit.
+// Settings under Overflow, for Admins: the switch and the wait, which hold
+// for every provider, and a panel for each provider with its account, its
+// own monthly spend limit, and the spend of the month. The page reads the
+// settings at each visit. A change that the API accepted is never sent
+// again: when the read after it fails, the page names the change and offers
+// only Try again, which reads. Each workspace gets a fresh page, so no typed
+// key or limit passes to another workspace. The tabs are those of Settings,
+// and Members counts the open requests from the settings of the workspace,
+// which this page also reads at each visit.
 
-import { useEffect, useRef, useState } from "react";
-import type { View } from "react-native";
+import { useEffect } from "react";
 
-import type { ApiFailure } from "../../api/client.ts";
-import type { OverflowSettings } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
-import { AlertIcon, CloudOffIcon } from "../../components/icons.tsx";
-import { Notice } from "../../components/notice.tsx";
+import { AlertIcon } from "../../components/icons.tsx";
 import {
   PageHeader,
   ReadFailure,
   StateBlock,
 } from "../../components/page-state.tsx";
-import { Panel } from "../../components/panel.tsx";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
-import type { AcceptedChange, OverflowStore } from "../../state/overflow.ts";
+import type { AcceptedChange } from "../../state/overflow.ts";
 import { settingsServices } from "../../state/settings-services.ts";
-import {
-  activeAccount,
-  boatProvider,
-  overflowNotice,
-} from "../../view/boat.ts";
+import { providerName } from "../../view/providers.ts";
 import { SettingsTabs } from "../settings/settings-tabs.tsx";
 import {
   WorkspacePageView,
   type WorkspaceContext,
 } from "../workspace-page.tsx";
-import { BoatPanel } from "./boat-panel.tsx";
-import { DisconnectDialog } from "./disconnect-dialog.tsx";
 import { OverflowLoading } from "./overflow-loading.tsx";
-import { SpendPanel } from "./spend-panel.tsx";
-import { usePolicy } from "./use-policy.ts";
-import { WaitPanel } from "./wait-panel.tsx";
+import { OverflowSettingsView } from "./overflow-settings.tsx";
 
-const acceptedText: Readonly<Record<AcceptedChange, string>> = {
-  connected: "Boat connected.",
-  disconnected: "Boat disconnected.",
-  saved: "The change is saved.",
-};
-
-function retry(store: OverflowStore) {
-  return () => void store.load();
-}
-
-function Policy(props: {
-  store: OverflowStore;
-  settings: OverflowSettings;
-  limitCents: string;
-  spend: boolean;
-}) {
-  const editor = usePolicy(props.store, props.settings, props.limitCents);
-  return (
-    <>
-      <WaitPanel settings={props.settings} editor={editor} />
-      {props.spend ? (
-        <SpendPanel
-          settings={props.settings}
-          limitCents={props.limitCents}
-          editor={editor}
-          onRetry={retry(props.store)}
-        />
-      ) : null}
-    </>
-  );
-}
-
-function Settings(props: {
-  store: OverflowStore;
-  settings: OverflowSettings;
-  refreshFailure: ApiFailure | null;
-}) {
-  const { store, settings } = props;
-  const title = useRef<View>(null);
-  const [disconnecting, setDisconnecting] = useState(false);
-  const [moved, setMoved] = useState(0);
-  useEffect(() => {
-    if (moved > 0) title.current?.focus();
-  }, [moved]);
-  const provider = boatProvider(settings);
-  if (!provider?.available) {
-    return (
-      <Panel title="Boat">
-        <StateBlock
-          icon={CloudOffIcon}
-          title="Boat is unavailable right now"
-          action={
-            <ActionButton
-              label="Try again"
-              tone="primary"
-              onPress={retry(store)}
-            />
-          }
-        >
-          Jobs run on your machines only.
-        </StateBlock>
-      </Panel>
-    );
+function acceptedText(change: AcceptedChange): string {
+  switch (change.kind) {
+    case "connected":
+      return `${providerName(change.provider)} connected.`;
+    case "disconnected":
+      return `${providerName(change.provider)} disconnected.`;
+    case "saved":
+      return "The change is saved.";
   }
-  const notice = overflowNotice(settings);
-  const account = provider.account ?? null;
-  const limit = provider.spend_limit_cents ?? null;
-  return (
-    <>
-      {props.refreshFailure ? (
-        <Notice
-          tone="warning"
-          title="Unable to refresh Overflow"
-          actions={
-            <ActionButton label="Try again" size="sm" onPress={retry(store)} />
-          }
-        >
-          The page shows the last settings that it read.
-        </Notice>
-      ) : null}
-      {notice ? (
-        <Notice tone={notice.tone} title={notice.title}>
-          {notice.body}
-        </Notice>
-      ) : null}
-      <BoatPanel
-        store={store}
-        settings={settings}
-        titleRef={title}
-        onChanged={() => setMoved((count) => count + 1)}
-        onDisconnect={() => setDisconnecting(true)}
-      />
-      {account !== null && limit !== null ? (
-        <Policy
-          store={store}
-          settings={settings}
-          limitCents={limit}
-          spend={activeAccount(settings) !== null}
-        />
-      ) : null}
-      {disconnecting ? (
-        <DisconnectDialog
-          store={store}
-          onClose={() => setDisconnecting(false)}
-          onDisconnected={() => {
-            setDisconnecting(false);
-            setMoved((count) => count + 1);
-          }}
-        />
-      ) : null}
-    </>
-  );
 }
 
 function OverflowBody({ workspaceId }: { workspaceId: string }) {
@@ -162,10 +47,11 @@ function OverflowBody({ workspaceId }: { workspaceId: string }) {
   useEffect(() => {
     void store.load();
   }, [store]);
+  const retry = () => void store.load();
   if (snapshot.status === "loading") return <OverflowLoading />;
   if (snapshot.status === "failed") {
     if (snapshot.accepted === null) {
-      return <ReadFailure subject="Overflow" onRetry={retry(store)} />;
+      return <ReadFailure subject="Overflow" onRetry={retry} />;
     }
     return (
       <StateBlock
@@ -173,19 +59,16 @@ function OverflowBody({ workspaceId }: { workspaceId: string }) {
         danger
         title="Unable to load Overflow"
         action={
-          <ActionButton
-            label="Try again"
-            tone="primary"
-            onPress={retry(store)}
-          />
+          <ActionButton label="Try again" tone="primary" onPress={retry} />
         }
       >
-        {`${acceptedText[snapshot.accepted]} Check the connection, then try again.`}
+        {`${acceptedText(snapshot.accepted)} Check the connection, then try again.`}
       </StateBlock>
     );
   }
   return (
-    <Settings
+    <OverflowSettingsView
+      workspaceId={workspaceId}
       store={store}
       settings={snapshot.settings}
       refreshFailure={snapshot.refreshFailure}

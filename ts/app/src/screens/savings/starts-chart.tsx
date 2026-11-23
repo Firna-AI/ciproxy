@@ -1,7 +1,8 @@
-// Starts by day, on own machines and on Boat: stacked bars of one value axis
-// from the Firna chart family, in the two series colours of the chart tokens.
-// The legend names both series, and the chart keeps its table view, so no
-// value lives in colour alone.
+// Starts by day, on own machines and on the providers together: stacked bars
+// of one value axis from the Firna chart family, in the two series colours of
+// the chart tokens. The overflow series names the providers of the range, as
+// "Boat" or "Boat and Second provider". The legend names both series, and the
+// chart keeps its table view, so no value lives in colour alone.
 
 import { BarChart } from "@firna/ui/chart";
 
@@ -10,12 +11,17 @@ import { chartColors } from "@ciproxy/tokens";
 import { Panel } from "../../components/panel.tsx";
 import type { SavingsPage } from "../../api/savings-types.ts";
 import { formatCount, formatUtcRange } from "../../view/exact-format.ts";
-import { boatRuntime, startsSeries } from "../../view/savings-report.ts";
+import {
+  overflowName,
+  overflowRuntime,
+  startsSeries,
+} from "../../view/savings-report.ts";
 
 export function StartsPanel({ page }: { page: SavingsPage }) {
   const series = startsSeries(page);
   const period = formatUtcRange(page.from, page.until);
-  const summary = `Starts by day, ${period}: ${formatCount(page.machines.starts)} on own machines and ${formatCount(boatRuntime(page).starts)} on Boat.`;
+  const name = overflowName(page);
+  const summary = `Starts by day, ${period}: ${formatCount(page.machines.starts)} on own machines and ${formatCount(overflowRuntime(page).starts)} on ${name}.`;
   return (
     <Panel title="Starts by day">
       <BarChart
@@ -29,10 +35,10 @@ export function StartsPanel({ page }: { page: SavingsPage }) {
             color: chartColors.own,
           },
           {
-            id: "boat",
-            label: "Boat",
-            data: series.boat,
-            color: chartColors.boat,
+            id: "overflow",
+            label: name,
+            data: series.overflow,
+            color: chartColors.overflow,
           },
         ]}
         height={220}

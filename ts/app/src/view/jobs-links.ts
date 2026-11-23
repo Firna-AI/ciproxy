@@ -7,6 +7,7 @@ import type { HistoryQuery } from "../api/jobs-types.ts";
 import type { OverflowProvider } from "../api/schema.ts";
 import { workspaceHref } from "../routing/pages.ts";
 import { addUtcDays, utcDayOf } from "./exact-format.ts";
+import { allProviders, providerName, providerOf } from "./providers.ts";
 
 export type JobsTab = "live" | "history";
 
@@ -20,6 +21,22 @@ export type HistoryFilters = {
   place: "machine" | OverflowProvider | null;
   days: HistoryWindow;
 };
+
+/** A choice of the place filter: every place, own machines, or a provider. */
+export type PlaceChoice = {
+  label: string;
+  value: "all" | "machine" | OverflowProvider;
+};
+
+/** The place filter: All, Own machines, and one choice for each provider. */
+export const placeChoices: readonly PlaceChoice[] = [
+  { label: "All", value: "all" },
+  { label: "Own machines", value: "machine" },
+  ...allProviders.map((provider) => ({
+    label: providerName(provider),
+    value: provider,
+  })),
+];
 
 export const defaultFilters: HistoryFilters = {
   search: "",
@@ -82,7 +99,7 @@ export function filtersOf(params: JobsParams): HistoryFilters {
   const days = Number(single(params.days));
   return {
     search: single(params.search) ?? "",
-    place: place === "machine" || place === "boat" ? place : null,
+    place: place === "machine" ? place : providerOf(place),
     days: historyWindows.find((window) => window === days) ?? 1,
   };
 }

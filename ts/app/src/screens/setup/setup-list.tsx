@@ -1,7 +1,7 @@
 // The steps of Setup as a list: a marker with the number, a check, or the
 // dash of a skipped step, the title, and the open body or the line of a
 // closed step. A finished or running first job keeps its body open. After a
-// skip or a connection of Boat, focus moves to the first job.
+// skip or a provider connection, focus moves to the first job.
 
 import { useRef } from "react";
 import { Link } from "expo-router";
@@ -14,7 +14,7 @@ import { text } from "../../components/text.ts";
 import { overflowHref } from "../../routing/pages.ts";
 import type { SetupModel, SetupStep } from "../../view/setup-steps.ts";
 import type { WorkspaceContext } from "../workspace-page.tsx";
-import { BoatStep } from "./boat-step.tsx";
+import { ProviderStep } from "./provider-step.tsx";
 import { JobStep, MachineStep } from "./step-bodies.tsx";
 
 function Marker({ step, index }: { step: SetupStep; index: number }) {
@@ -44,12 +44,12 @@ function Marker({ step, index }: { step: SetupStep; index: number }) {
   );
 }
 
-/** The line of a skipped Boat step, which leads to Settings under Overflow. */
+/** The line of a skipped provider step, which leads to Settings. */
 function SkippedLine({ workspaceId }: { workspaceId: string }) {
   const href = overflowHref(workspaceId);
   return (
     <Text style={text.small}>
-      Skipped for now. Connect Boat in{" "}
+      Skipped for now. Connect a provider in{" "}
       <Link href={href} style={styles.link}>
         Settings under Overflow
       </Link>
@@ -63,7 +63,7 @@ function StepBody(props: {
   model: SetupModel;
   context: WorkspaceContext;
   onContinue: (() => void) | null;
-  onBoatResolved: () => void;
+  onProviderResolved: () => void;
 }) {
   const { step, model, context } = props;
   const workspaceId = context.workspace.id;
@@ -77,12 +77,12 @@ function StepBody(props: {
       />
     );
   }
-  if (step.status === "active" && step.key === "boat") {
+  if (step.status === "active" && step.key === "provider") {
     return (
-      <BoatStep
+      <ProviderStep
         workspaceId={workspaceId}
         login={context.session.login}
-        onResolved={props.onBoatResolved}
+        onResolved={props.onProviderResolved}
       />
     );
   }
@@ -138,7 +138,7 @@ export function Steps(props: {
               model={model}
               context={context}
               onContinue={onContinue}
-              onBoatResolved={() => jobTitle.current?.focus()}
+              onProviderResolved={() => jobTitle.current?.focus()}
             />
           </View>
         </View>

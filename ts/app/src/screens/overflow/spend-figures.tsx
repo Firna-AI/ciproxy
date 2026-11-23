@@ -1,15 +1,16 @@
-// The Boat spend of the month against the limit: the costs that Boat
-// confirmed and the costs that it has not confirmed yet, each with its own
-// figure, and a bar that stacks both against the limit. The warning tone
-// follows the API flag of a reached limit. Settings under Overflow shows it
-// with its explanation; the Machines page can show it compact.
+// The spend of one provider in the month against its limit: the costs that
+// the provider confirmed and the costs that it has not confirmed yet, each
+// with its own figure, and a bar that stacks both against the limit. The
+// warning tone follows the API flag of a reached limit. Settings under
+// Overflow shows it with its explanation; the Machines page shows it
+// compact.
 
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors, radii } from "@ciproxy/tokens";
 
 import { text } from "../../components/text.ts";
-import type { SpendFigures } from "../../view/boat.ts";
+import type { SpendFigures } from "../../view/overflow.ts";
 
 function width(share: number): `${number}%` {
   return `${Math.round(share * 1000) / 10}%`;
@@ -81,7 +82,7 @@ export function SpendFiguresView({
       </View>
       <View role="list" style={styles.parts}>
         <Part
-          label="Confirmed by Boat"
+          label={`Confirmed by ${figures.name}`}
           value={figures.confirmed}
           confirmed
           warning={warning}
@@ -95,12 +96,11 @@ export function SpendFiguresView({
       </View>
       {compact ? null : (
         <Text style={text.caption}>
-          Not yet confirmed counts each start at its highest cost until Boat
-          reports the cost.
+          {`Not yet confirmed counts each start at its highest cost until ${figures.name} reports the cost.`}
           {figures.settled === null
             ? ""
-            : ` It includes ${figures.settled} for starts that Boat did not report before their lifetime ended.`}{" "}
-          At the limit, jobs run on your machines only.
+            : ` It includes ${figures.settled} for starts that ${figures.name} did not report before their lifetime ended.`}
+          {` At the limit, ciproxy starts no new jobs on ${figures.name}.`}
         </Text>
       )}
     </View>

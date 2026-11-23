@@ -12,7 +12,13 @@ addresses.
   monthly cost. Another role on Add a machine goes to the list.
 - The list shows the figures of the machines, a table with the slots,
   health, and cache of each machine, a notice for each offline machine, and
-  the Overflow panel with the Boat spend of the month.
+  the Overflow panel.
+- The Overflow panel has a row for each connected provider, with its account
+  and the spend of the month against its own limit, the confirmed and the
+  unconfirmed costs apart. A row says why its provider takes no jobs now,
+  when the API says so. The overflow wait shows once, under the rows. With
+  no connected provider, the panel says that jobs run on the machines only,
+  and an Admin gets Connect a provider.
 - The three pages share one read of `GET /workspaces/{id}/machines`. They
   read it again every 10 seconds, and Add a machine every 5 seconds. A
   machine that the read does not hold shows a not-found state. After Remove,
@@ -98,7 +104,8 @@ addresses.
   Machines on the one HTTP client.
 - [machines-overflow.ts](../../state/machines-overflow.ts) reads the overflow
   summary of the Overflow panel as a page read of
-  [page-store.ts](../../state/page-store.ts).
+  [page-store.ts](../../state/page-store.ts), and the
+  [view of the same name](../../view/machines-overflow.ts) gives its rows.
 
 ## Related docs
 

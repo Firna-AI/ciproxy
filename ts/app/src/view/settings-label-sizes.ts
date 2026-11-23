@@ -1,10 +1,9 @@
 // The sizes of the label dialog in words: the full request of a label, with
 // its vCPU, memory, and free disk, and the VM disk of one of its jobs, from
 // the API fit in whole decimal GB. The dialog names the full request of a
-// size that nothing fits, never what a machine or a Boat size offers.
+// size that nothing fits, never what a machine or a provider size offers.
 
 import type { LabelFit, LabelInput } from "../api/schema.ts";
-import { boatLabelFit } from "./settings-label-places.ts";
 
 const nbsp = "\u00a0";
 const grouped = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -26,14 +25,16 @@ export function requestPhrase(label: LabelInput): string {
   return `${vcpus}, ${memory} of memory, and ${disk} of free disk`;
 }
 
-/** "With the current image, each VM has a disk of 81 GB.", or null. */
+/**
+ * "With the current image, each VM has a disk of 81 GB.", or null. The API
+ * gives the complete root of a job of the size with each provider fit, the
+ * providers of the order first.
+ */
 export function vmDiskLine(fit: LabelFit): string | null {
-  const root = boatLabelFit(fit.providers)?.required_root_disk_bytes ?? null;
+  const root =
+    fit.providers.find((provider) => provider.required_root_disk_bytes != null)
+      ?.required_root_disk_bytes ?? null;
   return root === null
     ? null
     : `With the current image, each VM has a disk of ${unbroken(`${wholeGb(root)} GB`)}.`;
 }
-
-/** The text of the choice "Run on the largest Boat size". */
-export const largestBoatText =
-  "Jobs run on the largest size of your Boat account.";

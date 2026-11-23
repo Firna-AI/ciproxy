@@ -1,5 +1,6 @@
-// Disconnect asks first: ciproxy then starts no new jobs on Boat, the jobs
-// that run on Boat finish, and ciproxy deletes the key when the last of their
+// Disconnect of one provider asks first: ciproxy then starts no new jobs on
+// that provider, the labels keep it in their order and skip it, the jobs that
+// run on it finish, and ciproxy deletes the key when the last of their
 // sandboxes ends. The dialog opens on Cancel, the safe action, and a phone
 // shows it as a sheet. The dialog opens only after a press, never in the
 // static export, so it reads the window width at once. Firna builds the
@@ -11,24 +12,29 @@ import { useRef, useState } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { WebModalFrame } from "@firna/ui/modal";
 
+import type { OverflowProvider } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { text } from "../../components/text.ts";
 import { viewportFor } from "../../components/viewport.ts";
 import { useValue } from "../../services/hooks.ts";
 import type { OverflowStore } from "../../state/overflow.ts";
-import { disconnectFailure } from "../../view/boat-failures.ts";
 import type { FailureCopy } from "../../view/claim.ts";
+import { disconnectFailure } from "../../view/overflow-failures.ts";
+import { providerName } from "../../view/providers.ts";
 
 export function DisconnectDialog({
   store,
+  provider,
   onClose,
   onDisconnected,
 }: {
   store: OverflowStore;
+  provider: OverflowProvider;
   onClose: () => void;
   onDisconnected: () => void;
 }) {
+  const name = providerName(provider);
   const placement =
     viewportFor(useWindowDimensions().width) === "mobile"
       ? "bottom-sheet"
@@ -43,16 +49,16 @@ export function DisconnectDialog({
     running.current = true;
     setBusy(true);
     setFailure(null);
-    const result = await store.disconnect();
+    const result = await store.disconnect(provider);
     running.current = false;
     setBusy(false);
     if (result.ok) onDisconnected();
-    else setFailure(disconnectFailure(result.failure));
+    else setFailure(disconnectFailure(result.failure, provider));
   };
   return (
     <WebModalFrame
       key={placement}
-      title="Disconnect Boat?"
+      title={`Disconnect ${name}?`}
       size="sm"
       placement={placement}
       dismissible={!busy}
@@ -80,11 +86,10 @@ export function DisconnectDialog({
     >
       <View style={styles.body}>
         <Text style={text.small}>
-          ciproxy starts no new jobs on Boat, and jobs run on your machines
-          only.
+          {`ciproxy starts no new jobs on ${name}. Your labels keep ${name} in their order and skip it until you connect ${name} again.`}
         </Text>
         <Text style={text.small}>
-          Jobs that run on Boat now finish. ciproxy then deletes the key.
+          {`Jobs that run on ${name} now finish. ciproxy then deletes the key.`}
         </Text>
         {failure ? (
           <Notice tone="danger" title={failure.title}>

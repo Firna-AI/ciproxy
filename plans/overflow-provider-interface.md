@@ -699,31 +699,34 @@ Depends on: 1, 9
 
 The app shows the approved mockups.
 
-- [ ] Move the provider-neutral parts of `ts/app/src/screens/boat` to
+- [x] Move the provider-neutral parts of `ts/app/src/screens/boat` to
       overflow components. Keep the wallet choice for Boat only.
-- [ ] Add the provider choice to Setup.
-- [ ] Update Settings under Overflow to the list of providers, each with
+- [x] Add the provider choice to Setup.
+- [x] Update Settings under Overflow to the list of providers, each with
       its spend limit.
-- [ ] Replace the label switches with the label order control.
-- [ ] Update the Jobs notices, the job page, the live queue, the Machines
+- [x] Replace the label switches with the label order control.
+- [x] Update the Jobs notices, the job page, the live queue, the Machines
       page, and the savings report.
-- [ ] Update the app tests, the harness scripts, and the browser checks.
-- [ ] Add one job history filter choice for each provider. Wrap the choices
+- [x] Update the app tests, the harness scripts, and the browser checks.
+- [x] Add one job history filter choice for each provider. Wrap the choices
       on a narrow screen.
-- [ ] Make the shared dialog scroll its body between the title and the
+- [x] Make the shared dialog scroll its body between the title and the
       footer, as the mockups do.
-- [ ] Replace `chartColors.boat` in `ts/tokens/index.ts` with a neutral
+- [x] Replace `chartColors.boat` in `ts/tokens/index.ts` with a neutral
       overflow token, and move its consumers.
-- [ ] Run the app typecheck, lint, tests, and export. Compare the screens
+- [x] Run the app typecheck, lint, tests, and export. Compare the screens
       with the mockups, and save screenshots under
       `.context/providers-interface/`.
-- [ ] Delete the Milestone 9 view mappings that select only the Boat row
+- [x] Delete the Milestone 9 view mappings that select only the Boat row
       or map the order to the old switches, in `src/view/boat.ts`,
       `boat-failures.ts`, `machines-overflow.ts`, `machines.ts`,
       `settings-label-form.ts`, `jobs-live.ts`, `jobs-places.ts`,
       `jobs-format.ts`, `jobs-detail.ts`, `jobs-links.ts`,
       `setup-steps.ts`, `savings-costs.ts`, `savings-report.ts`,
       `src/state/overflow.ts`, and the setup, overflow, and label screens.
+
+Evidence: `.context/providers-interface/m10/` and
+`.context/providers-interface/m10-screens/`.
 
 ## Milestone 11: Site: provider-neutral docs
 

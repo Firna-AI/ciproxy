@@ -7,7 +7,7 @@ import {
   nextAttempt,
   uncheckedKey,
 } from "../src/state/key-check.ts";
-import { walletOptions } from "../src/view/boat.ts";
+import { walletOptions } from "../src/view/boat-wallets.ts";
 import { boatWallets } from "../scripts/fixtures-boat.ts";
 
 test("the likely wallet of the key check starts chosen, not the first wallet", () => {

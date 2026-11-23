@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 
 import { overflowHref, workspaceHref } from "../src/routing/pages.ts";
-import { keyRefused } from "../src/view/boat-failures.ts";
+import { providerCopy } from "../src/view/providers.ts";
 import { settingsHref } from "../src/view/settings-tabs.ts";
 import {
   assertKeyMasked,
@@ -52,6 +52,9 @@ export async function fieldFocused(page: Page, label: string): Promise<void> {
   }, label);
 }
 
+/** The limit field of the Boat connection form. */
+export const connectionLimit = "Monthly spend limit on Boat, US dollars";
+
 /** Type the key, and the limit unless it is null. */
 async function typeKey(
   page: Page,
@@ -61,9 +64,7 @@ async function typeKey(
 ): Promise<void> {
   await page.getByLabel(keyLabel, { exact: true }).fill(key);
   if (limit !== null) {
-    await page
-      .getByLabel("Monthly spend limit, US dollars", { exact: true })
-      .fill(limit);
+    await page.getByLabel(connectionLimit, { exact: true }).fill(limit);
   }
 }
 
@@ -136,11 +137,9 @@ async function setupConnect(page: Page, origin: string, width: number) {
   await assertKeyMasked(page, keyField, "before the key check");
   await assertKeyPrivate(page, keyLines, "before the key check");
   await page.getByRole("button", { name: "Check key", exact: true }).click();
-  await visible(page.getByText(keyRefused, { exact: true }));
+  await visible(page.getByText(providerCopy.boat.keyError, { exact: true }));
   assert.equal(
-    await page
-      .getByLabel("Monthly spend limit, US dollars", { exact: true })
-      .inputValue(),
+    await page.getByLabel(connectionLimit, { exact: true }).inputValue(),
     "200",
     "A refused key keeps the typed limit",
   );

@@ -1,9 +1,9 @@
 // The savings report as a model: the range, the savings figure, the cost
-// bars, the price-list note, and the starts of each day. Every amount comes
-// from the API. The figure shows only when the API names the cheaper
-// alternative and gives its signed saving, and its words keep the sign: a
-// negative saving says "more than". The shown end of a range is the day
-// before its first excluded day.
+// bars, the price-list note, and the starts of each day on own machines and
+// on the providers together. Every amount comes from the API. The figure
+// shows only when the API names the cheaper alternative and gives its signed
+// saving, and its words keep the sign: a negative saving says "more than".
+// The shown end of a range is the day before its first excluded day.
 
 import type {
   SavingsAlternative,
@@ -21,8 +21,10 @@ import {
   formatCount,
   formatUtcDate,
   formatUtcRange,
+  sumDecimals,
 } from "./exact-format.ts";
 import { joinWords } from "./format.ts";
+import { providerNames } from "./providers.ts";
 
 export const rangeLabels: Readonly<Record<SavingsRange, string>> = {
   last30_days: "Last 30 days",
@@ -46,21 +48,29 @@ export function savingsSubtitle(page: SavingsPage): string {
   return `${rangeLabels[page.range]} · ${formatUtcRange(page.from, page.until)}`;
 }
 
-/** Runtime for the Boat series, with zero on dates without Boat jobs. */
-export function boatRuntime(
+/** The starts and minutes of a date or a range on every provider together. */
+export function overflowRuntime(
   row: Pick<SavingsDay, "providers">,
 ): SavingsRuntime {
-  return (
-    row.providers.find((provider) => provider.provider === "boat")?.usage ?? {
-      starts: "0",
-      minutes: "0",
-    }
-  );
+  return {
+    starts: row.providers
+      .reduce((sum, provider) => sum + BigInt(provider.usage.starts), 0n)
+      .toString(),
+    minutes: sumDecimals(
+      row.providers.map((provider) => provider.usage.minutes),
+    ),
+  };
 }
 
-/** The starts of the range on own machines and on Boat together. */
+/** The starts of the range on own machines and on the providers together. */
 export function totalStarts(page: SavingsPage): bigint {
-  return BigInt(page.machines.starts) + BigInt(boatRuntime(page).starts);
+  return BigInt(page.machines.starts) + BigInt(overflowRuntime(page).starts);
+}
+
+/** "Boat", or "Boat and Second provider": the providers of the range. */
+export function overflowName(page: SavingsPage): string {
+  const providers = page.providers.map((provider) => provider.provider);
+  return providers.length === 0 ? "Overflow" : providerNames(providers, "and");
 }
 
 export type Hero = { figure: string; text: string };
@@ -152,14 +162,15 @@ export type StartsSeries = {
   /** The day of the month of each UTC date. */
   days: string[];
   machines: number[];
-  boat: number[];
+  /** The starts on every provider together. */
+  overflow: number[];
 };
 
 export function startsSeries(page: SavingsPage): StartsSeries {
   return {
     days: page.days.map((item) => String(Number(item.day.slice(8, 10)))),
     machines: page.days.map((item) => Number(item.machines.starts)),
-    boat: page.days.map((item) => Number(boatRuntime(item).starts)),
+    overflow: page.days.map((item) => Number(overflowRuntime(item).starts)),
   };
 }
 

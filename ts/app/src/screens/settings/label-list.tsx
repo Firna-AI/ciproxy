@@ -42,9 +42,6 @@ function Where({ row }: { row: LabelRow }) {
       ) : (
         <Text style={text.small}>{row.where.text}</Text>
       )}
-      {row.where.note === null ? null : (
-        <Text style={text.caption}>{row.where.note}</Text>
-      )}
     </View>
   );
 }

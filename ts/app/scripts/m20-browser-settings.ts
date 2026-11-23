@@ -19,6 +19,7 @@ import {
   organizationFacts,
   overflowTabFacts,
 } from "./m20-browser-settings-facts.ts";
+import { labelOrderCases } from "./m20-browser-label-order.ts";
 import { labelCases } from "./m20-browser-labels.ts";
 import { organizationCases } from "./m20-browser-organizations.ts";
 
@@ -193,6 +194,7 @@ export function settingsCases(origin: string, output: string): M20Case[] {
       },
     },
     ...labelCases(origin, output),
+    ...labelOrderCases(origin, output),
     ...organizationCases(origin, output),
   ];
 }
