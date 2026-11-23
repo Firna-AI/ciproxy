@@ -97,9 +97,9 @@ All design calls are my calls, made on 23 November 2026.
   `crates/ciproxy-agent/scripts/github-smoke-workflow.yml`. Reason:
   `image/smoke-workflow.yml` runs only on Boat, and a step in every mode
   of the agent smoke would fail each agent smoke on an older image.
-- In the Boat smoke, warn and pass when the Boat kernel has no zram.
-  Reason: such a job still runs, as the protocol says, and Milestone 4
-  records whether Boat has zram.
+- In the Boat smoke, warn and pass only when both zram device entries and
+  the installed module are absent. Jobs can still run without zram.
+  An installed but unloaded module counts as zram and requires active swap.
 - When only the `vm.page-cluster` write fails, keep the swap and warn.
   Reason: the setting only tunes the swap. The first version of the
   script turned the whole swap off.
@@ -273,6 +273,59 @@ on the same day.
   after a full image build and a smoke run.
 - **Action:** ask the user, because A adds a new build error.
 
+### 5. Boat keeps a zram swap of another size
+
+Open. Review finding 3 of 23 November 2026, repeated as finding 7.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Review.
+- **Category:** Docs or spec.
+- **Location:** `image/ciproxy-swap.sh`, `image/check-swap.py`,
+  `image/smoke-workflow.yml`, and `docs/protocol/agent-images.md`.
+- **Background:** The protocol sizes the swap at MemTotal, capped at
+  8 GiB. The swap script leaves any active zram swap alone. A Boat launch
+  starts on Boat's running system, which can already have zram. Nobody has
+  checked whether it does.
+- **Problem:** The script keeps a zram swap of any size, but the Boat
+  smoke accepts only the protocol size.
+- **Impact if no action:** A Boat job can get less headroom than the
+  protocol says, and the Boat smoke then fails although the launch
+  followed the plan.
+- **Root question:** What headroom does a Boat job get when Boat already
+  has an active zram swap?
+- **Options:**
+  - **A.** Keep Boat's swap, state the exception, and report when the
+    launch keeps it. The smoke accepts the kept size. Cost: a Boat job can
+    get less than the protocol size. Effort: Small.
+  - **B.** Resize Boat's zram to the protocol size before the runner
+    starts. Cost: turning swap off moves Boat's pages into memory and can
+    fail. Effort: Medium.
+  - **C.** Add a ciproxy device when the existing swap is too small, and
+    keep Boat's swap. Cost: more memory for the zram tables. Effort:
+    Medium.
+  - **D.** Make the size a minimum for all zram swap together. The launch
+    adds one device for the shortfall only, and the Boat smoke checks the
+    total. Cost: the Boat smoke no longer catches a ciproxy device that is
+    too large. Effort: Small.
+  - **E.** Keep the current rule until Milestone 4 records whether Boat
+    has zram, and warn when the launch keeps a device of another size.
+    Cost: each Boat smoke fails in that case until this decision is
+    answered. Effort: Small.
+  - **F.** Always add a marked ciproxy device of the protocol size, and
+    keep Boat's swap. Cost: the total swap can pass the rule, and a second
+    device uses memory for its tables. Effort: Medium.
+- **Left out:** A smoke that accepts any zram without a record, because it
+  also passes a ciproxy device of the wrong size. A launch that stops on
+  such a device, because a swap problem must never stop the job.
+- **Wider fix:** F. It never reads Boat's device, so a change in Boat's
+  swap cannot break the rule.
+- **Previous examples:** None found.
+- **Recommendation:** D. Every job then gets at least the protocol swap,
+  Boat's swap stays, and no marker is needed. The first review
+  recommended A.
+- **Action:** ask the user, because each option changes the swap promise
+  for a Boat job that starts with zram.
+
 ## Milestone 1: Documentation and protocol
 
 Depends on: none
@@ -332,6 +385,7 @@ Depends on: 2
 - [x] Keep the swap when only the `vm.page-cluster` write fails, and list
       the swap step of Boat launch in `image/boat.md`.
 - [ ] Apply the answer of decision 3.
+- [ ] Apply the answer of decision 5.
 
 ## Milestone 4: Verification, commit, review, and pull request
 
@@ -350,7 +404,7 @@ Depends on: every other milestone
       the Boat kernel has no zram, ask the user about E of decision 1 on
       Boat.
 - [x] Commit with Conventional Commits and push the branch.
-- [ ] Review the complete local diff against `origin/main` with the
+- [x] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, record
       follow-up items under `plans/follow-ups/` for the rest, re-review

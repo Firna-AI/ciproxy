@@ -39,8 +39,10 @@ Provisioning runs in a chroot with stub tools and real `install` for the
 guest unit and swap files. The fixture enables the swap unit offline.
 The real exporter uses stub libguestfs transport and real archive, ext4,
 and package tools. The release tree and disk must keep the source owners,
-modes, capabilities, ACLs, and hard links. The tree must keep the swap
-helper with mode 0755, its unit, and its enablement link for the guest.
+modes, capabilities, ACLs, and hard links. Both must keep the swap helper
+with mode 0755, the swap unit, and the guest's enablement link. On disk,
+the link must point to the unit. The unit must run as a oneshot before
+`ciproxy-guest.service`.
 The release uses the pinned recipe's software report. A package that
 differs from its APT pin appears in `apt_pin_differences` without failing
 export, including when the tree has no APT preference file.
@@ -170,8 +172,10 @@ and checks for active zram within 64 KiB of the expected size:
   as the [KVM and GitHub smoke checks](../crates/ciproxy-agent/smoke-checks.md)
   say.
 - In a Boat job, the first step of [smoke-workflow.yml](smoke-workflow.yml).
-  When `/sys/class/zram-control` is absent after Boat launch, the step
-  warns and passes. With zram, a missing `/proc/swaps` fails the step.
+  It warns and passes only when `/sys/class/zram-control` and
+  `/sys/block/zram0` are absent and neither `modinfo` nor the kernel's
+  module directory finds zram. An installed but unloaded module still
+  requires a readable `/proc/swaps` and active swap of the expected size.
 
 ### Boat build
 

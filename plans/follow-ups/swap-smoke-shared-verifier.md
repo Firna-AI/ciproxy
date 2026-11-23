@@ -36,11 +36,14 @@
   rules as the helper?
 - **Options:**
   - **A.** Keep the inline steps. Effort: Small.
-  - **B.** Add a verify mode to `image/ciproxy-swap.sh` that reuses its
-    probe, prints the swap table, and checks the size. A flag lets the
-    Boat smoke accept a kernel without zram. Cover each outcome in
-    `image/check-swap.py`. Both workflows call the mode. Cost: the steps
-    need an image with the mode. Effort: Medium.
+  - **B.** Add a verify mode to `image/ciproxy-swap.sh` that prints the
+    swap table and checks the size. Reuse `zram_available` for both device
+    entries. Check for an installed module with `modinfo` and in the
+    running kernel's module directory. This detects an installed module
+    even when startup did not load it. A flag lets the Boat smoke accept
+    a kernel without zram. Cover each outcome in `image/check-swap.py`.
+    Both workflows call the mode. Cost: the steps need an image with the
+    mode. Effort: Medium.
   - **C.** Let the helper write its outcome to a file, and let the smoke
     print it and act on it. Cost: one more runtime file in both images.
     Effort: Medium.

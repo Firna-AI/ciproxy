@@ -17,7 +17,7 @@ import unittest
 sys.dont_write_bytecode = True
 
 from _checks_.export_fixture import (
-    CAPABILITY, RELEASE_FSTAB, SOURCE_FSTAB, create, disk_attribute, disk_file, provision, run,
+    CAPABILITY, RELEASE_FSTAB, SOURCE_FSTAB, create, disk_attribute, disk_file, disk_stat, provision, run,
 )
 from _checks_.image_cleanup import assert_clean_image
 
@@ -42,6 +42,31 @@ def check_guest_network(contents):
     assert all(not any(key in section for key in ["Address", "Gateway"])
                for section in network.values()), (
         "The image must not duplicate the agent's guest address or gateway")
+
+
+def check_swap_startup(tree, disk, root):
+    helper = "usr/local/libexec/ciproxy-swap"
+    unit = pathlib.PurePosixPath("etc/systemd/system/ciproxy-swap.service")
+    link = unit.parent / "ciproxy-guest.service.wants" / unit.name
+    assert (tree / helper).is_file(), "Export must contain /usr/local/libexec/ciproxy-swap"
+    assert (tree / helper).stat().st_mode & 0o7777 == 0o755, "Export must keep ciproxy-swap mode 0755"
+    assert (tree / unit).is_file(), "Export must contain /etc/systemd/system/ciproxy-swap.service"
+    assert (tree / link).is_symlink(), "Export must enable ciproxy-swap.service for ciproxy-guest.service"
+
+    helper_stat = disk_stat(disk, f"/{helper}", root, "ext4-swap-helper")
+    assert re.search(r"\bType:\s+regular\s+Mode:\s+0755\b", helper_stat), (
+        f"Released disk must contain /{helper} with mode 0755")
+    service = configparser.ConfigParser(interpolation=None)
+    service.read_string(disk_file(disk, f"/{unit}", root, "ext4-swap-unit").decode())
+    assert service.get("Service", "Type", fallback="") == "oneshot", (
+        "Released ciproxy-swap.service must set Type=oneshot")
+    assert "ciproxy-guest.service" in service.get("Unit", "Before", fallback="").split(), (
+        "Released ciproxy-swap.service must set Before=ciproxy-guest.service")
+    link_stat = disk_stat(disk, f"/{link}", root, "ext4-swap-link")
+    assert re.search(r"\bType:\s+symlink\b", link_stat), f"Released disk must contain the symlink /{link}"
+    target = re.search(r'^Fast link dest: "([^"]+)"$', link_stat, re.MULTILINE)
+    linked_path = os.path.join(f"/{link.parent}", target.group(1) if target else "")
+    assert os.path.normpath(linked_path) == f"/{unit}", f"Released symlink /{link} must point to /{unit}"
 
 
 def check_export(workspace):
@@ -111,13 +136,7 @@ def check_export(workspace):
     assert_clean_image(tree)
     check_guest_network((tree / network_path).read_text())
     assert (tree / service_path).read_bytes() == (source / service_path).read_bytes()
-    swap_helper = tree / "usr/local/libexec/ciproxy-swap"
-    assert swap_helper.is_file(), "Export must contain /usr/local/libexec/ciproxy-swap"
-    assert swap_helper.stat().st_mode & 0o7777 == 0o755, "Export must keep ciproxy-swap mode 0755"
-    swap_unit = tree / "etc/systemd/system/ciproxy-swap.service"
-    assert swap_unit.is_file(), "Export must contain /etc/systemd/system/ciproxy-swap.service"
-    swap_link = swap_unit.parent / "ciproxy-guest.service.wants" / swap_unit.name
-    assert swap_link.is_symlink(), "Export must enable ciproxy-swap.service for ciproxy-guest.service"
+    check_swap_startup(tree, disk, root)
     tool = tree / "privileged-tool"
     assert (tool.stat().st_uid, tool.stat().st_gid, tool.stat().st_mode & 0o7777) == (1234, 2345, 0o755)
     assert os.getxattr(tool, "security.capability").hex() == CAPABILITY
@@ -130,10 +149,10 @@ def check_export(workspace):
     assert disk_file(disk, "/" + service_path, root, "ext4-guest-service") == (source / service_path).read_bytes()
     assert acl_entries(disk_attribute(disk, "/privileged-tool", "system.posix_acl_access",
                                       root, "ext4-acl")) == expected_acl
-    tool_stat = run(["debugfs", "-R", "stat /privileged-tool", str(disk)], root, "ext4-tool")
-    alias_stat = run(["debugfs", "-R", "stat /tool-alias", str(disk)], root, "ext4-alias")
+    tool_stat = disk_stat(disk, "/privileged-tool", root, "ext4-tool")
+    alias_stat = disk_stat(disk, "/tool-alias", root, "ext4-alias")
     assert re.search(r"Inode: (\d+)", tool_stat).group(1) == re.search(r"Inode: (\d+)", alias_stat).group(1)
-    sparse_stat = run(["debugfs", "-R", "stat /sparse-data", str(disk)], root, "ext4-sparse")
+    sparse_stat = disk_stat(disk, "/sparse-data", root, "ext4-sparse")
     assert int(re.search(r"Blockcount: (\d+)", sparse_stat).group(1)) * 512 < 8388608
     grown = root / "job-copy.ext4"
     run(["cp", "--sparse=always", str(disk), str(grown)], root, "copy-for-growth")

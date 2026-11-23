@@ -130,7 +130,12 @@ def run(command, root, name, environment=None):
 def disk_file(image, path, root, name):
     output = root / (name + ".bin")
     run(["debugfs", "-R", f"dump {path} {output}", str(image)], root, name)
+    assert output.is_file(), f"Released disk is missing {path}"
     return output.read_bytes()
+
+
+def disk_stat(image, path, root, name):
+    return run(["debugfs", "-R", f"stat {path}", str(image)], root, name)
 
 
 def disk_attribute(image, path, attribute, root, name):

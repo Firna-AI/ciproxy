@@ -4,7 +4,7 @@
   **Harder later:** No.
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-23, from the branch `calummoore/swap-support-3dll`,
-  review finding 4, the wider fix.
+  review findings 4 and 9, the shared wider fix.
 - **Source:** Review.
 - **Category:** Test.
 - **Location:** `image/ciproxy-guest.service`,
@@ -26,6 +26,9 @@
   - The Boat launch check and the export check each verify their own
     path. `plans/follow-ups/boat-guest-registration-path-coverage.md`
     records a similar gap in the Boat fixture.
+  - The export check once passed when the swap unit had no `Before=` rule
+    or the enablement link was missing from `rootfs.ext4`. It now checks
+    both on the released disk.
 - **Problem:** Each new pre-start step needs two separate wirings and two
   separate checks.
 - **Impact if no action:** A later pre-start step can reach one build and
@@ -39,6 +42,10 @@
     it in the launch and export fixtures. Effort: Medium.
   - **C.** Let the guest program run each pre-start step before the
     runner. Cost: the guest gets a system setup duty. Effort: Large.
+  - **D.** Use `ExecStartPre=-/usr/local/libexec/ciproxy-swap` in both guest
+    units. The directive requests the helper, orders it before the guest,
+    and waits for it. This reverses the separate unit design. Swap setup
+    then waits for Docker. Effort: Medium.
 - **Left out:** A text match on the scripts, because the `testing` skill
   asks for a test of the behaviour through the real entry point.
 - **Wider fix:** B.

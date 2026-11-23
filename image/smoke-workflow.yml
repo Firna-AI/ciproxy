@@ -9,9 +9,17 @@ jobs:
       - name: Check compressed swap
         run: |
           swapon --show || true
-          if [ ! -e /sys/class/zram-control ]; then
-            echo '::warning::This kernel has no zram, so the job runs without compressed swap.'
-            exit 0
+          if [ ! -e /sys/class/zram-control ] &&
+            [ ! -e /sys/block/zram0 ] &&
+            ! modinfo zram >/dev/null 2>&1; then
+            module_dir="/lib/modules/$(uname -r)"
+            if [ ! -d "$module_dir" ] || {
+              zram_module=$(find -H "$module_dir" -name 'zram.ko*' -print -quit) &&
+                [ -z "$zram_module" ]
+            }; then
+              echo '::warning::This kernel has no zram, so the job runs without compressed swap.'
+              exit 0
+            fi
           fi
           if [ ! -r /proc/swaps ]; then
             echo 'Cannot read /proc/swaps on a kernel with zram.' >&2
