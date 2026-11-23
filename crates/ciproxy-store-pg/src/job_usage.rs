@@ -63,10 +63,10 @@ pub(crate) fn purge_unmatched(
     cutoff: DateTime<Utc>,
 ) -> Result<()> {
     diesel::sql_query(
-        "DELETE FROM job_usage_samples AS sample USING runners AS runner
+        "DELETE FROM job_usage_samples AS sample
+         USING job_usage_runners_without_history AS runner
          WHERE sample.workspace_id = $1 AND sample.received_at <= $2
-            AND runner.workspace_id = sample.workspace_id AND runner.id = sample.runner_id
-            AND NOT runner_has_job_usage_history(runner)",
+            AND runner.workspace_id = sample.workspace_id AND runner.id = sample.runner_id",
     )
     .bind::<sql_types::Uuid, _>(workspace_id)
     .bind::<sql_types::Timestamptz, _>(cutoff)

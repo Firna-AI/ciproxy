@@ -2,10 +2,11 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::github::{DemandPhase, JobDelivery};
+use ciproxy_store_interface::jobs::JobState;
 use uuid::Uuid;
 
 use super::super::support::job_usage::{assert_job_usage_deleted, boat_runner, sample_report};
-use super::super::support::{Database, at};
+use super::super::support::{Database, at, job};
 use super::fixtures::demand;
 
 #[test]
@@ -152,6 +153,7 @@ fn github_job_usage_follows_each_attempt_and_expires_unmatched_reports() {
     let finished = boat_runner(&database, workspace.id, &label, &scale_set);
     let running = boat_runner(&database, workspace.id, &label, &scale_set);
     let without_attempt = boat_runner(&database, workspace.id, &label, &scale_set);
+    let with_actions = boat_runner(&database, workspace.id, &label, &scale_set);
     let unmatched = boat_runner(&database, workspace.id, &label, &scale_set);
     let store = &database.store;
     let mut completed = demand(&label, &scale_set);
@@ -167,6 +169,16 @@ fn github_job_usage_follows_each_attempt_and_expires_unmatched_reports() {
     current.runner_github_id = running.github_id;
     current.completed_at = None;
     store.save_github_job(workspace.id, &current, at()).unwrap();
+    let mut expired_with_actions = completed.clone();
+    expired_with_actions.id = Uuid::from_u128(73);
+    expired_with_actions.runner_github_id = with_actions.github_id;
+    store
+        .save_github_job(workspace.id, &expired_with_actions, at())
+        .unwrap();
+    let mut actions = job(&label, &scale_set);
+    actions.runner_id = Some(with_actions.id);
+    actions.state = JobState::Running;
+    store.insert_job(workspace.id, &actions).unwrap();
     let mut without_assignment = completed;
     without_assignment.id = Uuid::from_u128(72);
     without_assignment.assigned_at = None;
@@ -179,17 +191,15 @@ fn github_job_usage_follows_each_attempt_and_expires_unmatched_reports() {
     report.received_at = at() + Duration::seconds(2);
     for runner_id in [finished.id, without_attempt.id] {
         assert!(
-            database
-                .job_usage
+            store
                 .save_job_usage(workspace.id, runner_id, &report)
                 .unwrap()
         );
     }
     let older = sample_report();
-    for runner_id in [running.id, unmatched.id] {
+    for runner_id in [running.id, with_actions.id, unmatched.id] {
         assert!(
-            database
-                .job_usage
+            store
                 .save_job_usage(workspace.id, runner_id, &older)
                 .unwrap()
         );
@@ -199,15 +209,19 @@ fn github_job_usage_follows_each_attempt_and_expires_unmatched_reports() {
         store
             .purge_github_jobs(workspace.id, at() + Duration::days(90))
             .unwrap(),
-        1
+        2
     );
     for runner_id in [finished.id, without_attempt.id, unmatched.id] {
         assert_job_usage_deleted(&mut database, workspace.id, runner_id);
     }
     assert_eq!(
+        database.store.job_usage(workspace.id, running.id).unwrap(),
+        Some(older.clone())
+    );
+    assert_eq!(
         database
-            .job_usage
-            .job_usage(workspace.id, running.id)
+            .store
+            .job_usage(workspace.id, with_actions.id)
             .unwrap(),
         Some(older)
     );

@@ -11,5 +11,6 @@ mod guard_cost_support;
 mod guard_cost_tests;
 mod measured_tests;
 mod retention_tests;
+mod sample_tests;
 mod stopped_tests;
 mod support;

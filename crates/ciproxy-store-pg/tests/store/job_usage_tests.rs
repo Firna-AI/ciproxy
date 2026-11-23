@@ -15,8 +15,8 @@ fn job_usage_round_trips_samples_and_steps_for_the_dashboard_runner() {
     let organization = database.organization(&workspace);
     let (label, scale_set) = database.label_and_scale_set(&organization);
     let runner = boat_runner(&database, workspace.id, &label, &scale_set);
-    let usage = &database.job_usage;
-    assert_eq!(usage.job_usage(workspace.id, runner.id).unwrap(), None);
+    let store = &database.store;
+    assert_eq!(store.job_usage(workspace.id, runner.id).unwrap(), None);
 
     let mut report = sample_report();
     report.usage.steps.extend([
@@ -40,7 +40,7 @@ fn job_usage_round_trips_samples_and_steps_for_the_dashboard_runner() {
         },
     ]);
     assert!(
-        usage
+        store
             .save_job_usage(workspace.id, runner.id, &report)
             .unwrap()
     );
@@ -56,14 +56,14 @@ fn job_usage_round_trips_samples_and_steps_for_the_dashboard_runner() {
     assert_eq!(jobs.len(), 1);
     let dashboard_runner_id = jobs[0].runner_id.unwrap();
     assert_eq!(
-        usage.job_usage(workspace.id, dashboard_runner_id).unwrap(),
+        store.job_usage(workspace.id, dashboard_runner_id).unwrap(),
         Some(report.clone())
     );
 
     let other = database.workspace();
-    assert_eq!(usage.job_usage(other.id, runner.id).unwrap(), None);
+    assert_eq!(store.job_usage(other.id, runner.id).unwrap(), None);
     assert!(matches!(
-        usage.save_job_usage(other.id, runner.id, &report),
+        store.save_job_usage(other.id, runner.id, &report),
         Err(Error::InvalidReference)
     ));
 }
@@ -75,11 +75,11 @@ fn job_usage_keeps_the_newest_partial_until_a_final_report_replaces_it() {
     let organization = database.organization(&workspace);
     let (label, scale_set) = database.label_and_scale_set(&organization);
     let runner = boat_runner(&database, workspace.id, &label, &scale_set);
-    let usage = &database.job_usage;
+    let store = &database.store;
 
     let older = sample_report();
     assert!(
-        usage
+        store
             .save_job_usage(workspace.id, runner.id, &older)
             .unwrap()
     );
@@ -91,21 +91,21 @@ fn job_usage_keeps_the_newest_partial_until_a_final_report_replaces_it() {
     newer.usage.oom_kills = Some(vec![2]);
     newer.usage.steps.clear();
     assert!(
-        usage
+        store
             .save_job_usage(workspace.id, runner.id, &newer)
             .unwrap()
     );
     assert_eq!(
-        usage.job_usage(workspace.id, runner.id).unwrap(),
+        store.job_usage(workspace.id, runner.id).unwrap(),
         Some(newer.clone())
     );
     assert!(
-        !usage
+        !store
             .save_job_usage(workspace.id, runner.id, &older)
             .unwrap()
     );
     assert_eq!(
-        usage.job_usage(workspace.id, runner.id).unwrap(),
+        store.job_usage(workspace.id, runner.id).unwrap(),
         Some(newer)
     );
 
@@ -113,7 +113,7 @@ fn job_usage_keeps_the_newest_partial_until_a_final_report_replaces_it() {
     final_report.is_final = true;
     final_report.received_at = at() + Duration::seconds(29);
     assert!(
-        usage
+        store
             .save_job_usage(workspace.id, runner.id, &final_report)
             .unwrap()
     );
@@ -123,12 +123,12 @@ fn job_usage_keeps_the_newest_partial_until_a_final_report_replaces_it() {
     late_partial.usage.steps.clear();
     late_partial.usage.cpu_milli_vcpu = vec![0, 0];
     assert!(
-        !usage
+        !store
             .save_job_usage(workspace.id, runner.id, &late_partial)
             .unwrap()
     );
     assert_eq!(
-        usage.job_usage(workspace.id, runner.id).unwrap(),
+        store.job_usage(workspace.id, runner.id).unwrap(),
         Some(final_report)
     );
 }
@@ -148,7 +148,7 @@ fn finished_actions_job_purge_removes_job_usage_at_ninety_days() {
     let report = sample_report();
     assert!(
         database
-            .job_usage
+            .store
             .save_job_usage(workspace.id, runner.id, &report)
             .unwrap()
     );
@@ -162,10 +162,7 @@ fn finished_actions_job_purge_removes_job_usage_at_ninety_days() {
         0
     );
     assert_eq!(
-        database
-            .job_usage
-            .job_usage(workspace.id, runner.id)
-            .unwrap(),
+        database.store.job_usage(workspace.id, runner.id).unwrap(),
         Some(report)
     );
     assert_eq!(
@@ -194,7 +191,7 @@ fn app_removal_purges_job_usage_only_for_the_removed_organization() {
         database.store.insert_job(workspace.id, &record).unwrap();
         assert!(
             database
-                .job_usage
+                .store
                 .save_job_usage(workspace.id, runner.id, &report)
                 .unwrap()
         );
@@ -216,7 +213,7 @@ fn app_removal_purges_job_usage_only_for_the_removed_organization() {
     );
     assert_eq!(
         database
-            .job_usage
+            .store
             .job_usage(workspace.id, removed_runner)
             .unwrap(),
         Some(report.clone())
@@ -231,7 +228,7 @@ fn app_removal_purges_job_usage_only_for_the_removed_organization() {
     assert_job_usage_deleted(&mut database, workspace.id, removed_runner);
     assert_eq!(
         database
-            .job_usage
+            .store
             .job_usage(workspace.id, active_runner)
             .unwrap(),
         Some(report)

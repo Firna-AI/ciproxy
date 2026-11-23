@@ -38,10 +38,10 @@ Job cache metadata separates content origin from machine-handled measurements.
 One optional count bundle holds restored entries and bytes together.
 Measured GitHub-only fetches and zero-entry restores keep that bundle.
 Direct GitHub use and fallback have no measured count bundle.
-`JobUsageStore` is separate from `Store`. It stores validated reports by
-workspace and runner, including their final mark and arrival time. The caller
-applies the [step name rule](../../docs/protocol/job-usage.md#step-names)
-before the write.
+`Store` includes `JobUsageStore`. `OverflowStore` reuses it for Boat reports.
+`JobUsageStore` stores validated reports by workspace and runner, including
+their final mark and arrival time. The caller applies the
+[step name rule](../../docs/protocol/job-usage.md#step-names) before the write.
 Organization removal keeps shared resources while another App remains.
 Removal of the last App revokes machine and install credentials.
 Live sandbox-end tokens and retired Boat keys stay available for cleanup.

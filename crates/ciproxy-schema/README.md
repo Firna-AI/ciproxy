@@ -34,9 +34,12 @@ Cache measurements and restored content origins remain independent.
 The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
 Job usage samples use the workspace and runner as their key. Steps add their
-position to that key and cascade with the samples. Job history deletion clears
-the samples when no matching job record remains. Organization deletion also
-clears them through the runner foreign key.
+position to that key and cascade with the samples. After a job history delete,
+each trigger checks the affected runners together. It clears samples only
+when no matching job record remains. The unmatched report sweep uses the same
+check. Indexes cover the runner keys in each history table. An index on the
+attempts' parent job key supports the cascade from demand to attempts.
+Organization deletion also clears samples through the runner foreign key.
 Metering tables hold trusted times and costs.
 Confirmed billing state supplies current billing-period boundaries.
 Anonymous aggregates hold daily VM-size totals and Boat costs.

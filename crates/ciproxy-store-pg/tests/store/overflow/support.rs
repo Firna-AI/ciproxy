@@ -7,6 +7,7 @@ use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use ciproxy_store_interface::overflow::admission::{
     PreparedDispatch, ReservationBudget, ReservationOutcome,
 };
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{
     EncryptedLaunch, ProviderParameters, StartPhase, StartRecord,
 };
@@ -153,4 +154,33 @@ pub(super) fn reserve(
     }
     session.save_start(record)?;
     Ok(ReservationOutcome::Reserved)
+}
+
+/// Reserve a delivery and save its observed running sandbox.
+pub(super) fn save_running_delivery(
+    session: &mut dyn OverflowSession,
+    record: &mut StartRecord,
+    hash: &TokenHash,
+) {
+    assert_eq!(
+        reserve(
+            session,
+            record,
+            &EncryptedLaunch(vec![71]),
+            hash,
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
+        ReservationOutcome::Reserved
+    );
+    record.sandbox = Some(KnownSandbox::observed(
+        "bx_23456789".to_owned(),
+        record.starts_at,
+        record.dispatch.as_ref().unwrap().lifetime_seconds,
+    ));
+    record.phase = StartPhase::Running;
+    session.save_start(record).unwrap();
 }

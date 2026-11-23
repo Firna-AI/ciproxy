@@ -4,51 +4,19 @@ use std::thread;
 
 use chrono::Duration;
 use ciproxy_schema::overflow::overflow_starts;
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
-use ciproxy_store_interface::overflow::known::KnownSandbox;
-use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
-use ciproxy_store_interface::overflow::store::OverflowSession;
+use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::runtime_results::{BoatRunnerResult, BoatRunnerWrite};
 use ciproxy_store_interface::secrets::TokenHash;
 use ciproxy_store_interface::store::Store;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
-use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::store::metering::concurrent::support::{backend_pid, tagged_store, wait_for_blocker};
 
 use super::super::support::{Database, at};
-use super::support::{create_runner_intent, reserve, setup};
-
-fn save_running_delivery(
-    session: &mut dyn OverflowSession,
-    record: &mut StartRecord,
-    hash: &TokenHash,
-) {
-    assert_eq!(
-        reserve(
-            session,
-            record,
-            &EncryptedLaunch(vec![71]),
-            hash,
-            &ReservationBudget {
-                current_month_usd: Decimal::new(462, 3),
-                next_month_usd: None,
-            },
-        )
-        .unwrap(),
-        ReservationOutcome::Reserved
-    );
-    record.sandbox = Some(KnownSandbox::observed(
-        "bx_23456789".to_owned(),
-        record.starts_at,
-        record.dispatch.as_ref().unwrap().lifetime_seconds,
-    ));
-    record.phase = StartPhase::Running;
-    session.save_start(record).unwrap();
-}
+use super::support::{create_runner_intent, save_running_delivery, setup};
 
 fn hold_delivery_row(connection: &mut PgConnection, delivery_id: Uuid) -> i32 {
     let controller_pid = backend_pid(connection);

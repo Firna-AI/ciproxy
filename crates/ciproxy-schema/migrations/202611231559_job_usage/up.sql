@@ -35,17 +35,29 @@ CREATE INDEX job_usage_samples_arrival ON job_usage_samples (workspace_id, recei
 CREATE INDEX runners_scale_set_github_id ON runners (workspace_id, organization_id, scale_set_id, github_id)
     WHERE github_id IS NOT NULL;
 
-CREATE FUNCTION runner_has_job_usage_history(runner runners) RETURNS BOOLEAN LANGUAGE sql STABLE
-RETURN EXISTS (
+CREATE INDEX jobs_job_usage_runner ON jobs (workspace_id, runner_id)
+    WHERE runner_id IS NOT NULL;
+CREATE INDEX github_job_attempts_job_usage_runner ON github_job_attempts
+    (workspace_id, organization_id, ((body->>'scale_set_id')::uuid), ((body->>'runner_github_id')::bigint))
+    WHERE (body->>'runner_github_id')::bigint IS NOT NULL;
+CREATE INDEX github_jobs_job_usage_runner ON github_jobs
+    (workspace_id, organization_id, scale_set_id, ((body->>'runner_github_id')::bigint))
+    WHERE (body->>'runner_github_id')::bigint IS NOT NULL;
+CREATE INDEX github_job_attempts_parent_job ON github_job_attempts (organization_id, job_id);
+
+CREATE VIEW job_usage_runners_without_history AS
+SELECT runner.workspace_id, runner.id, runner.organization_id, runner.scale_set_id, runner.github_id
+FROM runners AS runner
+WHERE NOT EXISTS (
     SELECT 1 FROM jobs AS job
     WHERE job.workspace_id = runner.workspace_id AND job.runner_id = runner.id
-) OR EXISTS (
+) AND NOT EXISTS (
     SELECT 1 FROM github_job_attempts AS attempt
     WHERE attempt.workspace_id = runner.workspace_id
         AND attempt.organization_id = runner.organization_id
         AND (attempt.body->>'scale_set_id')::uuid = runner.scale_set_id
         AND (attempt.body->>'runner_github_id')::bigint = runner.github_id
-) OR EXISTS (
+) AND NOT EXISTS (
     SELECT 1 FROM github_jobs AS demand
     WHERE demand.workspace_id = runner.workspace_id
         AND demand.organization_id = runner.organization_id
@@ -55,34 +67,54 @@ RETURN EXISTS (
 
 CREATE FUNCTION remove_actions_job_usage() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-    DELETE FROM job_usage_samples AS sample USING runners AS runner
-    WHERE sample.workspace_id = OLD.workspace_id AND sample.runner_id = OLD.runner_id
-        AND runner.workspace_id = sample.workspace_id AND runner.id = sample.runner_id
-        AND NOT runner_has_job_usage_history(runner);
-    RETURN OLD;
+    DELETE FROM job_usage_samples AS sample
+    USING (
+        SELECT DISTINCT workspace_id, runner_id FROM deleted_jobs WHERE runner_id IS NOT NULL
+    ) AS affected, job_usage_runners_without_history AS runner
+    WHERE sample.workspace_id = affected.workspace_id AND sample.runner_id = affected.runner_id
+        AND runner.workspace_id = sample.workspace_id AND runner.id = sample.runner_id;
+    RETURN NULL;
 END;
 $$;
 
 CREATE TRIGGER actions_job_usage_cleanup AFTER DELETE ON jobs
-    FOR EACH ROW WHEN (OLD.runner_id IS NOT NULL)
+    REFERENCING OLD TABLE AS deleted_jobs FOR EACH STATEMENT
     EXECUTE FUNCTION remove_actions_job_usage();
 
-CREATE FUNCTION remove_scale_job_usage() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+CREATE FUNCTION remove_scale_attempt_job_usage() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-    DELETE FROM job_usage_samples AS sample USING runners AS runner
-    WHERE runner.workspace_id = OLD.workspace_id AND runner.organization_id = OLD.organization_id
-        AND runner.scale_set_id = (OLD.body->>'scale_set_id')::uuid
-        AND runner.github_id = (OLD.body->>'runner_github_id')::bigint
-        AND sample.workspace_id = runner.workspace_id AND sample.runner_id = runner.id
-        AND NOT runner_has_job_usage_history(runner);
-    RETURN OLD;
+    DELETE FROM job_usage_samples AS sample
+    USING (
+        SELECT DISTINCT workspace_id, organization_id, (body->>'scale_set_id')::uuid AS scale_set_id,
+            (body->>'runner_github_id')::bigint AS github_id
+        FROM deleted_attempts WHERE body->>'runner_github_id' IS NOT NULL
+    ) AS affected, job_usage_runners_without_history AS runner
+    WHERE runner.workspace_id = affected.workspace_id AND runner.organization_id = affected.organization_id
+        AND runner.scale_set_id = affected.scale_set_id AND runner.github_id = affected.github_id
+        AND sample.workspace_id = runner.workspace_id AND sample.runner_id = runner.id;
+    RETURN NULL;
 END;
 $$;
 
 CREATE TRIGGER scale_attempt_job_usage_cleanup AFTER DELETE ON github_job_attempts
-    FOR EACH ROW WHEN (OLD.body->>'runner_github_id' IS NOT NULL)
-    EXECUTE FUNCTION remove_scale_job_usage();
+    REFERENCING OLD TABLE AS deleted_attempts FOR EACH STATEMENT
+    EXECUTE FUNCTION remove_scale_attempt_job_usage();
+
+CREATE FUNCTION remove_scale_demand_job_usage() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    DELETE FROM job_usage_samples AS sample
+    USING (
+        SELECT DISTINCT workspace_id, organization_id, scale_set_id,
+            (body->>'runner_github_id')::bigint AS github_id
+        FROM deleted_demand WHERE body->>'runner_github_id' IS NOT NULL
+    ) AS affected, job_usage_runners_without_history AS runner
+    WHERE runner.workspace_id = affected.workspace_id AND runner.organization_id = affected.organization_id
+        AND runner.scale_set_id = affected.scale_set_id AND runner.github_id = affected.github_id
+        AND sample.workspace_id = runner.workspace_id AND sample.runner_id = runner.id;
+    RETURN NULL;
+END;
+$$;
 
 CREATE TRIGGER scale_demand_job_usage_cleanup AFTER DELETE ON github_jobs
-    FOR EACH ROW WHEN (OLD.body->>'runner_github_id' IS NOT NULL)
-    EXECUTE FUNCTION remove_scale_job_usage();
+    REFERENCING OLD TABLE AS deleted_demand FOR EACH STATEMENT
+    EXECUTE FUNCTION remove_scale_demand_job_usage();

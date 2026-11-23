@@ -11,6 +11,7 @@ use crate::gateway::GatewayStore;
 use crate::github::GithubStore;
 use crate::github_lifecycle::GithubLifecycleStore;
 use crate::installation_links::InstallationLinkStore;
+use crate::job_usage::JobUsageStore;
 use crate::jobs::JobStore;
 use crate::labels::LabelStore;
 use crate::machines::MachineStore;
@@ -36,6 +37,7 @@ pub trait Store:
     + TokenStore
     + RunnerStore
     + JobStore
+    + JobUsageStore
     + SettingsStore
     + BoatStore
     + BoatRuntimeStore

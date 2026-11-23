@@ -254,7 +254,7 @@ CI starts the database for the existing workspace test phase.
 - [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal
   outcomes.
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.
-  `connect_with_job_usage` gives both store traits on the same connection.
+  `StoreFactory::connect` returns a `Store` that includes `JobUsageStore`.
 - [src/connection.rs](src/connection.rs) owns the private query connection.
 - [src/connector.rs](src/connector.rs) bounds all PostgreSQL connections.
 - [src/workspaces.rs](src/workspaces.rs) creates shared customer tenants.

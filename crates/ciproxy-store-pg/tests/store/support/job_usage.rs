@@ -19,10 +19,7 @@ pub(in crate::store) fn assert_job_usage_deleted(
     runner_id: Uuid,
 ) {
     assert_eq!(
-        database
-            .job_usage
-            .job_usage(workspace_id, runner_id)
-            .unwrap(),
+        database.store.job_usage(workspace_id, runner_id).unwrap(),
         None
     );
     assert_eq!(
