@@ -24,6 +24,7 @@ use super::vm_files::{
 use crate::boundaries::Vms;
 use crate::cache_authority::CacheAuthority;
 use crate::error::{Error, Result};
+use crate::macos::area_disk::{MISSING_REPAIR, area_mounted};
 use crate::macos::guests::{
     HELPER_EXIT_WAIT, HELPER_START_WAIT, VmFolders, wait_for_helper, wait_for_helper_end,
 };
@@ -137,6 +138,12 @@ impl MacVms {
     /// Clone the seat's saved state when it matches the VM, else the image,
     /// with the seat identity. Then write `vm.json` and the launchd file.
     async fn prepare(&self, vm: &VmRecord) -> Result<()> {
+        if !area_mounted(&self.folders.area) {
+            return Err(Error::Preparation {
+                component: "area volume",
+                repair: MISSING_REPAIR,
+            });
+        }
         let folder = self.folders.folder(&vm.local_id);
         private_directory(&folder)?;
         let identity = seat_identity(&self.folders.area, vm.network_index)?;

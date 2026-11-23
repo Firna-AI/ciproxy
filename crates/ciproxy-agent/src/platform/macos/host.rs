@@ -7,6 +7,7 @@ use ciproxy_protocol::reports::HardwareReport;
 
 use crate::boundaries::Host;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos::area_disk::area_mounted;
 use crate::macos::hardware::{
     AreaSpace, ImageNeeds, MacFacts, MacosVersion, report, virtualization,
 };
@@ -74,8 +75,15 @@ pub(crate) fn macos_version() -> Result<MacosVersion> {
     MacosVersion::parse(&sysctl_text("kern.osproductversion")?).ok_or(Error::MacHostUnsupported)
 }
 
-/// The space of the area volume, or none before install creates it.
+/// The space of the area volume, or none before install creates it or
+/// while it is not mounted.
 fn area_space() -> Option<AreaSpace> {
+    // After its disk is unplugged, the mount point is a bare folder on the
+    // startup disk. Its space is not the area's, so the Mac reports no disk
+    // and takes no job until the volume is back.
+    if !area_mounted(std::path::Path::new(AREA)) {
+        return None;
+    }
     let stat = rustix::fs::statvfs(AREA).ok()?;
     let block = stat.f_frsize;
     Some(AreaSpace {
