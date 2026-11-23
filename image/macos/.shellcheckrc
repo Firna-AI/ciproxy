@@ -1,0 +1,4 @@
+# Resolve each sourced file from the folder of the script, so that shellcheck
+# follows r2.sh and pins.env from any working folder.
+source-path=SCRIPTDIR
+external-sources=true

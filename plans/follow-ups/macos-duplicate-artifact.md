@@ -2,13 +2,15 @@
 
 - **Severity:** High. **Likelihood:** Rare. **Effort:** Small.
   **Confidence:** High. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-23, from the branch
   `calummoore/h3-macos-release-from-r2-qjch`, review round 2, finding 10.
 - **Location:** `crates/ciproxy-control-plane/src/image_release.rs`, the
   `Platform::MacosArm64` arm of `SignedReleases::current`.
 - **Reason:** Refusing a repeated entry is a new rejection for the macOS
   release, and only the user adds a rejection.
+- **Approval:** Approved 23 November 2026 by the parent workspace H, under
+  Cal's authority; fix after merge.
 
 - **Terms:**
   - **`downloads.json`:** the release file that maps an archive key to
@@ -44,5 +46,5 @@
   commit `703b9b19`, refused a second `firecracker` entry.
 - **Recommendation:** B. It gives both platforms one rule for the one
   file format, for a Small change.
-- **Action:** ask the user, because the fix adds a new rejection of a
-  macOS release file.
+- **Action:** fix after merge, apply B, the recommended option, which the
+  approval above allows.

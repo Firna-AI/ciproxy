@@ -2,7 +2,7 @@
 
 - **Severity:** High. **Likelihood:** Rare. **Effort:** Medium.
   **Confidence:** Medium. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-23, from the branch
   `calummoore/h3-macos-release-from-r2-qjch`, review round 2, finding 9.
 - **Location:** `deploy/scripts/deploy.py` and
@@ -11,6 +11,8 @@
   `terraform output deployment`; `deploy/promotion.md`.
 - **Reason:** The wider fix is a test for a class of defect, which needs
   the user's approval.
+- **Approval:** Approved 23 November 2026 by the parent workspace H, under
+  Cal's authority; fix after merge.
 
 - **Terms:**
   - **Launch handoff:** the point after which production, not preview,
@@ -57,4 +59,5 @@
   added a direct read of a new output.
 - **Recommendation:** C with B. C finds the defect before the merge, and
   B gives the recovery when it still happens.
-- **Action:** ask the user, because C is a test for a class of defect.
+- **Action:** fix after merge, apply C with B, the recommended option,
+  which the approval above allows.

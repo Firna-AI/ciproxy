@@ -2,12 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Download and check the pinned inputs of the macOS image on the build Mac.
 # LOCAL_RESTORE_IMAGE names a local copy of the restore image to clone instead
-# of a download. XCODE_DIR names the folder with the Xcode archives, which an
-# Apple Account downloads. GUEST_DIR names the folder of package-guest.sh.
+# of a download. XCODE_DIR names a local folder with the Xcode archive. Else
+# R2_ACCOUNT_ID, R2_XCODE_ACCESS_KEY_ID, and R2_XCODE_SECRET_ACCESS_KEY read the
+# private copy in the R2 bucket ciproxy-xcode. GUEST_DIR names the folder of
+# package-guest.sh.
 set -euo pipefail
 
 definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$definition/pins.env"
+source "$definition/r2.sh"
 work_dir=${1:?Usage: image/macos/fetch.sh WORK_DIR}
 inputs="$work_dir/inputs"
 mkdir -p "$inputs"
@@ -50,16 +53,35 @@ tar -xzf "$inputs/runner-images.tar.gz" -C "$work_dir/upstream" --strip-componen
 # stops when the archive is missing.
 mkdir -p "$inputs/xcode"
 # Apple names the download Xcode_VERSION_Universal.xip. The recipe asks for
-# the upstream name, so the copy takes that name.
-if [[ ! -f "$inputs/xcode/$XCODE_XIP_NAME" && -n "${XCODE_DIR:-}" ]]; then
-    source_xip="$XCODE_DIR/$XCODE_XIP_NAME"
-    [[ -f "$source_xip" ]] || source_xip="$XCODE_DIR/Xcode_${XCODE_VERSION}_Universal.xip"
-    cp -c "$source_xip" "$inputs/xcode/$XCODE_XIP_NAME"
-fi
-if [[ -f "$inputs/xcode/$XCODE_XIP_NAME" ]]; then
-    check "$XCODE_SHA256" "$inputs/xcode/$XCODE_XIP_NAME"
+# the upstream name, so the copy takes that name. XCODE_DIR is a local
+# override. Else the R2 read keys download the private copy in ciproxy-xcode.
+xcode_xip="$inputs/xcode/$XCODE_XIP_NAME"
+xcode_keys=(R2_ACCOUNT_ID R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY)
+missing_keys=$(r2_missing "${xcode_keys[@]}")
+# A new archive arrives as a .part file and gets its name only after the
+# check, so the next run fetches a bad copy again.
+if [[ -f "$xcode_xip" ]]; then
+    check "$XCODE_SHA256" "$xcode_xip"
+elif [[ -n "${XCODE_DIR:-}" || -z $missing_keys ]]; then
+    rm -f "$xcode_xip.part"
+    if [[ -n "${XCODE_DIR:-}" ]]; then
+        source_xip="$XCODE_DIR/$XCODE_XIP_NAME"
+        [[ -f "$source_xip" ]] || source_xip="$XCODE_DIR/Xcode_${XCODE_VERSION}_Universal.xip"
+        cp -c "$source_xip" "$xcode_xip.part"
+    else
+        # No minimum version: aws s3 cp works on any AWS CLI v2.
+        r2_require_aws ""
+        r2_aws R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY s3 cp \
+            "s3://ciproxy-xcode/xcode/$XCODE_XIP_NAME" "$xcode_xip.part"
+    fi
+    check "$XCODE_SHA256" "$xcode_xip.part"
+    mv "$xcode_xip.part" "$xcode_xip"
 else
+    if [[ $missing_keys != "${xcode_keys[*]}" ]]; then
+        echo "The R2 Xcode download also needs $missing_keys." >&2
+    fi
     echo "No Xcode archive: only the test image can be built. Set XCODE_DIR for a release."
+    echo "Or source the R2 Xcode env file, as image/macos/README.md says."
 fi
 [[ -x "$GUEST_DIR/install.sh" ]] || { echo "no install.sh in $GUEST_DIR" >&2; exit 1; }
 rm -rf "$inputs/guest"

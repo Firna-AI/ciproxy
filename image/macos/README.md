@@ -66,8 +66,11 @@ Packer when the host has less than `MIN_FREE_GB` free, 15 GB by default.
 Run from the repository root:
 
 ```sh
-XCODE_DIR=/path/to/xcode GUEST_DIR=/path/to/guest \
-  bash image/macos/build.sh "$PWD/.context/macos-image-build"
+(
+  source ~/ws-i/secrets/r2-xcode-read.env
+  GUEST_DIR=/path/to/guest \
+    bash image/macos/build.sh "$PWD/.context/macos-image-build"
+)
 ```
 
 Each step below is a phase of `build.sh`: `fetch`, `tools`, `install`,
@@ -77,11 +80,16 @@ Name phases after the work folder to run only those phases. Set
 limit in the upstream scripts. The token stays out of the image.
 
 1. `fetch.sh` downloads and checks the inputs. Apple serves Xcode only
-   after an Apple Account sign-in, so a person downloads the archive once
-   and names its folder in `XCODE_DIR`. The archive stays out of the
-   repository and out of the public image. `GUEST_DIR` names the folder that
-   `package-guest.sh` builds: the guest, the cache sidecar, the runner patch,
-   and their `install.sh`.
+   after an Apple Account sign-in, so the private R2 bucket `ciproxy-xcode`
+   keeps one copy of each archive as `xcode/<XCODE_XIP_NAME>`. When
+   `inputs/xcode` has no archive, `fetch.sh` downloads that copy with the
+   read-only keys of the [R2 env files](#the-r2-env-files), then checks
+   `XCODE_SHA256`. When only some of the keys are set, it names the missing
+   ones. `XCODE_DIR` names a local folder with the archive instead,
+   and it wins over the bucket. Without either, only the test image can be
+   built. The archive stays out of the repository and out of the public
+   image. `GUEST_DIR` names the folder that `package-guest.sh` builds: the
+   guest, the cache sidecar, the runner patch, and their `install.sh`.
 2. The VM tool installs macOS from the restore image onto a sparse disk of
    `DISK_BYTES`.
 3. The Setup Assistant runs over VNC. `setup-assistant.py` reads each
@@ -200,8 +208,96 @@ logical size of `disk.img`, and `free_job_bytes` is the free space inside
 it. The agent does not grow the disk. `minimum_host_macos` is the guest's macOS
 version. Refuse an older host.
 
+## Publish
+
+`publish.sh` uploads a packaged release image from the build Mac to the
+private R2 bucket `ciproxy-macos-images`, under `releases/<image_id>/`.
+Run it from the repository root after the `package` phase:
+
+```sh
+(
+  source ~/ws-i/secrets/r2-publish.env
+  bash image/macos/publish.sh "$PWD/.context/macos-image-build/artifacts"
+)
+```
+
+The script reads `R2_ACCOUNT_ID`, `R2_PUBLISH_ACCESS_KEY_ID`, and
+`R2_PUBLISH_SECRET_ACCESS_KEY`. It does these steps in order:
+
+1. It reads `image_id` and `variant` from `manifest.json`, and prints them.
+   It refuses an `image_id` that is empty or that holds a character other
+   than a letter, a digit, `.`, `_`, `+`, or `-`. It accepts the variants
+   `full` and `standard`. It accepts `test` only when `--test-image` comes
+   before the folder. Only the `test` variant may have `"test_image": true`,
+   so the script refuses a manifest where the two disagree. A manifest
+   without `variant` comes from an older build. The script then warns once,
+   and counts it as `test` when `test_image` is true, else as `full`.
+2. It checks `SHA256SUMS` in the artifact folder.
+3. It stops when `releases/<image_id>/manifest.json` exists. A release
+   folder is immutable, so a new build needs a new image ID.
+4. It uploads `macos.tar` as a multipart upload with 128 MiB parts. Then it
+   uploads `downloads.json`, `SHA256SUMS`, `measurement.json`,
+   `software-report.json`, `upstream-software.json`, and `size-report.txt`.
+5. It reads the byte size of the uploaded `macos.tar` with a HEAD request.
+   It stops when the size differs from `downloads.json`.
+6. It uploads `manifest.json` last, with `If-None-Match: *`. So a folder
+   with a manifest is complete, and two runs cannot both write it.
+7. It prints the image ID and the variant again, then the value of the
+   GitHub environment variable, for example
+   `MACOS_IMAGE_MANIFEST_PATH=releases/<image_id>/manifest.json`.
+
+To ship the release, set `MACOS_IMAGE_MANIFEST_PATH` to that value in the
+GitHub environment, first `main-preview`, then `production`. Then deploy
+that environment. [macOS images](../../deploy/runtime.md#macos-images) in
+the runtime guide gives the other settings that the control plane needs.
+Each environment offers one macOS release, the standard variant for now.
+
+The scripts use the AWS CLI v2. `publish.sh` needs version 2.17.34 or
+later, the first release with `--if-none-match` on `aws s3api put-object`.
+`fetch.sh` warns on a CLI that is not v2 and continues. The scripts set
+`AWS_REQUEST_CHECKSUM_CALCULATION` and `AWS_RESPONSE_CHECKSUM_VALIDATION`
+to `when_required`, as Cloudflare advises for R2 with AWS CLI 2.23.0 or
+later. `r2.sh` gives the R2 keys to each `aws` process in its own
+environment only, and it leaves your AWS config and profile unchanged.
+
+### The R2 env files
+
+The R2 keys live only in env files on the build Mac. Each file holds
+`export` lines for its two keys and `R2_ACCOUNT_ID`:
+
+- `~/ws-i/secrets/r2-publish.env` holds the token
+  `ciproxy-macos-images-publish`: `R2_PUBLISH_ACCESS_KEY_ID` and
+  `R2_PUBLISH_SECRET_ACCESS_KEY`. It can read and write
+  `ciproxy-macos-images` only.
+- `~/ws-i/secrets/r2-xcode-read.env` holds the token `ciproxy-xcode-read`:
+  `R2_XCODE_ACCESS_KEY_ID` and `R2_XCODE_SECRET_ACCESS_KEY`. It can read
+  `ciproxy-xcode` only.
+
+Source the publish file before `publish.sh`. Source the Xcode file before
+`fetch.sh` or `build.sh`. Source each file in a subshell, as the commands
+above do, so that the later commands of your shell do not get the keys.
+The scripts remove the export flag of the keys, so that only `aws` gets
+them. Of the phases of `build.sh`, only `fetch` gets the Xcode keys. Keep
+each file at mode 600 in a folder with mode 700. Keep the files out of the
+repository. Never print a file, and do not source one in a shell with
+`set -x`. A `bash -x` trace of `publish.sh` or `fetch.sh` shows no key.
+
 ## Checks
 
 `python3 image/macos/check-template.py` checks the template, toolset, and
 variant preparation offline. `python3 image/macos/check-archive.py` checks the
 archive writer and checker against the agent's member list.
+`python3 image/macos/check-r2.py` runs `publish.sh`, and
+`python3 image/macos/check-r2-xcode.py` runs the Xcode download of
+`fetch.sh` and the `fetch` and `install` phases of `build.sh`, against a
+fake `aws` on `PATH`. They check the upload order,
+the variants, the refusals, and that no key reaches the output, a trace,
+or the `aws` arguments. They need bash and `shasum`, and run on Linux too.
+Lint the R2 scripts from the repository root:
+
+```sh
+shellcheck image/macos/publish.sh image/macos/fetch.sh image/macos/r2.sh
+for script in publish fetch r2; do bash -n "image/macos/$script.sh"; done
+```
+
+`image/macos/.shellcheckrc` makes shellcheck follow the sourced files.
