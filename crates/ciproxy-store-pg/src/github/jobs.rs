@@ -14,6 +14,7 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
+use crate::job_usage;
 
 use super::{attempts, updates};
 
@@ -144,17 +145,22 @@ pub(super) fn list(
 
 pub(super) fn purge(store: &PgStore, workspace_id: Uuid, at: DateTime<Utc>) -> Result<usize> {
     transaction(&mut *store.connection()?, |connection| {
+        let cutoff = at - Duration::days(90);
         attempts::purge(connection, workspace_id, at)?;
-        diesel::delete(
-        github_jobs::table
-            .filter(github_jobs::workspace_id.eq(workspace_id))
-            .filter(github_jobs::phase.eq(2_i16))
-            .filter(
-                sql::<Bool>("COALESCE((github_jobs.body->>'completed_at')::timestamptz, github_jobs.completed_observed_at) <= ")
-                    .bind::<Timestamptz, _>(at - Duration::days(90)),
-            ),
-    )
-    .execute(connection)
-    .store()
+        let expired = sql::<Bool>(concat!(
+            "COALESCE((github_jobs.body->>'completed_at')::timestamptz, ",
+            "github_jobs.completed_observed_at) <= ",
+        ))
+        .bind::<Timestamptz, _>(cutoff);
+        let count = diesel::delete(
+            github_jobs::table
+                .filter(github_jobs::workspace_id.eq(workspace_id))
+                .filter(github_jobs::phase.eq(2_i16))
+                .filter(expired),
+        )
+        .execute(connection)
+        .store()?;
+        job_usage::purge_unmatched(connection, workspace_id, cutoff)?;
+        Ok(count)
     })
 }

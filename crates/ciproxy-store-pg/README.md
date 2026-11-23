@@ -32,6 +32,9 @@ The last removal also deletes pending Boat connection grants.
 Install, removal, and purge queries serialize on that workspace lock.
 Retention queries delete finished jobs after 90 days.
 They delete removed organization data after 30 days.
+Job usage follows the retained job history and cascades on organization
+deletion. The GitHub job purge also deletes reports with no matching job
+record 90 days after arrival.
 The workspace purge deletes one empty workspace after its 30-day deadline.
 A reinstall clears that deadline without restoring execution credentials.
 It preserves labels, settings, and job resource history.
@@ -251,6 +254,7 @@ CI starts the database for the existing workspace test phase.
 - [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal
   outcomes.
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.
+  `connect_with_job_usage` gives both store traits on the same connection.
 - [src/connection.rs](src/connection.rs) owns the private query connection.
 - [src/connector.rs](src/connector.rs) bounds all PostgreSQL connections.
 - [src/workspaces.rs](src/workspaces.rs) creates shared customer tenants.
@@ -260,6 +264,8 @@ CI starts the database for the existing workspace test phase.
 - [src/job_views.rs](src/job_views.rs) reads tier-visible dashboard jobs,
   preserves trusted alias metadata and retained requests, and keeps actual
   runner dimensions.
+- [src/job_usage.rs](src/job_usage.rs) saves samples and ordered steps in one
+  transaction. Partial reports do not replace final reports.
 - [src/scale_set_tracking.rs](src/scale_set_tracking.rs) owns retired binding
   context, listener discovery, and exact remote cleanup confirmation.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.

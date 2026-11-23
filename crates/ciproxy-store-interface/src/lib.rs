@@ -16,6 +16,7 @@ pub mod installation_association;
 pub mod installation_links;
 pub mod installation_results;
 pub mod job_bindings;
+pub mod job_usage;
 pub mod job_views;
 pub mod jobs;
 pub mod labels;

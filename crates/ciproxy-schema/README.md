@@ -33,6 +33,10 @@ It stores job metadata and references to immutable runner placements.
 Cache measurements and restored content origins remain independent.
 The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
+Job usage samples use the workspace and runner as their key. Steps add their
+position to that key and cascade with the samples. Job history deletion clears
+the samples when no matching job record remains. Organization deletion also
+clears them through the runner foreign key.
 Metering tables hold trusted times and costs.
 Confirmed billing state supplies current billing-period boundaries.
 Anonymous aggregates hold daily VM-size totals and Boat costs.
@@ -205,6 +209,7 @@ Each migration has an up.sql and a down.sql.
 - [src/workspaces.rs](src/workspaces.rs) defines the shared customer tenant.
 - [src/organizations.rs](src/organizations.rs) defines GitHub installations.
 - [src/runners.rs](src/runners.rs) defines stored runner placements.
+- [src/job_usage.rs](src/job_usage.rs) defines job usage samples and steps.
 - [src/github.rs](src/github.rs) defines repository snapshots and durable
   UUID job notifications.
 - [src/metering.rs](src/metering.rs) defines histories and aggregates.

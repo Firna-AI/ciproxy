@@ -936,13 +936,13 @@ Depends on: 3
 
 The store keeps the samples and the steps of each job.
 
-- [ ] Add a migration under `crates/ciproxy-schema/migrations` with one
+- [x] Add a migration under `crates/ciproxy-schema/migrations` with one
       table for the samples of a job and one for its steps. Delete their
       rows with the job, also in the 90-day purge and in an App removal.
-- [ ] Add the types to `ciproxy-store-interface` and the reads and writes
+- [x] Add the types to `ciproxy-store-interface` and the reads and writes
       to `ciproxy-store-pg`. Test them against PostgreSQL, as `AGENTS.md`
       says.
-- [ ] Update the READMEs of `ciproxy-schema`, `ciproxy-store-interface`,
+- [x] Update the READMEs of `ciproxy-schema`, `ciproxy-store-interface`,
       and `ciproxy-store-pg`.
 
 ## Milestone 8: Save the samples

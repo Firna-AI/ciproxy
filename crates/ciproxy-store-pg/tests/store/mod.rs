@@ -10,6 +10,7 @@ mod gateway_tests;
 mod github;
 mod install_revocation_tests;
 mod isolation_tests;
+mod job_usage_tests;
 mod jobs_tests;
 mod key_erasure_tests;
 mod lifecycle_tests;

@@ -9,6 +9,7 @@ pub mod dashboard;
 pub mod github;
 pub mod github_attempts;
 pub mod installation_links;
+pub mod job_usage;
 pub mod jobs;
 pub mod labels;
 pub mod machines;

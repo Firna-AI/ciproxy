@@ -2,6 +2,7 @@
 
 pub(super) mod installation_claim;
 pub(super) mod installation_results;
+pub(super) mod job_usage;
 
 use ciproxy_protocol::platform::{Platform, Virtualization};
 use std::env;
@@ -9,6 +10,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::boat::BoatAccount;
+use ciproxy_store_interface::job_usage::JobUsageStore;
 use ciproxy_store_interface::jobs::{Job, JobState};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::machines::{Machine, MachineDisk};
@@ -16,7 +18,7 @@ use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryA
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::secrets::TokenHash;
-use ciproxy_store_interface::store::{Store, StoreFactory};
+use ciproxy_store_interface::store::Store;
 use ciproxy_store_interface::vm_size::VmSize;
 use ciproxy_store_interface::workspaces::Workspace;
 use ciproxy_store_pg::factory::PgStoreFactory;
@@ -27,6 +29,7 @@ use uuid::Uuid;
 
 pub(super) struct Database {
     pub(super) store: Arc<dyn Store>,
+    pub(super) job_usage: Arc<dyn JobUsageStore>,
     pub(super) connection: PgConnection,
     pub(super) url: String,
     _database: TestDatabase,
@@ -53,9 +56,12 @@ impl Database {
         let mut url = Url::parse(&raw_url).expect("DATABASE_URL must be a PostgreSQL URL");
         url.set_path(&database.name);
         let url = url.to_string();
-        let store: Arc<dyn Store> = PgStoreFactory.connect(&url).expect("open migrated store");
+        let store = PgStoreFactory
+            .connect_with_job_usage(&url)
+            .expect("open migrated store");
         let connection = PgConnection::establish(&url).expect("connect test database");
         Self {
+            job_usage: store.clone(),
             store,
             connection,
             url,
