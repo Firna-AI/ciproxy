@@ -14,7 +14,8 @@ Attempts have no age limit. Add evidence is durable before GitHub opens.
 
 POST `/workspaces/{workspace_id}/organizations/add` returns the configured
 `/installations/new?state=...` URL. GitHub still chooses the organization.
-The registered setup return starts the same browser-bound OAuth proof.
+Add uses the same setup return and the same proof as a Direct install, as
+[the crate README](README.md#what-this-crate-does) describes.
 `setup_action=request` stays waiting and chooses no workspace.
 
 GET `/installation-links` refreshes the original person's installed claims.

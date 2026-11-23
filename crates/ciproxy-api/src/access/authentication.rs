@@ -73,24 +73,31 @@ impl AccessService {
 
 #[async_trait]
 impl DashboardAccess for AccessService {
-    async fn begin_login(&self, previous: Option<&str>) -> Result<LoginAttempt> {
-        self.start(Purpose::SignIn, previous).await
+    async fn begin_login(
+        &self,
+        previous: Option<&str>,
+        pending_setup: Option<&str>,
+    ) -> Result<LoginAttempt> {
+        let purpose = if let Some(cookie) = pending_setup {
+            self.open_pending_setup(cookie)
+                .await
+                .unwrap_or(Purpose::SignIn)
+        } else {
+            Purpose::SignIn
+        };
+        self.start(purpose, previous).await
     }
-    async fn begin_setup(
+    async fn hold_setup(
         &self,
         installation: Option<InstalledApp>,
         install_state: Option<String>,
         request_only: bool,
-        previous: Option<&str>,
-    ) -> Result<LoginAttempt> {
-        self.start(
-            Purpose::Setup {
-                installation: installation.map(SetupTarget::configured).transpose()?,
-                install_state,
-                request_only,
-            },
-            previous,
-        )
+    ) -> Result<SecretString> {
+        self.seal_pending_setup(Purpose::Setup {
+            installation: installation.map(SetupTarget::configured).transpose()?,
+            install_state,
+            request_only,
+        })
         .await
     }
     async fn finish_login(

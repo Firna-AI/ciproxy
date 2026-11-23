@@ -39,7 +39,7 @@ use crate::cache_metadata::transport;
 use crate::config::Config;
 use crate::error::{ErrorResultExt, Result};
 use crate::hosted_events::Relay;
-use crate::image_signing::CdnSigning;
+use crate::image_signing::{CdnSigning, PlatformSigning};
 use crate::repositories::{RefreshRepositories, RepositoryRefresh, StoredInstallations};
 use crate::runtime::{MachineRuntime, OwnMachines};
 
@@ -136,6 +136,14 @@ impl Hosted {
         });
         let overflow =
             crate::overflow_composition::compose(config, store.clone(), registrations.clone())?;
+        let offers = PlatformSigning {
+            linux: Arc::new(CdnSigning::new(
+                config.cdn_signing_key_name.clone(),
+                config.secret("cdn-signing-key")?.expose_secret(),
+            )?),
+            macos: config.macos_images.download_signing(),
+        }
+        .offers(&config.images);
         let mut machine_runtime = MachineRuntime::new(
             store.clone(),
             gateway.clone(),
@@ -144,17 +152,13 @@ impl Hosted {
                 store: persistence.clone(),
             }),
             clock.clone(),
-            config.image.clone(),
+            offers,
             installations.clone(),
         );
         machine_runtime.overflow = overflow.as_ref().map(|overflow| overflow.service.clone());
         machine_runtime.boat_retirement = overflow
             .as_ref()
             .map(|overflow| overflow.retirement.clone());
-        machine_runtime.image_signing = Some(Arc::new(CdnSigning::new(
-            config.cdn_signing_key_name.clone(),
-            config.secret("cdn-signing-key")?.expose_secret(),
-        )?));
         let metering: Arc<dyn Metering> = Arc::new(StoredMetering::new(store.clone()));
         let accounting = Arc::new(AccountingWorker::new(
             store.clone(),

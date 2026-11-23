@@ -64,6 +64,7 @@ mod docker_reservation;
 mod endpoint;
 mod endpoint_files;
 mod error;
+mod error_diagnostic;
 mod gateway;
 mod guest_transport;
 #[cfg(target_os = "linux")]
@@ -135,6 +136,8 @@ mod process;
 mod registration;
 mod release_client;
 mod reporting;
+#[cfg(any(target_os = "macos", test))]
+mod resumable_download;
 mod retirement;
 mod runtime;
 mod runtime_ownership;
@@ -172,7 +175,11 @@ async fn main() -> std::process::ExitCode {
     match application::main().await {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(error) => {
-            tracing::error!(error = %error, "agent command failed");
+            tracing::error!(
+                error = %error,
+                cause = %error_diagnostic::diagnostic(&error),
+                "agent command failed"
+            );
             std::process::ExitCode::FAILURE
         }
     }
@@ -192,6 +199,10 @@ mod network_barriers;
 #[cfg(test)]
 #[path = "_tests_/fixtures.rs"]
 mod fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/range_server.rs"]
+mod range_server;
 
 #[cfg(test)]
 #[path = "_tests_/connection_fixtures.rs"]

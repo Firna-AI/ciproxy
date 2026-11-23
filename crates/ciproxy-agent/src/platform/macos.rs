@@ -12,6 +12,7 @@ use tokio::sync::{Mutex, mpsc};
 
 use crate::boundaries::{DockerDisks, Host, Service, Updates, Vms};
 use crate::error::{Error, Result};
+use crate::macos::area_disk::{AreaDisk, setting_error};
 use crate::macos::guests::{HelperLiveness, HelperTransport, VmFolders};
 use crate::macos::paths::{AREA, CONTROL};
 use crate::preparation::{Preparation, Uninstall};
@@ -22,7 +23,9 @@ use crate::workload_space::WorkloadSpace;
 use super::{Machine, MachineInput, Platform, UninstallParts};
 
 mod area;
+mod area_target;
 mod cache;
+mod diskutil;
 mod guard;
 mod host;
 mod images;
@@ -108,12 +111,18 @@ impl Platform for MacPlatform {
             })?),
             Err(_) => None,
         };
+        let area_disk = match std::env::var("CIPROXY_AREA_DISK") {
+            Ok(value) => AreaDisk::parse(Some(&value))?,
+            Err(std::env::VarError::NotPresent) => AreaDisk::Startup,
+            Err(std::env::VarError::NotUnicode(_)) => return Err(setting_error()),
+        };
         let image_budget = requested_image_budget()?.unwrap_or(IMAGE_BUDGET_BYTES);
         Ok((
             Arc::new(MacPreparation {
                 isolation: self.isolation.clone(),
                 launchd: Arc::new(Launchctl),
                 area_bytes,
+                area_disk,
             }),
             image_budget,
         ))
@@ -202,10 +211,23 @@ pub(crate) async fn prepare_host(with_service: bool) -> Result<()> {
     let (preparation, image_budget) = platform.prepare()?;
     preparation.prepare().await?;
     println!("host prepared: control folder, area volume, fstab line, and pf rules");
-    if let Some(record) = area::record()? {
+    let record = area::record()?;
+    if let Some(record) = &record {
         println!(
-            "area volume: UUID {}, quota {} bytes",
-            record.volume_uuid, record.quota_bytes
+            "area volume: UUID {}, quota {} bytes, disk {}{}",
+            record.volume_uuid,
+            record.quota_bytes,
+            record.disk.as_deref().unwrap_or("the startup disk"),
+            if record.external {
+                " (external: keep it connected)"
+            } else {
+                ""
+            }
+        );
+    }
+    if record.as_ref().is_some_and(|record| record.disk.is_some()) && !with_service {
+        println!(
+            "the area is on another disk: the launchd daemon needs Full Disk Access for /usr/local/bin/ciproxy-agent, and install checks it"
         );
     }
     let report = serde_json::to_string(&host.hardware()?).map_err(|_| Error::MacHostUnsupported)?;

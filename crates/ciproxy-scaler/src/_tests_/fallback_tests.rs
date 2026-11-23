@@ -179,6 +179,7 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
         runner: Some(BoatRunner {
             runner: retained,
             required_root_disk_bytes: 109_470_908_416,
+            launched_at: None,
         }),
     }];
     assert_eq!(decide(&state), vec![]);

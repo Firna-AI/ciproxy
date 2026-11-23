@@ -287,7 +287,11 @@ CI starts the database for the existing workspace test phase.
 - [Store interface](../ciproxy-store-interface/README.md) owns the API.
 - [Schema](../ciproxy-schema/README.md) owns migrations and table definitions.
 - [Architecture](../../docs/architecture.md) gives the hosted boundaries.
-- [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Security](../../docs/protocol/security.md) defines key custody.
+- [Isolation](../../docs/protocol/security-isolation.md#tenant-isolation)
+  defines tenant isolation.
+- [Data retention](../../docs/protocol/security-data.md#data-retention)
+  defines how long the store keeps each kind of data.
 - [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [App removal](../../docs/protocol/app-removal.md) defines removal.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.

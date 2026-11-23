@@ -23,6 +23,8 @@ class RuntimeConfigurationTests(PromotionCase):
             "GITHUB_OAUTH_CLIENT_ID": "ambient-old-client-id",
             "GITHUB_APP_SLUG": "ambient-old-app-slug",
             "JOB_IMAGE_MANIFEST_PATH": "release-20261106/manifest.json",
+            "MACOS_IMAGE_URL_PREFIX": "https://account.r2.example/ciproxy-macos-images",
+            "MACOS_IMAGE_MANIFEST_PATH": "releases/macos-fixture/manifest.json",
             "GITHUB_SHA": "c" * 40,
             "BUILD_ID": "untrusted-build-override",
             "DOWNLOAD_URL": "https://untrusted-download.invalid",
@@ -42,10 +44,13 @@ class RuntimeConfigurationTests(PromotionCase):
             {"name": "GITHUB_OAUTH_CLIENT_ID", "value": "Iv1.runtime-fixture"},
             {"name": "GITHUB_APP_SLUG", "value": "runtime-fixture-app"},
             {"name": "JOB_IMAGE_MANIFEST_PATH", "value": "release-20261106/manifest.json"},
+            {"name": "MACOS_IMAGE_URL_PREFIX", "value": "https://account.r2.example/ciproxy-macos-images"},
+            {"name": "MACOS_IMAGE_MANIFEST_PATH", "value": "releases/macos-fixture/manifest.json"},
             {"name": "DOWNLOAD_URL", "value": "https://downloads.invalid"},
             {"name": "BUILD_ID", "value": self.source},
         ])
-        for name in ("CIPROXY_APP_ID", "CIPROXY_APP_CLIENT_ID", "CIPROXY_APP_SLUG"):
+        for name in ("CIPROXY_APP_ID", "CIPROXY_APP_CLIENT_ID", "CIPROXY_APP_SLUG",
+                     "MACOS_IMAGE_URL_PREFIX", "MACOS_IMAGE_MANIFEST_PATH"):
             self.env.pop(name)
         missing_inputs = self.cli("deploy.py", "production")
         self.assertEqual(missing_inputs.returncode, 0, missing_inputs.stderr)
@@ -55,6 +60,8 @@ class RuntimeConfigurationTests(PromotionCase):
             {"name": "GITHUB_OAUTH_CLIENT_ID", "value": ""},
             {"name": "GITHUB_APP_SLUG", "value": ""},
             {"name": "JOB_IMAGE_MANIFEST_PATH", "value": "release-20261106/manifest.json"},
+            {"name": "MACOS_IMAGE_URL_PREFIX", "value": ""},
+            {"name": "MACOS_IMAGE_MANIFEST_PATH", "value": ""},
             {"name": "DOWNLOAD_URL", "value": "https://downloads.invalid"},
             {"name": "BUILD_ID", "value": self.source},
         ])

@@ -9,8 +9,10 @@
 - **Location:** `image/boat-runner-entry.sh:4-12`, `forward` and `main` in
   `image/boat-runner-stderr.py`, `crates/ciproxy-guest/src/service.rs:156-158`,
   and `image/ciproxy-boat-guest.service:12`.
-- **Reason:** Only a failed-fast exit report with a pending helper line
-  loses that line, and a working callback deletes the sandbox first.
+- **Reason:** Only a guest that ends before the sandbox delete loses a
+  pending helper line. That happens after a failed exit report, or after a
+  saved report that returns 204 before a deferred delete. Otherwise a
+  working callback deletes the sandbox first.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
@@ -46,12 +48,19 @@
     When the guest ends, systemd sends SIGTERM to each remaining process of
     the unit. The `runuser` PAM service has no `pam_systemd`, so the helper
     stays in the control group of the guest unit.
-  - With a working callback, the guest waits in its exit report while the
-    control plane deletes the sandbox inside that request. The code is at
+  - With a working callback, the control plane first saves the report as a
+    one-use claim. It then waits up to 5 seconds for the workspace lock and
+    deletes the sandbox inside that request, while the guest waits in its
+    exit report. The code is at
     `crates/ciproxy-control-plane/src/boat_callback.rs:41`, then
-    `crates/ciproxy-overflow/src/service/cleanup.rs:41` and `:60`. On
+    `crates/ciproxy-overflow/src/service/cleanup.rs:58` and `:77`. On
     2026-11-21, two sandboxes ended 7 and 6 seconds after their reports.
     The deletion, not the guest stop, then ends the journal.
+  - When that lock wait ends first, or the delete fails, the control plane
+    still answers 204, because the report is saved. The guest then ends
+    before the delete, and a later cleanup pass deletes the sandbox.
+    "The exit report" in `docs/protocol/overflow-sandbox-end.md` states
+    this rule.
   - The operator guide covers the reads that come before a deletion. The
     restore smoke waits up to 15 seconds for a fresh journal record. The
     job smoke copies the journal while the sandbox exists. See
@@ -59,12 +68,16 @@
 - **Problem:** The end of the Boat runner entry does not show that its
   stderr is in the journal. After a runner start failure, an exit report
   can fail fast, for example on an unreachable control plane or a fast 401
-  or 503. The guest then ends at once, and systemd stops the helper. A line
-  that the helper has not yet written is then lost.
-- **Impact if no action:** The sandbox then stays until its lifetime ends,
-  6 hours or 2 hours on a Boat free trial. Its journal is the only record,
-  and it holds no runner error. An operator must reproduce the failure on a
-  new paid sandbox.
+  or 503. A saved report can also return 204 before its delete, when the
+  workspace lock stays busy for 5 seconds or the delete fails. In each case
+  the guest ends at once, and systemd stops the helper. A line that the
+  helper has not yet written is then lost.
+- **Impact if no action:** After a report that fails before its claim, the
+  sandbox stays until its lifetime ends, 6 hours or 2 hours on a Boat free
+  trial. Its journal is the only record, and it holds no runner error.
+  After a saved report with a deferred delete, a later cleanup deletes the
+  sandbox, and no journal copy holds the last line. In both cases, an
+  operator must reproduce the failure on a new paid sandbox.
 - **Root question:** How can the end of the Boat runner entry show that its
   stderr is in the journal, within a short limit, so that the steps after
   it do not lose or miss the last line?
@@ -92,10 +105,11 @@
     example, the launcher takes a lock before the common entry starts, and
     the helper holds it until it ends. The `exec` chain and the
     signal handling of the runner stay. D covers only a guest that ends
-    after a failed exit report. It does not order the line before the exit
-    report, the restore smoke read, or the local check. A local test needs
-    systemd, so its proof is a live restore with a forced report failure.
-    Effort: Medium.
+    before the sandbox delete. That guest ends after a failed exit report,
+    or after a saved report that returns 204 before a deferred delete. It
+    does not order the line before the exit report, the restore smoke read,
+    or the local check. A local test needs systemd, so its proof is a live
+    restore with a forced report failure. Effort: Medium.
 - **Left out:**
   - A fixed delay after the runner exits, because it does not show that
     the line reached the journal.
@@ -127,6 +141,7 @@
   wait delays the deletion and adds billed time. C gives the same order at
   a larger cost. D is the narrow fallback when the launcher must keep
   `exec`.
-- **Action:** fix after merge, apply A, because only a failed-fast exit
-  report loses the pending line, and a working callback deletes the
-  sandbox first.
+- **Action:** fix after merge, apply A, because only a guest that ends
+  before the sandbox delete loses the pending line. After a report that
+  fails before its claim, the lifetime stays the backstop. After a saved
+  report that returns 204 first, a later cleanup deletes the sandbox.

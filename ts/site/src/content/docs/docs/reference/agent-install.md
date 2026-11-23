@@ -44,7 +44,11 @@ On a Mac:
   image, as
   [Add a Mac](/docs/guides/add-a-machine/#add-a-mac) lists them.
 - It prepares the disk area of the agent, which holds the job disk and the
-  images.
+  images. The area is on the startup disk, or on the APFS disk that
+  `CIPROXY_AREA_DISK` names, as
+  [Use an external disk](/docs/guides/add-a-machine/#use-an-external-disk)
+  says. An external disk needs Full Disk Access for the agent. Install
+  checks it, and stops with the repair when macOS blocks the agent.
 - It registers the machine once, with the install token, as on Linux.
 - It installs the launchd daemon `dev.ciproxy.agent`. The daemon keeps the
   Mac awake while the agent runs.

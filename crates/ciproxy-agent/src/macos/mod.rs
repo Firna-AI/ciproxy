@@ -60,6 +60,18 @@ pub(crate) mod image_extract;
 #[path = "_tests_/image_bundle_tests.rs"]
 mod image_bundle_tests;
 
+pub(crate) mod area_access;
+
+#[cfg(test)]
+#[path = "_tests_/area_access_tests.rs"]
+mod area_access_tests;
+
+pub(crate) mod area_disk;
+
+#[cfg(test)]
+#[path = "_tests_/area_disk_tests.rs"]
+mod area_disk_tests;
+
 pub(crate) mod image_import;
 
 #[cfg(test)]

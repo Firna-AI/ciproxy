@@ -4,6 +4,7 @@ mod accounting_tests;
 mod admission_tests;
 mod authority_support;
 mod budget_tests;
+mod callback_tests;
 mod connection_tests;
 mod delivery_tests;
 mod guard_cost_support;

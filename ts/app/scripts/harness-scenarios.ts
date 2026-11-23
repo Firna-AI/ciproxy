@@ -4,6 +4,7 @@ import type {
   SessionView,
   SetupView,
 } from "../src/api/schema.ts";
+import { pages } from "../src/routing/pages.ts";
 import {
   activation,
   link,
@@ -197,7 +198,7 @@ export function recordedScenario(name: ScenarioName): Scenario {
   }
   if (name === "install-reauthorize") {
     data.session.reauthorization_required = true;
-    data.session.reauthorization_url = "/api/auth/github?fixture=reauthorize";
+    data.session.reauthorization_url = pages.termsStep;
   }
   if (name === "personal") {
     data.session.setup = {

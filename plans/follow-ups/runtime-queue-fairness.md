@@ -46,8 +46,8 @@
   - On 17 November 2026 the final review chose to queue compact events of a
     fixed size. That bounds the memory of the queue. It does not change the
     share of each workspace.
-  - "Tenant isolation" in `docs/protocol/security.md` says that tenant
-    isolation holds between workspaces.
+  - "Tenant isolation" in `docs/protocol/security-isolation.md` says that
+    tenant isolation holds between workspaces.
 - **Problem:** One machine can keep the shared queue full with small valid
   events. While the queue stays full, `try_send` drops the events of every
   other workspace.

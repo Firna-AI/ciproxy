@@ -47,10 +47,10 @@ async function labelsWithoutBoat(page: Page, origin: string): Promise<void> {
   assert.ok(placement, "a label without Boat runs on the machines only");
   await visible(placement);
   await page
-    .getByRole("button", { name: "Edit ciproxy-8vcpu", exact: true })
+    .getByRole("button", { name: "Edit ciproxy-large", exact: true })
     .click();
   const dialog = within(
-    page.getByRole("dialog", { name: "Edit ciproxy-8vcpu", exact: true }),
+    page.getByRole("dialog", { name: "Edit ciproxy-large", exact: true }),
   );
   await visible(dialog.getByText(/ Boat is not connected\.$/));
   assert.equal(await dialog.getByText(/no Boat size fits/i).count(), 0);
@@ -151,10 +151,10 @@ export function labelCases(origin: string, output: string): M20Case[] {
           "Settings",
         );
         await page
-          .getByRole("button", { name: "Edit ciproxy-8vcpu", exact: true })
+          .getByRole("button", { name: "Edit ciproxy-large", exact: true })
           .click();
         await visible(
-          page.getByRole("dialog", { name: "Edit ciproxy-8vcpu", exact: true }),
+          page.getByRole("dialog", { name: "Edit ciproxy-large", exact: true }),
         );
         await capture(page, width, output, "label-partial-fit-dialog");
         await labelsWithoutBoat(page, origin);

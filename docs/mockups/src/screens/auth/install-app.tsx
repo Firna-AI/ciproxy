@@ -1,7 +1,9 @@
 // Install the ciproxy GitHub App on an organization. GitHub owns the choice of
 // organization and repositories; ciproxy shows the permissions that the
 // app asks for. A member who is not an owner asks the owners on GitHub; when
-// one approves, the member who asked becomes the first Admin in ciproxy.
+// one approves, the member who asked becomes the first Admin in ciproxy. The
+// return from GitHub opens the terms step, and so does Check again, because
+// a sign-in with no workspace needs a new GitHub sign-in.
 
 import { Check, Github } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -59,7 +61,7 @@ export function InstallAppScreen({
       <div className="auth-actions">
         {pending ? (
           <>
-            <LinkAction to={paths.onboarding} tone="primary" size="lg" block>
+            <LinkAction to={paths.termsStep} tone="primary" size="lg" block>
               Check again
             </LinkAction>
             <Action tone="secondary" size="lg" block>
@@ -68,7 +70,7 @@ export function InstallAppScreen({
           </>
         ) : (
           <LinkAction
-            to={paths.onboarding}
+            to={paths.termsStep}
             tone="primary"
             size="lg"
             icon={Github}

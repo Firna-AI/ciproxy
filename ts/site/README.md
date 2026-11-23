@@ -12,10 +12,9 @@ The pages follow the marketing and docs mockups under
   closing call to action.
 - `/pricing/` has the tiers, the add-ons, the feature comparison, and the
   questions. The last question shows the calculation of the cost claim.
-- `/terms/` and `/privacy/` are the terms of service and the privacy policy.
-  Both pages show draft text for the owner's review, with visible
-  placeholders in square brackets. The privacy policy also shows the
-  decided data retention.
+- `/terms/` and `/privacy/` are the approved terms of service and privacy
+  policy of Firna Ltd, the provider of ciproxy. The privacy policy also
+  shows the decided data retention.
 - `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
   of the docs sidebar mockup, in its order:
   - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
@@ -28,10 +27,13 @@ The pages follow the marketing and docs mockups under
 
 The look is Graphite:
 
-- One top bar serves both parts. The marketing pages show the wordmark,
-  Pricing, Docs, Sign in, and Start free. On a phone, a menu holds the links.
-  The docs show the wordmark with "Docs", the Starlight search, and the same
-  actions.
+- One top bar serves both parts. The marketing pages show the wordmark on
+  the left, and Pricing, Docs, GitHub, Sign in, and Start free on the right.
+  On a phone, a menu holds the links. The docs show the wordmark with "Docs",
+  the Starlight search, Pricing, GitHub, and the same actions. A narrow docs
+  window hides Pricing, GitHub, and Sign in.
+- The GitHub link is text, with no icon. It opens the public repository of
+  ciproxy, `https://github.com/Firna-AI/ciproxy`.
 - Every marketing page ends with the footer.
 - The docs use a Graphite theme of Starlight. Black is the one accent, and
   Geist and Geist Mono are the faces. Code is in the ink, because colour
@@ -66,8 +68,7 @@ Rules for work on the site:
   link open the dashboard at `https://app.ciproxy.dev/sign-in`.
 - Add a link only when its page exists. A marketing page links to a docs
   page through `docsLinks`, which shows the link only once the page exists.
-  The GitHub link of the mockups waits for the public repository of the
-  agent.
+  The GitHub mark of the footer mockup is not on the site yet.
 - The picture of the product in the hero is a static illustration with
   fixed values, and its caption says so. The site shows no customer logos,
   quotes, or press.
@@ -117,23 +118,27 @@ Rules for the legal pages:
   `src/data/legal-privacy.ts`. `src/data/legal.ts` joins them into the two
   pages. Each page file, `src/pages/terms.astro` or
   `src/pages/privacy.astro`, gives the effective date of its text.
-- A placeholder in square brackets, such as `[effective date]`, marks a
-  detail that the owner must complete. Keep the placeholder until the owner
-  gives the detail. Never put the current date or a guess in its place.
+- Both texts are approved. Each change to a text is a new version, which
+  needs the owner's approval. Set the effective date of its page to the
+  day that the new version goes live.
+- On the day that a new version of the terms goes live, an operator emails
+  the billing address of each paid workspace, as
+  [Announce a new version of the terms](../../deploy/operations.md#announce-a-new-version-of-the-terms)
+  says.
+- The terms define "the customer", which holds a workspace, and "you", the
+  person who signs in. Each clause names the party that it binds.
+- When a text states a legal right or tells a person how to use it, give
+  each channel or detail as a help, not as a condition. Add no condition
+  that the law does not set, such as where the person lives.
+- Take each provider role and each transfer safeguard from the current
+  data processing agreement or privacy policy of that provider. Name the
+  document, its date, and its section in a comment beside the sentence.
 - The data retention of the privacy policy shows its text first. The table
   of the decided limits and the job history of each plan come after it.
   The limits come from `src/data/legal.ts`.
-- A shared draft note at the top of each page says that the text is a
-  draft. Remove the note only after the owner completes every placeholder
-  and approves both texts. To remove it:
-  1. Open `/terms/` and `/privacy/`, and search each page for `[`. No match
-     may remain.
-  2. In `src/components/legal/LegalPage.astro`, delete the element with the
-     class `legal-draft`.
-  3. In `src/components/legal/legal.css`, delete the `.legal-draft` and
-     `.legal-draft-title` rules and the comment above them.
-  4. In this README, delete this rule and the rule on placeholders. Then
-     describe `/terms/` and `/privacy/` as the approved texts.
+- Each retention period of the privacy policy is a requirement in
+  [Data retention](../../docs/protocol/security-data.md#data-retention).
+  Change the requirement and the text together.
 
 ## Development
 
@@ -213,6 +218,10 @@ This keeps it separate from the Markdown lint tool's YAML version.
 - [src/components/site-header/SiteHeader.astro](src/components/site-header/SiteHeader.astro)
   is the top bar. Its `section` prop selects the page that it marks, and the
   docs form.
+- [src/data/brand.ts](src/data/brand.ts) holds the paths of the brand mark.
+  [src/components/Brand.astro](src/components/Brand.astro) draws the mark and
+  the wordmark, and [src/pages/favicon.svg.ts](src/pages/favicon.svg.ts)
+  serves `/favicon.svg`, the mark in the ink.
 - [src/components/LinkButton.astro](src/components/LinkButton.astro) is a
   link with the look of a button, and
   [src/components/icon/Icon.astro](src/components/icon/Icon.astro) an icon.

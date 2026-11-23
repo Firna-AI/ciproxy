@@ -30,8 +30,8 @@ fn machine_slots_reserve_a_quarter_and_round_down() {
 fn vm_slots_cover_both_resources_and_round_up() {
     let examples = [
         ("ciproxy", 2, 8 * GIGABYTE, 1),
-        ("ciproxy-4vcpu", 4, 16 * GIGABYTE, 2),
-        ("ciproxy-8vcpu", 8, 32 * GIGABYTE, 4),
+        ("ciproxy-medium", 4, 16 * GIGABYTE, 2),
+        ("ciproxy-large", 8, 32 * GIGABYTE, 4),
         ("CPU rounds up", 3, 8 * GIGABYTE, 2),
         ("odd CPU request", 5, 8 * GIGABYTE, 3),
         ("memory requires three", 2, 17 * GIGABYTE, 3),

@@ -9,7 +9,7 @@ use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners;
 
-use crate::snapshot::registration_target;
+use crate::snapshot::{instant, registration_target};
 
 pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<Sandbox> {
     let mut sandboxes = Vec::new();
@@ -86,6 +86,7 @@ pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<S
             ),
             marked: true,
             runner: Some(BoatRunner {
+                launched_at: record.and_then(|record| record.launched_at).map(instant),
                 required_root_disk_bytes: record
                     .map_or(intent.required_root_disk_bytes, |record| {
                         record.required_root_disk_bytes

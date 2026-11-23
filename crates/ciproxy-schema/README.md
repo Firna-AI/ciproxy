@@ -213,7 +213,9 @@ Each migration has an up.sql and a down.sql.
 ### Related Docs
 
 - [Architecture](../../docs/architecture.md) gives the hosted boundaries.
-- [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Security](../../docs/protocol/security.md) defines key custody.
+- [Isolation](../../docs/protocol/security-isolation.md#tenant-isolation)
+  defines tenant isolation.
 - [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Labels](../../docs/protocol/labels.md) defines labels.

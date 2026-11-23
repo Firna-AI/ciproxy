@@ -176,7 +176,8 @@ The hosted runtime does not guess an image or job-disk size.
 ### Agent updates and releases
 
 The [updates and releases guide](updates-and-releases.md) gives the
-hourly updater, public package format, and glibc release checks.
+hourly updater, public package format, glibc release checks, and the version
+raise by hand when a shared library moves.
 
 ## Quick Start
 
@@ -224,6 +225,7 @@ The default `docker_regression` target also uses path includes.
 The gate compiles and runs that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
 The image download regression uses local HTTP and a controlled clock.
+The resumable download tests use a local HTTP server and a temporary folder.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
 The [development guide](development.md) gives the `docker_regression` checks,
@@ -333,6 +335,9 @@ that only creates its output files. The check does not link.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
+- [src/resumable_download.rs](src/resumable_download.rs) continues a large
+  image download from its partial file with `Range` requests. The macOS
+  image store uses it, and Linux tests run it.
 - [src/application_images.rs](src/application_images.rs) constructs image
   services and their client with a read timeout.
 - [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.
@@ -362,5 +367,6 @@ that only creates its output files. The check does not link.
 - [Agent endpoint](../../docs/protocol/agent-endpoint.md) defines endpoint use.
 - [Job routing](../../docs/protocol/job-routing.md) defines VM resources.
 - [Labels](../../docs/protocol/labels.md) defines the sizes of job VMs.
-- [Security](../../docs/protocol/security.md) defines isolation and key custody.
+- [Security](../../docs/protocol/security.md) defines key custody.
+- [Isolation](../../docs/protocol/security-isolation.md) defines job isolation.
 - [Cache](../../docs/protocol/cache.md) defines cache integration.

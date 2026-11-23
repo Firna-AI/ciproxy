@@ -52,36 +52,55 @@ pub(super) fn save(
     workspace_id: Uuid,
     record: &StartRecord,
 ) -> Result<()> {
-    let json = serde_json::to_string(record).internal()?;
     transaction(connection, |connection| {
-        let count = diesel::update(
+        let delivery = || {
             overflow_starts::table
                 .filter(overflow_starts::workspace_id.eq(workspace_id))
-                .find(record.delivery_id),
-        )
-        .set((
-            overflow_starts::record_json.eq(json),
-            overflow_starts::reported_at.eq(record.reported_at),
-            overflow_starts::ends_at.eq(record.ends_at),
-        ))
-        .execute(connection)
-        .store()?;
+                .find(record.delivery_id)
+        };
+        let saved = delivery()
+            .select(overflow_starts::record_json)
+            .for_update()
+            .first::<String>(connection)
+            .store()?;
+        let saved = serde_json::from_str(&saved).internal()?;
+        let merged = retain_lifecycle(record, &saved);
+        let json = serde_json::to_string(&merged).internal()?;
+        let count = diesel::update(delivery())
+            .set((
+                overflow_starts::record_json.eq(json),
+                overflow_starts::reported_at.eq(merged.reported_at),
+                overflow_starts::ends_at.eq(merged.ends_at),
+            ))
+            .execute(connection)
+            .store()?;
         require_record(count)?;
-        if matches!(
-            record.phase,
-            StartPhase::Running
-                | StartPhase::Ended
-                | StartPhase::Refused
-                | StartPhase::CancelledUnsent
-        ) {
+        if launch_input_unused(record.phase) || launch_input_unused(merged.phase) {
             diesel::update(overflow_starts::table.find(record.delivery_id))
                 .set(overflow_starts::launch_ciphertext.eq::<Option<Vec<u8>>>(None))
                 .execute(connection)
                 .store()?;
         }
-        if record.sandbox.is_some() {
-            placements::save(connection, workspace_id, record)?;
-        }
-        Ok(())
+        placements::save(connection, workspace_id, &merged)
     })
+}
+
+fn retain_lifecycle(record: &StartRecord, saved: &StartRecord) -> StartRecord {
+    let mut merged = record.clone();
+    merged.reported_at = saved.reported_at.or(record.reported_at);
+    merged.ends_at = saved.ends_at.or(record.ends_at);
+    merged.phase = match saved.phase {
+        StartPhase::Deleting if merged.ends_at.is_some() => StartPhase::Ended,
+        StartPhase::Deleting | StartPhase::Ended => saved.phase,
+        _ if saved.ends_at.is_some() => saved.phase,
+        _ => record.phase,
+    };
+    merged
+}
+
+fn launch_input_unused(phase: StartPhase) -> bool {
+    matches!(
+        phase,
+        StartPhase::Running | StartPhase::Ended | StartPhase::Refused | StartPhase::CancelledUnsent
+    )
 }

@@ -1,4 +1,5 @@
 import type { SessionView } from "../src/api/schema.ts";
+import { pages } from "../src/routing/pages.ts";
 import {
   claimId,
   link,
@@ -23,7 +24,7 @@ export function lateApprovalWait(): SessionView {
     state: "install_required",
     workspaces: [],
     setup: { kind: "waiting_approval" },
-    reauthorization_url: "/api/auth/github",
+    reauthorization_url: pages.termsStep,
     pending_install_requests: [
       {
         id: "91",
@@ -38,7 +39,7 @@ export function lateApprovalWait(): SessionView {
         installation_id: "9000",
         state: "reauthorization_required",
         reauthorization_required: true,
-        reauthorization_url: "/api/auth/github",
+        reauthorization_url: pages.termsStep,
         workspaces: [],
       }),
     ],

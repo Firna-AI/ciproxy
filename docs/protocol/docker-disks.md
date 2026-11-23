@@ -114,4 +114,5 @@ machine cache.
 - [Agent](agent.md): own machines and job VMs.
 - [Job routing](job-routing.md#disk): the disk of a job and the spare disk.
 - [Billing](billing.md#tier-features): the tiers that include Docker disks.
-- [Security](security.md): job isolation and job data.
+- [Isolation](security-isolation.md#job-isolation): job isolation.
+- [Data and retention](security-data.md): job data.

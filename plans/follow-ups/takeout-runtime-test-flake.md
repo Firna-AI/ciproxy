@@ -5,6 +5,11 @@
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-08, from the complete gate of the pull request #39
   merge.
+- **Seen again:** 2026-11-23, in the complete gate of the branch
+  `calummoore/macos-t-area-disk-access`, which changes only the agent.
+  `completed_takeout_forgets_terminal_registrations_after_retained_reinstall`
+  failed with `Err(StateChanged)` at line 135, in the gate and in one run
+  alone, then passed 3 runs alone.
 - **Source:** Implementation.
 - **Category:** Test.
 - **Location:** `crates/ciproxy-control-plane/tests/runtime/overflow_takeout_tests.rs:107`,
@@ -35,6 +40,12 @@
   - The pull-request CI run for the same commit passed. The failed push
     job passed on its single rerun. This branch changes neither test nor
     the control-plane runtime that they call.
+  - On 22 November 2026, the registration-retention test failed again in
+    the push CI run 45066565974 for commit `13a4163`, with the same panic
+    at line 135. The pull-request run 45066621971 of that commit passed.
+    Both runs of the next commit, a merge of `main`, passed. The branch
+    `calummoore/default-labels-rename` changes neither test nor the
+    control-plane runtime.
 - **Problem:** The tests depend on an order or a timing that load can
   change. The source is not proven. Async ordering between the lifecycle
   call and a runtime tick, or shared fixture state, is the likely source.

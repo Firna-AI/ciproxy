@@ -1,15 +1,20 @@
 //! The agent's own APFS volume, mounted at `/var/db/ciproxy/area`.
 //!
 //! The volume has a quota, so jobs and images cannot fill the Mac's disk.
-//! `area.json` records its UUID. Install and uninstall act only on the
-//! volume with that UUID. An `/etc/fstab` line mounts it again at boot.
+//! Install creates it in the container of the startup disk, or in the
+//! container that `CIPROXY_AREA_DISK` names, such as an external SSD.
+//! `area.json` records its UUID and the UUID of its container. Install and
+//! uninstall act only on that volume. An `/etc/fstab` line mounts it again
+//! at boot, and when its disk is connected again.
 
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
-use serde::{Deserialize, Serialize};
-
+use super::area_target::target;
+use super::diskutil::{Plist, area_error, diskutil, info_value, new_device, run_checked};
 use crate::error::{Error, ErrorResultExt, Result};
+pub(crate) use crate::macos::area_access::clear_result;
+use crate::macos::area_disk::AreaRecord;
+use crate::macos::area_disk::{AreaDisk, Deletion, MISSING_REPAIR, area_mounted, deletion};
 use crate::macos::paths::{AREA, CONTROL};
 use crate::persistence::{atomic_private_write, private_directory};
 
@@ -20,13 +25,6 @@ const MINIMUM_BYTES: u64 = 150 * 1024 * 1024 * 1024;
 /// The smallest volume that `CIPROXY_AREA_BYTES` may set, for example for a
 /// host check with no image.
 const MINIMUM_SET_BYTES: u64 = 20 * 1024 * 1024 * 1024;
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct AreaRecord {
-    pub(crate) volume_uuid: String,
-    pub(crate) quota_bytes: u64,
-}
 
 fn record_path() -> PathBuf {
     Path::new(CONTROL).join("area.json")
@@ -43,28 +41,38 @@ pub(crate) fn record() -> Result<Option<AreaRecord>> {
 }
 
 /// Create the volume once, or mount the recorded one.
-pub(crate) fn prepare(requested_bytes: Option<u64>) -> Result<AreaRecord> {
+pub(crate) fn prepare(requested_bytes: Option<u64>, disk: &AreaDisk) -> Result<AreaRecord> {
     if let Some(record) = record()? {
+        if disk.setting().is_some() && disk.setting() != record.disk {
+            tracing::warn!(
+                recorded = record.disk.as_deref().unwrap_or("the startup disk"),
+                "CIPROXY_AREA_DISK applies to a new area volume only; keep the recorded volume. Uninstall first to move it"
+            );
+        }
         mount(&record)?;
         return Ok(record);
     }
-    let container = info_value("/System/Volumes/Data", "APFSContainerReference")?;
-    let free: u64 = info_value("/System/Volumes/Data", "APFSContainerFree")?
-        .parse()
-        .context("read the container free space")?;
+    let target = target(disk)?;
+    if target.external {
+        tracing::warn!(
+            container = %target.container,
+            "the area volume is on an external or removable disk. Keep the disk connected: when it is gone, the Mac takes no jobs and its running jobs stop"
+        );
+    }
+    let free = target.free;
     let quota = requested_bytes.unwrap_or(free / 4 * 3);
     let minimum = requested_bytes.map_or(MINIMUM_BYTES, |_| MINIMUM_SET_BYTES);
     if quota < minimum || quota > free {
         return Err(Error::Preparation {
             component: "area volume",
-            repair: "Free at least 200 GB on the startup disk, or set CIPROXY_AREA_BYTES to a size that fits, of at least 20 GB. Then rerun install.",
+            repair: "Free at least 200 GB on the disk of the area, set CIPROXY_AREA_DISK to another APFS disk, or set CIPROXY_AREA_BYTES to a size that fits, of at least 20 GB. Then rerun install.",
         });
     }
     private_directory(Path::new(AREA))?;
     let output = diskutil(&[
         "apfs",
         "addVolume",
-        &container,
+        &target.container,
         "APFS",
         NAME,
         "-quota",
@@ -75,6 +83,9 @@ pub(crate) fn prepare(requested_bytes: Option<u64>) -> Result<AreaRecord> {
     let record = AreaRecord {
         volume_uuid: info_value(&device, "VolumeUUID")?,
         quota_bytes: quota,
+        container_uuid: target.container_uuid,
+        disk: disk.setting(),
+        external: target.external,
     };
     atomic_private_write(
         &record_path(),
@@ -94,18 +105,55 @@ pub(crate) fn prepare(requested_bytes: Option<u64>) -> Result<AreaRecord> {
     Ok(record)
 }
 
-/// Mount the recorded volume when it is not mounted at the area path.
+/// Mount the recorded volume when it is not mounted at the area path, and
+/// check that it uses file owners.
+///
+/// A volume that is not there, for example on an unplugged disk, gives the
+/// repair to connect it. launchd starts the daemon again every 5 seconds,
+/// so the agent goes on when the disk is back. fstab may mount the volume
+/// at the same time as this call, so a failed mount counts only when the
+/// volume is still not at the area path.
 pub(crate) fn mount(record: &AreaRecord) -> Result<()> {
-    if mounted(record) {
-        return Ok(());
+    Plist::info(&record.volume_uuid).map_err(|_| Error::Preparation {
+        component: "area volume",
+        repair: MISSING_REPAIR,
+    })?;
+    if !mounted(record) {
+        private_directory(Path::new(AREA))?;
+        if let Err(error) = diskutil(&["mount", "-mountPoint", AREA, &record.volume_uuid]) {
+            tracing::warn!(%error, "the area mount failed; check the mount point again");
+        }
+        if !mounted(record) {
+            return Err(area_error("mount the area volume"));
+        }
     }
-    private_directory(Path::new(AREA))?;
-    diskutil(&["mount", "-mountPoint", AREA, &record.volume_uuid])?;
-    if mounted(record) {
-        Ok(())
-    } else {
-        Err(area_error("mount the area volume"))
+    ensure_owners(record)
+}
+
+/// macOS can ignore file owners on an external volume. Then every user can
+/// write the root-only files of the agent. So the agent turns owners on,
+/// and refuses a volume where they stay off.
+fn ensure_owners(record: &AreaRecord) -> Result<()> {
+    let owners =
+        |record: &AreaRecord| Plist::info(&record.volume_uuid)?.flag("GlobalPermissionsEnabled");
+    match owners(record)? {
+        Some(true) => return Ok(()),
+        None => {
+            tracing::warn!("cannot read whether the area volume uses file owners");
+            return Ok(());
+        }
+        Some(false) => {}
     }
+    if let Err(error) = diskutil(&["enableOwnership", &real_area().to_string_lossy()]) {
+        tracing::warn!(%error, "cannot turn on file owners on the area volume");
+    }
+    if owners(record)? == Some(false) {
+        return Err(Error::Preparation {
+            component: "area volume",
+            repair: "Run sudo diskutil enableOwnership /private/var/db/ciproxy/area. If owners stay off, unmount and mount the ciproxy volume. The agent keeps root-only files on its volume, so the volume must use file owners. Then restart the agent.",
+        });
+    }
+    Ok(())
 }
 
 /// The volume at the area path is the recorded one.
@@ -125,22 +173,65 @@ fn real_area() -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from(AREA.replacen("/var/", "/private/var/", 1)))
 }
 
-/// Delete the recorded volume, its fstab line, and the record.
+/// Delete the recorded volume, its fstab line, and the record. A volume
+/// that is not there stays on its disk, with a warning.
 pub(crate) fn remove() -> Result<()> {
     let Some(record) = record()? else {
         return Ok(());
     };
-    if info_value(&record.volume_uuid, "VolumeName").is_ok_and(|name| name == NAME) {
-        diskutil(&["apfs", "deleteVolume", &record.volume_uuid])?;
+    let found = Plist::info(&record.volume_uuid).ok().map(|volume| {
+        let name = volume.optional("VolumeName").ok().flatten();
+        (name.unwrap_or_default(), container_uuid(&volume))
+    });
+    let found = found
+        .as_ref()
+        .map(|(name, container)| (name.as_str(), container.as_deref()));
+    match deletion(&record, found, NAME) {
+        Deletion::Delete => {
+            diskutil(&["apfs", "deleteVolume", &record.volume_uuid])?;
+        }
+        Deletion::Missing => tracing::warn!(
+            volume_uuid = %record.volume_uuid,
+            "the ciproxy volume is not connected, so it stays on its disk. Connect the disk and run diskutil apfs deleteVolume with this UUID"
+        ),
+        Deletion::Foreign => tracing::warn!(
+            volume_uuid = %record.volume_uuid,
+            "the volume with the recorded UUID has another name or container; keep it"
+        ),
+        Deletion::Unknown => return Err(area_error("read the container of the area volume")),
     }
+    remove_mount_point()?;
     remove_fstab_line(&record.volume_uuid)?;
-    std::fs::remove_file(record_path()).context("remove the area record")?;
-    match std::fs::remove_dir(AREA) {
+    clear_result(Path::new(CONTROL))?;
+    // The record goes last, so a failed step above repeats on a retry.
+    std::fs::remove_file(record_path()).context("remove the area record")
+}
+
+/// Remove the mount point. While its disk is unplugged, the folder is a
+/// bare folder on the startup disk, and it can hold files that the agent
+/// wrote there, so all of it goes. A folder that is still a mount point is
+/// only removed when it is empty.
+fn remove_mount_point() -> Result<()> {
+    let removed = if area_mounted(Path::new(AREA)) {
+        std::fs::remove_dir(AREA)
+    } else {
+        std::fs::remove_dir_all(AREA)
+    };
+    match removed {
         Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
             Err(error).context("remove the area mount point")
         }
         _ => Ok(()),
     }
+}
+
+/// The UUID of the container of a volume, when `diskutil` gives it.
+fn container_uuid(volume: &Plist) -> Option<String> {
+    let reference = volume.optional("APFSContainerReference").ok().flatten()?;
+    Plist::container(&reference)
+        .and_then(|list| list.optional("Containers.0.APFSContainerUUID"))
+        .ok()
+        .flatten()
 }
 
 fn fstab_line(uuid: &str) -> String {
@@ -174,86 +265,4 @@ fn remove_fstab_line(uuid: &str) -> Result<()> {
         std::fs::write(FSTAB, kept).context("remove the area from /etc/fstab")?;
     }
     Ok(())
-}
-
-/// The device in `diskutil apfs addVolume` output, such as `disk3s7`.
-fn new_device(output: &str) -> Option<String> {
-    output
-        .split_whitespace()
-        .rev()
-        .find(|word| {
-            word.strip_prefix("disk").is_some_and(|rest| {
-                rest.contains('s') && rest.bytes().all(|b| b.is_ascii_alphanumeric())
-            })
-        })
-        .map(str::to_owned)
-}
-
-/// One value of `diskutil info -plist TARGET`, read with `plutil`.
-fn info_value(target: &str, key: &str) -> Result<String> {
-    let plist = Command::new("diskutil")
-        .args(["info", "-plist", target])
-        .output()
-        .context("run diskutil info")?;
-    if !plist.status.success() {
-        tracing::warn!(
-            target_volume = target,
-            output = %String::from_utf8_lossy(&plist.stdout).trim(),
-            stderr = %String::from_utf8_lossy(&plist.stderr).trim(),
-            "diskutil info failed"
-        );
-        return Err(area_error("read volume facts"));
-    }
-    let mut child = Command::new("plutil")
-        .args(["-extract", key, "raw", "-o", "-", "-"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .context("run plutil")?;
-    if let Some(mut stdin) = child.stdin.take() {
-        std::io::Write::write_all(&mut stdin, &plist.stdout).context("send volume facts")?;
-    }
-    let output = child.wait_with_output().context("wait for plutil")?;
-    if !output.status.success() {
-        return Err(area_error("read a volume fact"));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
-}
-
-fn diskutil(args: &[&str]) -> Result<String> {
-    let output = Command::new("diskutil")
-        .args(args)
-        .output()
-        .context("run diskutil")?;
-    if !output.status.success() {
-        tracing::warn!(
-            args = ?args,
-            output = %String::from_utf8_lossy(&output.stdout).trim(),
-            stderr = %String::from_utf8_lossy(&output.stderr).trim(),
-            "diskutil failed"
-        );
-        return Err(area_error("run diskutil"));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-}
-
-/// Run a tool. Return its output when it fails, for the log.
-fn run_checked(program: &str, args: &[&str]) -> Option<String> {
-    match Command::new(program).args(args).output() {
-        Ok(output) if output.status.success() => None,
-        Ok(output) => Some(format!(
-            "{} {}",
-            String::from_utf8_lossy(&output.stdout).trim(),
-            String::from_utf8_lossy(&output.stderr).trim()
-        )),
-        Err(error) => Some(error.to_string()),
-    }
-}
-
-fn area_error(step: &'static str) -> Error {
-    tracing::warn!(step, "an area volume step failed");
-    Error::HostCommand {
-        program: "diskutil".to_owned(),
-    }
 }

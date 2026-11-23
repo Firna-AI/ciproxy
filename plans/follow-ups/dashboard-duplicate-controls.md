@@ -219,6 +219,14 @@
     fix changes `ts/app/src/screens/machines/overflow-panel.tsx`, which C
     moves to the standalone `Panel` and `TextLink`. Only the order of the
     work changes. The options do not conflict.
+  - `plans/follow-ups/dialog-first-focus.md`, the same code. Its option C
+    builds a shared confirmation frame on `FeatureDialog`, which C of this
+    item moves into its own module. Either item can go first. The options
+    do not conflict.
+  - `plans/follow-ups/dashboard-mockup-spacing-drift.md`, the same code.
+    Its option E sets the body gap of every dialog in the one dialog frame,
+    which C of this item builds, so that option waits for C. The options do
+    not conflict.
 - **Recommendation:** E, changed from C. C settles the duplicated controls,
   but each in-app link still chooses its own history mode. E gives every
   in-app link one default, so the sidebar items and the tabs keep Back

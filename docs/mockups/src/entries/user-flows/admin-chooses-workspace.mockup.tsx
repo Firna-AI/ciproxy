@@ -6,7 +6,7 @@ import { relatedMvp } from "../../components/related-docs.ts";
 export const adminChoosesWorkspace = defineUseCase({
   title: "An Admin of two workspaces picks one",
   description:
-    "A what-if of 2 November: Cal Moore is also an Admin of driftwood, a workspace on Free. He adds mokly-labs from mokly-ai. After the check of the install, the return lists both workspaces with none picked, and Cal picks the one that runs the jobs of mokly-labs.",
+    "A what-if of 2 November: Cal Moore is also an Admin of driftwood, a workspace on Free. He adds mokly-labs from mokly-ai. After the terms step and the check of the install, the return lists both workspaces with none picked, and Cal picks the one that runs the jobs of mokly-labs.",
   relatedDocs: relatedMvp("workspaces", "security", "billing"),
   steps: [
     {
@@ -14,6 +14,12 @@ export const adminChoosesWorkspace = defineUseCase({
       title: "One organization on Team",
       description:
         "Cal chooses Add an organization and installs the App on mokly-labs on GitHub.",
+    },
+    {
+      screenPath: paths.termsStep,
+      title: "Continue with GitHub",
+      description:
+        "GitHub returns to the terms step, which shows the terms notice of sign-in. Continue with GitHub signs Cal in again, so that ciproxy can check the install with his account.",
     },
     {
       screenPath: paths.addOrganization,

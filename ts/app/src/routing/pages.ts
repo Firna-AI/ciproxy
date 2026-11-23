@@ -6,6 +6,8 @@
 export const pages = {
   home: "/",
   signIn: "/sign-in",
+  /** The terms step before a GitHub sign-in that does not start on sign-in. */
+  termsStep: "/continue",
   install: "/install",
   personalAccount: "/personal-account",
   appRemoved: "/app-removed",

@@ -1,9 +1,9 @@
-// The pages that show in place of the dashboard: sign-in, the App install,
-// the install on a personal account, the removed App, the ended access, and
-// the page of a member with no role. Each reads only the session, so no
-// page shows data that the API did not give.
+// The pages that show in place of the dashboard: sign-in, the terms step, the
+// App install, the install on a personal account, the removed App, the ended
+// access, and the page of a member with no role. Each reads only the session,
+// so no page shows data that the API did not give.
 
-import { githubSignInHref } from "../api/endpoints.ts";
+import { githubResumeHref, githubSignInHref } from "../api/endpoints.ts";
 import type {
   RemovedOrganization,
   SessionView,
@@ -38,6 +38,22 @@ export function signInPage(reason: SignInReason | null): AuthPageModel {
     notice: reason === null ? null : signInNotices[reason],
     list: null,
     actions: [leave("Sign in with GitHub", githubSignInHref, "primary")],
+    footer: "",
+  };
+}
+
+/**
+ * The terms step: the page before each GitHub sign-in that does not start on
+ * sign-in, such as the return from an install on GitHub. It reads nothing,
+ * so it names no install, no person, and no next page.
+ */
+export function termsStepPage(): AuthPageModel {
+  return {
+    title: "Sign in to continue",
+    lead: "ciproxy checks your access with your GitHub account.",
+    notice: null,
+    list: null,
+    actions: [leave("Continue with GitHub", githubResumeHref, "primary")],
     footer: "",
   };
 }

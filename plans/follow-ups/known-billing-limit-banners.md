@@ -9,7 +9,7 @@
 - **Source:** Review.
 - **Category:** Mockup.
 - **Location:** `docs/mockups/src/screens/billing/plans.tsx:141`,
-  `docs/mockups/src/screens/billing/checkout-review.tsx:139`, and
+  `docs/mockups/src/screens/billing/checkout-review.tsx:141`, and
   `docs/mockups/src/screens/billing/checkout-result.tsx:49`.
 - **Reason:** These three known-data screens had no banner before the branch
   that found the gap, so the gap is outside its review scope.
@@ -29,8 +29,8 @@
 - **Background:**
   - `docs/protocol/metering.md:93-94`: while a workspace is above a soft
     limit, every page of the workspace shows one banner.
-    `docs/protocol/billing.md:211-213`: the banner of a failed payment or of
-    an ended tier takes its place, so a page shows one banner.
+    "Failed payments" in `docs/protocol/billing.md`: the banner of a failed
+    payment or of an ended tier takes its place, so a page shows one banner.
   - Two moments of these screens pass a soft limit on Free: `free-over`, on
     4 September, and `inactive-organization`, on 8 December. Both are in
     `passedLimit` at `docs/mockups/src/fixtures/current-api.ts:41-47`.
@@ -38,7 +38,7 @@
     - Plans, in the states `from-free` and `inactive-organization`.
       `plans.tsx:141` shows the banner only in the pending states.
     - The Checkout review `to-team`, at the moment `free-over`.
-      `checkout-review.tsx:139-141` shows it only with `api`.
+      `checkout-review.tsx:141-143` shows it only with `api`.
     - The Checkout return states `confirming`, `still-confirming`, and
       `cancelled`, before Stripe confirms Team on 4 September.
       `checkout-result.tsx:49-52` shows it only in the current-API states.

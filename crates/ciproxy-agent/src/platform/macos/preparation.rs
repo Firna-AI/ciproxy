@@ -14,9 +14,13 @@ use super::recovery::remove_orphans;
 use crate::boundaries::{Images, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos::area_access::{
+    Access, FULL_DISK_ACCESS_REPAIR, TERMINAL_ACCESS_REPAIR, probe, record_result,
+};
+use crate::macos::area_disk::AreaDisk;
 use crate::macos::guests::VmFolders;
 use crate::macos::hardware::install_check;
-use crate::macos::paths::{AREA, CONTROL};
+use crate::macos::paths::{AGENT_LABEL, AREA, CONTROL};
 use crate::persistence::private_directory;
 use crate::preparation::{Preparation, Uninstall, UninstallState, stage_error};
 use crate::runtime_ownership::RuntimeOwner;
@@ -27,6 +31,8 @@ pub(crate) struct MacPreparation {
     pub(crate) launchd: Arc<dyn Launchd>,
     /// `CIPROXY_AREA_BYTES`, the size of a new area volume.
     pub(crate) area_bytes: Option<u64>,
+    /// `CIPROXY_AREA_DISK`, the disk of a new area volume.
+    pub(crate) area_disk: AreaDisk,
 }
 
 #[async_trait]
@@ -41,11 +47,11 @@ impl Preparation for MacPreparation {
             )
         })?;
         private_directory(&Path::new(CONTROL).join("vms"))?;
-        area::prepare(self.area_bytes).map_err(|error| {
+        area::prepare(self.area_bytes, &self.area_disk).map_err(|error| {
             stage_error(
                 error,
                 "area volume",
-                "Check that the startup disk is APFS and has free space. Then rerun install.",
+                "Check that the disk of the area is APFS and has free space, and that CIPROXY_AREA_DISK names it. Then rerun install.",
             )
         })?;
         for folder in ["images", "vms", "seats"] {
@@ -72,6 +78,9 @@ impl Preparation for MacPreparation {
                 "Mount the ciproxy volume in Disk Utility. Then restart the agent.",
             )
         })?;
+        if record.disk.is_some() {
+            check_access()?;
+        }
         let folders = VmFolders {
             area: PathBuf::from(AREA),
         };
@@ -91,6 +100,30 @@ impl Preparation for MacPreparation {
             }
             _ => Ok(()),
         }
+    }
+}
+
+/// Check that this process can use an area on another disk, and keep the
+/// result for install. See [`crate::macos::area_access`].
+///
+/// Only the launchd job of the daemon writes the result. A command from a
+/// terminal, such as uninstall, tests the access of the terminal.
+fn check_access() -> Result<()> {
+    let access = probe(Path::new(AREA))?;
+    let daemon = std::env::var("XPC_SERVICE_NAME").is_ok_and(|name| name == AGENT_LABEL);
+    if daemon && let Err(error) = record_result(Path::new(CONTROL), access) {
+        tracing::warn!(%error, "install cannot read the area access result");
+    }
+    match access {
+        Access::Open => Ok(()),
+        Access::Blocked => Err(Error::Preparation {
+            component: "area volume",
+            repair: if daemon {
+                FULL_DISK_ACCESS_REPAIR
+            } else {
+                TERMINAL_ACCESS_REPAIR
+            },
+        }),
     }
 }
 

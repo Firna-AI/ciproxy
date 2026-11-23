@@ -299,5 +299,5 @@ executable smoke, SDK conformance, and authenticated GitHub commands.
 
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Cache protocol](../../docs/protocol/cache.md) defines cache requirements.
-- [Job isolation](../../docs/protocol/security.md#job-isolation) defines VM
-  network access.
+- [Job isolation](../../docs/protocol/security-isolation.md#job-isolation)
+  defines VM network access.

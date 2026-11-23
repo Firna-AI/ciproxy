@@ -7,7 +7,8 @@
 // tiers shows its priced review, a review that the API cannot price, or a
 // review whose quote the API refused at payment, which asks for a new review.
 // A payment that cannot start says why, and a payment whose result the page
-// did not get shows only what the Plan and usage read after it proves.
+// did not get shows only what the Plan and usage read after it proves. Each
+// summary with a pay button says that paid plans are for business use only.
 
 import { ExternalLink } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -35,6 +36,7 @@ import {
 import { businessMove, proratedCharge } from "../../fixtures/usage.ts";
 import { ApiOutcomeNotice, type ApiOutcome } from "./api-outcome.tsx";
 import { ApiSummary, type ApiSummaryState } from "./api-review.tsx";
+import { BusinessUseNote } from "./business-use-note.tsx";
 import "./billing.css";
 
 export type ReviewMove = "to-team" | "to-business";
@@ -203,7 +205,10 @@ function KnownSummary({ move }: { move: ReviewMove }) {
             {formatMoney(review.today)}
           </DetailRow>
         </DetailList>
-        <ChargeNote move={move} />
+        <div className="stack-tight">
+          <ChargeNote move={move} />
+          <BusinessUseNote />
+        </div>
         {move === "to-team" ? (
           <LinkAction
             to={paths.checkoutStripe}

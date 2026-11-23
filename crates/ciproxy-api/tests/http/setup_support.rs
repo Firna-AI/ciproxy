@@ -93,6 +93,15 @@ pub(super) async fn finish(
     assert_eq!(begin.status(), StatusCode::SEE_OTHER);
     let nonce = oauth_state(&begin);
     let binding = cookie(&begin, "__Host-ciproxy-oauth");
+    finish_callback(fixture, &nonce, &binding, outcome).await
+}
+
+pub(super) async fn finish_callback(
+    fixture: &Fixture,
+    nonce: &str,
+    binding: &str,
+    outcome: CallbackOutcome,
+) -> Response<Body> {
     let request = Request::builder()
         .uri(format!(
             "/api/auth/github/callback?code=synthetic&state={nonce}"
@@ -121,9 +130,54 @@ pub(super) async fn begin(
     prior: Option<&Browser>,
     query: &str,
 ) -> Response<Body> {
-    let mut request = Request::builder().uri(format!("/api/github/setup{query}"));
+    github_get(fixture, prior, None, &format!("/api/github/setup{query}")).await
+}
+
+pub(super) fn pending_cookie(response: &Response<Body>) -> String {
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(
+        response
+            .headers()
+            .get(header::LOCATION)
+            .and_then(|value| value.to_str().ok()),
+        Some("/continue")
+    );
+    cookie(response, "__Host-ciproxy-oauth")
+}
+
+pub(super) async fn start_authorization(
+    fixture: &Fixture,
+    prior: Option<&Browser>,
+    binding: Option<&str>,
+    query: &str,
+) -> Response<Body> {
+    github_get(fixture, prior, binding, &format!("/api/auth/github{query}")).await
+}
+
+pub(super) async fn complete_setup(
+    fixture: &Fixture,
+    prior: Option<&Browser>,
+    query: &str,
+    outcome: CallbackOutcome,
+) -> Response<Body> {
+    let returned = begin(fixture, prior, query).await;
+    let pending = pending_cookie(&returned);
+    let authorization = start_authorization(fixture, prior, Some(&pending), "?resume=setup").await;
+    finish(fixture, authorization, outcome).await
+}
+
+async fn github_get(
+    fixture: &Fixture,
+    prior: Option<&Browser>,
+    binding: Option<&str>,
+    path: &str,
+) -> Response<Body> {
+    let mut request = Request::builder().uri(path);
     if let Some(prior) = prior {
         request = request.header(header::COOKIE, format!("__Host-ciproxy={}", prior.cookie));
+    }
+    if let Some(binding) = binding {
+        request = request.header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"));
     }
     Router::new()
         .nest("/api", router(fixture.state.clone()))

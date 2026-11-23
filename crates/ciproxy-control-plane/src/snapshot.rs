@@ -202,7 +202,8 @@ pub(crate) fn size(size: ciproxy_store_interface::vm_size::VmSize) -> VmSize {
     }
 }
 
-fn instant(at: DateTime<Utc>) -> Duration {
+/// Convert a UTC timestamp to the scaler snapshot clock.
+pub(crate) fn instant(at: DateTime<Utc>) -> Duration {
     at.signed_duration_since(DateTime::UNIX_EPOCH)
         .to_std()
         .unwrap_or(Duration::ZERO)

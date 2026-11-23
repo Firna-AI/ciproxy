@@ -93,6 +93,26 @@ resource "google_secret_manager_secret_iam_member" "boat_snapshot_sync" {
   member    = "serviceAccount:${local.ci_email}"
 }
 
+# The optional read key of the macOS image bucket in R2. An operator adds each
+# version. Deploy copies the latest one into the pod as R2_IMAGES_KEY.
+resource "google_secret_manager_secret" "r2_images" {
+  secret_id           = "${local.prefix}-r2-images"
+  deletion_protection = true
+  replication {
+    user_managed {
+      replicas {
+        location = local.region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_iam_member" "r2_images_sync" {
+  secret_id = google_secret_manager_secret.r2_images.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.ci_email}"
+}
+
 resource "google_dns_managed_zone" "public" {
   for_each    = local.dns_domains
   name        = each.key == "site" ? local.prefix : "${local.prefix}-${each.key}"

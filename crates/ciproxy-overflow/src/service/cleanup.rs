@@ -25,13 +25,30 @@ impl OverflowService {
             .internal()?
             .internal()?
             .ok_or(Error::InvalidToken)?;
-        let session = Session::acquire(self.dependencies.store.clone(), workspace_id, true).await?;
+        let store = self.dependencies.store.clone();
         let now = self.dependencies.clock.now();
-        let mut record = session
-            .call(move |session| session.accept_end(&hash, runner_id, now))
-            .await?
+        let record = spawn_blocking(move || store.accept_end(workspace_id, &hash, runner_id, now))
+            .await
+            .internal()?
+            .internal()?
             .ok_or(Error::InvalidToken)?;
+        let delivery_id = record.delivery_id;
+        if let Err(error) = self.delete_reported(workspace_id, delivery_id).await {
+            tracing::warn!(%workspace_id, %delivery_id, %error, "Boat exit report saved; cleanup deferred");
+        }
+        Ok(())
+    }
+
+    async fn delete_reported(&self, workspace_id: Uuid, delivery_id: Uuid) -> Result<()> {
+        let session = Session::acquire(self.dependencies.store.clone(), workspace_id, true).await?;
         let snapshot = session.call(|session| session.snapshot()).await?;
+        let Some(mut record) = snapshot
+            .starts
+            .into_iter()
+            .find(|record| record.delivery_id == delivery_id && record.ends_at.is_none())
+        else {
+            return Ok(());
+        };
         let account = snapshot
             .accounts
             .iter()

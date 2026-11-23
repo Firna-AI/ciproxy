@@ -31,7 +31,7 @@ against a tier.
 - Stripe bills each paid tier monthly.
 - A tier includes its starts in each [period](metering.md#periods).
 - The job history of a tier is the window of finished jobs that its pages
-  show. [Data retention](security.md#data-retention) says how long ciproxy
+  show. [Data retention](security-data.md#data-retention) says how long ciproxy
   keeps them.
 - Every workspace starts on Free.
 - The customer picks a paid tier by hand, and ciproxy never picks one by
@@ -132,6 +132,16 @@ against a tier.
 - It offers to try again.
 - **Decision:** Stripe takes every payment. Reason: no card data reaches
   ciproxy, and the ciproxy team already uses Stripe for billing.
+- Paid tiers are for business use only: the customer buys a paid tier for
+  its trade, business, or profession.
+- Each review with a pay button says so, with a link to the
+  [Terms](terms-acceptance.md#who-accepts).
+- **Decision:** paid tiers are for business use only. Rejected: a checkout
+  open to consumers, with each withdrawal handled by hand, an express
+  request with a durable confirmation and a withdrawal function, and a
+  merchant of record. Reason: ciproxy serves GitHub organizations, and the
+  consumer-only duties then do not apply. Agent call of 22 November 2026,
+  under the user's delegation.
 - Every sign-in button of the
   [public site](../architecture.md#public-site) says "Start free", also on
   the paid tiers of the pricing page.

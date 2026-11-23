@@ -9,7 +9,7 @@
   "Actions" read comes from the check of finding 1207.
 - **Source:** Review.
 - **Category:** Code structure.
-- **Location:** `ts/app/src/view/access.ts:46`,
+- **Location:** `ts/app/src/view/access.ts:62`,
   `docs/mockups/src/fixtures/github-app.ts:13`,
   `ts/site/src/data/workflow.ts:11`, and
   `ts/site/src/content/docs/docs/reference/github-app.md:11`, and
@@ -28,7 +28,7 @@
     permissions and the reason of each: "Self-hosted runners", read and
     write; "Metadata", read; "Members", read; and "Actions", read.
   - Three packages keep their own copy of the list:
-    - The dashboard: `appPermissions` in `ts/app/src/view/access.ts:46`,
+    - The dashboard: `appPermissions` in `ts/app/src/view/access.ts:62`,
       one string for each permission, with its access level and its
       reason. The install page shows it.
     - The mockups: `appPermissions` in

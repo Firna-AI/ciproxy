@@ -3,7 +3,7 @@
 // after the legal mockups: the title with the effective date, the switch
 // between the two pages, "On this page" on a wide window, and the sections
 // with their paragraphs. After its paragraphs, the data retention of the
-// privacy policy shows the limits that docs/protocol/security.md decides.
+// privacy policy shows the limits that docs/protocol/security-data.md decides.
 
 import {
   historyWindows,
@@ -45,10 +45,6 @@ const { title, sections } = legalPages[page];
       </a>
     ))}
   </nav>
-  <div class="legal-draft" role="note">
-    <p class="legal-draft-title">Draft for the owner's review</p>
-    <p>Square brackets mark the details that the owner must complete.</p>
-  </div>
 </Section>
 <Section class="legal-body">
   <div class="legal-grid">

@@ -60,11 +60,11 @@ To move a job to ciproxy, change one line. Replace `ubuntu-latest` in its
 The label picks the [size](docs/protocol/labels.md#terms) of the VM that
 runs the job. Every workspace starts with these labels:
 
-| Label           | vCPU | Memory | Free job disk | Slots |
-| --------------- | ---- | ------ | ------------- | ----- |
-| `ciproxy`       | 2    | 8 GB   | 20 GB         | 1     |
-| `ciproxy-4vcpu` | 4    | 16 GB  | 20 GB         | 2     |
-| `ciproxy-8vcpu` | 8    | 32 GB  | 60 GB         | 4     |
+| Label            | vCPU | Memory | Free job disk | Slots |
+| ---------------- | ---- | ------ | ------------- | ----- |
+| `ciproxy`        | 2    | 8 GB   | 20 GB         | 1     |
+| `ciproxy-medium` | 4    | 16 GB  | 20 GB         | 2     |
+| `ciproxy-large`  | 8    | 32 GB  | 60 GB         | 4     |
 
 A [slot](docs/protocol/job-routing.md#slots) is 2 vCPU and 8 GB of an own
 machine. The Slots column gives the slots that one job of the label takes
@@ -146,7 +146,12 @@ The protocol docs hold the requirements and the decisions in force:
 - [Agent](docs/protocol/agent.md): install, the connection, machine
   identity, job VMs, the image, updates, health, drain, and remove.
 - [Security](docs/protocol/security.md): sign-in and access, GitHub App
-  permissions, repository access, key custody, isolation, and job data.
+  permissions, repository access, and key custody.
+  [Terms acceptance](docs/protocol/terms-acceptance.md) states who accepts
+  the terms of service and when a new version applies.
+  [Isolation](docs/protocol/security-isolation.md) and
+  [Data and retention](docs/protocol/security-data.md) state isolation, job
+  data, and data retention.
 - [Removing or suspending the App](docs/protocol/app-removal.md): what
   stops, what stays, and what ciproxy deletes when an organization removes
   or suspends the App, and when the last organization of a workspace
