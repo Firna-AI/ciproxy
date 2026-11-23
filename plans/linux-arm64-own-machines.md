@@ -264,9 +264,11 @@ Design calls, mine, 22 November 2026:
     the agent and a boot to the guest now. The image build and the live
     checks wait for the Pi. Effort: Medium.
   - **C.** A rented arm64 bare-metal server with KVM runs the image build
-    and the live checks now. Examples are an AWS Graviton `.metal`
-    instance and a Hetzner RX server. It needs your account and access,
-    and it costs money. Effort: Medium.
+    and the live checks now. Examples are a GCP C4A bare-metal instance
+    with Google Axion processors, an AWS Graviton `.metal` instance, and a
+    Hetzner RX server. ciproxy already deploys to the GCP project
+    `ciproxy`. The smallest C4A bare-metal type has 96 vCPUs, so it costs
+    much more per hour than a small server. Effort: Medium.
   - **D.** An arm64 Linux VM with nested virtualization on your Mac mini
     M4, over Tailscale, as the macOS work did. It runs the VM checks, the
     image build, and the live checks now, at no new cost. A short check
@@ -287,7 +289,8 @@ Design calls, mine, 22 November 2026:
     first. Effort: Medium.
 - **Left out:**
   - GitHub's hosted arm64 runners and common cloud arm64 VMs, because they
-    have no KVM. EC2 nested virtualization covers Intel types only.
+    have no KVM. EC2 nested virtualization covers Intel types only. GCP
+    nested virtualization excludes VMs with Arm processors.
   - The other 40 sandbox providers of the survey of 23 November 2026,
     because none documents `/dev/kvm` on arm64.
   - Firecracker Nitro Sandboxes on ordinary Graviton EC2 instances, from
