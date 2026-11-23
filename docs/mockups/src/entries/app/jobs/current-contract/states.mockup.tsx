@@ -7,7 +7,7 @@ import { JobsHistoryScreen } from "../../../../screens/jobs/jobs-history.tsx";
 import { JobsLiveScreen } from "../../../../screens/jobs/jobs-live.tsx";
 
 const rationale =
-  "The richer known-data pages stay as the target. These pages show only what the API gives today: no person or date of a suspension, no reason of a Boat refusal, no Boat account address, no total of the day, no tier name, no routing reason, and no fit of a Boat size.";
+  "The richer known-data pages stay as the target. These pages show only what the API gives today: no person or date of a suspension, no reason of a Boat refusal, no Boat account address, no total of the day, no tier name, no routing reason, and no fit of a Boat size. The job API gives the CPU and memory figures, so the page of each job that ran shows the panel.";
 
 export const suspended = defineScreen({
   slug: "suspended",
@@ -52,9 +52,9 @@ export const ownJob = defineScreen({
   slug: "own-job",
   title: "A job on an own machine, with the facts of the API",
   description:
-    "test (rust) as the API gives it: the times when GitHub queued it, when a runner took it, and when it passed. The API gives no routing reason yet, so the page says that it is not available.",
+    "test (rust) as the API gives it: the times when GitHub queued it, when a runner took it, and when it passed. The API gives no routing reason yet, so the page says that it is not available. The CPU and memory panel shows the same figures as the job page.",
   rationale,
-  relatedDocs: related("jobRouting", "labels", "cache", "metering"),
+  relatedDocs: related("jobUsage", "jobRouting", "labels", "cache", "metering"),
   address: orgAddress("jobs/48213977"),
   render: (_props, context) => (
     <JobDetailScreen viewport={context.viewport} state="current-own" />
@@ -65,9 +65,9 @@ export const boatJob = defineScreen({
   slug: "boat-job",
   title: "A job on Boat, with the facts of the API",
   description:
-    "e2e (chromium) 3/4 as the API gives it. The VM size names the Boat size and says that Boat bills it, with no claim that the size fits the label, because the API gives no fit.",
+    "e2e (chromium) 3/4 as the API gives it. The VM size names the Boat size and says that Boat bills it, with no claim that the size fits the label, because the API gives no fit. The CPU and memory panel shows the same figures as the job page on Boat, with the size of the label marked, because the API gives the request of the job.",
   rationale,
-  relatedDocs: related("jobRouting", "overflow", "labels"),
+  relatedDocs: related("jobUsage", "jobRouting", "overflow", "labels"),
   address: orgAddress("jobs/48213902"),
   render: (_props, context) => (
     <JobDetailScreen viewport={context.viewport} state="current-boat" />

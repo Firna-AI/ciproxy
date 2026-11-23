@@ -61,6 +61,11 @@ const detailPaths: Readonly<Record<JobDetailState, CataloguePath>> = {
   "unknown-facts": paths.jobUnknownFacts,
   "current-own": paths.jobCurrentOwn,
   "current-boat": paths.jobCurrentBoat,
+  "out-of-memory": paths.jobOutOfMemory,
+  macos: paths.jobMacos,
+  running: paths.jobRunning,
+  "no-figures": paths.jobNoFigures,
+  "no-steps": paths.jobNoSteps,
 };
 
 /**

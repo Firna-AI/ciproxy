@@ -1,0 +1,170 @@
+/* The CPU and memory panel (job-usage.tsx): it takes the full width of the
+   job page under the two panels. The figures and the chart sit in the padded
+   body, the step table runs to the panel edges, and the note closes the
+   panel. */
+
+.job-usage {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.usage-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px;
+}
+
+.mockup-mobile .usage-body {
+  padding: 14px;
+}
+
+/* The figures of the job: three on a row, or two on a row on a phone, so the
+   two meters sit side by side. */
+
+.usage-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+
+.mockup-mobile .usage-figures {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.usage-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.usage-figure-label {
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.usage-figure-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+}
+
+.usage-figure-number {
+  color: var(--c-ink);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 26px;
+  white-space: nowrap;
+}
+
+.usage-figure-number .dot-label {
+  color: var(--c-ink);
+}
+
+/* A meter with the size of the label as a tick, ringed in the surface
+   colour so it shows on the fill and on the track. */
+
+.usage-meter {
+  position: relative;
+  display: block;
+}
+
+.usage-meter-mark {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 10px;
+  border-radius: var(--r-mark-sm);
+  background: var(--c-chart-context);
+  box-shadow: 0 0 0 1px var(--c-surface);
+  transform: translateX(-50%);
+}
+
+/* The steps: a table that runs to the panel edges on desktop, and a dense
+   list on a phone. A long step name wraps rather than widens the table. */
+
+.usage-steps {
+  border-top: 1px solid var(--c-border);
+}
+
+.usage-steps .dt td.col-step {
+  white-space: normal;
+}
+
+.step-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.step-number {
+  min-width: 16px;
+  color: var(--c-muted);
+  font-size: 12px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.step-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.step-script {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-rows {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--c-border);
+  list-style: none;
+}
+
+.step-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.step-row:first-child {
+  border-top: 0;
+}
+
+.step-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.step-row > .duration,
+.step-row > .muted {
+  flex-shrink: 0;
+  line-height: 20px;
+}
+
+/* The figures under the name line up with the name, after the number. */
+.step-figures {
+  padding-left: 26px;
+}
+
+.usage-note {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--c-border);
+}
+
+.mockup-mobile .usage-note {
+  padding: 10px 14px 12px;
+}

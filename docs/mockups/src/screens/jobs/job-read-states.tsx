@@ -14,6 +14,7 @@ import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import "./jobs.css";
 import "./job-detail.css";
+import "./job-usage.css";
 
 export const jobReadStates = ["loading", "error", "not-found"] as const;
 export type JobReadState = (typeof jobReadStates)[number];
@@ -38,6 +39,16 @@ function LoadingJob() {
           <SkeletonBar width="90%" height={14} />
         </SkeletonGroup>
       </Panel>
+      <div className="job-usage">
+        <Panel title="CPU and memory">
+          <SkeletonGroup direction="column" gap={12}>
+            <SkeletonBar width="40%" height={14} />
+            <SkeletonBar width="100%" height={120} />
+            <SkeletonBar width="90%" height={14} />
+            <SkeletonBar width="90%" height={14} />
+          </SkeletonGroup>
+        </Panel>
+      </div>
     </div>
   );
 }

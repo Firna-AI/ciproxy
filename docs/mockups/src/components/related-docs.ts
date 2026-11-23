@@ -12,6 +12,7 @@ const docs = {
   cache: "docs/protocol/cache.md",
   dockerDisks: "docs/protocol/docker-disks.md",
   jobRouting: "docs/protocol/job-routing.md",
+  jobUsage: "docs/protocol/job-usage.md",
   labels: "docs/protocol/labels.md",
   metering: "docs/protocol/metering.md",
   overflow: "docs/protocol/overflow.md",

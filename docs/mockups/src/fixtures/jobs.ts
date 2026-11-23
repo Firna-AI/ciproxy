@@ -47,6 +47,10 @@ export type Job = {
 /** The label of a job whose row names no other: the default label. */
 export const defaultLabel = "ciproxy";
 
+/** Why a job ran on an own machine whose warm runner took it. */
+export const warmReason =
+  "A warm runner was ready, so the job started at once.";
+
 export const own = (index: number, slot: number): Where => ({
   kind: "own",
   machine: `hetzner-ax42-${index}`,

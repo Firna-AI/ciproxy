@@ -44,6 +44,36 @@ export function unbroken(text: string): string {
   return text.replaceAll(" ", nbsp);
 }
 
+/** 372 -> "6m 12s", 21 -> "21s": a duration in whole seconds. */
+export function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes === 0
+    ? `${rest}s`
+    : `${minutes}m ${String(rest).padStart(2, "0")}s`;
+}
+
+const tenths = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+/**
+ * 1.56 -> "1.6 vCPU": a measured vCPU figure, whole on one line. A VM size or
+ * a label size uses vcpuText() of sizes.ts, as the Details panel does.
+ */
+export function formatVcpu(value: number): string {
+  return unbroken(`${tenths.format(value)} vCPU`);
+}
+
+/**
+ * 6.08 -> "6.1 GB": a measured memory figure in SI GB, whole on one line. A
+ * VM size or a label size uses memoryText() of sizes.ts.
+ */
+export function formatGb(value: number): string {
+  return unbroken(`${tenths.format(value)} GB`);
+}
+
 /** "$49 a month", whole on one line. */
 export function monthly(amount: number): string {
   return unbroken(`${formatMoney(amount)} a month`);

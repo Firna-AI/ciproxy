@@ -25,8 +25,8 @@ The change does not cover size hints, figures on the job list, figures
 while a job runs, figures for each process, alerts, or an export to the
 customer's own monitoring. A job that ran before the change has no figures.
 
-The user answered all five decisions by 23 November 2026, so no TODO waits
-for an answer.
+Decision 6 waits for the user. Each TODO that needs its answer ends with
+"Waits for decision 6". The other TODOs do not wait.
 
 Contract owners:
 
@@ -325,10 +325,11 @@ and the
 - **Background:** The guest program sends the end report after its runner
   exits. When GitHub reports that a job completed, the Boat cleanup
   removes the runner of that job and deletes its sandbox at once. It does
-  not wait for the end report. The cleanup holds the overflow lock of the
-  workspace. An end report that waits for that lock is refused after the
-  cleanup ends the record of the sandbox. The samples of decision 1
-  travel in the end report.
+  not wait for the end report. When this decision was made, an end report
+  that waited for the overflow lock was refused after the cleanup ended
+  the record of the sandbox. Since the claim-first change of main on
+  23 November 2026, a report that arrives first is saved without the lock.
+  The samples of decision 1 travel in the end report.
 - **Problem:** The cleanup can delete the sandbox before the guest sends
   its end report, or refuse a report that arrives during the cleanup. The
   samples of that job are then lost.
@@ -416,6 +417,79 @@ and the
   rate limits of the design stay, because they also protect the control
   plane from a broken guest.
 
+## Decision 6. The hold reverses an earlier choice
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation. The orchestrator found it on 23 November
+  2026, while it prepared Milestone 2. The options check of the same day
+  added D and E, and it changed the reason of the recommendation.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/overflow-sandbox-end.md:46` and
+  `crates/ciproxy-control-plane/src/boat_authority.rs:94`.
+- **Terms:**
+  - **Exit report:** the one-time message in which the guest program of a
+    Boat sandbox tells the control plane that its runner exited. This plan
+    adds the samples and the steps of the job to it.
+  - **Job-end delete:** the delete of a Boat sandbox that starts when
+    GitHub reports that its job completed.
+  - **Claim-first:** the user's choice of 22 November 2026. The control
+    plane saves an exit report before it waits for other overflow work.
+- **Background:**
+  - With claim-first, a report that arrives before the job-end delete is
+    saved. The samples are lost only when the delete comes first.
+  - The Decision line of "The exit report" in `overflow-sandbox-end.md`
+    still rejects "a delay of the job-end delete".
+  - That rejection had two reasons: a report could still wait behind other
+    overflow work, and the delay bills each sandbox whose report never
+    comes. Claim-first removed the first reason.
+  - On 23 November 2026, the user chose B and C for decision 4. B is such a
+    delay. B states the second reason as its cost.
+- **Problem:** The protocol doc rejects the hold that decision 4 adds.
+- **Impact if no action:** Milestone 2 cannot write the Boat rules, and
+  Milestone 8 cannot build the hold.
+- **Root question:** How does the control plane keep the final samples of
+  a Boat job without breaking a reason of the claim-first choice that
+  still holds?
+- **Options:**
+  - **A.** Keep B and C. The doc keeps the Decision line for claim-first,
+    takes the delay out of its rejected list, and adds a Decision line for
+    the hold. Cost: Boat bills up to about 25 seconds more, but only when a
+    report is late or lost. Effort: Small.
+  - **B.** Keep only C. The job-end delete and the doc stay as they are.
+    Cost: when the delete comes first, a Boat job loses up to its last 30
+    seconds of samples and steps, which often hold the step that failed.
+    Effort: Small.
+  - **C.** Keep only C, but send the samples every 10 seconds, with a rate
+    limit of 5 seconds. Cost: about 100 KB every 10 seconds for a long job,
+    and a Boat job still loses up to its last 10 seconds. Effort: Small.
+  - **D.** Keep only C, and add the runner's job-completed hook on Boat.
+    The hook asks the guest to send a sample report, and it waits a few
+    seconds for the answer. The runner runs the hook after the last step,
+    before it reports the result to GitHub. Cost: each Boat job log gets a
+    "Complete runner" step, and each Boat job runs up to the hook limit
+    longer. Effort: Medium.
+  - **E.** Keep only C, and also send a sample report when the guest sees a
+    step end in the Worker log, inside the rate limit. Cost: nothing makes
+    sure that the report of the last step arrives first. Effort: Small.
+- **Left out:** The hold without a doc change, because the protocol doc
+  must state the behaviour. Saving a report that arrives after the recorded
+  end, because it keeps only a report that left the VM during the delete.
+  The exit report as the only trigger of the delete, because a lost report
+  would then bill up to the lifetime of 6 hours.
+- **Wider fix:** A, because it keeps each fact of the exit report, not only
+  the samples.
+- **Previous examples:** `plans/follow-ups/boat-live-completion-acceptance.md`
+  and `plans/follow-ups/overflow-lifecycle-canonical-writes.md` record the
+  same race between the cleanup and the exit report.
+- **Related:** Decision 4, the same code. This decision settles whether B
+  of decision 4 applies.
+- **Recommendation:** A. The reason against a delay was a report that
+  waits behind other overflow work, and claim-first removed it. So A
+  narrows one rejected list and keeps claim-first. Choose D to keep the
+  text of 22 November 2026 as it is.
+- **Action:** ask the user, because A changes the rejected list of a
+  decision in force that the user made on 22 November 2026.
+
 ## Design
 
 Design calls, my calls, 22 November 2026:
@@ -485,7 +559,8 @@ Design calls, my calls, 22 November 2026:
 - **Job page only:** the job list stays as it is. Reason: the job page
   answers the question, and a list column can follow.
 - **Running jobs:** the panel says that the figures come when the job ends.
-  Reason: the guest sends the samples once, with the exit report.
+  Reason: own machines send the samples once, with the exit report, and the
+  Boat sample reports hold only part of a job.
 - **Older jobs:** a job without figures, for example from an older agent
   or image, shows one plain sentence instead of the panel content.
 - **Tiers and retention:** every tier gets the figures. They follow the job
@@ -560,6 +635,32 @@ Design calls, my calls, 23 November 2026, for the answer to decision 1:
   guest reads with the steps of the workflow. Each update of the runner pin
   reruns both. Reason: the log format is not a contract of the runner.
 
+Design calls, my calls, 23 November 2026, from the mockups of Milestone 1:
+
+- **Label mark:** a job whose VM is larger than the size of its label, as
+  on Boat, shows the label size as a reference mark on both plots and both
+  meters. Reason: a reader sizes the label from these figures.
+- **Run prefix:** the script names design call applies only to a name that
+  starts with "Run ", "Pre Run ", or "Post Run ", with the space. Reason:
+  a name such as "Running tests" is a name that the author chose.
+- **Display units:** measured figures use SI GB and vCPU with one decimal.
+  VM sizes and label sizes keep the format of the Details panel, such as
+  "2 vCPU · 8 GB". Reason: one value has one format on a page.
+- **Meter top:** the top of the memory meter is the memory of the VM. The
+  kernel of the VM keeps a part of it, so a job can run out of memory below
+  the top. The new protocol doc says so.
+- **macOS memory:** macOS counts app, wired, and compressed memory, so its
+  figures do not compare with Linux figures. The new protocol doc says so.
+- **Running state:** the panel keeps its state for a running job, because a
+  direct link can open the page of a running job. No new link leads to it.
+- **Whole VM note:** the panel says that each figure covers the whole VM,
+  also the services and processes that earlier steps started.
+- **App chart:** `@firna/ui/chart` cannot mark steps, and it draws at a
+  fixed width in a static render. So Milestone 11 builds the chart in the
+  app as the mockup draws it, with token colours. Previous example of a
+  chart that drifted from its mockup:
+  `plans/follow-ups/savings-chart-firna-marks.md`.
+
 Contract sketch, for the protocol crate:
 
 - `JobUsage`: the platform, the UTC start of the first point, the length
@@ -582,24 +683,27 @@ Depends on: none
 The job page gets a CPU and memory panel. The job page already renders
 five screens, so a new sub-page holds the other states of the panel.
 
-- [ ] Add a CPU and memory panel to the job page screen, in a new component
+- [x] Add a CPU and memory panel to the job page screen, in a new component
       beside `docs/mockups/src/screens/jobs/job-detail.tsx`. It shows the
       peak memory and the average CPU of the job, a chart over time with
       the steps marked, and a table of the steps with their figures. Check
       `@firna/ui` and its chart family first.
-- [ ] Add usage fixtures to the own-machine and Boat states of the job
+- [x] Add usage fixtures to the own-machine and Boat states of the job
       page. Include a step that holds no point.
-- [ ] Name the steps of the fixtures with the script names design call.
+- [x] Name the steps of the fixtures with the script names design call.
       Include a script step that shows as "Run script".
-- [ ] Add a sub-page for the panel under
+- [x] Add a sub-page for the panel under
       `docs/mockups/src/entries/app/jobs/`, with at most five states: a
       step that ran out of memory, a macOS job, a running job, a job
       without figures, and a job without step times.
-- [ ] Link the existing job routing and security docs from the new pages.
-- [ ] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
+- [x] Link the job routing and security docs, and the new job usage doc,
+      from the new pages.
+- [x] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
       pages in the mobile and the desktop variants.
-- [ ] Update the design and the TODOs of this plan for each problem that
+- [x] Update the design and the TODOs of this plan for each problem that
       the mockups show.
+
+Evidence: the screenshots are in `.context/job-step-cpu-and-memory/mockups/`.
 
 ## Milestone 2: Documentation and protocol
 
@@ -609,9 +713,10 @@ The protocol docs state the requirements of the figures before the code.
 
 - [ ] Write `docs/protocol/job-usage.md`: the terms, the figures, the
       window, the steps, what the job page shows, the platforms, the trust
-      rule, retention, and decision 1 with its rejected options. Link the
-      mockup pages of Milestone 1. Say that the steps come from the runner
-      in the VM, and that job code can change them.
+      rule, retention, and decision 1 with its rejected options. Say that
+      the steps come from the runner in the VM, and that job code can
+      change them. State the meter top, the display units, and the macOS
+      memory design calls.
 - [ ] Add the CPU and memory samples and the steps of each job to the job
       metadata in "Secrets and job data" of `docs/protocol/security-data.md`,
       with the script names and rule words design calls. Link the new doc.
@@ -619,10 +724,12 @@ The protocol docs state the requirements of the figures before the code.
       token also sends the samples of its own job.
 - [ ] Write the out-of-memory rule of decision 2 into the new doc: only
       the stopped process ends, and the job goes on.
-- [ ] Write the hold and the sample reports of decision 4 into "The end of
-      a job" and "The exit report" of
+- [ ] Write the sample reports of decision 4 into "The exit report" of
       `docs/protocol/overflow-sandbox-end.md`. Align the token sentence of
       `docs/protocol/overflow.md`.
+- [ ] Write the answer to decision 6 into "The end of a job" and into the
+      Decision line of "The exit report" of
+      `docs/protocol/overflow-sandbox-end.md`. Waits for decision 6.
 - [ ] Link the new doc from "What the dashboard shows" in
       `docs/protocol/job-routing.md`.
 - [ ] Add the samples to the boundary "The agent and its job VMs" in
@@ -738,14 +845,17 @@ Boat sample reports.
       `crates/ciproxy-control-plane/src/boat_callback.rs` receives.
 - [ ] Save the steps of each report with its samples, after the script
       names design call. Apply the step limits of the design. Test each
-      kind of name and each limit.
+      kind of name and each limit. Pin with a test that a one-word command
+      shaped like an action, such as "Run foo/bar@baz", keeps its text.
 - [ ] Accept the Boat sample reports with the report limits design call.
       Test the rate limit, a report after the record ends, and a newer
       series that replaces an older one.
 - [ ] Add the hold of decision 4 to the retirement check in
-      `crates/ciproxy-control-plane/src/boat_authority.rs`, not inside the
-      cleanup lock. Test a late end report, which keeps the final series,
-      and a lost one, which keeps the newest sample report.
+      `crates/ciproxy-control-plane/src/boat_authority.rs`, if decision 6
+      keeps it. The check skips the sandbox and never waits. Start the 15
+      seconds at the completion time that the control plane records for
+      the job. Test a late end report, which keeps the final series, and a
+      lost one, which keeps the newest sample report. Waits for decision 6.
 - [ ] Apply the checks of the design. Test each check, and test that a
       dropped usage keeps the exit.
 - [ ] Update the READMEs of `ciproxy-control-plane` and `ciproxy-overflow`.
@@ -796,6 +906,12 @@ The dashboard shows the panel of the mockups.
 - [ ] Build the CPU and memory panel and each of its states in
       `ts/app/src/screens/jobs/`, as the mockups show them. Check
       `@firna/ui` first, and take each colour from `@ciproxy/tokens`.
+- [ ] Build the chart as the app chart design call says. Draw the label
+      line in the context colour of `chartColors`, not in a status colour.
+      Draw the meter tick over `ProgressBar`, not with `BulletChart`,
+      whose screen reader text speaks of a target.
+- [ ] Add formatters for one decimal of vCPU and GB. The app formatters
+      round to whole numbers today.
 - [ ] Test the formatting of the figures under `ts/app/_tests_/`.
 - [ ] Smoke-test the job page with the dev server, on a phone width and on
       a desktop width.

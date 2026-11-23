@@ -27,11 +27,21 @@ export const defaultMacosLabelSize: Size = {
 /** The least free disk that a label gives each job, in GB. */
 export const minimumFreeDiskGb = 1;
 
+/** "8 vCPU", the vCPU of a size, whole on one line. */
+export function vcpuText(vcpu: number): string {
+  return unbroken(`${vcpu} vCPU`);
+}
+
+/** "32 GB", the memory of a size, whole on one line. */
+export function memoryText(memoryGb: number): string {
+  return unbroken(`${memoryGb} GB`);
+}
+
 /** "8 vCPU · 32 GB · 60 GB free disk", the size of a label. */
 export function sizeText(size: Size): string {
   return dotJoin(
-    unbroken(`${size.vcpu} vCPU`),
-    unbroken(`${size.memoryGb} GB`),
+    vcpuText(size.vcpu),
+    memoryText(size.memoryGb),
     unbroken(`${size.freeDiskGb} GB free disk`),
   );
 }
@@ -45,15 +55,15 @@ export type JobVm = { vcpu: number; memoryGb: number; vmDiskBytes: number };
 /** "2 vCPU · 8 GB · 81 GB VM disk", the VM that ran a job. */
 export function vmSizeText(vm: JobVm): string {
   return dotJoin(
-    unbroken(`${vm.vcpu} vCPU`),
-    unbroken(`${vm.memoryGb} GB`),
+    vcpuText(vm.vcpu),
+    memoryText(vm.memoryGb),
     unbroken(`${diskText(vm.vmDiskBytes)} VM disk`),
   );
 }
 
 /** "16 vCPU and 32 GB", the vCPU and memory of a size in a sentence. */
 export function sizePhrase(size: Pick<Size, "vcpu" | "memoryGb">): string {
-  return `${unbroken(`${size.vcpu} vCPU`)} and ${unbroken(`${size.memoryGb} GB`)}`;
+  return `${vcpuText(size.vcpu)} and ${memoryText(size.memoryGb)}`;
 }
 
 /**
@@ -70,8 +80,8 @@ export type BoatSize = {
 /** "8 vCPU · 16 GB · 111 GB disk", a Boat size as Boat states it. */
 export function boatSizeText(size: BoatSize): string {
   return dotJoin(
-    unbroken(`${size.vcpu} vCPU`),
-    unbroken(`${size.memoryGb} GB`),
+    vcpuText(size.vcpu),
+    memoryText(size.memoryGb),
     unbroken(`${size.diskGb} GB disk`),
   );
 }

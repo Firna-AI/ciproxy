@@ -8,7 +8,8 @@ import { JobReadScreen } from "../../../../screens/jobs/job-read-states.tsx";
 export const loading = defineScreen({
   slug: "loading",
   title: "While the job loads",
-  description: "Skeleton bars keep the layout of the two panels.",
+  description:
+    "Skeleton bars keep the layout of the three panels: Where it ran, Details, and CPU and memory.",
   relatedDocs: related("jobRouting"),
   address: orgAddress("jobs/48213977"),
   render: (_props, context) => (
@@ -59,10 +60,10 @@ export const unknownFacts = defineScreen({
   slug: "unknown-facts",
   title: "A job with unknown facts",
   description:
-    "deploy preview ran on hetzner-ax42-3. GitHub reports it as passed with no finish time, ciproxy has no saved request and no report of its VM, and the machine cache sent no counts. Each such value says Unknown, never 0 or the current label size.",
+    "deploy preview ran on hetzner-ax42-3. GitHub reports it as passed with no finish time, ciproxy has no saved request and no report of its VM, and the machine cache sent no counts. Each such value says Unknown, never 0 or the current label size. The CPU and memory panel says that the figures are not available.",
   rationale:
     "The API keeps unknown values apart from zero: the duration, the VM size, the request, and the cache facts can each be absent.",
-  relatedDocs: related("jobRouting", "cache", "labels"),
+  relatedDocs: related("jobUsage", "jobRouting", "cache", "labels"),
   address: orgAddress("jobs/48213931"),
   render: (_props, context) => (
     <JobDetailScreen viewport={context.viewport} state="unknown-facts" />

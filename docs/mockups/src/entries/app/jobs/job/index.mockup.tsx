@@ -10,10 +10,18 @@ import { JobDetailScreen } from "../../../../screens/jobs/job-detail.tsx";
 export const job = defineScreen({
   title: "Job detail",
   description:
-    "A job that ran on an own machine. A warm runner took it at once. The job VM had the size of the label ciproxy, and the machine cache handled the restores, so the page shows their counts.",
+    "A job that ran on an own machine. A warm runner took it at once. The job VM had the size of the label ciproxy, and the machine cache handled the restores, so the page shows their counts. The CPU and memory panel shows the average CPU and the peak memory against the 2 vCPU and 8 GB of the VM, a chart with each step marked, and the figures of each step, from Set up job to Complete job. cargo fetch shows as Run script, with a link to its step on GitHub. The step that the author named Running tests keeps its name. The post step of actions/checkout lasted under a second, so it holds no point and shows no figures.",
   rationale:
-    "The label and the VM size that ran say what the job got. The cache counts come from the agent, so only a job whose restores the machine cache handled shows them.",
-  relatedDocs: related("jobRouting", "labels", "cache", "overflow", "metering"),
+    "The label and the VM size that ran say what the job got. The cache counts come from the agent, so only a job whose restores the machine cache handled shows them. The figures cover the whole VM while each step runs, because the label limits the whole VM. Only a step name that starts with Run, Pre Run, or Post Run and a space can come from a run command and hold a line of job code. ciproxy keeps such a name only when the rest names a remote action, and shows each other one as Run script, Pre Run script, or Post Run script.",
+  relatedDocs: related(
+    "jobUsage",
+    "jobRouting",
+    "labels",
+    "cache",
+    "overflow",
+    "metering",
+    "securityData",
+  ),
   address: orgAddress("jobs/48213977"),
   propSchema: stateSchema(jobDetailStates),
   props: { state: "own" },
@@ -25,7 +33,7 @@ export const job = defineScreen({
       slug: "boat",
       title: "A job that ran on Boat",
       description:
-        "The own machines were full, so the job waited 30 seconds and then ran on Boat. Boat ran it on large, 8 vCPU and 16 GB, because it is the cheapest Boat size that fits the 8 GB of the label ciproxy and its VM disk of 81 GB, the current image with 20 GB of free disk: default has the memory, but only 51 GB of disk. Boat bills that size. The page shows only the cache source, the GitHub cache, because only the machine cache counts the restores of a job.",
+        "The own machines were full, so the job waited 30 seconds and then ran on Boat. Boat ran it on large, 8 vCPU and 16 GB, because it is the cheapest Boat size that fits the 8 GB of the label ciproxy and its VM disk of 81 GB, the current image with 20 GB of free disk: default has the memory, but only 51 GB of disk. Boat bills that size. The page shows only the cache source, the GitHub cache, because only the machine cache counts the restores of a job. The CPU and memory run against large, the size that ran the job. A grey line on each plot, and a note and a tick at each meter, mark the size of the label, 2 vCPU and 8 GB, so the page shows that the job used more vCPU than the label gives.",
       address: orgAddress("jobs/48213902"),
       props: { state: "boat" },
       useCasePaths: [paths.flowPeakOverflow],
@@ -42,10 +50,17 @@ export const job = defineScreen({
       slug: "mixed-cache",
       title: "A job that restored from both caches",
       description:
-        "eval (agents) of mokly-labs, the second organization of the workspace, ran on hetzner-ax42-2. The machine cache handled its 4 restores: some entries were on the machine, and the rest came from the GitHub cache, where jobs on the other machines had saved them. The page shows the counts and names both caches.",
+        "eval (agents) of mokly-labs, the second organization of the workspace, ran on hetzner-ax42-2. The machine cache handled its 4 restores: some entries were on the machine, and the rest came from the GitHub cache, where jobs on the other machines had saved them. The page shows the counts and names both caches. Its step Run evals shows as Run script, as each step name that starts with Run and a space and names no remote action does.",
       rationale:
         "Design call 44: a job that restored from both caches shows This machine and the GitHub cache, because one of the two sources would be false for some of its entries.",
-      relatedDocs: relatedMvp("jobRouting", "labels", "cache", "metering"),
+      relatedDocs: relatedMvp(
+        "jobUsage",
+        "jobRouting",
+        "labels",
+        "cache",
+        "metering",
+        "securityData",
+      ),
       address: orgAddress("jobs/48213941"),
       props: { state: "mixed-cache" },
     },
@@ -56,7 +71,13 @@ export const job = defineScreen({
         "fmt checks the formatting of mokly and uses no cache. A warm runner on hetzner-ax42-2 ran it, and it restored no entry, so the page says No entries restored and names no cache source.",
       rationale:
         "A design call of the docs work of Milestone 2: a job that restored no entry shows No entries restored, which is true for every such job.",
-      relatedDocs: relatedMvp("jobRouting", "labels", "cache", "metering"),
+      relatedDocs: relatedMvp(
+        "jobUsage",
+        "jobRouting",
+        "labels",
+        "cache",
+        "metering",
+      ),
       address: orgAddress("jobs/48213928"),
       props: { state: "no-restores" },
     },

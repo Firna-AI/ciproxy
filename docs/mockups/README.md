@@ -78,7 +78,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the disk rule, in which each running job holds its VM disk: the current image
   with the free disk of its label, as `vm-disk.ts` gives it. In
   `job-details.ts`, ciproxy has no saved request for two jobs of the history, so
-  their pages show an unknown request and the VM that ran each job.
+  their pages show an unknown request and the VM that ran each job. In
+  `job-usage-details.ts`, typecheck ran on hetzner-ax42-1 with an agent from
+  before the CPU and memory figures, so its page has none, and ciproxy could
+  not read the steps of unit (node 24).
 - A machine that gets its first job image takes no job until the image is
   ready. Every page that shows such a machine says so: the machine list and
   the machine page show it as Preparing, and Setup and Add a machine show it
@@ -133,6 +136,15 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   of a label that only Boat runs and of a label whose Boat size Boat
   refused. `fit-facts` shows a label that no permitted place fits, with its
   full request, and a label that does not run on Boat.
+- The job page shows the CPU and memory of each job that a runner took,
+  against the VM that ran it. The Jobs folder `cpu-memory` shows the other
+  states of that panel: a step that ran out of memory, a macOS job, a running
+  job, a job without figures, and a job without steps. When the VM is larger
+  than the size of the label, as on Boat, a line on each plot and a note at
+  each meter mark the label size. Only a step name that starts with "Run ",
+  "Pre Run ", or "Post Run " can come from a run command, so the panel keeps
+  such a name only when the rest names a remote action, and shows each other
+  one as Run script, Pre Run script, or Post Run script.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -160,8 +172,11 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   and a feature that ships later says "Coming later", through
   `src/components/tier-feature-list.tsx`.
 - One value has one format: `src/fixtures/format.ts` holds the money, count,
-  and date formats, and `unbroken()` keeps a short value such as a date on one
-  line.
+  date, and duration formats, and the formats of a measured vCPU or memory
+  figure, each with one decimal and memory in SI GB. `unbroken()` keeps a
+  short value such as a date on one line. `src/fixtures/sizes.ts` writes a VM
+  size or a label size in whole vCPU and GB, as the Details panel of the job
+  page does, also in the CPU and memory panel.
 - The look is Graphite: light and monochrome, Geist and Geist Mono, hairline
   borders, small radii, and black primary buttons. Colour marks status only,
   as a dot beside its word. Its tokens live in
@@ -277,10 +292,11 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   parts. Each total comes from `machines.ts`: the spend of the month, or the
   limit when the spend reaches it. The unconfirmed part holds each start that
   Boat has not reported, at its highest cost, also after its lifetime ends.
-- `src/fixtures/sizes.ts`: the size of a label as text, the size of the
-  default label, the least free disk of a label, the VM that ran a job with
-  its VM disk, and the sizes that the Boat account can start, with their
-  whole disks, which decide where the jobs of a label run.
+- `src/fixtures/sizes.ts`: the size of a label as text, with its vCPU and
+  memory as `vcpuText()` and `memoryText()`, the size of the default label,
+  the least free disk of a label, the VM that ran a job with its VM disk, and
+  the sizes that the Boat account can start, with their whole disks, which
+  decide where the jobs of a label run.
 - `src/fixtures/vm-disk.ts`: the VM disk of a job, which grows the root disk
   of the current image by the free disk of its label. It mirrors `RootSizing`
   of `ciproxy-agent`, and it holds the root size of the current image. No
@@ -327,6 +343,15 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/fixtures/job-details.ts`: the jobs of the job page, with the label, the
   request that it gave the job or an unknown request, the Boat size that ran
   a job on Boat, and the cache source and counts.
+- `src/fixtures/job-usage.ts`: the CPU and memory of a job: a point for each
+  second, the steps with the names that ciproxy keeps, the figures of each
+  step from the points whose middle it holds, and the size of the label when
+  the VM is larger. `job-usage-jobs.ts` builds the figures of each job page
+  from a profile of its steps, and `job-usage-details.ts` holds the jobs of
+  the `cpu-memory` states.
+- `src/screens/jobs/job-usage.tsx`: the CPU and memory panel of the job page,
+  with the figures of the job, the chart of `usage-chart.tsx`, and the step
+  table of `usage-steps.tsx`, or one sentence in their place.
 - `src/fixtures/usage.ts`: Plan and usage at each moment, the included starts
   and own machines of a use, and the day on which the pace passes the
   included starts, which decides the pace notice of Free.

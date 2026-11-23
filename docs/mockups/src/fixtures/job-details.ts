@@ -8,13 +8,16 @@
 // ciproxy saves. In a what-if, ciproxy has no saved request for two jobs of
 // the history, one on an own machine and one on Boat. Their request is then
 // unknown, never the current size of the label, which can change after a job.
-// The VM that ran each of them stays known.
+// The VM that ran each of them stays known. The jobs of the CPU and memory
+// states come from job-usage-details.ts.
 
 import { factDetails } from "./job-details-facts.ts";
+import { usageDetails } from "./job-usage-details.ts";
 import {
   onBoat,
   own,
   repositoryName,
+  warmReason,
   type JobState,
   type Where,
 } from "./jobs.ts";
@@ -91,10 +94,13 @@ export const jobDetailStates = [
   "unknown-facts",
   "current-own",
   "current-boat",
+  "out-of-memory",
+  "macos",
+  "running",
+  "no-figures",
+  "no-steps",
 ] as const;
 export type JobDetailState = (typeof jobDetailStates)[number];
-
-const warmReason = "A warm runner was ready, so the job started at once.";
 
 const boatReason = `Your machines were full, so the job started on Boat after ${boat.waitSeconds} seconds.`;
 
@@ -246,4 +252,5 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     cache: { source: "github", fallback: false },
   },
   ...factDetails,
+  ...usageDetails,
 };

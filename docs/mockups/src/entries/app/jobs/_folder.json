@@ -4,6 +4,7 @@
     "waiting",
     "history",
     "job",
+    "cpu-memory",
     "unknown-request",
     "job-states",
     "wait-facts",

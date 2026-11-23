@@ -5,7 +5,10 @@
 // machine cache handled the restores; a job on Boat, and a job that fell back
 // to the GitHub cache, show only the cache source. When ciproxy has no saved
 // request for a job, the label says so in place of a size, and the VM size
-// comes from the VM that ran the job, never from the label as it is now.
+// comes from the VM that ran the job, never from the label as it is now. A
+// job that a runner took shows the CPU and memory panel of job-usage.tsx
+// under the two panels, also on the pages of the current API, because the
+// job API gives the figures. A running job shows its time so far.
 
 import { CircleDashed, Cloud, ExternalLink, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -27,8 +30,10 @@ import {
   type JobDetail,
   type JobDetailState,
 } from "../../fixtures/job-details.ts";
+import { jobUsage } from "../../fixtures/job-usage-jobs.ts";
 import type { Where } from "../../fixtures/jobs.ts";
 import { boatSizeText, sizeText, vmSizeText } from "../../fixtures/sizes.ts";
+import { UsagePanel } from "./job-usage.tsx";
 import "./jobs.css";
 import "./job-detail.css";
 
@@ -149,7 +154,7 @@ function RanDetails({ job }: { job: JobDetail }) {
       <DetailRow label="Waited">
         <span className="duration">{job.waited}</span>
       </DetailRow>
-      <DetailRow label="Duration">
+      <DetailRow label={job.result === "running" ? "Running for" : "Duration"}>
         <span className="duration">{job.duration}</span>
       </DetailRow>
       <CacheRows cache={job.cache} job={job} />
@@ -166,6 +171,7 @@ export function JobDetailScreen({
   state: JobDetailState;
 }) {
   const job = jobDetails[state];
+  const usage = jobUsage[state];
   const Icon =
     job.where.kind === "boat"
       ? Cloud
@@ -219,6 +225,7 @@ export function JobDetailScreen({
             {job.noRunner ? null : <RanDetails job={job} />}
           </DetailList>
         </Panel>
+        {usage ? <UsagePanel usage={usage} viewport={viewport} /> : null}
       </div>
     </AppShell>
   );

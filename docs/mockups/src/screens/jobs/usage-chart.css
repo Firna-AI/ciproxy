@@ -1,0 +1,200 @@
+/* The CPU and memory chart (usage-chart.tsx): a step lane, two plots on one
+   time axis, and the key of an out-of-memory kill. The plots stretch to the
+   panel; the grid lines and the step starts are hairlines, the line is thin
+   ink with a faint wash under it, and the axis labels use the monospace
+   face. */
+
+.uc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  margin: 0;
+}
+
+.uc-axis {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 12px;
+  white-space: nowrap;
+}
+
+/* The lane of the steps: one light block for each step that lasted. */
+
+.uc-lane-label {
+  grid-column: 1;
+  align-self: center;
+  text-align: right;
+}
+
+.uc-lane {
+  position: relative;
+  grid-column: 2;
+  height: 18px;
+}
+
+.uc-step {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding: 0 1px;
+}
+
+.uc-step-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-radius: var(--r-mark-md);
+  background: var(--c-bg2);
+  color: var(--c-ink2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 12px;
+}
+
+/* A plot: its title, its value axis, and the plot itself. */
+
+.uc-title {
+  grid-column: 2;
+  margin: 12px 0 8px;
+  color: var(--c-ink2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+/* The unit of a plot, after its title, so each tick is a bare figure. */
+.uc-unit {
+  color: var(--c-muted);
+  font-weight: 400;
+}
+
+/* Without a step lane, the CPU title starts the chart. */
+.uc-title:first-child {
+  margin-top: 0;
+}
+
+.uc-y {
+  position: relative;
+  grid-column: 1;
+  min-width: 30px;
+  height: 76px;
+}
+
+.uc-y .uc-axis {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+}
+
+.uc-plot {
+  position: relative;
+  grid-column: 2;
+  height: 76px;
+}
+
+.uc-grid {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.uc-grid.is-base {
+  border-top-color: var(--c-border2);
+}
+
+.uc-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.uc-start {
+  stroke: var(--c-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.uc-area {
+  fill: var(--c-chart-own);
+  fill-opacity: 0.1;
+}
+
+.uc-line {
+  fill: none;
+  stroke: var(--c-chart-own);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The size of the label, when the VM is larger: a grey reference line. */
+.uc-label {
+  stroke: var(--c-chart-context);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* An out-of-memory kill: a status dot with a ring in the surface colour. */
+
+.uc-kill,
+.uc-key-kill {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--c-status-err);
+}
+
+.uc-kill {
+  position: absolute;
+  box-shadow: 0 0 0 2px var(--c-surface);
+  transform: translate(-50%, -50%);
+}
+
+/* The time axis and the key. */
+
+.uc-x {
+  position: relative;
+  grid-column: 2;
+  height: 12px;
+  margin-top: 8px;
+}
+
+.uc-x .uc-axis {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.uc-keys {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 2;
+  gap: 6px 16px;
+  margin-top: 14px;
+}
+
+.uc-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-ink2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.uc-key-label {
+  width: 14px;
+  height: 0;
+  border-top: 2px solid var(--c-chart-context);
+}
+
+.mockup-mobile .uc-y,
+.mockup-mobile .uc-plot {
+  height: 64px;
+}
