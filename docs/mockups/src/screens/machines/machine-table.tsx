@@ -102,6 +102,9 @@ function cell(machine: Machine, key: string, readOnly: boolean) {
         </span>
       );
     case "cache":
+      if (machine.hardware.platform === "macos") {
+        return <span className="muted">Not on macOS yet</span>;
+      }
       return machine.cache.status === "measured" ? (
         <span className="num">
           {machine.cache.usedGb} of {machine.cache.sizeGb} GB

@@ -48,21 +48,21 @@ failed, and 10 skipped.
 
 ## ciproxy compared with GitHub macos-latest
 
-| Item                   | ciproxy                                                                          | GitHub `macos-latest`                                                    |
-| ---------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| macOS                  | 26.7.3 (25G342)                                                                  | 26.7.2                                                                   |
-| Xcode                  | 26.6 only                                                                        | 26.0.1, 26.1.1, 26.2, 26.3, 26.4.1, 26.5, and 26.6. The default is 26.6. |
-| Simulator runtimes     | iOS 26.5 only                                                                    | iOS, tvOS, watchOS, and visionOS, for several versions                   |
-| Android SDK            | Not in the image. `ANDROID_HOME` is set, but no SDK is there.                    | In the image                                                             |
-| Safari                 | 26.6.2, the Safari of macOS                                                      | 27.2                                                                     |
-| Other tools            | The same tools. About 24 have a newer patch release, such as Chrome 158 for 157. | As GitHub lists them                                                     |
-| SIP                    | Off                                                                              | Off                                                                      |
-| Free disk of a job     | About 21.8 GB                                                                    | As GitHub states it                                                      |
-| VMs at a time          | At most 2 on each Mac, as Apple allows                                           | As many as GitHub starts                                                 |
-| Start of a job         | Cold: the VM boots macOS for each job                                            | As GitHub starts it                                                      |
-| Cache                  | The GitHub cache only. A Mac has no machine cache.                               | The GitHub cache                                                         |
-| When all Macs are busy | The job waits for a free Mac. It never runs on Boat.                             | Not applicable                                                           |
-| Image download         | About 46.2 GB for each new image                                                 | None                                                                     |
+| Item                   | ciproxy                                                                                                                                                      | GitHub `macos-latest`                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| macOS                  | 26.7.3 (25G342)                                                                                                                                              | 26.7.2                                                                   |
+| Xcode                  | 26.6 only                                                                                                                                                    | 26.0.1, 26.1.1, 26.2, 26.3, 26.4.1, 26.5, and 26.6. The default is 26.6. |
+| Simulator runtimes     | iOS 26.5 only                                                                                                                                                | iOS, tvOS, watchOS, and visionOS, for several versions                   |
+| Android SDK            | Not in the image. `ANDROID_HOME` is set, but no SDK is there.                                                                                                | In the image                                                             |
+| Safari                 | 26.6.2, the Safari of macOS                                                                                                                                  | 27.2                                                                     |
+| Other tools            | The same tools. About 24 have a newer patch release, such as Chrome 158 for 157.                                                                             | As GitHub lists them                                                     |
+| SIP                    | Off                                                                                                                                                          | Off                                                                      |
+| Free disk of a job     | About 21.8 GB                                                                                                                                                | As GitHub states it                                                      |
+| VMs at a time          | At most 2 on each Mac, as Apple allows                                                                                                                       | As many as GitHub starts                                                 |
+| Start of a job         | Each job VM boots macOS from scratch, with no saved state: about 25 s until its runner is ready. A warm runner can boot before the job arrives, as on Linux. | As GitHub starts it                                                      |
+| Cache                  | The GitHub cache only. A Mac has no machine cache yet.                                                                                                       | The GitHub cache                                                         |
+| When all Macs are busy | The job waits for a free Mac. It never runs on Boat.                                                                                                         | Not applicable                                                           |
+| Image download         | About 46.2 GB for each new image                                                                                                                             | None                                                                     |
 
 The toolset of GitHub pins Node.js, Python, Ruby, Go, Java, .NET, and
 Xcode, so the image has the same versions. Homebrew and some installers
@@ -78,8 +78,11 @@ newer patch release.
   Android SDK, cannot run on ciproxy yet. Keep it on GitHub-hosted runners.
 - A workflow that writes more than about 21.8 GB fails when the disk is
   full.
-- Each job boots macOS, so a short job takes longer than on a warm GitHub
-  runner.
+- Each job VM boots macOS from scratch, which takes about 25 s until its
+  runner is ready. A [warm runner](/docs/guides/add-a-machine/#after-the-machine-connects)
+  boots before the job arrives, so a job that a warm runner takes does not
+  wait for the boot. A warm runner counts against the limit of 2 VMs of
+  the Mac.
 - A cache step uses the GitHub cache. Its speed depends on the link of the
   Mac to GitHub.
 

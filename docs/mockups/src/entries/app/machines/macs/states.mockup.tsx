@@ -12,7 +12,7 @@ export const list = defineScreen({
   slug: "list",
   title: "Machines with a Mac",
   description:
-    "A what-if of 18 November: mokly-ai added mac-studio-1 as its fourth machine, beside its three AX42 machines. The caption under each name gives the platform, Linux or macOS, with the threads or cores and the memory. mac-studio-1 shows its 6 slots, with one job and one warm runner, its 2 VMs. Four machines pass the three of Team, so the banner offers the extra-machine add-on. The Mac opens its machine page.",
+    "A what-if of 18 November: mokly-ai added mac-studio-1 as its fourth machine, beside its three AX42 machines. The caption under each name gives the platform, Linux or macOS, with the threads or cores and the memory. The Cache column of the Mac says that the machine cache is not on macOS yet. mac-studio-1 shows its 6 slots, with one job and one warm runner, its 2 VMs. Four machines pass the three of Team, so the banner offers the extra-machine add-on. The Mac opens its machine page.",
   rationale,
   relatedDocs: related("agent", "jobRouting", "metering"),
   address: orgAddress("machines"),

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { MachineView } from "../src/api/schema.ts";
-import { unknownNote } from "../src/view/machines-cache.ts";
+import {
+  cacheText,
+  macWithoutCache,
+  unknownNote,
+} from "../src/view/machines-cache.ts";
 import { connectedFacts, macJobsLine } from "../src/view/machines-capacity.ts";
 import { machineNotice, machineSubtitle } from "../src/view/machines-detail.ts";
 import { healthModel } from "../src/view/machines-panels.ts";
@@ -134,6 +138,17 @@ test("a Mac that joined names its virtualization and its macOS jobs", () => {
     "It runs the jobs of macOS labels, at most 2 at a time.",
   );
   assert.equal(macJobsLine(machine()), null);
+});
+
+test("a Mac without a machine cache says so, not Unknown", () => {
+  const unavailable = {
+    machine_cache: { status: "unavailable" },
+    docker_disks: { status: "measured", used_bytes: "0", repositories: "0" },
+  } as const;
+  assert.equal(cacheText(mac({ cache: unavailable })), "Not on macOS yet");
+  assert.equal(macWithoutCache(mac({ cache: null })), true);
+  assert.equal(macWithoutCache(machine({ cache: unavailable })), false);
+  assert.equal(cacheText(machine({ cache: unavailable })), "Unknown");
 });
 
 test("the cache note of a Mac never names Docker disks", () => {
