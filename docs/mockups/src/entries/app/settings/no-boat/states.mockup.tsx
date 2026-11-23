@@ -13,7 +13,7 @@ export const labels = defineScreen({
   slug: "labels",
   title: "Labels without Boat",
   description:
-    "mokly-ai skipped the Boat step of setup. Each label fits the three machines, so its jobs run on the machines only, and the list says Your machines only. The jobs of 30 days and Edit stay as with Boat; Edit of ciproxy-8vcpu opens its dialog.",
+    "mokly-ai skipped the Boat step of setup. Each label fits the three machines, so its jobs run on the machines only, and the list says Your machines only. The jobs of 30 days and Edit stay as with Boat; Edit of ciproxy-large opens its dialog.",
   rationale,
   relatedDocs: relatedMvp("labels", "overflow"),
   address,
@@ -26,7 +26,7 @@ export const editLabel = defineScreen({
   slug: "edit-label",
   title: "Edit a label without Boat",
   description:
-    "The dialog of ciproxy-8vcpu in the same workspace. The line under the size keeps the fit of the machines, 1 job of this size at a time on each, and says that Boat is not connected. Run on the largest Boat size names no size, because no Boat account gives one.",
+    "The dialog of ciproxy-large in the same workspace. The line under the size keeps the fit of the machines, 1 job of this size at a time on each, and says that Boat is not connected. Run on the largest Boat size names no size, because no Boat account gives one.",
   rationale,
   relatedDocs: relatedMvp("labels", "overflow"),
   address,

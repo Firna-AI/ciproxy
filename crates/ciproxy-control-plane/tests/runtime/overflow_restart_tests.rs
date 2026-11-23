@@ -56,9 +56,10 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
         registrations.clone(),
         harness.runtime.assignments.clone(),
         harness.ports.clone(),
-        harness.runtime.image.clone(),
+        None,
         harness.runtime.installations.clone(),
     );
+    restarted.images = harness.runtime.images.clone();
     restarted.overflow = Some(harness.service.clone());
     restarted.boat_retirement = Some(authority(&harness.fixture, &harness.ports, registrations));
     harness.runtime = restarted;

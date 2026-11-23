@@ -27,7 +27,7 @@ python3 image/boat-build.py bundle \
   --upstream-archive .context/ciproxy-image-build/runner-images.tar.gz \
   --guest target/release/ciproxy-guest \
   --cache target/release/ciproxy-cache-sidecar \
-  --worker .context/ciproxy-image-build/patched-worker/Runner.Worker.dll \
+  --worker .context/ciproxy-image-build/worker-overlay \
   --runner .context/ciproxy-image-build/runner.tar.gz \
   --reference .context/ciproxy-image-build/artifacts/software-report.json \
   --output .context/ciproxy-boat-build.tar.gz

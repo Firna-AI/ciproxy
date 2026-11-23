@@ -1,0 +1,198 @@
+# SPDX-License-Identifier: Apache-2.0
+# Shared helpers of build.sh: the VM run, the guest address, and SSH.
+# build.sh sets definition, work_dir, and vm_tool before it sources this file.
+
+run_dir="$work_dir/run"
+secrets="$work_dir/secrets"
+bundle="$work_dir/vm"
+ssh_key="$secrets/id_ed25519"
+guest_user=runner
+
+ssh_options=(-i "$ssh_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+    -o LogLevel=ERROR -o ConnectTimeout=5 -o ServerAliveInterval=15 -o BatchMode=yes)
+
+make_secrets() {
+    mkdir -p "$secrets"
+    chmod 700 "$secrets"
+    if [[ -s "$secrets/password" && -s "$secrets/vnc-password" && -f "$ssh_key.pub" ]]; then
+        return 0
+    fi
+    rm -f "$secrets/password" "$secrets/vnc-password" "$ssh_key" "$ssh_key.pub"
+    # VNC authentication uses at most 8 characters of a password.
+    python3 - "$secrets" <<'PY'
+import os, pathlib, secrets, string, sys
+folder = pathlib.Path(sys.argv[1])
+alphabet = string.ascii_letters + string.digits
+for name, length in (("password", 20), ("vnc-password", 8)):
+    path = folder / name
+    with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as output:
+        output.write("".join(secrets.choice(alphabet) for _ in range(length)))
+PY
+    ssh-keygen -q -t ed25519 -N '' -C ciproxy-image-build -f "$ssh_key"
+}
+
+# Start the VM in the background. With "recovery", start macOS Recovery.
+vm_start() {
+    local mode=${1:-normal}
+    mkdir -p "$run_dir"
+    rm -f "$run_dir/status.json" "$run_dir/stop"
+    local recovery=""
+    [[ $mode == recovery ]] && recovery=--recovery
+    printf '\n== start %s at %s\n' "$mode" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$run_dir/vm.log"
+    "$vm_tool" run --bundle "$bundle" ${recovery:+"$recovery"} \
+        --vnc-password-file "$secrets/vnc-password" --status-file "$run_dir/status.json" \
+        --stop-file "$run_dir/stop" --cpus "${BUILD_CPUS:-4}" --memory-gib "${BUILD_MEMORY_GIB:-8}" \
+        >> "$run_dir/vm.log" 2>&1 &
+    echo $! > "$run_dir/vm.pid"
+    for _ in $(seq 120); do
+        [[ -s "$run_dir/status.json" ]] && return 0
+        vm_running || { tail -n 20 "$run_dir/vm.log" >&2; return 1; }
+        sleep 1
+    done
+    echo "the VM did not report its VNC port" >&2
+    return 1
+}
+
+vm_running() {
+    [[ -f "$run_dir/vm.pid" ]] && kill -0 "$(cat "$run_dir/vm.pid")" 2>/dev/null
+}
+
+# Wait until the guest turns itself off. Stop it after the timeout.
+vm_wait_stopped() {
+    local timeout=${1:-600}
+    for _ in $(seq "$timeout"); do
+        vm_running || return 0
+        sleep 1
+    done
+    echo "the guest did not turn off in $timeout s, so the build stops it" >&2
+    vm_stop
+    return 1
+}
+
+vm_stop() {
+    vm_running || return 0
+    touch "$run_dir/stop"
+    for _ in $(seq 60); do
+        vm_running || return 0
+        sleep 1
+    done
+    kill "$(cat "$run_dir/vm.pid")" 2>/dev/null || true
+}
+
+vnc_port() {
+    python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["vnc_port"])' \
+        "$run_dir/status.json"
+}
+
+guest_ip() {
+    "$vm_tool" ip --bundle "$bundle" --wait-seconds "${1:-300}"
+}
+
+guest_ssh() {
+    ssh "${ssh_options[@]}" "$guest_user@$(guest_ip 5)" "$@"
+}
+
+guest_scp() {
+    local target=$1
+    shift
+    scp -q "${ssh_options[@]}" "$@" "$guest_user@$(guest_ip 5):$target"
+}
+
+# Wait until SSH answers. A restart in the guest can take some minutes.
+wait_ssh() {
+    local timeout=${1:-900} started=$SECONDS
+    guest_ip "$timeout" >/dev/null
+    while (( SECONDS - started < timeout )); do
+        guest_ssh true 2>/dev/null && return 0
+        sleep 5
+    done
+    echo "no SSH to the guest in $timeout s" >&2
+    return 1
+}
+
+# Wait until the guest runs the given macOS build. A macOS update restarts
+# the guest one or more times. When a restart ends the VM's run, start it
+# again.
+wait_for_build() {
+    local target=$1 timeout=$2 started=$SECONDS seen=none
+    while (( SECONDS - started < timeout )); do
+        sleep 20
+        if ! vm_running; then
+            echo "the VM stopped during the update; starting it again"
+            vm_start
+        fi
+        # The guest is down for a while, so SSH fails. That is no error.
+        seen=$(guest_ssh 'sw_vers -buildVersion' 2>/dev/null || true)
+        if [[ $seen == "$target" ]]; then
+            echo "the guest runs build $seen after $(( SECONDS - started )) s"
+            return 0
+        fi
+        (( (SECONDS - started) % 300 < 20 )) && echo "waiting for build $target; seen: $seen"
+    done
+    echo "the guest did not reach build $target in $timeout s; last seen: $seen" >&2
+    guest_ssh 'sw_vers; uptime' >&2 2>/dev/null || true
+    return 1
+}
+
+# Put the VM files into ARTIFACTS/bundle as APFS clones, which take no space
+# until one side changes. The archive compresses the disk from the clone.
+bundle_artifacts() {
+    local artifacts=$1 file
+    mkdir -p "$artifacts/bundle"
+    for file in disk.img aux.img hardware-model.bin; do
+        rm -f "$artifacts/bundle/$file"
+        cp -c "$bundle/$file" "$artifacts/bundle/$file"
+    done
+}
+
+
+# Keep one SSH connection to the guest with two tunnels, and open it again
+# after each guest restart. Packer reaches the guest's SSH through the host's
+# 127.0.0.1:SSH_PORT, and the guest reaches the host's Xcode server through
+# its own 127.0.0.1:XCODE_PORT. macOS Local Network privacy can stop a
+# third-party program, such as Packer, from reaching the VM network after its
+# launching session ends. Apple's ssh is exempt, and loopback is not covered.
+guest_tunnel() {
+    local ssh_port=$1 xcode_port=$2
+    while true; do
+        ssh "${ssh_options[@]}" -N -o ExitOnForwardFailure=yes \
+            -L "127.0.0.1:$ssh_port:127.0.0.1:22" -R "$xcode_port:127.0.0.1:$xcode_port" \
+            "$guest_user@$(guest_ip 5 || true)" 2>/dev/null || true
+        sleep 2
+    done
+}
+
+# Stop the provision when the host runs short of space, before the host or
+# the VM fails. MIN_FREE_GB sets the limit, 15 GB by default. Every 5 minutes
+# it also writes the sizes to run/space.log: the time, the host's free GB,
+# the allocated GB of disk.img, and the used GB of the guest data volume.
+space_guard() {
+    local limit=$(( ${MIN_FREE_GB:-15} * 1000000 )) free allocated used next=0
+    while true; do
+        free=$(df -k "$work_dir" | awk 'NR == 2 {print $4}')
+        if (( free * 1024 / 1000 < limit )); then
+            echo "only $(( free / 1000000 )) GB free on the host; stopping the provision" >&2
+            pkill -f "$work_dir/inputs/packer build" || true
+            return
+        fi
+        if (( SECONDS >= next )); then
+            allocated=$(du -k "$bundle/disk.img" | cut -f1)
+            used=$(guest_ssh "df -k /System/Volumes/Data | awk 'NR == 2 {print \$3}'" \
+                2>/dev/null || echo 0)
+            printf '%s host_free_gb=%s disk_allocated_gb=%s guest_used_gb=%s\n' \
+                "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(( free * 1024 / 1000000000 ))" \
+                "$(( allocated * 1024 / 1000000000 ))" "$(( ${used:-0} * 1024 / 1000000000 ))" \
+                >> "$run_dir/space.log"
+            next=$(( SECONDS + 300 ))
+        fi
+        sleep 30
+    done
+}
+
+stop_helpers() {
+    local pid
+    for pid in "$@"; do
+        pkill -P "$pid" 2>/dev/null || true
+        kill "$pid" 2>/dev/null || true
+    done
+}

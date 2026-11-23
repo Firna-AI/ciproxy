@@ -20,12 +20,12 @@ export const termsSections: readonly LegalSection[] = [
     id: "service",
     title: "The service",
     paragraphs: [
-      "ciproxy is provided by [legal entity name], at [registered address]. The customer is [customer definition]. These terms cover [covered services]. You accept them by [terms acceptance method]. You must have [authority needed to act for the customer]. The control plane is the hosted service that schedules jobs.",
-      "ciproxy runs GitHub Actions jobs on your own machines first. When those machines are busy, it can start runners in your own Boat account. A runner takes one job. A workspace is the ciproxy account that holds your organizations, machines, settings, and plan.",
+      "ciproxy is provided by Firna Ltd, a company registered in England and Wales with company number 09018453. Its registered office is 26 John Hogan V C Road, Manchester, M40 7QU, United Kingdom. The customer is the person or organization that holds a ciproxy workspace. These terms cover the site at ciproxy.dev, the dashboard at app.ciproxy.dev, the ciproxy GitHub App, the hosted control plane, and the downloads at get.ciproxy.dev. You accept their current version each time that you sign in with GitHub. You must have the authority to accept these terms for the customer. The control plane is the hosted service that schedules jobs.",
+      "ciproxy runs GitHub Actions jobs on your own machines first. When those machines are busy, it can start runners for Linux jobs in your own Boat account. A runner takes one job. A workspace is the ciproxy account that holds your organizations, machines, settings, and plan.",
       "ciproxy serves GitHub organizations and private repositories only. Installing the GitHub App on a personal account creates no workspace. Public repositories do not get ciproxy runners. You choose which private repositories may use the service.",
       "The service depends on GitHub, Boat, Stripe, your machines, and network connections. Jobs can wait when no permitted runner can start. ciproxy does not rerun a job by itself.",
       `Features marked Coming later are not available yet. These features are ${laterFeatures}.`,
-      "You must meet [eligibility rules and minimum age]. The service is available to [supported customer types and locations].",
+      "You must be at least 18 years old and have a GitHub account. Customers in any country can use the service, as long as their use breaks no sanction or export control.",
     ],
   },
   {
@@ -34,10 +34,10 @@ export const termsSections: readonly LegalSection[] = [
     paragraphs: [
       "You sign in with GitHub. ciproxy has no password of its own. A sign-in lasts 30 days. During that time, ciproxy checks your organization memberships with GitHub each hour. A workspace role requires current membership of one of its organizations.",
       "A workspace has Admin, Billing, and Viewer roles. A Viewer can see jobs, machines, savings, and Plan and usage. Billing adds control of the plan, add-ons, and invoices. An Admin also controls machines, labels, settings, organizations, Boat, and roles.",
-      "Every person with a workspace role sees job metadata for all repositories of all its organizations. This includes repositories that the person cannot read on GitHub. Give access only to people you trust with that visibility. Your role-grant duties are [customer duties for workspace access].",
+      "Every person with a workspace role sees job metadata for all repositories of all its organizations. This includes repositories that the person cannot read on GitHub. Give access only to people you trust with that visibility. You are responsible for the roles that your workspace gives, and for what each person with a role does in ciproxy.",
       "An Admin can add machines and connect Boat without a separate GitHub runner-right check. Those runners run jobs and their secrets for every organization in the workspace. The Admin role grants control over those runners. Use separate workspaces when organizations need separate runner control.",
       "Each organization belongs to at most one workspace. Its repository choices stay separate. An Admin can allow all private repositories or selected repositories that GitHub makes visible. Allowing all private repositories also includes new private repositories that ciproxy can see.",
-      "Keep install tokens, machine credentials, and provider keys secure. An install token can add any number of machines to its workspace for one hour. An Admin can revoke it earlier. Your credential duties are [customer credential duties]. Report suspected unauthorized access through [unauthorized-access reporting procedure].",
+      "Keep install tokens, machine credentials, and provider keys secure. An install token can add any number of machines to its workspace for one hour. An Admin can revoke it earlier. Connect only machines and accounts that you may use. If a credential leaks, revoke the install token, remove the machine, or replace the Boat key in Boat and in ciproxy. Report suspected unauthorized access to abuse@ciproxy.dev.",
     ],
   },
   {
@@ -55,15 +55,18 @@ export const termsSections: readonly LegalSection[] = [
       "A paid plan move has a stored quote. Its review shows the new monthly total, today's prorated amount, and later billing dates. Each new review needs your confirmation. The quote keeps the amounts and proration time for a retry of that move.",
       "You can cancel in the Stripe customer portal or choose Move to Free. The paid plan and add-ons remain until the paid period ends. You can undo cancellation before then. While Stripe retries a failed payment, the paid plan remains active.",
       "After the final failed retry, the subscription ends and the workspace moves to Free. Jobs keep running on all its machines, including above Free's soft limits. A plan change controls the history window shown in the dashboard. The privacy policy states the storage limits.",
-      "Refunds and credits follow [refund and credit policy]. Any withdrawal rights follow [applicable withdrawal rights and procedure]. Send disputed charges through [charge dispute procedure]. Future price changes follow [price change notice and timing].",
+      "Payments are not refunded, except where the law requires a refund. When a change lowers the monthly total, Stripe keeps the prorated difference as a credit for a later invoice. If you think a charge is wrong, email legal@ciproxy.dev before you dispute it with your bank.",
+      "If you are a consumer, you can withdraw from a paid plan within 14 days after the day of the purchase, without giving a reason. To withdraw, tell us of your decision with a clear statement before the period ends, for example by email to legal@ciproxy.dev or by post to our registered office. You can use the model form below, but you do not have to. We refund your payment within 14 days after you tell us, to the card that you paid with. If you asked for the plan to start during the withdrawal period, you pay an amount in proportion to the service that you used before you withdrew. Our checkout does not ask you for this request, so we refund your payment in full.",
+      "Model withdrawal form: To Firna Ltd, 26 John Hogan V C Road, Manchester, M40 7QU, United Kingdom, legal@ciproxy.dev. I give notice that I withdraw from my contract for the following service. Then give the plan, the date of the order, your name, your address, and the date.",
+      "We tell you about a price change for your plan at least 30 days before it applies, by email to the billing address that you gave Stripe. You can cancel before it applies.",
     ],
   },
   {
     id: "machines",
     title: "Your machines and Boat",
     paragraphs: [
-      "The agent runs on supported x64 Linux machines with KVM. Installation runs as root. The agent updates itself, and an update does not stop a running job. You are responsible for [machine access, maintenance, provider account, and cost duties].",
-      "Each job on a machine runs in a fresh VM. The VM ends after the job, and its disk is not reused. The agent keeps a separate machine cache. Paid plans also offer repository Docker disks that can keep Docker data between jobs.",
+      "The agent runs on supported x64 Linux machines with KVM and on Apple Silicon Macs. Installation runs as root. The agent updates itself, and an update does not stop a running job. You are responsible for access to your machines and your Boat account, for their upkeep and security, and for their costs.",
+      "Each job on a machine runs in a fresh VM. The VM ends after the job, and its disk is not reused. The agent keeps a separate machine cache. On Linux machines, paid plans also offer repository Docker disks that can keep Docker data between jobs.",
       "A machine cache can keep an entry after GitHub deletes or evicts it. Clear cache removes the entries of one machine. It does not delete GitHub cache entries or the machine's Docker disks. A job on Boat uses the GitHub cache and gets no persistent Docker disk.",
       "You connect your own Boat account with its API key and choose its wallet. The wallet serves every organization in the workspace. ciproxy stores the key encrypted and uses it only for your workspace's sandboxes. The dashboard does not show the key after saving it.",
       "You set a monthly Boat spend limit. It covers sandboxes that ciproxy starts, not other use of your Boat account. The limit counts confirmed costs and pending bounds. At the limit, new Boat runners wait, while current jobs finish. Their costs can take spend above the limit.",
@@ -77,8 +80,9 @@ export const termsSections: readonly LegalSection[] = [
     paragraphs: [
       "Use ciproxy only with organizations, repositories, machines, accounts, and content that you have authority to use.",
       "Use the service lawfully. Respect other people's rights. Do not access another customer's workspace or data without authority. Do not interfere with the service or bypass its access controls.",
-      "Additional prohibited uses are [additional use restrictions, if any]. We handle suspected misuse under [investigation, notice, enforcement, and appeal procedure].",
-      "Send copyright complaints to [copyright complaint contact]. Include [required complaint information]. We handle complaints under [copyright review procedure]. A counter-notice follows [counter-notice procedure, if applicable].",
+      "Do not use ciproxy to break a law, a sanction, an export control, or the rights of others, such as privacy or intellectual property. Do not use it for illegal content, such as child sexual abuse material or terrorist or violent extremist material. Do not use it for malware, botnets, fraud, spam, or phishing, or to attack, scan, or overload systems without permission. Do not mine cryptocurrency, and do not run jobs whose main purpose is to use compute rather than to build, test, or ship software. Do not resell or share access to ciproxy, and do not break the terms of GitHub, Boat, or Stripe.",
+      "We can suspend an account or a workspace for misuse, as Ending the service says. Report abuse or a security problem to abuse@ciproxy.dev.",
+      "Send copyright complaints and law enforcement requests to legal@ciproxy.dev. A copyright complaint names the work, the material that you say infringes it, where that material is, and how to reach you. We review each complaint, and we can remove the material. The person whose material we remove can ask for a review at the same address.",
     ],
   },
   {
@@ -87,8 +91,8 @@ export const termsSections: readonly LegalSection[] = [
     paragraphs: [
       "The privacy policy describes job metadata, machine reports, workspace records, billing records, and the decided retention limits. Job code and secrets go from GitHub directly to the runner. Runners send logs and artifacts directly to GitHub. The hosted control plane does not read those logs or artifacts.",
       "The hosted control plane does not receive, store, or log job code, job secrets, job logs, or cache contents. Software on your machines handles job content and keeps local caches. The hosted-service limit does not mean that your machines or Boat cannot receive job content.",
-      "You keep the rights that you hold in your content. You give us permission to process it to provide ciproxy. That permission has [processing permission scope, duration, and recipients]. Customer processing follows [data processing agreement terms and link].",
-      "You are responsible for [customer content duties]. Backups and exports follow [backup and export terms]. Any use of aggregated or de-identified data follows [aggregate and de-identified data terms, if any].",
+      "You keep the rights that you hold in your content. You give us permission to store, copy, process, and transmit it as needed to provide ciproxy, also through the providers that the privacy policy names. You must have the right to give this permission. If your organization needs a data processing agreement, email legal@ciproxy.dev.",
+      "You are responsible for your content, your workflows, and what your jobs do. Keep your own backups of what you need, because the service can fail. Your code, job logs, and artifacts stay on GitHub, and the privacy policy says how to get a copy of the data that ciproxy holds. We can use aggregated data that identifies no customer or person to run and improve ciproxy.",
     ],
   },
   {
@@ -96,7 +100,7 @@ export const termsSections: readonly LegalSection[] = [
     title: "The open-source agent",
     paragraphs: [
       "The customer-side software is open source under Apache-2.0. It includes the agent, its connection protocol, the image definition, the install script, the cache sidecar, and the runner patch. Their licence governs their use.",
-      "The hosted control plane, dashboard, and public site have no open licence. Public access to the repository does not give those parts an open licence. Use of hosted parts follows [hosted-service licence terms]. Other software follows [separate third-party licence terms].",
+      "The hosted control plane, dashboard, and public site have no open licence. Public access to the repository does not give those parts an open licence. These terms give you the right to use the hosted parts through the service, for your workspace, and no other right in them. Third-party software keeps its own licence and terms.",
     ],
   },
   {
@@ -111,30 +115,32 @@ export const termsSections: readonly LegalSection[] = [
       "The last organization's App removal ends the subscription at the end of the paid period. Another organization's removal leaves it unchanged. Organization data is deleted after 30 days. Removal of the last organization also deletes workspace data after 30 days. Earlier normal expiry still applies.",
       "A reinstall within 30 days can recover data that has not expired. It does not extend the normal retention periods. After removal of the last organization, machines need installation again and Boat needs a new connection.",
       "Suspending the App stops new jobs for that organization while current jobs finish. Its workspace membership, machines, Boat key, subscription, and data remain. Jobs can start again after the App is unsuspended.",
-      "We can suspend or end hosted service for [provider suspension or termination grounds]. We give [suspension or termination notice period and method]. You can appeal through [suspension or termination appeal procedure]. Access to data follows [data access after suspension or termination]. Prepaid fees follow [prepaid fee treatment after suspension or termination].",
+      "We can suspend or end the hosted service of an account or a workspace that breaks these terms, or whose use puts other people or the service at risk. There is no fixed notice period, and in urgent cases we can act without notice. To ask for a review, email legal@ciproxy.dev with your GitHub username, the workspace or organization name, and why the suspension should end.",
+      "A suspension keeps the data of the workspace under the retention limits of the privacy policy. When we end the service of a workspace, we delete its data after 30 days, as after the removal of its last organization. A suspension or an end for a breach of these terms gives no refund. If we stop the service for another reason, we refund the unused part of the paid period.",
     ],
   },
   {
     id: "liability",
     title: "Warranties and liability",
     paragraphs: [
-      "We provide the service with [service warranties and service-level commitments]. We exclude [warranty exclusions, if any], subject to [mandatory warranty rights and exceptions].",
-      "Our liability for a claim is limited to [liability cap and calculation period, if any]. We are not liable for [excluded losses, if any]. These limits do not apply to [liability exceptions and mandatory rights]. Any indemnity follows [indemnity obligations, procedures, and limits, if any].",
-      "The governing law is [governing law]. Disputes follow [courts or dispute procedure]. These terms preserve [mandatory customer rights].",
+      "We provide the service as available. We make no uptime commitment and offer no service level.",
+      "These terms do not remove any warranty, right, or liability that the law does not let us exclude.",
+      "The laws of England and Wales govern these terms, and the courts of England and Wales can hear disputes. If you are a consumer, this does not remove any mandatory protection of the law where you live, or your right to bring a claim in your local courts.",
     ],
   },
   {
     id: "changes",
     title: "Changes to these terms",
     paragraphs: [
-      "We will notify you of changes through [terms notice method]. Changes take effect after [terms notice period]. Your acceptance follows [acceptance rule for changed terms]. Existing subscriptions follow [existing subscription treatment after changes]. You may end service after a change under [right to end service after a change].",
+      "Each change gives these terms a new version, which we publish on this page with a new effective date. A changed version applies from your next sign-in, and you accept it when you sign in with GitHub. A sign-in lasts at most 30 days. Until your next sign-in, the version that you accepted last keeps applying, also while your jobs run.",
+      "A price change follows Plans and payment instead. A change does not alter the price of a billing period that has already started. If you do not accept a change, you can stop using ciproxy at any time, and a cancelled plan ends at the end of its paid period.",
     ],
   },
   {
     id: "contact",
     title: "Contact",
     paragraphs: [
-      "The service provider is [legal entity name], at [registered address]. Send questions about these terms to [legal contact email]. Send formal notices through [formal notice address and method].",
+      "The service provider is Firna Ltd, company number 09018453, VAT number GB191373695, at 26 John Hogan V C Road, Manchester, M40 7QU, United Kingdom. Send questions about these terms to legal@ciproxy.dev. Send formal notices by email to legal@ciproxy.dev, or by post to the registered office. Report abuse or a security problem to abuse@ciproxy.dev.",
     ],
   },
 ];

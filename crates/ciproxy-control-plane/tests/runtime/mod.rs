@@ -41,6 +41,8 @@ mod overflow_takeout_support;
 mod overflow_takeout_tests;
 mod overflow_tests;
 mod own_replacement_tests;
+mod platform_image_tests;
+mod platform_sizing_tests;
 mod preparation_delivery_tests;
 mod progress_socket;
 mod progress_support;

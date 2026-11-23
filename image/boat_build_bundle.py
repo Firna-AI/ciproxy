@@ -52,8 +52,11 @@ def bundle(args):
         artifacts = root / "artifacts"
         artifacts.mkdir()
         for source, name in [(args.guest, "ciproxy-guest"), (args.cache, "ciproxy-cache-sidecar"),
-                             (args.worker, "ciproxy-worker.dll"), (args.runner, "ciproxy-runner.tar.gz")]:
+                             (args.runner, "ciproxy-runner.tar.gz")]:
             shutil.copy2(source, artifacts / name)
+        if not (args.worker / "stock-deps.sha256").is_file():
+            raise RuntimeError("--worker must name the Worker overlay of worker-overlay.py")
+        shutil.copytree(args.worker, artifacts / "ciproxy-worker")
         shutil.copy2(args.reference, root / "reference-software.json")
         plan = make_plan(root / "runner-images")
         plan.update(image_id=pins["IMAGE_ID"], upstream_commit=pins["RUNNER_IMAGES_COMMIT"],
@@ -71,7 +74,7 @@ def bundle(args):
                               "user": "root", "environment": {}, "inline": [
                                   "mkdir -p /tmp/ciproxy-image",
                                   "cp -a /opt/ciproxy-build/definition/. /tmp/ciproxy-image/",
-                                  "cp /opt/ciproxy-build/artifacts/* /tmp/",
+                                  "cp -R /opt/ciproxy-build/artifacts/. /tmp/",
                                   "install -m 0755 /opt/ciproxy-build/runner-images/images/ubuntu/assets/post-gen/cleanup-logs.sh /opt/post-generation/cleanup-logs.sh"]})
         plan["steps"].append({"id": "086-boat-provision", "provisioner": 100, "type": "shell",
                               "inputs": ["/opt/ciproxy-build/artifacts", *[
@@ -81,7 +84,8 @@ def bundle(args):
                                       "boat-runner-stderr.py",
                                       "pins.env", "boat-run.sh", "boat-start.sh", "measure.py",
                                       "metadata-smoke.py", "runner-entry.sh", "docker-attach.sh",
-                                      "runner-patch/container-proxy-url.sh", "ciproxy-boat-start.service",
+                                      "runner-patch/container-proxy-url.sh",
+                                      "runner-patch/install-worker.sh", "ciproxy-boat-start.service",
                                       "ciproxy-boat-guest.service")]],
                               "script": "/opt/ciproxy-build/definition/boat-provision.sh", "interpreter": "bash",
                               "user": "root", "environment": {}})

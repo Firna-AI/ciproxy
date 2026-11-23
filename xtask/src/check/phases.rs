@@ -12,6 +12,7 @@ pub(crate) const MACOS_TARGET: &str = "aarch64-apple-darwin";
 /// `["--lib", "--bins"]` for a crate whose tests do not build for macOS yet.
 pub(crate) const MACOS_CRATES: &[(&str, &[&str])] = &[
     ("ciproxy-vz", &["--all-targets"]),
+    ("ciproxy-image-vm", &["--all-targets"]),
     // The agent test targets use Linux fixtures, so the check covers the
     // library and the binary only.
     ("ciproxy-agent", &["--lib", "--bins"]),

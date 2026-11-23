@@ -42,14 +42,18 @@ pub(crate) async fn run(local_id: &str) -> Result<()> {
         serde_json::from_slice(&std::fs::read(folder.join("vm.json")).context("read the VM file")?)
             .context("decode the VM file")?;
     spec.check().map_err(|error| helper(&error.to_string()))?;
-    let settings = VmSettings {
-        cpus: spec.cpus,
-        memory_bytes: spec.memory_bytes,
-        display: None,
-    };
+    let settings = spec.settings();
     let listener = bind(&folders.client(local_id).socket).context("bind the control socket")?;
     let mut terminate = signal(SignalKind::terminate()).context("watch SIGTERM")?;
-    let vm = Arc::new(start(&spec, &settings, &folder).await?);
+    let vm = match start(&spec, &settings, &folder).await {
+        Ok(vm) => Arc::new(vm),
+        Err(error) => {
+            // The agent's start wait reads `exit.json`, so it fails at once.
+            write_exit(&folder, StopReason::Failure)?;
+            let _ = std::fs::remove_file(folders.client(local_id).socket);
+            return Err(error);
+        }
+    };
     let control = Arc::new(HelperVm {
         vm: vm.clone(),
         folder: folder.clone(),

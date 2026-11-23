@@ -7,6 +7,9 @@
 //! guest on another vmnet network would escape them. When a check fails,
 //! the guard stops the affected VMs, because their isolation is gone. The
 //! guest bridge then reports their end to the core.
+//!
+//! The guard also checks that the area volume is still mounted. When its
+//! disk is unplugged, the VM disks are gone, so the guard stops every VM.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,6 +20,7 @@ use tokio::task::JoinHandle;
 
 use super::isolation::Isolation;
 use super::launchctl::Launchd;
+use crate::macos::area_disk::area_mounted;
 use crate::macos::guests::VmFolders;
 use crate::macos::pf::VmNetwork;
 
@@ -54,6 +58,14 @@ async fn check(isolation: &dyn Isolation, launchd: &dyn Launchd, folders: &VmFol
     };
     if running.is_empty() {
         return;
+    }
+    if !area_mounted(&folders.area) {
+        tracing::error!("the area volume is gone, with the disks of the VMs; stop every VM");
+        for local_id in &running {
+            if let Err(error) = launchd.bootout_vm(local_id).await {
+                tracing::warn!(%error, local_id = %local_id, "the VM stop will retry");
+            }
+        }
     }
     let network = match isolation.ensure().await {
         Ok(network) => Some(network),

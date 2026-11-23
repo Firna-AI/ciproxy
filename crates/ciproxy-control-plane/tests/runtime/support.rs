@@ -178,6 +178,11 @@ impl Fixture {
         }
     }
     pub(super) fn add_machine(&mut self) -> Uuid {
+        self.add_machine_on(Platform::LinuxX64)
+    }
+
+    /// Add a connected machine of this platform with no runners and no images.
+    pub(super) fn add_machine_on(&mut self, platform: Platform) -> Uuid {
         let source = self
             .store
             .machine_snapshots(self.workspace)
@@ -187,9 +192,15 @@ impl Fixture {
         machine.id = Uuid::new_v4();
         machine.draining = false;
         machine.warm_runners = 1;
+        machine.platform = platform;
         self.store.create_machine(self.workspace, &machine).unwrap();
         let mut report = source.report.unwrap().report;
         report.runners.clear();
+        report.hardware.platform = platform;
+        if platform != Platform::LinuxX64 {
+            report.images.available.clear();
+            report.images.newest = None;
+        }
         diesel::sql_query("INSERT INTO machine_reports (workspace_id, machine_id, session_id, report, received_at) VALUES ($1,$2,$3,$4,$5)")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(machine.id).bind::<sql_types::Uuid,_>(Uuid::new_v4())
             .bind::<sql_types::Jsonb,_>(serde_json::to_value(report).unwrap()).bind::<sql_types::Timestamptz,_>(at()).execute(&mut self.connection).unwrap();

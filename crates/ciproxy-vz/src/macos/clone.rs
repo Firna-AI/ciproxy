@@ -5,7 +5,8 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
 use super::configuration::new_machine_identifier;
-use crate::bundle::{Bundle, Identity, io};
+use crate::bundle::{Bundle, Identity};
+use crate::bundle_clone::clone_with;
 use crate::error::{Error, Result};
 use crate::mac_address::MacAddress;
 
@@ -28,6 +29,10 @@ impl Identity {
 /// Both paths must be on one APFS volume, and `target` must not exist.
 /// The clone takes almost no time and no space at first.
 ///
+/// The source needs the disk, the auxiliary storage, and the hardware
+/// model, but no identity files. A released image has none. The clone
+/// always gets `identity`, also when the source has an identity.
+///
 /// Use [`Identity::fresh`] for a VM that needs no saved state. Use the
 /// identity of a saved state to restore that state into the clone. Two VMs
 /// that run at the same time need two identities.
@@ -35,24 +40,17 @@ impl Identity {
 /// The clone copies every file in the directory, also a saved state that
 /// the caller put there.
 pub fn clone_bundle(source: &Bundle, target: &Path, identity: &Identity) -> Result<Bundle> {
-    source.check_files()?;
     let from = c_path(source.root())?;
     let to = c_path(target)?;
-    // SAFETY: Both strings are valid and end in a null byte.
-    let status = unsafe { libc::clonefile(from.as_ptr(), to.as_ptr(), CLONE_NOFOLLOW) };
-    if status != 0 {
-        return Err(io(
-            "clone the bundle",
-            target,
-            std::io::Error::last_os_error(),
-        ));
-    }
-    let clone = Bundle::new(target);
-    if let Err(error) = clone.write_identity(identity) {
-        let _partial_clone_stays = std::fs::remove_dir_all(target);
-        return Err(error);
-    }
-    Ok(clone)
+    clone_with(source, target, identity, || {
+        // SAFETY: Both strings are valid and end in a null byte.
+        let status = unsafe { libc::clonefile(from.as_ptr(), to.as_ptr(), CLONE_NOFOLLOW) };
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(std::io::Error::last_os_error())
+        }
+    })
 }
 
 fn c_path(path: &Path) -> Result<CString> {

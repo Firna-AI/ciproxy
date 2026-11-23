@@ -61,7 +61,7 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: "14.0"
       # The crates with macOS code. Add a crate here when it builds and
       # tests on macOS.
-      MACOS_PACKAGES: ciproxy-protocol ciproxy-vz ciproxy-guest ciproxy-cache-sidecar
+      MACOS_PACKAGES: ciproxy-protocol ciproxy-vz ciproxy-image-vm ciproxy-guest ciproxy-cache-sidecar
       # The crates that build on macOS, but whose tests use Linux fixtures.
       # Move a crate to MACOS_PACKAGES when its tests build on macOS.
       MACOS_BUILD_ONLY_PACKAGES: ciproxy-agent

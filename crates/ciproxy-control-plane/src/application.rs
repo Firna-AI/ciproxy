@@ -5,10 +5,10 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use ciproxy_github::runtime::SystemRuntime;
+use ciproxy_github::runtime::{Runtime, SystemRuntime};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::store::StoreFactory;
 use ciproxy_store_pg::factory::PgStoreFactory;
-use reqwest::{Client, redirect};
 use secrecy::ExposeSecret;
 use tokio::net::TcpListener;
 use tokio::signal::unix::{SignalKind, signal};
@@ -17,8 +17,9 @@ use tokio::time::{MissedTickBehavior, interval, timeout};
 
 use crate::config::Config;
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::image_release::{CdnReleases, ImageReleases};
+use crate::image_release::{ImageReleases, SignedReleases, release_client};
 use crate::image_signing::CdnSigning;
+use crate::macos_release::read_macos_release;
 use crate::startup_api::compose;
 use crate::tasks::OwnedTask;
 
@@ -37,25 +38,27 @@ impl ControlPlane for Production {
     async fn serve(&self, mut config: Config) -> Result<()> {
         let mut terminate = signal(SignalKind::terminate()).internal()?;
         let starting = async {
-            let releases: Arc<dyn ImageReleases> = Arc::new(CdnReleases {
-                http: Client::builder()
-                    .http1_only()
-                    .redirect(redirect::Policy::none())
-                    .connect_timeout(Duration::from_secs(5))
-                    .timeout(Duration::from_secs(90))
-                    .build()
-                    .internal()?,
+            let http = release_client(Duration::from_secs(90)).build().internal()?;
+            let clock: Arc<dyn Runtime> = Arc::new(SystemRuntime);
+            let releases: Arc<dyn ImageReleases> = Arc::new(SignedReleases {
+                http,
                 prefix: config.image_url_prefix.clone(),
                 manifest_path: config.image_manifest_path.clone(),
                 signing: Arc::new(CdnSigning::new(
                     config.cdn_signing_key_name.clone(),
                     config.secret("cdn-signing-key")?.expose_secret(),
                 )?),
-                clock: Arc::new(SystemRuntime),
+                clock: clock.clone(),
+                platform: Platform::LinuxX64,
             });
             let release = releases.current().await?;
-            config.image = Some(release.download);
+            config.images.push(release.download);
             config.image_disk_bytes = release.root_disk_bytes;
+            // A short limit keeps a slow macOS store inside the pod's start window.
+            let macos_http = release_client(Duration::from_secs(30)).build().internal()?;
+            if let Some(macos) = read_macos_release(&config.macos_images, macos_http, clock).await {
+                config.images.push(macos);
+            }
             let database_url = config.database_url.expose_secret().to_owned();
             let store = tokio::task::spawn_blocking(move || PgStoreFactory.connect(&database_url))
                 .await
