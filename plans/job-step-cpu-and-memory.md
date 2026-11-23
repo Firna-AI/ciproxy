@@ -31,11 +31,14 @@ for an answer.
 Contract owners:
 
 - `docs/protocol/job-usage.md`, a new protocol doc that Milestone 2 writes.
-- [Secrets and job data](../docs/protocol/security.md#secrets-and-job-data)
-  and [Data retention](../docs/protocol/security.md#data-retention).
+- [Secrets and job data](../docs/protocol/security-data.md#secrets-and-job-data)
+  and [Data retention](../docs/protocol/security-data.md#data-retention).
+- [Key custody](../docs/protocol/security.md#key-custody), for the sandbox
+  token.
 - [What the dashboard shows](../docs/protocol/job-routing.md#what-the-dashboard-shows).
-- [Overflow runners](../docs/protocol/overflow.md#overflow-runners), for the
-  end report of a sandbox.
+- [The exit report](../docs/protocol/overflow-sandbox-end.md#the-exit-report)
+  and [The end of a job](../docs/protocol/overflow-sandbox-end.md#the-end-of-a-job),
+  for the Boat reports and the hold.
 - The [architecture doc](../docs/architecture.md) and its
   [data flow](../docs/architecture/data-flow.md).
 - The [mockups](../docs/mockups/README.md) of the job page.
@@ -160,7 +163,7 @@ Contract owners:
   - A step's figures cover the whole VM while the step runs. Source: this
     plan. Kept, because the label limits the whole VM.
   - No figure names a process or a command line. Source:
-    [Secrets and job data](../docs/protocol/security.md#secrets-and-job-data).
+    [Secrets and job data](../docs/protocol/security-data.md#secrets-and-job-data).
     Kept. Decision 3 covers the step names.
   - The figures change no VM size. Source:
     [Labels](../docs/protocol/labels.md). Kept.
@@ -245,7 +248,7 @@ and the
 - **Source:** Review. The options check of decision 1 found it on
   22 November 2026. The options check of decisions 2 to 4 added E.
 - **Category:** Security.
-- **Location:** `docs/protocol/security.md:276` and
+- **Location:** `docs/protocol/security-data.md:10` and
   `ts/site/src/content/docs/docs/security/job-isolation.md:86`.
 - **Background:** The job page of decision 1 shows each step by its name.
   If a step has no `name:`, GitHub names it with "Run" and the text of its
@@ -366,8 +369,15 @@ and the
   sandbox is deleted before the guest sends.
 - **Wider fix:** D, because every deletion passes the read, also a cleanup
   after a failed or refused report.
-- **Previous examples:** `plans/follow-ups/boat-runner-stderr-drain.md`
-  records other end-of-job data that the deletion of a sandbox loses.
+- **Previous examples:**
+  - `plans/follow-ups/boat-runner-stderr-drain.md` records other
+    end-of-job data that the deletion of a sandbox loses.
+  - `plans/follow-ups/boat-live-completion-acceptance.md` records the same
+    race between the job-end cleanup and the exit report. On 23 November
+    2026, main moved the acceptance of the exit report out of the cleanup
+    lock, in `crates/ciproxy-overflow/src/service/cleanup.rs`. So a report
+    that arrives during a cleanup is no longer refused for the lock, but
+    the deletion can still come first.
 - **Related:** Decision 1, work that waits for the answer. Only the Boat
   part of the samples waits.
 - **Recommendation:** B. It keeps the figures of each Boat job, and Boat
@@ -484,11 +494,10 @@ Design calls, my calls, 22 November 2026:
 - **Open-source boundary:** the guest, protocol, and agent changes stay in
   their Apache-2.0 crates and use no hosted crate. The store, control
   plane, API, and app changes stay in closed crates.
-- **Doc split:** `docs/protocol/security.md` has 317 lines. Milestone 2
-  moves "Sign-in and access", with "Roles" and "Who gets a role", into a
-  new `docs/protocol/access.md`. Reason: the `documentation` skill splits
-  a doc over 250 lines when a change touches it, and this is the largest
-  section that stands alone.
+- **Doc split:** none. On 23 November 2026, main split `security.md` and
+  `overflow.md`. "Secrets and job data" now lives in `security-data.md`,
+  and the Boat exit report in `overflow-sandbox-end.md`. Each doc that
+  this plan touches is under 250 lines.
 - **Brainstorm:** the widen and narrow steps ran in the orchestrator
   session. That session runs the agent, the model, and the effort of the
   `brainstorming` action.
@@ -604,23 +613,21 @@ The protocol docs state the requirements of the figures before the code.
       mockup pages of Milestone 1. Say that the steps come from the runner
       in the VM, and that job code can change them.
 - [ ] Add the CPU and memory samples and the steps of each job to the job
-      metadata in "Secrets and job data" of `docs/protocol/security.md`,
-      with the script names and rule words design calls. Say in "Key
-      custody" that the sandbox token also sends the samples of its own
-      job. Link the new doc.
-- [ ] Split `docs/protocol/security.md` as the doc split design call says.
-      Update every link to the moved sections in `docs/`, `plans/`, the
-      READMEs, the mockups, and `ts/site`.
+      metadata in "Secrets and job data" of `docs/protocol/security-data.md`,
+      with the script names and rule words design calls. Link the new doc.
+- [ ] Say in "Key custody" of `docs/protocol/security.md` that the sandbox
+      token also sends the samples of its own job.
 - [ ] Write the out-of-memory rule of decision 2 into the new doc: only
       the stopped process ends, and the job goes on.
-- [ ] Write the hold and the sample reports of decision 4 into
-      `docs/protocol/overflow.md`. That doc has 267 lines, so split it as
-      the `documentation` skill says.
+- [ ] Write the hold and the sample reports of decision 4 into "The end of
+      a job" and "The exit report" of
+      `docs/protocol/overflow-sandbox-end.md`. Align the token sentence of
+      `docs/protocol/overflow.md`.
 - [ ] Link the new doc from "What the dashboard shows" in
       `docs/protocol/job-routing.md`.
-- [ ] Add the samples to the boundaries "GitHub and the control plane" and
-      "The agent and its job VMs" in `docs/architecture.md`. Add them to
-      the job flows in `docs/architecture/data-flow.md`.
+- [ ] Add the samples to the boundary "The agent and its job VMs" in
+      `docs/architecture.md`, and keep that doc under 250 lines. Add them
+      to the job flows in `docs/architecture/data-flow.md`.
 - [ ] Add the new docs to the protocol doc list in `README.md`.
 - [ ] Run the Markdown check named in `AGENTS.md`.
 
