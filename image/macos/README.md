@@ -287,6 +287,9 @@ repository. Never print a file, and do not source one in a shell with
 `python3 image/macos/check-template.py` checks the template, toolset, and
 variant preparation offline. `python3 image/macos/check-archive.py` checks the
 archive writer and checker against the agent's member list.
+`python3 image/macos/check-manifest.py` checks that `write-manifest.py`
+refuses a `--variant` and `--test-image` pair that disagrees, because only
+the `test` variant is a test image.
 `python3 image/macos/check-r2.py` runs `publish.sh`, and
 `python3 image/macos/check-r2-xcode.py` runs the Xcode download of
 `fetch.sh` and the `fetch` and `install` phases of `build.sh`, against a

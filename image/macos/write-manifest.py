@@ -35,6 +35,14 @@ def gigabytes(value):
     return f"{value / 1e9:.2f} GB"
 
 
+def check_variant(variant, test_image):
+    """Refuse a pair that publish.sh would refuse: only the test variant is
+    a test image. The build then fails at once, not at publish time."""
+    if (variant == "test") != test_image:
+        raise SystemExit(f"--variant {variant} and --test-image disagree: only the test "
+                         "variant is a test image, and a test image is the test variant")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifacts", type=pathlib.Path)
@@ -44,6 +52,7 @@ def main():
     parser.add_argument("--test-image", action="store_true",
                         help="a test image without Xcode and the upstream toolset")
     args = parser.parse_args()
+    check_variant(args.variant, args.test_image)
     definition = pathlib.Path(__file__).resolve().parent
     pins = dict(line.split("=", 1) for line in (definition / "pins.env").read_text().splitlines()
                 if line and not line.startswith("#"))
