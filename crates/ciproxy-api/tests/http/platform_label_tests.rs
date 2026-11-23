@@ -12,7 +12,7 @@ use super::machine_tests::register;
 fn mac_label() -> Value {
     json!({
         "name": "mac-build", "platform": "macos_arm64", "vcpus": 2, "memory_gb": 8,
-        "disk_gb": 20, "allow_machines": true, "allow_boat": false,
+        "disk_gb": 20, "order":[{"kind":"machine"}],
         "when_nothing_fits": "wait"
     })
 }
@@ -25,8 +25,8 @@ async fn macos_labels_refuse_boat_keep_their_platform_and_skip_linux_machines() 
     let _machine = register(&fixture, &admin).await;
     let labels = fixture.path("/labels");
     for (field, value) in [
-        ("allow_boat", json!(true)),
-        ("when_nothing_fits", json!("largest_boat")),
+        ("order", json!([{"kind":"overflow","provider":"boat"}])),
+        ("when_nothing_fits", json!("largest_overflow")),
     ] {
         let mut refused = mac_label();
         refused[field] = value;
@@ -43,7 +43,7 @@ async fn macos_labels_refuse_boat_keep_their_platform_and_skip_linux_machines() 
     let saved = json(response).await;
     assert_eq!(saved["label"]["platform"], "macos_arm64");
     assert_eq!(saved["fit"]["eligible_machines"], 0, "the Linux machine");
-    assert_eq!(saved["fit"]["boat"]["state"], "disabled");
+    assert_eq!(saved["fit"]["providers"][0]["fit"]["state"], "disabled");
 
     let path = fixture.path(&format!("/labels/{}", saved["id"].as_str().unwrap()));
     let mut linux = mac_label();

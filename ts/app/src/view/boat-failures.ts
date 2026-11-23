@@ -17,7 +17,13 @@ export type FieldProblem =
   | { field: null; copy: FailureCopy };
 
 function code(failure: ApiFailure): string | null {
-  return failure.kind === "problem" ? failure.problem.code : null;
+  if (failure.kind !== "problem") return null;
+  if (
+    failure.problem.code === "provider_key_rejected" &&
+    failure.problem.provider !== "boat"
+  )
+    return null;
+  return failure.problem.code;
 }
 
 function retry(failure: ApiFailure, action: string): string {
@@ -29,7 +35,7 @@ function retry(failure: ApiFailure, action: string): string {
 /** A key check that did not finish: a refused key, or another failure. */
 export function checkProblem(failure: ApiFailure): FieldProblem {
   switch (code(failure)) {
-    case "boat_key_rejected":
+    case "provider_key_rejected":
       return { field: "key", message: keyRefused };
     case "conflict":
       return {
@@ -53,7 +59,7 @@ export function checkProblem(failure: ApiFailure): FieldProblem {
 /** A connection that did not finish: a refused key, a limit, or another. */
 export function connectProblem(failure: ApiFailure): FieldProblem {
   switch (code(failure)) {
-    case "boat_key_rejected":
+    case "provider_key_rejected":
       return { field: "key", message: keyRefused };
     case "invalid_request":
       return {

@@ -15,6 +15,7 @@ import type {
   Platform,
 } from "../api/schema.ts";
 import { isMacLabel, labelPlatform, platformName } from "./platform.ts";
+import { boatLabelFit, hasBoat, hasMachines } from "./settings-label-places.ts";
 
 /**
  * The one label that cannot be deleted, because the warm runners serve it,
@@ -46,52 +47,48 @@ export type Placement = {
 
 /** The reason of a wait, by the switches of the label and the account. */
 function waitReason(label: LabelInput, fit: LabelFit): string {
-  if (!label.allow_machines && !label.allow_boat) {
+  if (!hasMachines(label.order) && !hasBoat(label.order)) {
     return "Your machines and Boat are off";
   }
-  if (!label.allow_boat) return "no machine fits";
-  if (fit.boat_connected === false) {
-    return label.allow_machines ? "no machine fits" : "Boat is not connected";
+  if (!hasBoat(label.order)) return "no machine fits";
+  if (boatLabelFit(fit.providers)?.connected === false) {
+    return hasMachines(label.order)
+      ? "no machine fits"
+      : "Boat is not connected";
   }
-  if (!label.allow_machines) return "no Boat size fits";
+  if (!hasMachines(label.order)) return "no Boat size fits";
   return "nothing fits";
 }
 
 /** Where the jobs of a macOS label run now: on the Macs only, or they wait. */
 function macPlacement(fit: LabelFit): Placement {
-  switch (fit.placement) {
-    case "waits":
-      return { text: "Waits: no Mac fits", warn: true, note: null };
-    case "unavailable":
-      return fit.fitting_machines > 0
-        ? { text: "Your Macs only", warn: false, note: null }
-        : { text: "Not known yet", warn: false, note: null };
-    default:
-      return { text: "Your Macs only", warn: false, note: null };
+  if (fit.fitting_places?.length === 0) {
+    return { text: "Waits: no Mac fits", warn: true, note: null };
   }
+  if (fit.fitting_places == null && fit.fitting_machines === 0) {
+    return { text: "Not known yet", warn: false, note: null };
+  }
+  return { text: "Your Macs only", warn: false, note: null };
 }
 
 /** Where the jobs of a label run now, as the API places them. */
 export function placement(label: LabelInput, fit: LabelFit): Placement {
   if (isMacLabel(label)) return macPlacement(fit);
-  switch (fit.placement) {
-    case "machines_then_boat":
-      return { text: "Your machines, then Boat", warn: false, note: null };
-    case "machines_only":
-      return { text: "Your machines only", warn: false, note: null };
-    case "boat_only":
-      return { text: "Boat only", warn: false, note: null };
-    case "waits":
-      return {
-        text: `Waits: ${waitReason(label, fit)}`,
-        warn: true,
-        note: null,
-      };
-    case "unavailable":
-      return label.allow_machines && fit.fitting_machines > 0
-        ? { text: "Your machines", warn: false, note: "Boat fit not known yet" }
-        : { text: "Not known yet", warn: false, note: null };
+  const places = fit.fitting_places ?? null;
+  if (places === null) {
+    return hasMachines(label.order) && fit.fitting_machines > 0
+      ? { text: "Your machines", warn: false, note: "Boat fit not known yet" }
+      : { text: "Not known yet", warn: false, note: null };
   }
+  if (hasMachines(places)) {
+    return {
+      text: hasBoat(places) ? "Your machines, then Boat" : "Your machines only",
+      warn: false,
+      note: null,
+    };
+  }
+  if (hasBoat(places)) return { text: "Boat only", warn: false, note: null };
+  return { text: `Waits: ${waitReason(label, fit)}`, warn: true, note: null };
 }
 
 export type LabelRow = {

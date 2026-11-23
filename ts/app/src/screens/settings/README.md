@@ -23,9 +23,9 @@ Organizations tab.
   says. The dashboard sorts the labels itself.
 - A label has a platform, Linux or macOS, which Add label asks for and Edit
   shows read-only, as it shows the name. A macOS label runs on the Macs
-  only: its dialog has no switches and no "When nothing fits", and it always
-  sends Boat off and "Wait", which the API requires. Its fit line names
-  Macs. The free disk can have a most value; the API gives none yet.
+  only. Its dialog has no switches and no "When nothing fits". It sends
+  an order of own machines and a fallback of `wait`. Its fit line names
+  Macs. The API gives no fixed maximum free disk size yet.
 - Without a Boat account, the jobs of a label run on the machines only, and
   the dialog keeps the fit of the machines and says that Boat is not
   connected. It never says that a Boat size does not fit before the Boat
@@ -77,8 +77,8 @@ Organizations tab.
   When the read after it fails, the page offers only Try again, which reads.
 - The Boat connection form has two phases, in Setup and in Settings under
   Overflow. Check key sends only the key to
-  `POST /api/workspaces/<id>/overflow/wallets`, which saves nothing. The
-  form then lists the wallets of the answer. The `selected_wallet` of the
+  `POST /api/workspaces/<id>/overflow/providers/boat/key-check`. The API
+  uses the key once to return the list of wallets. The `selected_wallet` of the
   answer starts picked when the list holds it. Connect Boat sends the key,
   the limit, and the chosen wallet. A key edit drops the wallets, and the
   answer of an older check never applies.

@@ -6,6 +6,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::jobs::JobVmSize;
 use super::money::Cents;
+use super::overflow::OverflowProvider;
 use super::pages::PageBanner;
 
 /// One of the three UTC report ranges.
@@ -56,8 +57,28 @@ pub struct SavingsDay {
     pub day: NaiveDate,
     /// Own-machine starts and elapsed runtime.
     pub machines: SavingsRuntime,
-    /// Boat starts and elapsed runtime.
-    pub boat: SavingsRuntime,
+    /// Starts and elapsed runtime for each provider used on this date.
+    pub providers: Vec<SavingsProviderRuntime>,
+}
+
+/// Daily job runtime on one overflow provider.
+#[derive(Serialize, ToSchema)]
+pub struct SavingsProviderRuntime {
+    /// Provider that ran the jobs.
+    pub provider: OverflowProvider,
+    /// Runner-taken starts and elapsed runtime.
+    pub usage: SavingsRuntime,
+}
+
+/// Total runtime and measured cost for one overflow provider in the range.
+#[derive(Serialize, ToSchema)]
+pub struct SavingsProvider {
+    /// Provider that ran jobs or charged for sandboxes in the date range.
+    pub provider: OverflowProvider,
+    /// Runner-taken starts and elapsed runtime.
+    pub usage: SavingsRuntime,
+    /// Measured cost in integer US cents, including idle sandboxes.
+    pub cost_cents: Cents,
 }
 
 /// A missing monthly-price or registration fact.
@@ -130,14 +151,12 @@ pub struct SavingsPage {
     pub until: NaiveDate,
     /// Own-machine starts and minutes.
     pub machines: SavingsRuntime,
-    /// Boat starts and minutes.
-    pub boat: SavingsRuntime,
+    /// Starts, minutes, and measured cost by provider.
+    pub providers: Vec<SavingsProvider>,
     /// Every UTC date in the range, including dates with zero starts.
     pub days: Vec<SavingsDay>,
     /// Known own-machine registered-day costs in integer US cents.
     pub known_machine_cents: Cents,
-    /// Measured Boat cost in integer US cents, including idle sandboxes.
-    pub boat_cents: Cents,
     /// Known plan and add-on date costs in integer US cents.
     pub known_plan_cents: Cents,
     /// Complete ciproxy cost, absent when monthly histories are incomplete.

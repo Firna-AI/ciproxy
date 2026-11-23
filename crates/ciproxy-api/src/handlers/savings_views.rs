@@ -1,21 +1,23 @@
 //! Savings wire conversion after exact store-backed metering calculations.
 
+use std::collections::BTreeMap;
+
 use ciproxy_metering::report::catalog::{Alternative, PriceMatch};
 use ciproxy_metering::report::costs::CostGap;
 use ciproxy_metering::report::savings::SavingsReport;
 use ciproxy_store_interface::metering::totals::LocationTotals;
-use ciproxy_store_interface::overflow::provider::OverflowProvider;
 
 use crate::wire::jobs::JobVmSize;
 use crate::wire::savings::{
     SavingsAlternative, SavingsComparison, SavingsCostGap, SavingsDay, SavingsPage,
-    SavingsPriceGap, SavingsPriceGapReason, SavingsRange, SavingsRuntime,
+    SavingsPriceGap, SavingsPriceGapReason, SavingsProvider, SavingsProviderRuntime, SavingsRange,
+    SavingsRuntime,
 };
 
 use super::billing_views::cents;
 
 pub(super) fn report(
-    mut report: SavingsReport,
+    report: SavingsReport,
     range: SavingsRange,
     refresh_complete: bool,
 ) -> SavingsPage {
@@ -23,7 +25,7 @@ pub(super) fn report(
     let mut day = report.range.from;
     while day < report.range.until {
         let mut machines = LocationTotals::default();
-        let mut boat = LocationTotals::default();
+        let mut providers: BTreeMap<_, LocationTotals> = BTreeMap::new();
         for size in report
             .days
             .iter()
@@ -32,15 +34,22 @@ pub(super) fn report(
         {
             machines.starts += size.machines.starts;
             machines.minutes += size.machines.minutes;
-            if let Some(usage) = size.overflow.get(&OverflowProvider::Boat) {
-                boat.starts += usage.starts;
-                boat.minutes += usage.minutes;
+            for (&provider, usage) in &size.overflow {
+                let total = providers.entry(provider).or_default();
+                total.starts += usage.starts;
+                total.minutes += usage.minutes;
             }
         }
         days.push(SavingsDay {
             day,
             machines: runtime(machines),
-            boat: runtime(boat),
+            providers: providers
+                .into_iter()
+                .map(|(provider, usage)| SavingsProviderRuntime {
+                    provider: provider.into(),
+                    usage: runtime(usage),
+                })
+                .collect(),
         });
         let Some(next) = day.succ_opt() else {
             break;
@@ -73,19 +82,22 @@ pub(super) fn report(
                 .collect(),
         })
         .collect();
-    let boat = report
-        .providers
-        .remove(&OverflowProvider::Boat)
-        .unwrap_or_default();
     SavingsPage {
         range,
         from: report.range.from,
         until: report.range.until,
         machines: runtime(report.machines),
-        boat: runtime(boat.usage),
+        providers: report
+            .providers
+            .into_iter()
+            .map(|(provider, total)| SavingsProvider {
+                provider: provider.into(),
+                usage: runtime(total.usage),
+                cost_cents: cents(total.usd),
+            })
+            .collect(),
         days,
         known_machine_cents: cents(report.costs.known_machines_usd),
-        boat_cents: cents(boat.usd),
         known_plan_cents: cents(report.costs.known_plan_usd),
         total_cents: report.costs.total_usd.map(cents),
         missing_costs: report

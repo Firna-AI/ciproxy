@@ -665,29 +665,31 @@ The dashboard API sends the provider in every overflow body, the label order,
 and the spend limit of each provider. The app's API layer moves in this
 milestone, so that the gate stays green. Its screens move in Milestone 10.
 
-- [ ] Add the provider routes of the design calls: the key check, connect,
+- [x] Add the provider routes of the design calls: the key check, connect,
       change key, Disconnect, and the spend limit.
-- [ ] Give the live view one running count for each provider.
-- [ ] Return a list of providers in `OverflowSettings`, each with its account
+- [x] Give the live view one running count for each provider.
+- [x] Return a list of providers in `OverflowSettings`, each with its account
       view and spend. Keep the wallet types `BoatKeyCheck`, `BoatWallets`,
       `BoatWallet`, and `BoatConnection.wallet` for the Boat case only.
-- [ ] Replace `allow_boat`, `LabelPlacement` with its values
+- [x] Replace `allow_boat`, `LabelPlacement` with its values
       `MachinesThenBoat` and `BoatOnly`, and `NothingFits::LargestBoat` with
       the label order and `largest_overflow`.
-- [ ] Rename the Boat wire types, fields, and values: `BoatLabelFit`,
+- [x] Rename the Boat wire types, fields, and values: `BoatLabelFit`,
       `BoatAccountView`, `BoatSpendView`, `LabelBoatSize`, the `LabelFit`
       fields `boat_connected`, `boat`, `largest_boat`, and
       `boat_required_root_disk_bytes`, `JobLocation::Boat`,
       `HistoryPlace::Boat`, `SetupPlace::Boat`, and the savings fields. Add
       the provider where the view names a provider.
-- [ ] Replace `ProblemCode::BoatKeyRejected` with a key problem that names
+- [x] Replace `ProblemCode::BoatKeyRejected` with a key problem that names
       the provider.
-- [ ] Regenerate the OpenAPI and `ts/api/generated`. Move `ts/app/src/api`
+- [x] Regenerate the OpenAPI and `ts/api/generated`. Move `ts/app/src/api`
       to the new types with no visible change.
-- [ ] Update the README and the docs files of `ciproxy-api`.
-- [ ] Delete the Milestone 4 adapters in `src/handlers/label_views.rs`,
+- [x] Update the README and the docs files of `ciproxy-api`.
+- [x] Delete the Milestone 4 adapters in `src/handlers/label_views.rs`,
       `labels.rs`, and `overflow.rs` that map the old switches,
       `largest_boat`, and the single Boat limit.
+
+Evidence: `.context/providers-interface/m9/`.
 
 ## Milestone 10: Dashboard UI: providers and the label order
 
@@ -715,6 +717,13 @@ The app shows the approved mockups.
 - [ ] Run the app typecheck, lint, tests, and export. Compare the screens
       with the mockups, and save screenshots under
       `.context/providers-interface/`.
+- [ ] Delete the Milestone 9 view mappings that select only the Boat row
+      or map the order to the old switches, in `src/view/boat.ts`,
+      `boat-failures.ts`, `machines-overflow.ts`, `machines.ts`,
+      `settings-label-form.ts`, `jobs-live.ts`, `jobs-places.ts`,
+      `jobs-format.ts`, `jobs-detail.ts`, `jobs-links.ts`,
+      `setup-steps.ts`, `savings-costs.ts`, `savings-report.ts`,
+      `src/state/overflow.ts`, and the setup, overflow, and label screens.
 
 ## Milestone 11: Site: provider-neutral docs
 

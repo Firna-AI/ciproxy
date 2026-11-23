@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
+
 import { fitLine } from "../src/view/settings-label-fit.ts";
 import { vmDiskLine } from "../src/view/settings-label-sizes.ts";
-import { fit, labelInput, offer, xlarge } from "./settings-support.ts";
+import {
+  fit,
+  labelInput,
+  offer,
+  providerFit,
+  xlarge,
+} from "./settings-support.ts";
 
 const nbsp = "\u00a0";
 const request = `8${nbsp}vCPU, 32${nbsp}GB of memory, and 60${nbsp}GB of free disk`;
@@ -28,7 +36,7 @@ test("the fit line gives one count, a range, or the machines that fit", () => {
         fitting_machines: 3,
         minimum_jobs: "1",
         maximum_jobs: "1",
-        placement: "machines_only",
+        fitting_places: [machinePlace],
       }),
       line: "1 job of this size at a time on 3 of your 4 machines.",
     },
@@ -78,33 +86,42 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
   ][] = [
     [
       {},
-      { placement: "boat_only" },
+      { fitting_places: [boatPlace] },
       `No machine of yours fits a job of ${request}`,
       "Jobs with this label run on Boat.",
     ],
     [
       {},
-      { placement: "boat_only", boat: fallback },
+      {
+        fitting_places: [boatPlace],
+        providers: [providerFit({ fit: fallback })],
+      },
       `No machine of yours and no Boat size fits a job of ${request}`,
       largestBoat,
     ],
     [
       {},
-      { placement: "waits", boat: { state: "no_size_fits" } },
+      {
+        fitting_places: [],
+        providers: [providerFit({ fit: { state: "no_size_fits" } })],
+      },
       `No machine of yours and no Boat size fits a job of ${request}`,
       null,
     ],
     [
-      { allow_boat: false },
-      { placement: "waits", boat: { state: "disabled" } },
+      { order: [machinePlace] },
+      {
+        fitting_places: [],
+        providers: [providerFit({ fit: { state: "disabled" } })],
+      },
       `No machine of yours fits a job of ${request}`,
       "Jobs with this label wait until a machine that fits connects.",
     ],
     [
-      { allow_boat: false },
+      { order: [machinePlace] },
       {
-        placement: "waits",
-        boat: { state: "disabled" },
+        fitting_places: [],
+        providers: [providerFit({ fit: { state: "disabled" } })],
         eligible_machines: 0,
         machines: [],
       },
@@ -112,21 +129,27 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
       "No connected machine can run jobs now. Jobs with this label wait until a machine that fits connects.",
     ],
     [
-      { allow_machines: false },
-      { placement: "waits", boat: { state: "no_size_fits" } },
+      { order: [boatPlace] },
+      {
+        fitting_places: [],
+        providers: [providerFit({ fit: { state: "no_size_fits" } })],
+      },
       `No Boat size fits a job of ${request}`,
       null,
     ],
     [
-      { allow_machines: false, allow_boat: false },
-      { placement: "waits", boat: { state: "disabled" } },
+      { order: [] },
+      {
+        fitting_places: [],
+        providers: [providerFit({ fit: { state: "disabled" } })],
+      },
       "Turn on Your machines or Boat",
       "Jobs with this label wait until one of them is on.",
     ],
     [
       {},
       {
-        placement: "boat_only",
+        fitting_places: [boatPlace],
         machines: [
           offer("1", { slots: "6", vcpus: "12", memory_bytes: "48000000000" }),
           offer("2"),
@@ -137,13 +160,17 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
     ],
     [
       {},
-      { placement: "boat_only", eligible_machines: 1, machines: [offer("1")] },
+      {
+        fitting_places: [boatPlace],
+        eligible_machines: 1,
+        machines: [offer("1")],
+      },
       `No machine of yours fits a job of ${request}`,
       "Jobs with this label run on Boat.",
     ],
     [
       {},
-      { placement: "boat_only", eligible_machines: 0, machines: [] },
+      { fitting_places: [boatPlace], eligible_machines: 0, machines: [] },
       `No machine of yours fits a job of ${request}`,
       "Jobs with this label run on Boat.",
     ],
@@ -156,7 +183,7 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
     );
   }
   assert.deepEqual(
-    line({ allow_machines: false }, { placement: "boat_only" }),
+    line({ order: [boatPlace] }, { fitting_places: [boatPlace] }),
     {
       kind: "caption",
       text: "Only Boat may run jobs with this label.",
@@ -169,19 +196,28 @@ test("the dialog names the VM disk of the size, and never a size of the Boat acc
     vmDiskLine(fit()),
     `With the current image, each VM has a disk of 122${nbsp}GB.`,
   );
-  assert.equal(vmDiskLine(fit({ boat_required_root_disk_bytes: null })), null);
+  assert.equal(
+    vmDiskLine(
+      fit({ providers: [providerFit({ required_root_disk_bytes: null })] }),
+    ),
+    null,
+  );
   const fallback = fit({
-    placement: "boat_only",
+    fitting_places: [boatPlace],
     fitting_machines: 0,
     minimum_jobs: null,
     maximum_jobs: null,
     no_machine_fits: true,
-    boat: {
-      state: "largest_fallback",
-      refused: false,
-      size: xlarge.size,
-      size_name: xlarge.name,
-    },
+    providers: [
+      providerFit({
+        fit: {
+          state: "largest_fallback",
+          refused: false,
+          size: xlarge.size,
+          size_name: xlarge.name,
+        },
+      }),
+    ],
   });
   const nothingFits = {
     kind: "warning",
@@ -190,10 +226,16 @@ test("the dialog names the VM disk of the size, and never a size of the Boat acc
   };
   assert.deepEqual(fitLine(labelInput(), fallback), nothingFits);
   assert.deepEqual(
-    fitLine(labelInput(), { ...fallback, largest_boat: null }),
+    fitLine(labelInput(), {
+      ...fallback,
+      providers: fallback.providers.map((provider) => ({
+        ...provider,
+        largest_size: null,
+      })),
+    }),
     nothingFits,
   );
-  assert.deepEqual(fitLine(labelInput({ allow_machines: false }), fallback), {
+  assert.deepEqual(fitLine(labelInput({ order: [boatPlace] }), fallback), {
     kind: "caption",
     text: `Only Boat may run jobs with this label. ${largestBoat}`,
   });

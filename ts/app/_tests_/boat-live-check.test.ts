@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { components } from "../../api/index.ts";
+import { overflowSettings } from "../scripts/fixtures-boat.ts";
 import {
   runBoatLiveCheck,
   type BoatLiveDependencies,
@@ -20,7 +20,7 @@ const credentials = {
 const readySession = () =>
   session({ workspaces: [workspace({ id: credentials.workspace_id })] });
 
-const settings = {
+const settings = overflowSettings({
   account: {
     connected_at: "2026-11-07T00:00:00Z",
     name: privateMarker,
@@ -32,7 +32,7 @@ const settings = {
   spend: null,
   spend_limit_cents: "10000",
   wait_seconds: 30,
-} satisfies components["schemas"]["OverflowSettings"];
+});
 
 function response(value: unknown, build = "recorded-build"): Response {
   return new Response(JSON.stringify(value), {

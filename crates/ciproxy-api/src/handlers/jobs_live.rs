@@ -2,8 +2,11 @@
 
 use std::sync::Arc;
 
-use chrono::{Datelike, Months, NaiveTime};
+use std::collections::BTreeMap;
+
+use chrono::{DateTime, Utc};
 use ciproxy_gateway::types::Presence;
+use ciproxy_overflow::view::{OverflowView, RefreshStatus};
 use ciproxy_protocol::reports::SlotOccupancy;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::job_views::DashboardJob;
@@ -11,16 +14,17 @@ use ciproxy_store_interface::jobs::JobState;
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
-use ciproxy_store_interface::settings::OverflowWait;
 use uuid::Uuid;
 
-use crate::error::{Error, ErrorResultExt, Result, ServiceResultExt};
+use crate::error::{ErrorResultExt, Result, ServiceResultExt};
 use crate::pages::PageServices;
 use crate::state::{ApiState, query};
-use crate::wire::job_overflow::JobOverflow;
-use crate::wire::jobs::{JobVisibility, JobsLivePage, StartingRunner};
+use crate::wire::job_overflow::{JobOverflow, ProviderRunningCount};
+use crate::wire::jobs::{JobLocation, JobView, JobVisibility, JobsLivePage, StartingRunner};
 
-use super::{billing_views, job_fit, job_views, overflow_views, page_context};
+use super::{
+    billing_views, job_fit, job_views, label_provider::Observation, overflow_views, page_context,
+};
 
 pub(super) async fn page(
     state: &ApiState,
@@ -121,29 +125,26 @@ pub(super) async fn page(
                 RunnerPlace::Machine { machine_id, .. } => Some(machine_id.to_string()),
                 _ => None,
             },
-            boat: matches!(
-                runner.place,
-                RunnerPlace::Overflow {
-                    provider: OverflowProvider::Boat,
-                    ..
-                }
-            ),
+            provider: match runner.place {
+                RunnerPlace::Overflow { provider, .. } => Some(provider.into()),
+                RunnerPlace::Machine { .. } => None,
+            },
         })
         .collect();
-    let sizing = pages
-        .as_ref()
-        .and_then(|pages| pages.provider_roots.get(&OverflowProvider::Boat).copied());
-    let overflow_view = match pages.and_then(|pages| pages.overflow.clone()) {
-        Some(service) => overflow_views::current_boat(service.as_ref(), workspace).await,
-        None => None,
+    let overflow_view = overflow_views::observe(state, pages.as_deref(), workspace).await;
+    let observation = Observation {
+        view: overflow_view.as_ref(),
+        roots: pages.as_ref().map(|pages| &pages.provider_roots),
+        image_root_bytes: state.config.image_disk_bytes,
+        enabled: settings.overflow_enabled,
+        at: context.at,
     };
     let waiting_labels = job_fit::labels(job_fit::FitInput {
         jobs: &waiting_jobs,
         labels,
         machines: &machines,
         capacity: state.capacity.as_ref(),
-        overflow: overflow_view.as_ref(),
-        sizing,
+        observation: &observation,
         admin: context.role == Role::Admin,
     });
     let waiting: Vec<_> = waiting_jobs
@@ -155,22 +156,61 @@ pub(super) async fn page(
         .filter(|job| job.state == JobState::Running)
         .map(|job| job_views::job(job, context.at))
         .collect();
-    let overflow = match overflow_view {
-        Some(view) => {
+    let overflow = provider_observations(overflow_view, context.at)?;
+    Ok(JobsLivePage {
+        waiting_labels,
+        waiting_count: complete_waiting.then(|| waiting.len().to_string()),
+        running_by_provider: running_by_provider(&running),
+        running,
+        waiting,
+        own_slots_used: used.map(|value| value.to_string()),
+        own_slots_total: slots.map(|value| value.to_string()),
+        warm_runners,
+        starting_runners,
+        visibility,
+        overflow_enabled: settings.overflow_enabled,
+        overflow_wait_seconds: u32::from(overflow_views::wait_seconds(settings.overflow_wait)),
+        overflow,
+        can_manage: context.role == Role::Admin,
+        banner: page_context::banner(&mut context)?,
+    })
+}
+
+fn running_by_provider(running: &[JobView]) -> Vec<ProviderRunningCount> {
+    let mut counts = BTreeMap::new();
+    for job in running {
+        if let Some(JobLocation::Overflow { provider, .. }) = job.location {
+            *counts.entry(provider.0).or_insert(0usize) += 1;
+        }
+    }
+    OverflowProvider::all()
+        .map(|provider| ProviderRunningCount {
+            provider: provider.into(),
+            running: counts
+                .get(&provider)
+                .copied()
+                .unwrap_or_default()
+                .to_string(),
+        })
+        .collect()
+}
+
+fn provider_observations(
+    view: Option<OverflowView>,
+    at: DateTime<Utc>,
+) -> Result<Vec<JobOverflow>> {
+    let next = overflow_views::next_month(at)?;
+    Ok(view
+        .into_iter()
+        .flat_map(|view| view.providers)
+        .filter(|view| view.refresh == RefreshStatus::Current)
+        .map(|view| {
             let counted = view.spend.counted_usd().ok();
-            let next = context
-                .at
-                .date_naive()
-                .with_day(1)
-                .and_then(|date| date.checked_add_months(Months::new(1)))
-                .ok_or(Error::Unavailable)?
-                .and_time(NaiveTime::MIN)
-                .and_utc();
-            Some(JobOverflow {
+            JobOverflow {
+                provider: view.provider.into(),
                 connected: view.account.is_some(),
                 key_rejected: view
                     .account
-                    .as_ref()
                     .is_some_and(|account| account.rejected_at.is_some()),
                 billing_required: view.state.billing_required,
                 retry_at: view.state.retry_at,
@@ -182,40 +222,7 @@ pub(super) async fn page(
                 measured_complete: view.spend.complete(),
                 next_month: next,
                 refused_sizes: view.state.refused_sizes,
-            })
-        }
-        None => None,
-    };
-    Ok(JobsLivePage {
-        waiting_labels,
-        waiting_count: complete_waiting.then(|| waiting.len().to_string()),
-        on_boat: running
-            .iter()
-            .filter(|job| {
-                matches!(
-                    job.location,
-                    Some(crate::wire::jobs::JobLocation::Boat { .. })
-                )
-            })
-            .count()
-            .to_string(),
-        running,
-        waiting,
-        own_slots_used: used.map(|value| value.to_string()),
-        own_slots_total: slots.map(|value| value.to_string()),
-        warm_runners,
-        starting_runners,
-        visibility,
-        overflow_enabled: settings.overflow_enabled,
-        overflow_wait_seconds: match settings.overflow_wait {
-            OverflowWait::AtOnce => 0,
-            OverflowWait::Seconds15 => 15,
-            OverflowWait::Seconds30 => 30,
-            OverflowWait::Seconds60 => 60,
-            OverflowWait::Seconds120 => 120,
-        },
-        overflow,
-        can_manage: context.role == Role::Admin,
-        banner: page_context::banner(&mut context)?,
-    })
+            }
+        })
+        .collect())
 }

@@ -76,7 +76,13 @@ export function liveModel(page: JobsLivePage, readAt: number): LiveModel {
   }
   figures.push(
     { label: "Own slots in use", value: slotsText(page) },
-    { label: "On Boat", value: formatCount(page.on_boat) },
+    {
+      label: "On Boat",
+      value: formatCount(
+        page.running_by_provider.find((item) => item.provider === "boat")
+          ?.running ?? "0",
+      ),
+    },
   );
   const warm = BigInt(page.warm_runners);
   const idle = page.running.length === 0 && page.waiting.length === 0;

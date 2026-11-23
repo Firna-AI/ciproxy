@@ -5387,6 +5387,18 @@
               "description": "Execution place filter.",
               "enum": [
                 "machine",
+                "overflow"
+              ]
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "description": "One overflow provider, absent to include all providers allowed by the place filter.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
                 "boat"
               ]
             }
@@ -6357,7 +6369,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LabelInput"
+                "$ref": "#/components/schemas/LabelCreate"
               }
             }
           },
@@ -11361,9 +11373,10 @@
         ]
       }
     },
-    "/workspaces/{workspace_id}/overflow/connection": {
-      "post": {
-        "operationId": "overflow_connect",
+    "/workspaces/{workspace_id}/overflow/providers/{provider}/connection": {
+      "put": {
+        "summary": "Replace a provider key while its running jobs finish.",
+        "operationId": "overflow_change_key",
         "parameters": [
           {
             "name": "workspace_id",
@@ -11373,6 +11386,18 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "Provider whose connection or settings the request changes.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "boat"
+              ]
             }
           },
           {
@@ -11417,7 +11442,532 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Success"
+                  "$ref": "#/components/schemas/ProviderSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Provider key refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Connect a provider key and save its spend limit.",
+        "operationId": "overflow_connect",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "Provider whose connection or settings the request changes.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "boat"
+              ]
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoatConnection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Provider key refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "overflow_disconnect",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "Provider whose connection or settings the request changes.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "boat"
+              ]
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderSuccess"
                 }
               }
             }
@@ -11616,9 +12166,12 @@
             "session": []
           }
         ]
-      },
-      "delete": {
-        "operationId": "overflow_disconnect",
+      }
+    },
+    "/workspaces/{workspace_id}/overflow/providers/{provider}/key-check": {
+      "post": {
+        "summary": "Check a provider key without saving it. Boat returns its billing wallets.",
+        "operationId": "overflow_check_key",
         "parameters": [
           {
             "name": "workspace_id",
@@ -11628,6 +12181,18 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "Provider whose connection or settings the request changes.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "boat"
+              ]
             }
           },
           {
@@ -11649,6 +12214,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoatKeyCheck"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -11662,7 +12237,276 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Success"
+                  "$ref": "#/components/schemas/BoatWallets"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Provider key refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/overflow/providers/{provider}/spend-limit": {
+      "put": {
+        "operationId": "overflow_save_limit",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "Provider whose connection or settings the request changes.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "boat"
+              ]
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderSpendLimit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderSuccess"
                 }
               }
             }
@@ -12086,264 +12930,6 @@
         },
         "security": [
           {
-            "session": []
-          }
-        ]
-      }
-    },
-    "/workspaces/{workspace_id}/overflow/wallets": {
-      "post": {
-        "summary": "Check a Boat key and list its billing wallets.",
-        "operationId": "overflow_wallets",
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "description": "Stable workspace identity.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Origin",
-            "in": "header",
-            "description": "Exact configured dashboard origin.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-ciproxy-csrf",
-            "in": "header",
-            "description": "The session's CSRF token returned by the session endpoint.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BoatKeyCheck"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BoatWallets"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Malformed request",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sign-in absent, expired, or revoked",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Workspace role, origin, or CSRF token refused",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Resource absent in this workspace",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method not allowed",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflicting resource state",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Request body is too large",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported content type",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "GitHub label refusal or malformed body",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal operation failed",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Temporary upstream or agent failure",
-            "headers": {
-              "x-ciproxy-build": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "csrf": [],
             "session": []
           }
         ]
@@ -13599,33 +14185,6 @@
           "ask_admin_or_billing"
         ]
       },
-      "BoatAccountView": {
-        "type": "object",
-        "description": "Safe connected-account metadata with no key or key ciphertext.",
-        "required": [
-          "name",
-          "connected_at"
-        ],
-        "properties": {
-          "connected_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "The time this key version connected."
-          },
-          "name": {
-            "type": "string",
-            "description": "The account name returned by Boat during verification."
-          },
-          "rejected_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time",
-            "description": "The first time Boat refused this key, absent while the key is accepted."
-          }
-        }
-      },
       "BoatConnection": {
         "type": "object",
         "description": "Key verification and a required monthly limit for every Boat connection.",
@@ -13663,151 +14222,6 @@
           }
         }
       },
-      "BoatLabelFit": {
-        "oneOf": [
-          {
-            "type": "object",
-            "description": "The trusted image sizing, account, or catalog observation is unavailable.",
-            "required": [
-              "state"
-            ],
-            "properties": {
-              "state": {
-                "type": "string",
-                "enum": [
-                  "unavailable"
-                ]
-              }
-            }
-          },
-          {
-            "type": "object",
-            "description": "This label does not permit Boat.",
-            "required": [
-              "state"
-            ],
-            "properties": {
-              "state": {
-                "type": "string",
-                "enum": [
-                  "disabled"
-                ]
-              }
-            }
-          },
-          {
-            "type": "object",
-            "description": "No catalog size fits and no permitted largest-size fallback exists.",
-            "required": [
-              "state"
-            ],
-            "properties": {
-              "state": {
-                "type": "string",
-                "enum": [
-                  "no_size_fits"
-                ]
-              }
-            }
-          },
-          {
-            "type": "object",
-            "description": "A catalog size covers all requested resources.",
-            "required": [
-              "size_name",
-              "size",
-              "refused",
-              "state"
-            ],
-            "properties": {
-              "refused": {
-                "type": "boolean",
-                "description": "A provider refusal currently excludes this size from starts."
-              },
-              "size": {
-                "$ref": "#/components/schemas/JobVmSize",
-                "description": "Actual byte-precise catalog resources."
-              },
-              "size_name": {
-                "type": "string",
-                "description": "Actual catalog size name."
-              },
-              "state": {
-                "type": "string",
-                "enum": [
-                  "fitting"
-                ]
-              }
-            }
-          },
-          {
-            "type": "object",
-            "description": "The label permits the largest size with enough disk for the image.",
-            "required": [
-              "size_name",
-              "size",
-              "refused",
-              "state"
-            ],
-            "properties": {
-              "refused": {
-                "type": "boolean",
-                "description": "A provider refusal currently excludes this size from starts."
-              },
-              "size": {
-                "$ref": "#/components/schemas/JobVmSize",
-                "description": "Actual resources, which can be smaller than the requested label."
-              },
-              "size_name": {
-                "type": "string",
-                "description": "Actual catalog size name."
-              },
-              "state": {
-                "type": "string",
-                "enum": [
-                  "largest_fallback"
-                ]
-              }
-            }
-          }
-        ],
-        "description": "Boat resources under the label policy, without claiming a start is available."
-      },
-      "BoatSpendView": {
-        "type": "object",
-        "description": "Rounded display amounts. Exact decimal costs still govern Boat admission.",
-        "required": [
-          "confirmed_cents",
-          "unconfirmed_cents",
-          "settled_bound_cents",
-          "bounded"
-        ],
-        "properties": {
-          "bounded": {
-            "type": "boolean",
-            "description": "Whether all current-month costs have either a known value or a safe bound."
-          },
-          "confirmed_cents": {
-            "$ref": "#/components/schemas/Cents",
-            "description": "Provider-confirmed costs, rounded once after aggregation to integer US cents."
-          },
-          "limit_reached": {
-            "type": [
-              "boolean",
-              "null"
-            ],
-            "description": "Whether exact counted costs have reached the saved monthly limit."
-          },
-          "settled_bound_cents": {
-            "$ref": "#/components/schemas/Cents",
-            "description": "The settled-bound portion of unconfirmed costs, rounded after aggregation."
-          },
-          "unconfirmed_cents": {
-            "$ref": "#/components/schemas/Cents",
-            "description": "Unconfirmed costs, including pending bounds and expired settled bounds.\nRounded once after both parts are added. This is not a provider-confirmed charge."
-          }
-        }
-      },
       "BoatWallet": {
         "type": "object",
         "description": "A named billing wallet that the checked key can use.",
@@ -13830,10 +14244,15 @@
         "type": "object",
         "description": "Safe key-check result with the likely wallet selected.",
         "required": [
+          "provider",
           "wallets",
           "selected_wallet"
         ],
         "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Provider that accepted the key and returned these wallets."
+          },
           "selected_wallet": {
             "type": "string",
             "description": "Boat's active wallet, or the first offered wallet when none is active."
@@ -14235,8 +14654,9 @@
           },
           {
             "type": "object",
-            "description": "A sandbox on Boat.",
+            "description": "A sandbox on an overflow provider.",
             "required": [
+              "provider",
               "size",
               "kind"
             ],
@@ -14244,12 +14664,16 @@
               "kind": {
                 "type": "string",
                 "enum": [
-                  "boat"
+                  "overflow"
                 ]
+              },
+              "provider": {
+                "$ref": "#/components/schemas/OverflowProvider",
+                "description": "Provider that ran this job."
               },
               "size": {
                 "type": "string",
-                "description": "Actual billed Boat size name."
+                "description": "Actual billed size name."
               }
             }
           }
@@ -14258,8 +14682,9 @@
       },
       "JobOverflow": {
         "type": "object",
-        "description": "Existing overflow service observations, absent when that source is unavailable.",
+        "description": "Current overflow observations for one provider.",
         "required": [
+          "provider",
           "connected",
           "key_rejected",
           "billing_required",
@@ -14270,11 +14695,11 @@
         "properties": {
           "billing_required": {
             "type": "boolean",
-            "description": "Boat requires account billing before it starts more sandboxes."
+            "description": "The provider requires account billing before it starts more sandboxes."
           },
           "connected": {
             "type": "boolean",
-            "description": "An active Boat account is connected."
+            "description": "An active account is connected."
           },
           "counted_cents": {
             "oneOf": [
@@ -14289,7 +14714,7 @@
           },
           "key_rejected": {
             "type": "boolean",
-            "description": "Boat rejected the active key."
+            "description": "The provider rejected the active key."
           },
           "limit_cents": {
             "oneOf": [
@@ -14317,6 +14742,10 @@
             "type": "string",
             "format": "date-time",
             "description": "First UTC instant at which the monthly budget resets."
+          },
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Provider whose account, refusals, and spend were observed."
           },
           "refused_sizes": {
             "type": "array",
@@ -14608,12 +15037,13 @@
           "waiting_labels",
           "running",
           "waiting",
-          "on_boat",
+          "running_by_provider",
           "warm_runners",
           "starting_runners",
           "visibility",
           "overflow_enabled",
           "overflow_wait_seconds",
+          "overflow",
           "can_manage"
         ],
         "properties": {
@@ -14632,20 +15062,12 @@
             "type": "boolean",
             "description": "Current caller may change labels or overflow settings."
           },
-          "on_boat": {
-            "type": "string",
-            "description": "Number of running Boat jobs."
-          },
           "overflow": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/JobOverflow",
-                "description": "Current Boat refusal and spend facts, absent when their source is unavailable."
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobOverflow"
+            },
+            "description": "Current refusal and spend facts for providers with a successful observation."
           },
           "overflow_enabled": {
             "type": "boolean",
@@ -14677,6 +15099,13 @@
               "$ref": "#/components/schemas/JobView"
             },
             "description": "Running jobs across all workspace organizations."
+          },
+          "running_by_provider": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderRunningCount"
+            },
+            "description": "Running counts for every supported provider, including zero counts."
           },
           "starting_runners": {
             "type": "array",
@@ -14719,55 +15148,43 @@
           }
         }
       },
-      "LabelBoatSize": {
-        "type": "object",
-        "description": "One trusted Boat catalog size with its complete actual allocation.",
-        "required": [
-          "name",
-          "size"
-        ],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Actual catalog name."
+      "LabelCreate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/LabelSpec",
+            "description": "Definition of the new label."
           },
-          "size": {
-            "$ref": "#/components/schemas/JobVmSize",
-            "description": "Actual resources, with byte counts as decimal strings."
+          {
+            "type": "object",
+            "properties": {
+              "order": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/LabelPlace"
+                },
+                "description": "Omit to use own machines followed by the offered providers on Linux.\nAn explicit empty order leaves all jobs waiting."
+              }
+            }
           }
-        }
+        ],
+        "description": "Create a label with an explicit order or the workspace default."
       },
       "LabelFit": {
         "type": "object",
-        "description": "Computed machine capacity for a label preview.",
+        "description": "Computed capacity and routing for a label or a label preview.",
         "required": [
           "machines",
-          "boat",
-          "placement",
+          "providers",
+          "routing",
           "eligible_machines",
           "unavailable_machines",
           "fitting_machines",
           "no_machine_fits"
         ],
         "properties": {
-          "boat": {
-            "$ref": "#/components/schemas/BoatLabelFit",
-            "description": "Physical Boat fit under the label's exact routing policy."
-          },
-          "boat_connected": {
-            "type": [
-              "boolean",
-              "null"
-            ],
-            "description": "Account presence from a successful observation, absent when not observed."
-          },
-          "boat_required_root_disk_bytes": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Complete required root under the shared trusted Boat image policy."
-          },
           "eligible_machines": {
             "type": "integer",
             "format": "int32",
@@ -14780,16 +15197,15 @@
             "description": "Count of those machines that fit at least one job.",
             "minimum": 0
           },
-          "largest_boat": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/LabelBoatSize",
-                "description": "Largest size in the trusted physical Boat catalog."
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "fitting_places": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LabelPlace"
+            },
+            "description": "Physical choices in label order, including a fallback when applicable.\nAbsent when a missing observation prevents a conclusion."
           },
           "machines": {
             "type": "array",
@@ -14816,9 +15232,16 @@
             "type": "boolean",
             "description": "Whether no allowed own machine currently fits this size."
           },
-          "placement": {
-            "$ref": "#/components/schemas/LabelPlacement",
-            "description": "Current physical placement, with missing sources explicit."
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderLabelFit"
+            },
+            "description": "Physical fit and current holds for each provider."
+          },
+          "routing": {
+            "$ref": "#/components/schemas/LabelRouting",
+            "description": "Routing choices after the workspace switch and provider holds."
           },
           "unavailable_machines": {
             "type": "integer",
@@ -14829,54 +15252,28 @@
         }
       },
       "LabelInput": {
-        "type": "object",
-        "description": "Label definition whose name and platform never change after creation.",
-        "required": [
-          "name",
-          "vcpus",
-          "memory_gb",
-          "disk_gb",
-          "allow_machines",
-          "allow_boat",
-          "when_nothing_fits"
-        ],
-        "properties": {
-          "allow_boat": {
-            "type": "boolean",
-            "description": "Whether Boat may run this label. Always false for a macOS label."
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/LabelSpec",
+            "description": "Definition of the label."
           },
-          "allow_machines": {
-            "type": "boolean",
-            "description": "Whether own machines may run this label."
-          },
-          "disk_gb": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Free job disk in decimal GB, apart from the full image disk."
-          },
-          "memory_gb": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Requested memory in decimal GB."
-          },
-          "name": {
-            "type": "string",
-            "description": "Workflow label accepted by GitHub."
-          },
-          "platform": {
-            "$ref": "#/components/schemas/Platform",
-            "description": "Platform of the label's job VMs. Jobs run only on machines of this platform.\nAn absent value means `linux_x64`."
-          },
-          "vcpus": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Requested hardware threads."
-          },
-          "when_nothing_fits": {
-            "$ref": "#/components/schemas/NothingFits",
-            "description": "What happens when neither destination fits. Always `wait` for a macOS label."
+          {
+            "type": "object",
+            "required": [
+              "order"
+            ],
+            "properties": {
+              "order": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LabelPlace"
+                },
+                "description": "Places in the order in which the label tries them."
+              }
+            }
           }
-        }
+        ],
+        "description": "A label with its complete stored order, also used for edits and previews."
       },
       "LabelMachineFit": {
         "type": "object",
@@ -14932,16 +15329,153 @@
           }
         }
       },
-      "LabelPlacement": {
-        "type": "string",
-        "description": "Current physical placement, independent of temporary start availability.",
-        "enum": [
-          "machines_then_boat",
-          "machines_only",
-          "boat_only",
-          "waits",
-          "unavailable"
-        ]
+      "LabelPlace": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The workspace's own machines.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "machine"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "One overflow provider.",
+            "required": [
+              "provider",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "overflow"
+                ]
+              },
+              "provider": {
+                "$ref": "#/components/schemas/OverflowProvider",
+                "description": "Provider the label tries at this position."
+              }
+            }
+          }
+        ],
+        "description": "One place in the order of a label."
+      },
+      "LabelRouting": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Places that can serve the label at its requested size, in order.",
+            "required": [
+              "places",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "places"
+                ]
+              },
+              "places": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LabelPlace"
+                },
+                "description": "Each place that can take the job."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A provider's largest size can run the job as a fallback.",
+            "required": [
+              "provider",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "largest"
+                ]
+              },
+              "provider": {
+                "$ref": "#/components/schemas/OverflowProvider",
+                "description": "First provider that can start the fallback."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "No place can take the job now.",
+            "required": [
+              "reason",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "waits"
+                ]
+              },
+              "reason": {
+                "$ref": "#/components/schemas/LabelWaitReason",
+                "description": "Reason for waiting."
+              }
+            }
+          }
+        ],
+        "description": "Where a job of the label can run before own-machine occupancy is checked."
+      },
+      "LabelSpec": {
+        "type": "object",
+        "description": "Label definition whose name and platform never change after creation.",
+        "required": [
+          "name",
+          "vcpus",
+          "memory_gb",
+          "disk_gb",
+          "when_nothing_fits"
+        ],
+        "properties": {
+          "disk_gb": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Free job disk in decimal GB, apart from the full image disk."
+          },
+          "memory_gb": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Requested memory in decimal GB."
+          },
+          "name": {
+            "type": "string",
+            "description": "Workflow label accepted by GitHub."
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "description": "Platform of the label's job VMs. Jobs run only on machines of this platform.\nAn absent value means `linux_x64`."
+          },
+          "vcpus": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Requested hardware threads."
+          },
+          "when_nothing_fits": {
+            "$ref": "#/components/schemas/NothingFits",
+            "description": "What happens when no place fits. Always `wait` for a macOS label."
+          }
+        }
       },
       "LabelView": {
         "type": "object",
@@ -14988,6 +15522,81 @@
             "description": "Current label policy."
           }
         }
+      },
+      "LabelWaitReason": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The customer removed all places from the label.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "empty_order"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "No permitted place can fit the request or its fallback.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "nothing_fits"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Own-machine or provider resource observations are missing.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "unavailable"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "First eligible place that is blocked by its current provider state.",
+            "required": [
+              "provider",
+              "hold",
+              "kind"
+            ],
+            "properties": {
+              "hold": {
+                "$ref": "#/components/schemas/ProviderHold",
+                "description": "Reason it cannot take this label now."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "provider"
+                ]
+              },
+              "provider": {
+                "$ref": "#/components/schemas/OverflowProvider",
+                "description": "Provider whose hold explains the wait."
+              }
+            }
+          }
+        ],
+        "description": "First applicable reason a label waits."
       },
       "LinkState": {
         "type": "string",
@@ -15380,7 +15989,7 @@
         "description": "Waiting policy for a label that currently fits nothing.",
         "enum": [
           "wait",
-          "largest_boat"
+          "largest_overflow"
         ]
       },
       "OrganizationLinkView": {
@@ -15611,17 +16220,12 @@
         "description": "Complete routing policy editable in Settings under Overflow.",
         "required": [
           "enabled",
-          "wait_seconds",
-          "spend_limit_cents"
+          "wait_seconds"
         ],
         "properties": {
           "enabled": {
             "type": "boolean",
-            "description": "Whether the workspace permits new Boat runners."
-          },
-          "spend_limit_cents": {
-            "$ref": "#/components/schemas/Cents",
-            "description": "Positive monthly integer US cents as a decimal string."
+            "description": "Whether the workspace permits new overflow runners."
           },
           "wait_seconds": {
             "type": "integer",
@@ -15631,61 +16235,37 @@
           }
         }
       },
+      "OverflowProvider": {
+        "type": "string",
+        "enum": [
+          "boat"
+        ]
+      },
       "OverflowSettings": {
         "type": "object",
-        "description": "Boat Setup and Settings data shared by their connection form.",
+        "description": "Workspace routing policy and provider options for Setup and Settings.",
         "required": [
-          "available",
           "enabled",
           "wait_seconds",
-          "next_month_at"
+          "next_month_at",
+          "providers"
         ],
         "properties": {
-          "account": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/BoatAccountView",
-                "description": "Safe account metadata, absent after skip or disconnect."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "available": {
-            "type": "boolean",
-            "description": "Whether the deployment has a shared Boat image and the Boat service."
-          },
           "enabled": {
             "type": "boolean",
-            "description": "The switch that permits new Boat starts."
+            "description": "The switch that permits new overflow starts."
           },
           "next_month_at": {
             "type": "string",
             "format": "date-time",
             "description": "First instant of the next calendar month in UTC."
           },
-          "spend": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/BoatSpendView",
-                "description": "Current-month cost display, absent when provider observations are unavailable."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "spend_limit_cents": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/Cents",
-                "description": "Saved limit for the connection or reconnect form."
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderSettings"
+            },
+            "description": "Every supported provider, including unavailable or disconnected providers."
           },
           "wait_seconds": {
             "type": "integer",
@@ -16321,6 +16901,17 @@
           "message": {
             "type": "string",
             "description": "Safe explanation with no credentials or provider response body."
+          },
+          "provider": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OverflowProvider",
+                "description": "Provider that refused a key, when the problem concerns a provider key."
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -16328,7 +16919,7 @@
         "type": "string",
         "description": "Closed set of machine-readable dashboard failures.",
         "enum": [
-          "boat_key_rejected",
+          "provider_key_rejected",
           "sign_in_required",
           "access_denied",
           "not_found",
@@ -16340,6 +16931,391 @@
           "internal",
           "method_not_allowed"
         ]
+      },
+      "ProviderAccountView": {
+        "type": "object",
+        "description": "Safe connected-account metadata with no key or key ciphertext.",
+        "required": [
+          "name",
+          "connected_at"
+        ],
+        "properties": {
+          "connected_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The time this key version connected."
+          },
+          "name": {
+            "type": "string",
+            "description": "The account name returned by the provider during verification."
+          },
+          "rejected_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "The first time the provider refused this key, absent while the key is accepted."
+          }
+        }
+      },
+      "ProviderCatalogSize": {
+        "type": "object",
+        "description": "One trusted catalog size with its complete actual allocation.",
+        "required": [
+          "name",
+          "size"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Actual catalog name."
+          },
+          "size": {
+            "$ref": "#/components/schemas/JobVmSize",
+            "description": "Actual resources, with byte counts as decimal strings."
+          }
+        }
+      },
+      "ProviderHold": {
+        "type": "string",
+        "description": "Reason a provider cannot start a job now.",
+        "enum": [
+          "off",
+          "not_connected",
+          "unavailable",
+          "key_rejected",
+          "spend_limit",
+          "costs_unknown",
+          "retry_after",
+          "billing_required",
+          "size_refused"
+        ]
+      },
+      "ProviderLabelFit": {
+        "type": "object",
+        "description": "One provider's fit and current start availability for the label.",
+        "required": [
+          "provider",
+          "fit"
+        ],
+        "properties": {
+          "connected": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Account presence from a successful observation, absent when unknown."
+          },
+          "eligible_size": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProviderCatalogSize",
+                "description": "Cheapest fitting size after applying any refusals for individual sizes."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fit": {
+            "$ref": "#/components/schemas/ProviderSizeFit",
+            "description": "Physical fit under the label's resource policy."
+          },
+          "hold": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProviderHold",
+                "description": "A reason the provider cannot take this label now, when one applies."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "largest_size": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProviderCatalogSize",
+                "description": "Largest size in the trusted physical catalog."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Provider that owns the catalog and accounts for these resources."
+          },
+          "required_root_disk_bytes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Complete required root under the provider's trusted image policy."
+          }
+        }
+      },
+      "ProviderRunningCount": {
+        "type": "object",
+        "description": "Running jobs counted from their saved placement.",
+        "required": [
+          "provider",
+          "running"
+        ],
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Provider that runs the jobs."
+          },
+          "running": {
+            "type": "string",
+            "description": "Running job count as a decimal string."
+          }
+        }
+      },
+      "ProviderSettings": {
+        "type": "object",
+        "description": "Deployment and workspace facts for one supported provider.",
+        "required": [
+          "provider",
+          "name",
+          "available",
+          "has_billing_account_choice",
+          "offered"
+        ],
+        "properties": {
+          "account": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProviderAccountView",
+                "description": "Safe account metadata, absent after skip or disconnect."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available": {
+            "type": "boolean",
+            "description": "The deployment has the configuration needed to offer this provider."
+          },
+          "has_billing_account_choice": {
+            "type": "boolean",
+            "description": "The key can use several billing accounts and the customer selects one."
+          },
+          "name": {
+            "type": "string",
+            "description": "Provider brand name."
+          },
+          "offered": {
+            "type": "boolean",
+            "description": "The workspace can add this provider to its Linux label orders."
+          },
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Stable provider identity."
+          },
+          "spend": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProviderSpendView",
+                "description": "Current-month display, absent when spend observations are unavailable."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spend_limit_cents": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cents",
+                "description": "Saved limit for the connection or reconnect form."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ProviderSizeFit": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The trusted image sizing, account, or catalog observation is unavailable.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "unavailable"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The label order does not include this provider.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "disabled"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "No catalog size fits and no physical fallback is selected here.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "no_size_fits"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A catalog size covers all requested resources.",
+            "required": [
+              "size_name",
+              "size",
+              "refused",
+              "state"
+            ],
+            "properties": {
+              "refused": {
+                "type": "boolean",
+                "description": "A provider refusal currently excludes this size from starts."
+              },
+              "size": {
+                "$ref": "#/components/schemas/JobVmSize",
+                "description": "Actual byte-precise catalog resources."
+              },
+              "size_name": {
+                "type": "string",
+                "description": "Actual catalog size name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "fitting"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The label permits the largest size with enough disk for the image.",
+            "required": [
+              "size_name",
+              "size",
+              "refused",
+              "state"
+            ],
+            "properties": {
+              "refused": {
+                "type": "boolean",
+                "description": "A provider refusal currently excludes this size from starts."
+              },
+              "size": {
+                "$ref": "#/components/schemas/JobVmSize",
+                "description": "Actual resources which can be smaller than the requested label."
+              },
+              "size_name": {
+                "type": "string",
+                "description": "Actual catalog size name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "largest_fallback"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Physical provider resources without a claim that a start is available."
+      },
+      "ProviderSpendLimit": {
+        "type": "object",
+        "description": "A monthly spend limit for the provider named in the path.",
+        "required": [
+          "spend_limit_cents"
+        ],
+        "properties": {
+          "spend_limit_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Positive monthly integer US cents as a decimal string."
+          }
+        }
+      },
+      "ProviderSpendView": {
+        "type": "object",
+        "description": "Rounded display amounts. Exact decimal costs still govern admission.",
+        "required": [
+          "confirmed_cents",
+          "unconfirmed_cents",
+          "settled_bound_cents",
+          "bounded"
+        ],
+        "properties": {
+          "bounded": {
+            "type": "boolean",
+            "description": "Whether all current-month costs have either a known value or a safe bound."
+          },
+          "confirmed_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Provider-confirmed costs, rounded once after aggregation to integer US cents."
+          },
+          "limit_reached": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether exact counted costs have reached the saved monthly limit."
+          },
+          "settled_bound_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "The settled-bound portion of unconfirmed costs, rounded after aggregation."
+          },
+          "unconfirmed_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Unconfirmed costs, including pending bounds and expired settled bounds.\nRounded once after both parts are added. This is not a provider-confirmed charge."
+          }
+        }
+      },
+      "ProviderSuccess": {
+        "type": "object",
+        "description": "Confirmation of a change to one provider.",
+        "required": [
+          "ok",
+          "provider"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "True when the change succeeded."
+          },
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Provider whose change succeeded."
+          }
+        }
       },
       "RemovedOrganization": {
         "type": "object",
@@ -16599,13 +17575,9 @@
         "required": [
           "day",
           "machines",
-          "boat"
+          "providers"
         ],
         "properties": {
-          "boat": {
-            "$ref": "#/components/schemas/SavingsRuntime",
-            "description": "Boat starts and elapsed runtime."
-          },
           "day": {
             "type": "string",
             "format": "date",
@@ -16614,6 +17586,13 @@
           "machines": {
             "$ref": "#/components/schemas/SavingsRuntime",
             "description": "Own-machine starts and elapsed runtime."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavingsProviderRuntime"
+            },
+            "description": "Starts and elapsed runtime for each provider used on this date."
           }
         }
       },
@@ -16625,10 +17604,9 @@
           "from",
           "until",
           "machines",
-          "boat",
+          "providers",
           "days",
           "known_machine_cents",
-          "boat_cents",
           "known_plan_cents",
           "missing_costs",
           "comparisons",
@@ -16646,14 +17624,6 @@
                 "type": "null"
               }
             ]
-          },
-          "boat": {
-            "$ref": "#/components/schemas/SavingsRuntime",
-            "description": "Boat starts and minutes."
-          },
-          "boat_cents": {
-            "$ref": "#/components/schemas/Cents",
-            "description": "Measured Boat cost in integer US cents, including idle sandboxes."
           },
           "can_add_machine_costs": {
             "type": "boolean",
@@ -16708,6 +17678,13 @@
             },
             "description": "Missing facts that prevent a complete ciproxy total."
           },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavingsProvider"
+            },
+            "description": "Starts, minutes, and measured cost by provider."
+          },
           "range": {
             "$ref": "#/components/schemas/SavingsRange",
             "description": "Selected range."
@@ -16759,6 +17736,47 @@
           "unavailable",
           "ambiguous"
         ]
+      },
+      "SavingsProvider": {
+        "type": "object",
+        "description": "Total runtime and measured cost for one overflow provider in the range.",
+        "required": [
+          "provider",
+          "usage",
+          "cost_cents"
+        ],
+        "properties": {
+          "cost_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Measured cost in integer US cents, including idle sandboxes."
+          },
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Provider that ran jobs or charged for sandboxes in the date range."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/SavingsRuntime",
+            "description": "Runner-taken starts and elapsed runtime."
+          }
+        }
+      },
+      "SavingsProviderRuntime": {
+        "type": "object",
+        "description": "Daily job runtime on one overflow provider.",
+        "required": [
+          "provider",
+          "usage"
+        ],
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/OverflowProvider",
+            "description": "Provider that ran the jobs."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/SavingsRuntime",
+            "description": "Runner-taken starts and elapsed runtime."
+          }
+        }
       },
       "SavingsRange": {
         "type": "string",
@@ -16890,7 +17908,7 @@
       },
       "SettingsView": {
         "type": "object",
-        "description": "Admin-only non-Boat Settings data.",
+        "description": "Admin-only workspace Settings data.",
         "required": [
           "name",
           "organizations",
@@ -16936,7 +17954,7 @@
       },
       "SetupJob": {
         "type": "object",
-        "description": "First-job progress for the last non-Boat Setup step.",
+        "description": "First-job progress for the last Setup step.",
         "required": [
           "id",
           "name",
@@ -17100,16 +18118,48 @@
         ]
       },
       "SetupPlace": {
-        "type": "string",
-        "description": "Actual runner placement known from the matching durable runner record.",
-        "enum": [
-          "machine",
-          "boat"
-        ]
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "A VM on an own machine.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "machine"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A sandbox on an overflow provider.",
+            "required": [
+              "provider",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "overflow"
+                ]
+              },
+              "provider": {
+                "$ref": "#/components/schemas/OverflowProvider",
+                "description": "Provider where the first job ran."
+              }
+            }
+          }
+        ],
+        "description": "Actual runner placement known from the matching durable runner record."
       },
       "SetupView": {
         "type": "object",
-        "description": "Non-Boat setup progress for one workspace.",
+        "description": "Setup progress for one workspace.",
         "required": [
           "current_image_disk_bytes",
           "organizations",
@@ -17226,14 +18276,9 @@
         "description": "One runner that the runtime is preparing, without registration credentials.",
         "required": [
           "id",
-          "label_id",
-          "boat"
+          "label_id"
         ],
         "properties": {
-          "boat": {
-            "type": "boolean",
-            "description": "True for a Boat sandbox."
-          },
           "id": {
             "type": "string",
             "description": "Stable runner identity."
@@ -17247,7 +18292,18 @@
               "string",
               "null"
             ],
-            "description": "Registered own-machine identity, absent for Boat."
+            "description": "Registered own-machine identity, absent for overflow."
+          },
+          "provider": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OverflowProvider",
+                "description": "Provider starting the sandbox, absent for an own machine."
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -17425,7 +18481,7 @@
           "label_id",
           "label_name",
           "waiting_jobs",
-          "boat",
+          "providers",
           "can_edit",
           "ask_admin"
         ],
@@ -17433,10 +18489,6 @@
           "ask_admin": {
             "type": "boolean",
             "description": "This notice asks an Admin because the current caller cannot edit the label."
-          },
-          "boat": {
-            "$ref": "#/components/schemas/BoatLabelFit",
-            "description": "Boat resource fit, distinct from current provider availability."
           },
           "can_edit": {
             "type": "boolean",
@@ -17446,7 +18498,7 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/LabelView",
-                "description": "Current label policy and physical machine and Boat fit, absent after retirement."
+                "description": "Current label policy and fit, absent after retirement."
               },
               {
                 "type": "null"
@@ -17467,6 +18519,13 @@
               "null"
             ],
             "description": "No permitted resource choice exists, absent while required facts are unknown."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderLabelFit"
+            },
+            "description": "Physical provider fits, with the same observations as the label view."
           },
           "waiting_jobs": {
             "type": "string",

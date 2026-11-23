@@ -79,7 +79,12 @@ function reportDays(
     return {
       day: new Date(time).toISOString().slice(0, 10),
       machines: { starts: String(starts), minutes: String(starts * 4) },
-      boat: { starts: String(boat), minutes: String(boat * 6) },
+      providers: [
+        {
+          provider: "boat",
+          usage: { starts: String(boat), minutes: String(boat * 6) },
+        },
+      ],
     } satisfies components["schemas"]["SavingsDay"];
   });
 }
@@ -90,10 +95,26 @@ function runtime(
 ): components["schemas"]["SavingsRuntime"] {
   return {
     starts: String(
-      days.reduce((sum, day) => sum + BigInt(day[place].starts), 0n),
+      days.reduce(
+        (sum, day) =>
+          sum +
+          BigInt(
+            (place === "machines" ? day.machines : day.providers[0]?.usage)
+              ?.starts ?? "0",
+          ),
+        0n,
+      ),
     ),
     minutes: String(
-      days.reduce((sum, day) => sum + BigInt(day[place].minutes), 0n),
+      days.reduce(
+        (sum, day) =>
+          sum +
+          BigInt(
+            (place === "machines" ? day.machines : day.providers[0]?.usage)
+              ?.minutes ?? "0",
+          ),
+        0n,
+      ),
     ),
   };
 }
@@ -129,8 +150,9 @@ export function savingsReport(
     refresh_complete: mode !== "refresh-incomplete",
     days,
     machines: runtime(days, "machines"),
-    boat: runtime(days, "boat"),
-    boat_cents: boat,
+    providers: [
+      { provider: "boat", usage: runtime(days, "boat"), cost_cents: boat },
+    ],
     known_machine_cents: machine,
     known_plan_cents: plan,
     total_cents: total,

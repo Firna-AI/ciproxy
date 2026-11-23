@@ -13,10 +13,12 @@
 // after the read, as the overflow service waits only until that time.
 
 import type {
+  JobOverflow,
   JobVmSize,
   JobsLivePage,
   WaitingLabelFit,
 } from "../api/jobs-types.ts";
+import { boatLabelFit, hasMachines } from "./settings-label-places.ts";
 
 /** Whether an own machine runs the label now, or why none does. */
 export type OwnFit =
@@ -82,9 +84,14 @@ export type LabelPlace = {
   boat: BoatStart;
 };
 
+/** Select the provider used by the current live notices. */
+export function boatObservation(page: JobsLivePage): JobOverflow | null {
+  return page.overflow.find((provider) => provider.provider === "boat") ?? null;
+}
+
 /** The hold of Boat at `readAt`, the browser time when the read arrived. */
 export function boatHold(page: JobsLivePage, readAt: number): BoatHold {
-  const overflow = page.overflow ?? null;
+  const overflow = boatObservation(page);
   const retry = overflow?.retry_at ?? null;
   const retryUntil =
     retry !== null && Date.parse(retry) > readAt ? retry : null;
@@ -108,14 +115,15 @@ export function boatHold(page: JobsLivePage, readAt: number): BoatHold {
 function ownFit(fit: WaitingLabelFit): OwnFit {
   const current = fit.current ?? null;
   if (current === null) return "unknown";
-  if (!current.label.allow_machines) return "forbidden";
+  if (!hasMachines(current.label.order)) return "forbidden";
   if (current.fit.fitting_machines > 0) return "fits";
   if (!current.fit.no_machine_fits) return "unknown";
   return current.fit.eligible_machines === 0 ? "no-machine" : "no-fit";
 }
 
 function boatFit(fit: WaitingLabelFit): BoatFit {
-  const boat = fit.boat;
+  const boat = boatLabelFit(fit.providers)?.fit;
+  if (boat === undefined) return { kind: "unknown" };
   switch (boat.state) {
     case "disabled":
       return { kind: "forbidden" };

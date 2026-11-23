@@ -10,6 +10,7 @@ import {
   label,
   member,
   membersView,
+  providerFit,
   removed,
   settingsView,
 } from "./settings-support.ts";
@@ -37,21 +38,29 @@ test("the settings reader keeps a removed organization with its deadline", () =>
   const unknown = label(
     "b",
     {},
-    { boat: { state: "unavailable" }, boat_connected: null },
+    {
+      providers: [
+        providerFit({ fit: { state: "unavailable" }, connected: null }),
+      ],
+    },
     null,
   );
   const noBoat = label(
     "c",
     {},
-    { boat: { state: "unavailable" }, boat_connected: false },
+    {
+      providers: [
+        providerFit({ fit: { state: "unavailable" }, connected: false }),
+      ],
+    },
     "0",
   );
   const labels = settingsView({ labels: [counted, unknown, noBoat] });
   assert.deepEqual(
     parseSettings(JSON.parse(JSON.stringify(labels)))?.labels.map((item) => [
       item.jobs_last_30_days,
-      item.fit.boat.state,
-      item.fit.boat_connected,
+      item.fit.providers[0]?.fit.state,
+      item.fit.providers[0]?.connected,
     ]),
     [
       ["0", "fitting", true],
@@ -61,8 +70,13 @@ test("the settings reader keeps a removed organization with its deadline", () =>
     "a zero and a missing account stay apart from what ciproxy does not know",
   );
   for (const fit of [
-    { ...counted.fit, placement: "somewhere" },
-    { ...counted.fit, boat: { state: "fitting", refused: false } },
+    { ...counted.fit, routing: { kind: "somewhere" } },
+    {
+      ...counted.fit,
+      providers: [
+        { ...providerFit(), fit: { state: "fitting", refused: false } },
+      ],
+    },
   ]) {
     assert.equal(
       parseSettings({ ...labels, labels: [{ ...counted, fit }] }),

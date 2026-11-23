@@ -178,7 +178,7 @@ async fn roles_gate_settings_and_mutations_and_members_ask_for_access() {
                 .request(
                     Some(&pending),
                     "POST",
-                    &fixture.path("/overflow/wallets"),
+                    &fixture.path("/overflow/providers/boat/key-check"),
                     Some(json!({"api_key":"fixture-key"})),
                 )
                 .await
@@ -204,7 +204,7 @@ async fn roles_gate_settings_and_mutations_and_members_ask_for_access() {
         ("PUT", "/settings", json!({"name":"Intruder"})),
         (
             "POST",
-            "/overflow/wallets",
+            "/overflow/providers/boat/key-check",
             json!({"api_key":"fixture-key"}),
         ),
     ] {

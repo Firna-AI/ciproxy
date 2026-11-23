@@ -3,7 +3,7 @@
 The hosted dashboard API for ciproxy. The control plane mounts its axum router
 under `/api`. Depend on this crate to compose sign-in, workspace access, Setup,
 Machines, Settings, Jobs, Savings, and billing pages. Settings includes
-[Boat under Overflow](overflow.md). This crate has no open licence.
+[overflow provider controls](overflow.md). This crate has no open licence.
 
 ## Responsibilities
 
@@ -211,21 +211,16 @@ use decimal strings, including true zeros. Only a machine without a stored
 report has a null cache view. Unknown Docker reservations keep slot and image
 facts, but make disk capacity and complete concurrency unavailable.
 
-Labels include physical machine offers, complete root allocations, Boat fit,
-the largest Boat size, and current placement. The normal router uses the
-existing overflow service and trusted configured image size. PageServices can
-supply its existing collaborators. Busy slots, provider refusals, and missing
-spend bounds do not change physical resource fit. Thirty-day job summaries use
-retained label identity and canonical taken jobs across every organization.
-Unknown start times keep their label's count unavailable.
-A successful observation distinguishes a disconnected Boat account from an
-unknown connection. Disconnected Boat keeps catalog fit unavailable.
-Known machines then run jobs alone, or known no-fit capacity waits.
-Missing observations or unknown own capacity keep placement unavailable.
-Settings and Jobs use one physical Boat fit calculation. Each waiting label
-in Jobs has the same Boat choice in `current.fit.boat` and `boat`. Its
-`current.fit` also includes the account presence, required root disk,
-largest Boat size, and placement when the trusted image sizing is known.
+Labels include their saved order, own-machine offers, and capacity from
+each provider's catalog and configured image. Updates save the order with
+the size and fallback. A create request can omit the order to use the
+workspace default. An explicit empty Linux order leaves jobs waiting.
+
+Settings, Setup, label previews, and Jobs share one calculation of label
+fit and wait reasons. The response preserves physical fit separately from
+current provider holds. Job counts use retained label identity and
+canonical taken jobs across every organization. An unknown start time
+leaves the count for that label unavailable.
 
 Organizations include nullable first-registration and removal dates, complete
 repository snapshot counts, and retained adder profiles. Members include the
@@ -265,13 +260,13 @@ It never prints a cookie, token, install command, or response body.
   and intentional uninstall.
 - [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and
   enable, and creates attempts only through explicit installation starts.
-- [src/handlers/overflow.rs](src/handlers/overflow.rs) serves the Boat Setup
-  and Settings routes. It saves the Boat limit with the workspace policy.
-- [src/handlers/overflow_views.rs](src/handlers/overflow_views.rs) builds the
-  safe Boat view and converts limits and display amounts.
-- [src/wire/overflow.rs](src/wire/overflow.rs) defines the Boat wire types.
-- [src/handlers/label_views.rs](src/handlers/label_views.rs) maps the
-  dashboard's machine and Boat switches to the stored label order.
+- [src/handlers/overflow.rs](src/handlers/overflow.rs) serves workspace
+  policy and the routes for one provider's key, connection, and spend limit.
+- [src/handlers/overflow_views.rs](src/handlers/overflow_views.rs) builds
+  account and spend views from provider observations and saved data.
+- [src/wire/overflow.rs](src/wire/overflow.rs) defines the overflow contract.
+- [src/handlers/label_routing.rs](src/handlers/label_routing.rs) builds the
+  ordered routing view from own-machine fit and provider observations.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
 - [src/wire/machines.rs](src/wire/machines.rs) defines the machine view and
@@ -291,7 +286,9 @@ It never prints a cookie, token, install command, or response body.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Agent](../../docs/protocol/agent.md) defines install and machine controls.
 - [Labels](../../docs/protocol/labels.md) defines label policy.
-- [Overflow](../../docs/protocol/overflow.md) defines the Boat account and
-  the spend limit.
+- [Label order](../../docs/protocol/labels-order.md) defines the saved order.
+- [Overflow](../../docs/protocol/overflow.md) defines provider accounts.
+- [Spend limit](../../docs/protocol/overflow-spend.md) defines each
+  provider's budget.
 - [Cache](../../docs/protocol/cache.md) defines Clear cache.
 - [App removal](../../docs/protocol/app-removal.md) defines owner removal.

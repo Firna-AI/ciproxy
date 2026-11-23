@@ -22,7 +22,7 @@ use super::label_retirement_tests::retire;
 async fn empty_in_flight_poll_releases_a_retired_listener_before_another_poll() {
     let fixture = Fixture::new();
     let browser = fixture.login(7, Some(Role::Admin)).await;
-    let input = json!({"name":"custom","vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"});
+    let input = json!({"name":"custom","vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "order":[{"kind":"machine"},{"kind":"overflow","provider":"boat"}],"when_nothing_fits":"wait"});
     let created = fixture
         .request(
             Some(&browser),

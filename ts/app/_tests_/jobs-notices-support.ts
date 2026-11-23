@@ -1,9 +1,10 @@
 import type {
-  BoatLabelFit,
   JobOverflow,
   JobsLivePage,
   WaitingLabelFit,
 } from "../src/api/jobs-types.ts";
+import type { ProviderLabelFit, ProviderSizeFit } from "../src/api/schema.ts";
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
 import { fixtureJob } from "../scripts/fixtures-jobs.ts";
 import { liveJobs } from "../scripts/fixtures-jobs-live.ts";
 
@@ -18,7 +19,7 @@ export type OwnFacts = "fits" | "none" | "no-machine" | "forbidden";
 
 export type LabelExtra = {
   size?: { vcpus: number; memory_gb: number; disk_gb: number };
-  whenNothingFits?: "wait" | "largest_boat";
+  whenNothingFits?: "wait" | "largest_overflow";
 };
 
 /**
@@ -30,7 +31,7 @@ export function waitingLabel(
   name: string,
   jobs: number,
   own: OwnFacts,
-  boat: BoatLabelFit,
+  boat: ProviderSizeFit,
   extra: LabelExtra = {},
 ): WaitingLabelFit {
   const size = extra.size ?? { vcpus: 8, memory_gb: 16, disk_gb: 60 };
@@ -38,6 +39,11 @@ export function waitingLabel(
   const boatFits =
     boat.state === "fitting" || boat.state === "largest_fallback";
   const boatOut = boat.state === "disabled" || boat.state === "no_size_fits";
+  const providers: ProviderLabelFit[] = [{ provider: "boat", fit: boat }];
+  const places = [
+    ...(fits ? [machinePlace] : []),
+    ...(boatFits ? [boatPlace] : []),
+  ];
   return {
     label_id: `label-${name}`,
     label_name: name,
@@ -50,11 +56,13 @@ export function waitingLabel(
       label: {
         name,
         ...size,
-        allow_boat: boat.state !== "disabled",
-        allow_machines: own !== "forbidden",
+        order: [
+          ...(own === "forbidden" ? [] : [machinePlace]),
+          ...(boat.state === "disabled" ? [] : [boatPlace]),
+        ],
         when_nothing_fits:
           extra.whenNothingFits ??
-          (boat.state === "largest_fallback" ? "largest_boat" : "wait"),
+          (boat.state === "largest_fallback" ? "largest_overflow" : "wait"),
       },
       fit: {
         eligible_machines: own === "no-machine" ? 0 : 3,
@@ -63,16 +71,21 @@ export function waitingLabel(
         unavailable_machines: 0,
         minimum_jobs: fits ? "2" : null,
         maximum_jobs: fits ? "2" : null,
-        boat: { state: "unavailable" },
+        providers,
         machines: [],
-        placement: fits ? "machines_only" : "waits",
+        fitting_places: places,
+        routing:
+          places.length > 0
+            ? { kind: "places", places }
+            : { kind: "waits", reason: { kind: "nothing_fits" } },
       },
     },
-    boat,
+    providers,
   };
 }
 
 export const connectedBoat: JobOverflow = {
+  provider: "boat",
   connected: true,
   key_rejected: false,
   billing_required: false,
@@ -90,14 +103,14 @@ export const fitting = {
   size: { vcpus: 8, memory_bytes: "16000000000", disk_bytes: "120000000000" },
   size_name: "large",
   refused: false,
-} satisfies BoatLabelFit;
+} satisfies ProviderSizeFit;
 
 export const largest = {
   state: "largest_fallback",
   size: { vcpus: 16, memory_bytes: "64000000000", disk_bytes: "240000000000" },
   size_name: "xlarge",
   refused: false,
-} satisfies BoatLabelFit;
+} satisfies ProviderSizeFit;
 
 /** The live queue with these waiting labels and `used` of 6 own slots. */
 export function queue(
@@ -118,6 +131,6 @@ export function queue(
     })),
     waiting_count: String(count),
     waiting_labels: labels,
-    overflow,
+    overflow: [overflow],
   };
 }

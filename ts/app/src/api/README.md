@@ -49,6 +49,15 @@ API build.
   back and forward buttons. Until then, the page keeps its input. A filter or
   range change after a new build loads a new document with the new address.
 
+## Overflow and labels
+
+- The overflow read gives the workspace switch and wait, then the account,
+  spend, and saved limit for each provider. The provider routes check a key,
+  connect or replace it, disconnect, and set that provider's limit.
+- The label readers keep the exact saved order and the API's fit and wait
+  reasons. The job history reader keeps the provider on an overflow job.
+  The live queue and Savings keep per-provider figures.
+
 ## Key Code
 
 - [client.ts](client.ts) is the one HTTP client. The readers in `parse-*.ts`

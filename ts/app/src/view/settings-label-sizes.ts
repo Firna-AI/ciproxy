@@ -4,6 +4,7 @@
 // size that nothing fits, never what a machine or a Boat size offers.
 
 import type { LabelFit, LabelInput } from "../api/schema.ts";
+import { boatLabelFit } from "./settings-label-places.ts";
 
 const nbsp = "\u00a0";
 const grouped = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -27,7 +28,7 @@ export function requestPhrase(label: LabelInput): string {
 
 /** "With the current image, each VM has a disk of 81 GB.", or null. */
 export function vmDiskLine(fit: LabelFit): string | null {
-  const root = fit.boat_required_root_disk_bytes ?? null;
+  const root = boatLabelFit(fit.providers)?.required_root_disk_bytes ?? null;
   return root === null
     ? null
     : `With the current image, each VM has a disk of ${unbroken(`${wholeGb(root)} GB`)}.`;

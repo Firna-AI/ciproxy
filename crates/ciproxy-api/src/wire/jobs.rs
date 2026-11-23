@@ -8,7 +8,8 @@ use uuid::Uuid;
 use crate::access::workspace::WorkspaceId;
 
 use super::job_fit::WaitingLabelFit;
-use super::job_overflow::JobOverflow;
+use super::job_overflow::{JobOverflow, ProviderRunningCount};
+use super::overflow::OverflowProvider;
 use super::pages::PageBanner;
 
 /// One job detail path, opened only after current workspace access.
@@ -31,6 +32,9 @@ pub struct JobHistoryQuery {
     /// Execution place, absent for all places.
     #[param(inline)]
     pub place: Option<HistoryPlace>,
+    /// One overflow provider, absent to include all providers allowed by the place filter.
+    #[param(inline)]
+    pub provider: Option<OverflowProvider>,
     /// First included UTC date, absent for the full plan window.
     pub from: Option<NaiveDate>,
     /// First excluded UTC date.
@@ -43,8 +47,8 @@ pub struct JobHistoryQuery {
 pub enum HistoryPlace {
     /// A customer's own machine.
     Machine,
-    /// A Boat sandbox.
-    Boat,
+    /// A sandbox on an overflow provider.
+    Overflow,
 }
 
 /// The visible lifecycle, including terminal jobs with unknown finish times.
@@ -72,9 +76,11 @@ pub enum JobLocation {
         /// First assigned slot, when known.
         first_slot: Option<i32>,
     },
-    /// A sandbox on Boat.
-    Boat {
-        /// Actual billed Boat size name.
+    /// A sandbox on an overflow provider.
+    Overflow {
+        /// Provider that ran this job.
+        provider: OverflowProvider,
+        /// Actual billed size name.
         size: String,
     },
 }
@@ -197,8 +203,8 @@ pub struct JobsLivePage {
     pub own_slots_used: Option<String>,
     /// Available own slot capacity, absent when it is unknown.
     pub own_slots_total: Option<String>,
-    /// Number of running Boat jobs.
-    pub on_boat: String,
+    /// Running counts for every supported provider, including zero counts.
+    pub running_by_provider: Vec<ProviderRunningCount>,
     /// Actual ready own-machine runners.
     pub warm_runners: String,
     /// Actual starting runners and their target places.
@@ -209,8 +215,8 @@ pub struct JobsLivePage {
     pub overflow_enabled: bool,
     /// Saved overflow wait in seconds.
     pub overflow_wait_seconds: u32,
-    /// Current Boat refusal and spend facts, absent when their source is unavailable.
-    pub overflow: Option<JobOverflow>,
+    /// Current refusal and spend facts for providers with a successful observation.
+    pub overflow: Vec<JobOverflow>,
     /// Current caller may change labels or overflow settings.
     pub can_manage: bool,
     /// One page banner.
@@ -224,10 +230,10 @@ pub struct StartingRunner {
     pub id: String,
     /// Label it will serve.
     pub label_id: String,
-    /// Registered own-machine identity, absent for Boat.
+    /// Registered own-machine identity, absent for overflow.
     pub machine_id: Option<String>,
-    /// True for a Boat sandbox.
-    pub boat: bool,
+    /// Provider starting the sandbox, absent for an own machine.
+    pub provider: Option<OverflowProvider>,
 }
 
 /// Current suspension or retained owner removal, without changing current membership.

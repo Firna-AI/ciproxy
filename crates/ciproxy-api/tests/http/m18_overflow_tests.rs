@@ -95,15 +95,17 @@ async fn m18_live_exposes_saved_provider_refusals_without_keys_or_starting_sandb
     let response = pages.request(Some(&admin), "GET", "/jobs/live", None).await;
     assert_eq!(response.status(), StatusCode::OK);
     let live = json(response).await;
-    assert_eq!(live["overflow"]["key_rejected"], true);
-    assert_eq!(live["overflow"]["billing_required"], true);
-    assert_eq!(live["overflow"]["retry_at"], "2026-11-06T13:00:00Z");
-    assert_eq!(live["overflow"]["limit_cents"], "100");
-    assert_eq!(live["overflow"]["counted_cents"], "0");
-    assert_eq!(live["overflow"]["limit_reached"], false);
-    assert_eq!(live["overflow"]["next_month"], "2026-12-01T00:00:00Z");
-    assert_eq!(live["overflow"]["refused_sizes"][0], "unavailable-size");
-    assert_eq!(live["overflow"].get("key"), None);
+    assert_eq!(live["overflow"][0]["provider"], "boat");
+    assert_eq!(live["running_by_provider"][0]["running"], "0");
+    assert_eq!(live["overflow"][0]["key_rejected"], true);
+    assert_eq!(live["overflow"][0]["billing_required"], true);
+    assert_eq!(live["overflow"][0]["retry_at"], "2026-11-06T13:00:00Z");
+    assert_eq!(live["overflow"][0]["limit_cents"], "100");
+    assert_eq!(live["overflow"][0]["counted_cents"], "0");
+    assert_eq!(live["overflow"][0]["limit_reached"], false);
+    assert_eq!(live["overflow"][0]["next_month"], "2026-12-01T00:00:00Z");
+    assert_eq!(live["overflow"][0]["refused_sizes"][0], "unavailable-size");
+    assert_eq!(live["overflow"][0].get("key"), None);
     assert_eq!(
         pages
             .fixture

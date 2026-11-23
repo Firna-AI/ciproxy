@@ -9,13 +9,16 @@
 
 import type { ApiFailure } from "../api/client.ts";
 import type {
+  LabelCreate,
   LabelInput,
+  LabelPlace,
   LabelView,
   NothingFits,
   Platform,
 } from "../api/schema.ts";
 import type { FailureCopy } from "./claim.ts";
 import { labelPlatform } from "./platform.ts";
+import { hasBoat, hasMachines } from "./settings-label-places.ts";
 import { protectedLabelName } from "./settings-labels.ts";
 
 export type LabelDraft = {
@@ -27,6 +30,7 @@ export type LabelDraft = {
   allowMachines: boolean;
   allowBoat: boolean;
   whenNothingFits: NothingFits;
+  order?: LabelPlace[];
 };
 
 export type SizeField = "vcpus" | "memory" | "disk";
@@ -62,8 +66,9 @@ export function editDraft(label: LabelInput): LabelDraft {
     vcpus: String(label.vcpus),
     memory: String(label.memory_gb),
     disk: String(label.disk_gb),
-    allowMachines: label.allow_machines,
-    allowBoat: label.allow_boat,
+    allowMachines: hasMachines(label.order),
+    allowBoat: hasBoat(label.order),
+    order: label.order,
     whenNothingFits: label.when_nothing_fits,
   };
 }
@@ -96,6 +101,26 @@ function diskOf(
   return { gb };
 }
 
+function draftOrder(draft: LabelDraft): LabelPlace[] {
+  if (draft.platform === "macos_arm64") return [{ kind: "machine" }];
+  const order = (draft.order ?? []).filter((place) =>
+    place.kind === "machine" ? draft.allowMachines : draft.allowBoat,
+  );
+  if (draft.allowMachines && !hasMachines(order))
+    order.unshift({ kind: "machine" });
+  if (draft.allowBoat && !hasBoat(order))
+    order.push({ kind: "overflow", provider: "boat" });
+  return order;
+}
+
+/** A new label with both current switches on uses the workspace default. */
+export function createRequest(input: LabelInput): LabelCreate {
+  if (hasMachines(input.order) && hasBoat(input.order)) {
+    return { ...input, order: undefined };
+  }
+  return input;
+}
+
 /** The label of the draft, or the size fields that need a fix. */
 export function checkDraft(
   draft: LabelDraft,
@@ -120,8 +145,7 @@ export function checkDraft(
       vcpus,
       memory_gb: memory,
       disk_gb: disk.gb,
-      allow_machines: mac ? true : draft.allowMachines,
-      allow_boat: mac ? false : draft.allowBoat,
+      order: draftOrder(draft),
       when_nothing_fits: mac ? "wait" : draft.whenNothingFits,
     },
   };

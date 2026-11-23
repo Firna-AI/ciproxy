@@ -9,6 +9,7 @@ import type { paths } from "../../../api/index.ts";
 import type { ApiClient } from "./client.ts";
 import { parseSuccess } from "./parse-session.ts";
 import type {
+  LabelCreate,
   LabelInput,
   RepositorySelection,
   WorkspaceRole,
@@ -86,7 +87,7 @@ export function createSettingsEndpoints(client: ApiClient) {
         parseLabelFit,
         input,
       ),
-    createLabel: (workspaceId: string, input: LabelInput) =>
+    createLabel: (workspaceId: string, input: LabelCreate) =>
       client.change(
         "POST",
         routePath("/workspaces/{workspace_id}/labels", workspace(workspaceId)),

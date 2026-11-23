@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
+
 import type { ApiResult } from "../src/api/client.ts";
 import type { LabelFit, LabelInput } from "../src/api/schema.ts";
 import {
@@ -8,6 +10,7 @@ import {
   previewDelay,
 } from "../src/state/settings-preview.ts";
 import { deferred, manualSchedule, settled } from "./support.ts";
+import { hasBoat } from "../src/view/settings-label-places.ts";
 import { fit, labelInput } from "./settings-support.ts";
 
 function previewWith() {
@@ -102,24 +105,24 @@ test("a change of the Boat switch or of When nothing fits asks again, and a new 
   await settled();
   preview.request({ ...saved, name: "renamed-draft" });
   assert.equal(schedule.pending(), 0, "a new name reuses the shown fit");
-  preview.request({ ...saved, allow_boat: false });
+  preview.request({ ...saved, order: [machinePlace] });
   schedule.fire();
-  preview.request({ ...saved, when_nothing_fits: "largest_boat" });
+  preview.request({ ...saved, when_nothing_fits: "largest_overflow" });
   schedule.fire();
   assert.deepEqual(
-    asked.map((input) => [input.allow_boat, input.when_nothing_fits]),
+    asked.map((input) => [hasBoat(input.order), input.when_nothing_fits]),
     [
       [true, "wait"],
       [false, "wait"],
-      [true, "largest_boat"],
+      [true, "largest_overflow"],
     ],
   );
-  const fallback = fit({ placement: "boat_only" });
+  const fallback = fit({ fitting_places: [boatPlace] });
   answers[2]?.resolve({ ok: true, value: fallback });
   await settled();
   assert.deepEqual(preview.state.get(), {
     shown: {
-      input: { ...saved, when_nothing_fits: "largest_boat" },
+      input: { ...saved, when_nothing_fits: "largest_overflow" },
       fit: fallback,
     },
     pending: false,

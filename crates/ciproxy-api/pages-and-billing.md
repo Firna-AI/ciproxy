@@ -22,10 +22,10 @@ fn dashboard(state: ApiState, pages: Arc<PageServices>) -> Router {
 Use the existing `BillingService`, `StoredMetering`, and `Overflow` service.
 Supply dated Blacksmith and GitHub USD price lists from trusted configuration.
 Set `PageServices.provider_roots` from the image sizing in the provider
-registry. The current live queue reads the Boat entry and uses the scaler's
-public size selection. Missing sizing stays unavailable.
-An absent catalog returns `unavailable` for Savings. An absent overflow service
-leaves live Boat observations explicitly unavailable. The existing
+registry. The live queue uses the scaler's size selection with each
+provider's image sizing. Missing sizing stays unavailable.
+An absent price catalog returns `unavailable` for Savings. An absent overflow
+service leaves the live provider observations empty. The existing
 `router(state)` remains available to callers without these collaborators.
 
 Supply `ciproxy_billing::service::paid_review::PaidReview` for paid changes.
@@ -85,9 +85,14 @@ Busy slots and temporary provider refusals remain separate from physical fit.
 An unknown spend bound keeps its original start hold and unavailable counted
 spend. The overflow owner's resource-only accessor preserves the known catalog.
 The response preserves unknown facts and the permitted largest-size fallback.
+It names the provider for each overflow job and starting runner. Running
+counts come from the saved runner locations, even when provider observations
+are unavailable. History can select one provider in the current window.
 
 Every page includes one shared banner. Existing pages can read the banner route.
 The Organizations tab requests its explicit page scope for inactive reasons.
 Money crosses the HTTP boundary as integer-cent strings. Savings rounds only
 the final displayed amount, with half cents rounded away from zero. Metering
-keeps exact costs and runtime throughout the calculations.
+keeps exact costs and runtime throughout the calculations. Savings returns
+runtime and measured costs for each provider used in the report range. Each
+day also gives that day's runtime per provider.

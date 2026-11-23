@@ -21,8 +21,10 @@ import type {
   BoatWallets,
   OverflowPolicy,
   OverflowSettings,
+  ProviderSpendLimit,
   Success,
 } from "../api/schema.ts";
+import { boatProvider } from "../view/boat.ts";
 import { createStore, type Store } from "./store.ts";
 
 /** A change that the API accepted. */
@@ -38,7 +40,7 @@ export type OverflowSnapshot =
   | { status: "failed"; failure: ApiFailure; accepted: AcceptedChange | null };
 
 /** The values of the policy that a save means to change. */
-export type PolicyEdit = Partial<OverflowPolicy>;
+export type PolicyEdit = Partial<OverflowPolicy> | ProviderSpendLimit;
 
 export type OverflowStore = {
   readonly state: Store<OverflowSnapshot>;
@@ -68,16 +70,14 @@ export type OverflowStore = {
 };
 
 /** The complete policy of an edit, or null when a value is unknown. */
-export function policyFrom(
+function policyFrom(
   settings: OverflowSettings | null,
-  edit: PolicyEdit,
+  edit: Partial<OverflowPolicy>,
 ): OverflowPolicy | null {
   const enabled = edit.enabled ?? settings?.enabled;
   const wait = edit.wait_seconds ?? settings?.wait_seconds;
-  const limit = edit.spend_limit_cents ?? settings?.spend_limit_cents;
   if (enabled === undefined || wait === undefined) return null;
-  if (limit === undefined || limit === null) return null;
-  return { enabled, wait_seconds: wait, spend_limit_cents: limit };
+  return { enabled, wait_seconds: wait };
 }
 
 export function createOverflowStore(options: {
@@ -143,11 +143,11 @@ export function createOverflowStore(options: {
     });
   };
 
-  const send = async (
+  const send = async <T extends Success>(
     accepted: AcceptedChange,
-    request: () => Promise<ApiResult<Success>>,
+    request: () => Promise<ApiResult<T>>,
     onAccepted?: () => void,
-  ): Promise<ApiResult<Success>> => {
+  ): Promise<ApiResult<T>> => {
     const result = await mutate(request);
     if (!result.ok) return result;
     onAccepted?.();
@@ -169,22 +169,36 @@ export function createOverflowStore(options: {
       return first;
     },
     checkKey: (apiKey) =>
-      queue(() => mutate(() => endpoints.checkBoatKey(workspaceId, apiKey))),
+      queue(() =>
+        mutate(() => endpoints.checkKey(workspaceId, "boat", apiKey)),
+      ),
     connect: (request, onAccepted) =>
       queue(() =>
         send(
           "connected",
-          () => endpoints.connectBoat(workspaceId, request),
+          () =>
+            boatProvider(confirmed())?.account
+              ? endpoints.changeProviderKey(workspaceId, "boat", request)
+              : endpoints.connectProvider(workspaceId, "boat", request),
           onAccepted,
         ),
       ),
     disconnect: () =>
       queue(() =>
-        send("disconnected", () => endpoints.disconnectBoat(workspaceId)),
+        send("disconnected", () =>
+          endpoints.disconnectProvider(workspaceId, "boat"),
+        ),
       ),
     save: (edit) =>
       queue(async () => {
-        const policy = policyFrom(confirmed(), edit);
+        const settings = confirmed();
+        if ("spend_limit_cents" in edit) {
+          if (settings === null) return null;
+          return send("saved", () =>
+            endpoints.saveProviderLimit(workspaceId, "boat", edit),
+          );
+        }
+        const policy = policyFrom(settings, edit);
         if (policy === null) return null;
         return send("saved", () => endpoints.saveOverflow(workspaceId, policy));
       }),

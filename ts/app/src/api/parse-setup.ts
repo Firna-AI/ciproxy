@@ -16,10 +16,10 @@ import {
   time,
 } from "./parse-core.ts";
 import {
-  readBoatFit,
-  readBoatSize,
+  readLabelPlace,
+  readLabelRouting,
   readMachineFit,
-  readPlacement,
+  readProviderFit,
 } from "./parse-label-facts.ts";
 import { readActivation } from "./parse-links.ts";
 import { readPlatform } from "./parse-platform.ts";
@@ -37,7 +37,6 @@ import type {
   RepositorySelection,
   SetupJob,
   SetupPhase,
-  SetupPlace,
   SetupView,
 } from "./schema.ts";
 
@@ -47,7 +46,7 @@ const installationState = oneOf<InstallationState>({
   removed: true,
 });
 
-const nothingFits = oneOf<NothingFits>({ wait: true, largest_boat: true });
+const nothingFits = oneOf<NothingFits>({ wait: true, largest_overflow: true });
 
 const setupPhase = oneOf<SetupPhase>({
   available: true,
@@ -55,8 +54,6 @@ const setupPhase = oneOf<SetupPhase>({
   started: true,
   completed: true,
 });
-
-const setupPlace = oneOf<SetupPlace>({ machine: true, boat: true });
 
 function access(value: unknown): RepositorySelection {
   const fields = object(value, "repository access");
@@ -89,20 +86,17 @@ export function readOrganization(value: unknown): OrganizationView {
 export function readLabelFit(value: unknown): LabelFit {
   const fields = object(value, "label fit");
   return {
-    boat: readBoatFit(fields.boat),
-    boat_connected: optional(fields.boat_connected, boolean),
-    boat_required_root_disk_bytes: optional(
-      fields.boat_required_root_disk_bytes,
-      decimal,
+    providers: array(fields.providers, readProviderFit),
+    fitting_places: optional(fields.fitting_places, (places) =>
+      array(places, readLabelPlace),
     ),
     eligible_machines: integer(fields.eligible_machines),
     fitting_machines: integer(fields.fitting_machines),
-    largest_boat: optional(fields.largest_boat, readBoatSize),
     machines: array(fields.machines, readMachineFit),
     maximum_jobs: optional(fields.maximum_jobs, decimal),
     minimum_jobs: optional(fields.minimum_jobs, decimal),
     no_machine_fits: boolean(fields.no_machine_fits),
-    placement: readPlacement(fields.placement),
+    routing: readLabelRouting(fields.routing),
     unavailable_machines: integer(fields.unavailable_machines),
   };
 }
@@ -113,8 +107,7 @@ function labelInput(value: unknown): LabelInput {
   const platform = optional(fields.platform, readPlatform);
   return {
     ...(platform === null ? {} : { platform }),
-    allow_boat: boolean(fields.allow_boat),
-    allow_machines: boolean(fields.allow_machines),
+    order: array(fields.order, readLabelPlace),
     disk_gb: integer(fields.disk_gb),
     memory_gb: integer(fields.memory_gb),
     name: string(fields.name),
@@ -144,7 +137,7 @@ function job(value: unknown): SetupJob {
     id: string(fields.id),
     name: string(fields.name),
     phase: setupPhase(fields.phase),
-    place: optional(fields.place, setupPlace),
+    place: optional(fields.place, readLabelPlace),
     repository: string(fields.repository),
     result: optional(fields.result, string),
     started_at: optional(fields.started_at, time),

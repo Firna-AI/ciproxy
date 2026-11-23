@@ -125,7 +125,7 @@ SELECT v.body || jsonb_build_object(
   'actual_size',CASE WHEN r.id IS NULL THEN NULL ELSE jsonb_build_object(
     'vcpu',r.vcpus,'memory_bytes',r.memory_bytes,'disk_bytes',r.disk_bytes) END,
   'machine_id',r.machine_id,'machine_name',h.hostname,'first_slot',r.first_slot,
-  'overflow_size',r.overflow_size_name) AS body
+  'overflow_size',r.overflow_size_name,'overflow_provider',r.overflow_provider) AS body
 FROM visible v JOIN organizations o ON o.id=v.organization_id AND o.workspace_id=$1
 JOIN labels l ON l.id=v.label_id AND l.workspace_id=$1
 LEFT JOIN runners r ON r.workspace_id=$1 AND r.organization_id=v.organization_id

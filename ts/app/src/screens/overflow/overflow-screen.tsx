@@ -25,7 +25,11 @@ import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import type { AcceptedChange, OverflowStore } from "../../state/overflow.ts";
 import { settingsServices } from "../../state/settings-services.ts";
-import { activeAccount, overflowNotice } from "../../view/boat.ts";
+import {
+  activeAccount,
+  boatProvider,
+  overflowNotice,
+} from "../../view/boat.ts";
 import { SettingsTabs } from "../settings/settings-tabs.tsx";
 import {
   WorkspacePageView,
@@ -82,7 +86,8 @@ function Settings(props: {
   useEffect(() => {
     if (moved > 0) title.current?.focus();
   }, [moved]);
-  if (!settings.available) {
+  const provider = boatProvider(settings);
+  if (!provider?.available) {
     return (
       <Panel title="Boat">
         <StateBlock
@@ -102,8 +107,8 @@ function Settings(props: {
     );
   }
   const notice = overflowNotice(settings);
-  const account = settings.account ?? null;
-  const limit = settings.spend_limit_cents ?? null;
+  const account = provider.account ?? null;
+  const limit = provider.spend_limit_cents ?? null;
   return (
     <>
       {props.refreshFailure ? (

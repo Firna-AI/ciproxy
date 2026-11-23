@@ -74,7 +74,7 @@ const fitCases: {
       2,
       "none",
       { state: "no_size_fits" },
-      { whenNothingFits: "largest_boat" },
+      { whenNothingFits: "largest_overflow" },
     ),
     notice: [
       "fits-label-ciproxy-big",

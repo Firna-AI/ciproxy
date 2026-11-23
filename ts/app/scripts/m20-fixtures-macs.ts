@@ -1,3 +1,4 @@
+import { machinePlace } from "./m20-fixtures-labels.ts";
 // The Macs of the `macs` scenario of the Machines and Settings harness, and
 // the macOS labels that run on them. A Mac uses the slot rule of a Linux
 // machine and runs at most 2 job VMs at once. mac-studio-1 has 6 slots and
@@ -104,12 +105,17 @@ export function macMachines(): Schemas["MachineView"][] {
 export function macFit(): Schemas["LabelFit"] {
   const offer = { slots: "6", vcpus: "12", memory_bytes: gb(48) };
   return {
-    boat: { state: "disabled" },
-    boat_connected: true,
-    boat_required_root_disk_bytes: null,
+    providers: [
+      {
+        provider: "boat",
+        fit: { state: "disabled" },
+        connected: true,
+        required_root_disk_bytes: null,
+        largest_size: null,
+      },
+    ],
     eligible_machines: 2,
     fitting_machines: 2,
-    largest_boat: null,
     machines: [
       {
         ...offer,
@@ -132,7 +138,8 @@ export function macFit(): Schemas["LabelFit"] {
     minimum_jobs: "1",
     maximum_jobs: "2",
     no_machine_fits: false,
-    placement: "machines_only",
+    fitting_places: [machinePlace],
+    routing: { kind: "places", places: [machinePlace] },
     unavailable_machines: 0,
   };
 }
@@ -141,11 +148,10 @@ export function macFit(): Schemas["LabelFit"] {
 export function macLabels(): Schemas["LabelView"][] {
   const base = {
     platform: "macos_arm64",
-    allow_machines: true,
-    allow_boat: false,
+    order: [machinePlace],
     when_nothing_fits: "wait",
     disk_gb: 20,
-  } as const;
+  } satisfies Partial<Schemas["LabelInput"]>;
   return [
     {
       id: "60000000-0000-4000-8000-000000000101",

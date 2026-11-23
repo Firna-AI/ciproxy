@@ -12,6 +12,7 @@ import { boatNotices } from "./jobs-boat-notices.ts";
 import { jobsText, labelNotices } from "./jobs-label-notices.ts";
 import {
   boatHold,
+  boatObservation,
   boatTiming,
   labelPlaces,
   type LabelPlace,
@@ -136,7 +137,7 @@ function fullNotice(
       manage("Turn on Boat"),
     );
   }
-  if (page.overflow && !page.overflow.connected) {
+  if (boatObservation(page)?.connected === false) {
     return notice(
       [lead, "Boat is not connected, so each one starts when a slot is free."],
       manage("Connect Boat"),
@@ -187,7 +188,7 @@ export function liveNotices(
   );
   const hold = boatHold(page, readAt);
   const places = labelPlaces(page, hold);
-  const overflow = page.overflow ?? null;
+  const overflow = boatObservation(page);
   const boat =
     overflow === null
       ? []

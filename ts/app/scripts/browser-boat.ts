@@ -97,7 +97,8 @@ export async function connections(origin: string): Promise<number[]> {
   return (await facts(origin))
     .filter(
       (fact) =>
-        fact.method === "POST" && fact.path.endsWith("/overflow/connection"),
+        (fact.method === "POST" || fact.method === "PUT") &&
+        fact.path.endsWith("/overflow/providers/boat/connection"),
     )
     .map((fact) => fact.status);
 }
@@ -107,7 +108,8 @@ export async function checks(origin: string): Promise<number[]> {
   return (await facts(origin))
     .filter(
       (fact) =>
-        fact.method === "POST" && fact.path.endsWith("/overflow/wallets"),
+        fact.method === "POST" &&
+        fact.path.endsWith("/overflow/providers/boat/key-check"),
     )
     .map((fact) => fact.status);
 }

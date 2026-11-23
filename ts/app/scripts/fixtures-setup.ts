@@ -1,3 +1,4 @@
+import { boatPlace, machinePlace } from "./m20-fixtures-labels.ts";
 import type {
   InstallCommand,
   MachineView,
@@ -95,7 +96,7 @@ export function job(overrides: Partial<SetupJob> = {}): SetupJob {
     id: "50000000-0000-4000-8000-000000000001",
     name: "Build and test",
     phase: "started",
-    place: "machine",
+    place: machinePlace,
     repository: "northstar-labs/control",
     result: null,
     started_at: "2026-11-06T12:01:10Z",
@@ -112,17 +113,31 @@ export function setup(overrides: Partial<SetupView> = {}): SetupView {
     labels: [
       {
         fit: {
-          boat: { state: "unavailable" },
-          boat_connected: false,
-          boat_required_root_disk_bytes: "61000000000",
+          providers: [
+            {
+              provider: "boat",
+              fit: { state: "unavailable" },
+              connected: false,
+              required_root_disk_bytes: "61000000000",
+              largest_size: null,
+              hold: "not_connected",
+            },
+          ],
           eligible_machines: 0,
           fitting_machines: 0,
-          largest_boat: null,
           machines: [],
           maximum_jobs: null,
           minimum_jobs: null,
           no_machine_fits: true,
-          placement: "waits",
+          fitting_places: [],
+          routing: {
+            kind: "waits",
+            reason: {
+              kind: "provider",
+              provider: "boat",
+              hold: "not_connected",
+            },
+          },
           unavailable_machines: 0,
         },
         id: "60000000-0000-4000-8000-000000000001",
@@ -130,8 +145,7 @@ export function setup(overrides: Partial<SetupView> = {}): SetupView {
         job_count_until: fixtureTime,
         jobs_last_30_days: "0",
         label: {
-          allow_boat: true,
-          allow_machines: true,
+          order: [machinePlace, boatPlace],
           disk_gb: 20,
           memory_gb: 8,
           name: "ciproxy",

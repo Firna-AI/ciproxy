@@ -13,6 +13,7 @@ export function queryFacts(url: URL): Record<string, string[]> {
     "workspace",
     "search",
     "place",
+    "provider",
     "from",
     "until",
     "range",

@@ -23,7 +23,7 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
             .request(
                 Some(&admin),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(body.clone())
             )
             .await
@@ -56,7 +56,7 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
             .request(
                 Some(&reader),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(body.clone())
             )
             .await
@@ -70,7 +70,7 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
             .request(
                 Some(&admin),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(invalid)
             )
             .await
@@ -82,12 +82,15 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
         .request(
             Some(&admin),
             "POST",
-            &fixture.path("/overflow/connection"),
+            &fixture.path("/overflow/providers/boat/connection"),
             Some(body.clone()),
         )
         .await;
     assert_eq!(rejected.status(), StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(json(rejected).await["code"], "boat_key_rejected");
+    let rejected = json(rejected).await;
+    assert_eq!(rejected["code"], "provider_key_rejected");
+    assert_eq!(rejected["provider"], "boat");
+    assert!(!rejected.to_string().contains("fake-boat-key"));
     assert_eq!(
         fixture
             .database
@@ -103,7 +106,7 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
             .request(
                 Some(&admin),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(body)
             )
             .await
@@ -116,11 +119,11 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
             .await,
     )
     .await;
-    assert_eq!(saved["account"]["name"], "Customer Boat");
-    assert_eq!(saved["spend_limit_cents"], "20000");
+    assert_eq!(saved["providers"][0]["account"]["name"], "Customer Boat");
+    assert_eq!(saved["providers"][0]["spend_limit_cents"], "20000");
     assert_eq!(saved["next_month_at"], "2026-12-01T00:00:00Z");
     assert!(!saved.to_string().contains("fake-boat-key"));
-    let request = json!({"enabled":false,"wait_seconds":120,"spend_limit_cents":"5000"});
+    let request = json!({"enabled":false,"wait_seconds":120});
     assert_eq!(
         fixture
             .request(
@@ -135,6 +138,32 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
     );
     let stored = fixture.database.store.settings(fixture.workspace).unwrap();
     assert!(!stored.overflow_enabled);
+    assert_eq!(
+        stored.overflow_wait,
+        ciproxy_store_interface::settings::OverflowWait::Seconds120
+    );
+    assert_eq!(
+        fixture
+            .database
+            .store
+            .overflow_provider_settings(fixture.workspace, OverflowProvider::Boat)
+            .unwrap()
+            .unwrap()
+            .spend_limit_usd_micros,
+        Some(200_000_000)
+    );
+    assert_eq!(
+        fixture
+            .request(
+                Some(&admin),
+                "PUT",
+                &fixture.path("/overflow/providers/boat/spend-limit"),
+                Some(json!({"spend_limit_cents":"5000"}))
+            )
+            .await
+            .status(),
+        StatusCode::OK
+    );
     let boat = fixture
         .database
         .store
@@ -155,7 +184,7 @@ async fn replacement_and_disconnect_preserve_a_running_sandbox_and_saved_reconne
             .request(
                 Some(&admin),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(connection.clone())
             )
             .await
@@ -179,8 +208,8 @@ async fn replacement_and_disconnect_preserve_a_running_sandbox_and_saved_reconne
         fixture
             .request(
                 Some(&admin),
-                "POST",
-                &fixture.path("/overflow/connection"),
+                "PUT",
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(connection)
             )
             .await
@@ -200,7 +229,7 @@ async fn replacement_and_disconnect_preserve_a_running_sandbox_and_saved_reconne
             .request(
                 Some(&admin),
                 "DELETE",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 None
             )
             .await
@@ -213,8 +242,9 @@ async fn replacement_and_disconnect_preserve_a_running_sandbox_and_saved_reconne
             .await,
     )
     .await;
-    assert_eq!(view["account"], serde_json::Value::Null);
-    assert_eq!(view["spend_limit_cents"], "20000");
+    assert_eq!(view["providers"][0]["account"], serde_json::Value::Null);
+    assert_eq!(view["providers"][0]["offered"], true);
+    assert_eq!(view["providers"][0]["spend_limit_cents"], "20000");
     assert_eq!(ports.deletes.load(Ordering::SeqCst), 0);
     assert_eq!(
         fixture

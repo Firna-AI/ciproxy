@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { Success } from "../src/api/schema.ts";
+import type { ProviderSuccess, Success } from "../src/api/schema.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import { overflowSettings } from "../scripts/fixtures-boat.ts";
 import { appWith, deferred, response, settled } from "./support.ts";
 
 const ok = { ok: true } satisfies Success;
+const providerOk = { ...ok, provider: "boat" } satisfies ProviderSuccess;
 
 function sent(init: RequestInit | undefined): unknown {
   return typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
@@ -20,7 +21,7 @@ test("a wait save after an accepted key change waits for its read, then keeps th
   const read = deferred<Response>();
   const { app, calls } = appWith(
     response(overflowSettings()),
-    response(ok),
+    response(providerOk),
     read.promise,
     response(ok),
     response(
@@ -37,32 +38,38 @@ test("a wait save after an accepted key change waits for its read, then keeps th
   await settled();
   assert.deepEqual(
     methods(calls),
-    ["GET", "POST", "GET"],
+    ["GET", "PUT", "GET"],
     "The API accepted the key, and the read after it is held",
   );
   const saving = store.save({ wait_seconds: 60 });
   await settled();
   assert.deepEqual(
     methods(calls),
-    ["GET", "POST", "GET"],
+    ["GET", "PUT", "GET"],
     "No PUT before the held read returns",
   );
   read.resolve(response(overflowSettings({ spend_limit_cents: "10000" })));
   await connecting;
   await saving;
-  assert.deepEqual(methods(calls), ["GET", "POST", "GET", "PUT", "GET"]);
+  assert.deepEqual(methods(calls), ["GET", "PUT", "GET", "PUT", "GET"]);
   assert.deepEqual(sent(calls[3]?.init), {
     enabled: true,
     wait_seconds: 60,
-    spend_limit_cents: "10000",
   });
+  const state = store.state.get();
+  assert.equal(
+    state.status === "ready"
+      ? state.settings.providers[0]?.spend_limit_cents
+      : null,
+    "10000",
+  );
 });
 
 test("the pending mark covers a change through the read after it", async () => {
   const read = deferred<Response>();
   const { app } = appWith(
     response(overflowSettings()),
-    response(ok),
+    response(providerOk),
     read.promise,
   );
   const store = app.overflow(workspaceId);
@@ -94,32 +101,46 @@ test("a page visit during a change reads only after the change and its read", as
   });
   const visiting = store.load();
   await settled();
-  assert.deepEqual(methods(calls), ["GET", "POST"], "The visit waits");
-  post.resolve(response(ok));
+  assert.deepEqual(methods(calls), ["GET", "PUT"], "The visit waits");
+  post.resolve(response(providerOk));
   await connecting;
   await visiting;
-  assert.deepEqual(methods(calls), ["GET", "POST", "GET", "GET"]);
+  assert.deepEqual(methods(calls), ["GET", "PUT", "GET", "GET"]);
   const state = store.state.get();
   assert.equal(
-    state.status === "ready" ? state.settings.spend_limit_cents : null,
+    state.status === "ready"
+      ? state.settings.providers[0]?.spend_limit_cents
+      : null,
     "10000",
   );
 });
 
-test("a save builds the complete policy on the latest confirmed settings", async () => {
+test("a provider limit save leaves the workspace switch and wait alone", async () => {
   const { app, calls } = appWith(
     response(overflowSettings({ enabled: false, wait_seconds: 15 })),
-    response(ok),
-    response(overflowSettings()),
+    response(providerOk),
+    response(
+      overflowSettings({
+        enabled: false,
+        wait_seconds: 15,
+        spend_limit_cents: "25050",
+      }),
+    ),
   );
   const store = app.overflow(workspaceId);
   await store.ensure();
   await store.save({ spend_limit_cents: "25050" });
-  assert.deepEqual(sent(calls[1]?.init), {
-    enabled: false,
-    wait_seconds: 15,
-    spend_limit_cents: "25050",
-  });
+  assert.equal(
+    calls[1]?.url,
+    `/api/workspaces/${workspaceId}/overflow/providers/boat/spend-limit`,
+  );
+  assert.deepEqual(sent(calls[1]?.init), { spend_limit_cents: "25050" });
+  const state = store.state.get();
+  assert.equal(state.status === "ready" ? state.settings.enabled : null, false);
+  assert.equal(
+    state.status === "ready" ? state.settings.wait_seconds : null,
+    15,
+  );
 });
 
 test("a save with no confirmed settings to build on sends nothing", async () => {

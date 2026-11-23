@@ -3,7 +3,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer};
 
-use super::job_fit::BoatLabelFit;
 use super::jobs::{
     JobCacheCounts, JobCacheSource, JobLabel, JobLocation, JobStatus, JobView, JobVmSize,
 };
@@ -35,7 +34,8 @@ enum Location {
         name: Option<String>,
         first_slot: Option<i32>,
     },
-    Boat {
+    Overflow {
+        provider: super::overflow::OverflowProvider,
         size: String,
     },
 }
@@ -105,22 +105,3 @@ struct Job {
     cache_counts: Option<JobCacheCounts>,
 }
 reader!(JobView, Job);
-
-#[derive(Deserialize)]
-#[serde(remote = "BoatLabelFit", tag = "state", rename_all = "snake_case")]
-enum BoatFit {
-    Unavailable,
-    Disabled,
-    NoSizeFits,
-    Fitting {
-        size_name: String,
-        size: JobVmSize,
-        refused: bool,
-    },
-    LargestFallback {
-        size_name: String,
-        size: JobVmSize,
-        refused: bool,
-    },
-}
-reader!(BoatLabelFit, BoatFit);

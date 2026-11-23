@@ -1,15 +1,15 @@
 // Readers for the live queue: the running and waiting jobs, the slot and
-// runner figures, the fit of each waiting label, the Boat facts, and the
+// runner figures, the fit of each waiting label, the provider facts, and the
 // organizations whose jobs ciproxy cannot see. A figure that the API leaves
 // out stays null, apart from zero.
 
 import { readBannerField } from "./banner-reader.ts";
-import { readJob, readVmSize } from "./jobs-parse.ts";
+import { readJob } from "./jobs-parse.ts";
 import type {
-  BoatLabelFit,
   JobOverflow,
   JobVisibility,
   JobsLivePage,
+  ProviderRunningCount,
   StartingRunner,
   WaitingLabelFit,
 } from "./jobs-types.ts";
@@ -21,31 +21,12 @@ import {
   object,
   optional,
   parser,
-  ParseError,
   string,
   time,
 } from "./parse-core.ts";
+import { readProviderFit } from "./parse-label-facts.ts";
+import { readProvider } from "./parse-overflow.ts";
 import { readLabel } from "./parse-setup.ts";
-
-function boatFit(value: unknown): BoatLabelFit {
-  const fields = object(value, "Boat fit");
-  switch (fields.state) {
-    case "unavailable":
-    case "disabled":
-    case "no_size_fits":
-      return { state: fields.state };
-    case "fitting":
-    case "largest_fallback":
-      return {
-        state: fields.state,
-        refused: boolean(fields.refused),
-        size: readVmSize(fields.size),
-        size_name: string(fields.size_name),
-      };
-    default:
-      throw new ParseError("Boat fit");
-  }
-}
 
 function waitingLabel(value: unknown): WaitingLabelFit {
   const fields = object(value, "waiting label");
@@ -53,7 +34,7 @@ function waitingLabel(value: unknown): WaitingLabelFit {
     label_id: string(fields.label_id),
     label_name: string(fields.label_name),
     waiting_jobs: decimal(fields.waiting_jobs),
-    boat: boatFit(fields.boat),
+    providers: array(fields.providers, readProviderFit),
     can_edit: boolean(fields.can_edit),
     ask_admin: boolean(fields.ask_admin),
     current: optional(fields.current, readLabel),
@@ -64,6 +45,7 @@ function waitingLabel(value: unknown): WaitingLabelFit {
 function overflow(value: unknown): JobOverflow {
   const fields = object(value, "overflow");
   return {
+    provider: readProvider(fields.provider),
     connected: boolean(fields.connected),
     key_rejected: boolean(fields.key_rejected),
     billing_required: boolean(fields.billing_required),
@@ -92,8 +74,16 @@ function startingRunner(value: unknown): StartingRunner {
   return {
     id: string(fields.id),
     label_id: string(fields.label_id),
-    boat: boolean(fields.boat),
+    provider: optional(fields.provider, readProvider),
     machine_id: optional(fields.machine_id, string),
+  };
+}
+
+function runningCount(value: unknown): ProviderRunningCount {
+  const fields = object(value, "provider running count");
+  return {
+    provider: readProvider(fields.provider),
+    running: decimal(fields.running),
   };
 }
 
@@ -104,13 +94,13 @@ export const parseJobsLive = parser((value): JobsLivePage => {
     waiting: array(fields.waiting, readJob),
     waiting_count: optional(fields.waiting_count, decimal),
     waiting_labels: array(fields.waiting_labels, waitingLabel),
-    on_boat: decimal(fields.on_boat),
+    running_by_provider: array(fields.running_by_provider, runningCount),
     warm_runners: decimal(fields.warm_runners),
     own_slots_total: optional(fields.own_slots_total, decimal),
     own_slots_used: optional(fields.own_slots_used, decimal),
     starting_runners: array(fields.starting_runners, startingRunner),
     visibility: array(fields.visibility, visibility),
-    overflow: optional(fields.overflow, overflow),
+    overflow: array(fields.overflow, overflow),
     overflow_enabled: boolean(fields.overflow_enabled),
     overflow_wait_seconds: integer(fields.overflow_wait_seconds),
     can_manage: boolean(fields.can_manage),

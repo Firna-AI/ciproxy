@@ -1,3 +1,5 @@
+import { overflowSettings } from "../scripts/fixtures-boat.ts";
+import type { ProviderSettings } from "../src/api/schema.ts";
 // Test data for the Machines tests. Every body uses the generated contract.
 
 import type { OverflowSettings } from "../src/api/machine-schema.ts";
@@ -61,9 +63,9 @@ export function cache(
 }
 
 export function summary(
-  overrides: Partial<OverflowSettings> = {},
+  overrides: Partial<OverflowSettings> & Partial<ProviderSettings> = {},
 ): OverflowSettings {
-  return {
+  return overflowSettings({
     account: {
       connected_at: "2026-09-15T09:00:00Z",
       name: "mokly",
@@ -82,5 +84,5 @@ export function summary(
     spend_limit_cents: "20000",
     wait_seconds: 30,
     ...overrides,
-  };
+  });
 }

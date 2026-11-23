@@ -8,8 +8,10 @@
 import type {
   SavingsAlternative,
   SavingsComparison,
+  SavingsDay,
   SavingsPage,
   SavingsRange,
+  SavingsRuntime,
 } from "../api/savings-types.ts";
 import { workspaceHref } from "../routing/pages.ts";
 import {
@@ -44,9 +46,21 @@ export function savingsSubtitle(page: SavingsPage): string {
   return `${rangeLabels[page.range]} · ${formatUtcRange(page.from, page.until)}`;
 }
 
+/** Runtime for the Boat series, with zero on dates without Boat jobs. */
+export function boatRuntime(
+  row: Pick<SavingsDay, "providers">,
+): SavingsRuntime {
+  return (
+    row.providers.find((provider) => provider.provider === "boat")?.usage ?? {
+      starts: "0",
+      minutes: "0",
+    }
+  );
+}
+
 /** The starts of the range on own machines and on Boat together. */
 export function totalStarts(page: SavingsPage): bigint {
-  return BigInt(page.machines.starts) + BigInt(page.boat.starts);
+  return BigInt(page.machines.starts) + BigInt(boatRuntime(page).starts);
 }
 
 export type Hero = { figure: string; text: string };
@@ -145,7 +159,7 @@ export function startsSeries(page: SavingsPage): StartsSeries {
   return {
     days: page.days.map((item) => String(Number(item.day.slice(8, 10)))),
     machines: page.days.map((item) => Number(item.machines.starts)),
-    boat: page.days.map((item) => Number(item.boat.starts)),
+    boat: page.days.map((item) => Number(boatRuntime(item).starts)),
   };
 }
 

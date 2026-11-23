@@ -37,8 +37,7 @@ export const previewDelay = 300;
 
 /**
  * The parts of a label that its fit depends on: the platform, the size, the
- * switches "Your machines" and "Boat", and "When nothing fits", which decide the Boat fit
- * and where the jobs run. A change of the name needs no new fit.
+ * order of places and "When nothing fits", which decide where the jobs run. A change of the name needs no new fit.
  */
 export function fitKey(input: LabelInput): string {
   return [
@@ -46,8 +45,9 @@ export function fitKey(input: LabelInput): string {
     input.vcpus,
     input.memory_gb,
     input.disk_gb,
-    input.allow_machines,
-    input.allow_boat,
+    input.order
+      .map((place) => (place.kind === "machine" ? "machine" : place.provider))
+      .join(","),
     input.when_nothing_fits,
   ].join("/");
 }

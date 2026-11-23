@@ -26,7 +26,13 @@ function report(overrides: Partial<SavingsPage>): SavingsPage {
 
 const quietDay = {
   machines: { starts: "102", minutes: "498" },
-  boat: { starts: "7", minutes: "41" },
+  providers: [
+    {
+      provider: "boat",
+      usage: { starts: "7", minutes: "41" },
+      cost_cents: "1000",
+    },
+  ],
   total_cents: "713",
   lead: "blacksmith",
   comparisons: [
@@ -144,12 +150,16 @@ test("the daily chart keeps own and Boat starts apart, and the note names each p
       {
         day: "2026-11-03",
         machines: { starts: "40", minutes: "190" },
-        boat: { starts: "3", minutes: "18" },
+        providers: [
+          { provider: "boat", usage: { starts: "3", minutes: "18" } },
+        ],
       },
       {
         day: "2026-11-04",
         machines: { starts: "62", minutes: "308" },
-        boat: { starts: "4", minutes: "23" },
+        providers: [
+          { provider: "boat", usage: { starts: "4", minutes: "23" } },
+        ],
       },
     ],
   });

@@ -2,26 +2,24 @@
 
 use std::collections::BTreeMap;
 
-use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_gateway::types::MachineView;
-use ciproxy_overflow::view::ProviderView;
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::jobs::JobState;
 use ciproxy_store_interface::labels::Label;
 use uuid::Uuid;
 
 use crate::capacity::MachineCapacity;
-use crate::wire::job_fit::{BoatLabelFit, WaitingLabelFit};
+use crate::wire::job_fit::{ProviderSizeFit, WaitingLabelFit};
+use crate::wire::settings::LabelPlace;
 
-use super::{label_boat, label_views};
+use super::{label_provider::Observation, label_views};
 
 pub(super) struct FitInput<'a> {
     pub jobs: &'a [DashboardJob],
     pub labels: Vec<Label>,
     pub machines: &'a [MachineView],
     pub capacity: &'a dyn MachineCapacity,
-    pub overflow: Option<&'a ProviderView>,
-    pub sizing: Option<RootSizing>,
+    pub observation: &'a Observation<'a>,
     pub admin: bool,
 }
 
@@ -31,8 +29,7 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
         labels,
         machines,
         capacity,
-        overflow,
-        sizing,
+        observation,
         admin,
     } = input;
     let mut waiting: BTreeMap<Uuid, (String, u64)> = BTreeMap::new();
@@ -46,36 +43,36 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
         .into_iter()
         .map(|(id, (name, count))| {
             let label = labels.iter().find(|label| label.id == id);
-            let current = label.map(|label| {
-                let mut current = label_views::label(label.clone(), machines, capacity);
-                if let Some(sizing) = sizing {
-                    label_boat::enrich(&mut current.fit, &current.label, overflow, sizing);
+            let current = label
+                .map(|label| label_views::label(label.clone(), machines, capacity, observation));
+            let nothing_fits = current.as_ref().and_then(|current| {
+                if current.fit.fitting_machines > 0
+                    || current.fit.providers.iter().any(|provider| {
+                        matches!(
+                            provider.fit,
+                            ProviderSizeFit::Fitting { .. }
+                                | ProviderSizeFit::LargestFallback { .. }
+                        )
+                    })
+                {
+                    Some(false)
+                } else if current.label.order.contains(&LabelPlace::Machine)
+                    && current.fit.unavailable_machines > 0
+                    || current
+                        .fit
+                        .providers
+                        .iter()
+                        .any(|provider| matches!(provider.fit, ProviderSizeFit::Unavailable))
+                {
+                    None
+                } else {
+                    Some(true)
                 }
-                current
             });
-            let own_fits = current
+            let providers = current
                 .as_ref()
-                .is_some_and(|current| current.fit.fitting_machines > 0);
-            let own_unknown = current.as_ref().is_none_or(|current| {
-                current.label.allow_machines && current.fit.unavailable_machines > 0
-            });
-            let boat = current
-                .as_ref()
-                .map(|current| current.fit.boat.clone())
-                .unwrap_or(BoatLabelFit::Unavailable);
-            let nothing_fits = if own_fits
-                || matches!(
-                    boat,
-                    BoatLabelFit::Fitting { .. } | BoatLabelFit::LargestFallback { .. }
-                ) {
-                Some(false)
-            } else if !own_unknown
-                && matches!(boat, BoatLabelFit::NoSizeFits | BoatLabelFit::Disabled)
-            {
-                Some(true)
-            } else {
-                None
-            };
+                .map(|current| current.fit.providers.clone())
+                .unwrap_or_default();
             WaitingLabelFit {
                 label_id: id.to_string(),
                 label_name: name,
@@ -83,7 +80,7 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
                 can_edit: admin && current.is_some(),
                 ask_admin: !admin && nothing_fits == Some(true),
                 current,
-                boat,
+                providers,
                 nothing_fits,
             }
         })

@@ -18,6 +18,7 @@ import type { SettingsStore } from "../../state/settings-store.ts";
 import type { FailureCopy } from "../../view/claim.ts";
 import {
   checkDraft,
+  createRequest,
   editDraft,
   labelFailure,
   newDraft,
@@ -96,7 +97,9 @@ export function LabelDialog({
     }
     setBusy("save");
     setFailure(null);
-    const result = await store.saveLabel(saved?.id ?? null, check.input);
+    const result = await (saved === null
+      ? store.saveLabel(null, createRequest(check.input))
+      : store.saveLabel(saved.id, check.input));
     setBusy(null);
     if (result.ok) return onClose();
     const refused = labelFailure(result.failure, "save");

@@ -3,7 +3,7 @@
 // stays null, so a screen never shows an unknown cost as zero.
 
 import { readBannerField } from "./banner-reader.ts";
-import { readVmSize } from "./jobs-parse.ts";
+import { readVmSize } from "./parse-jobs.ts";
 import {
   array,
   boolean,
@@ -17,6 +17,7 @@ import {
   ParseError,
   string,
 } from "./parse-core.ts";
+import { readProvider } from "./parse-overflow.ts";
 import type {
   SavingsAlternative,
   SavingsComparison,
@@ -25,6 +26,8 @@ import type {
   SavingsPage,
   SavingsPriceGap,
   SavingsPriceGapReason,
+  SavingsProvider,
+  SavingsProviderRuntime,
   SavingsRange,
   SavingsRuntime,
 } from "./savings-types.ts";
@@ -50,12 +53,29 @@ function runtime(value: unknown): SavingsRuntime {
   return { starts: decimal(fields.starts), minutes: fraction(fields.minutes) };
 }
 
+function providerRuntime(value: unknown): SavingsProviderRuntime {
+  const fields = object(value, "provider runtime");
+  return {
+    provider: readProvider(fields.provider),
+    usage: runtime(fields.usage),
+  };
+}
+
+function providerTotal(value: unknown): SavingsProvider {
+  const fields = object(value, "provider total");
+  return {
+    provider: readProvider(fields.provider),
+    usage: runtime(fields.usage),
+    cost_cents: decimal(fields.cost_cents),
+  };
+}
+
 function day(value: unknown): SavingsDay {
   const fields = object(value, "report day");
   return {
     day: date(fields.day),
     machines: runtime(fields.machines),
-    boat: runtime(fields.boat),
+    providers: array(fields.providers, providerRuntime),
   };
 }
 
@@ -108,10 +128,9 @@ export const parseSavings = parser((value): SavingsPage => {
     from: date(fields.from),
     until: date(fields.until),
     machines: runtime(fields.machines),
-    boat: runtime(fields.boat),
+    providers: array(fields.providers, providerTotal),
     days: array(fields.days, day),
     known_machine_cents: decimal(fields.known_machine_cents),
-    boat_cents: decimal(fields.boat_cents),
     known_plan_cents: decimal(fields.known_plan_cents),
     total_cents: optional(fields.total_cents, decimal),
     missing_costs: array(fields.missing_costs, costGap),

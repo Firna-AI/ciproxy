@@ -1,17 +1,22 @@
 import type { components } from "../../api/index.ts";
+import { readLabelPlace } from "../src/api/parse-label-facts.ts";
+import { ParseError } from "../src/api/parse-core.ts";
+import { boatPlace, machinePlace } from "./m20-fixtures-labels.ts";
 import { fields } from "./harness-state.ts";
 
 type Schemas = components["schemas"];
 
-export function labelInput(value: unknown): Schemas["LabelInput"] | undefined {
+export function labelInput(
+  value: unknown,
+  create: boolean,
+): Schemas["LabelInput"] | undefined {
   if (!fields(value)) return undefined;
   const {
     name,
     vcpus,
     memory_gb,
     disk_gb,
-    allow_machines,
-    allow_boat,
+    order,
     when_nothing_fits,
     platform,
   } = value;
@@ -29,21 +34,28 @@ export function labelInput(value: unknown): Schemas["LabelInput"] | undefined {
     ![vcpus, memory_gb, disk_gb].every(
       (number) => Number.isInteger(number) && number >= 1,
     ) ||
-    typeof allow_machines !== "boolean" ||
-    typeof allow_boat !== "boolean" ||
-    (when_nothing_fits !== "wait" && when_nothing_fits !== "largest_boat")
+    (when_nothing_fits !== "wait" && when_nothing_fits !== "largest_overflow")
   )
     return undefined;
-  return {
-    ...(platform === undefined ? {} : { platform }),
-    name,
-    vcpus,
-    memory_gb,
-    disk_gb,
-    allow_machines,
-    allow_boat,
-    when_nothing_fits,
-  };
+  if (!Array.isArray(order) && !(create && order == null)) return undefined;
+  try {
+    return {
+      ...(platform === undefined ? {} : { platform }),
+      name,
+      vcpus,
+      memory_gb,
+      disk_gb,
+      order: Array.isArray(order)
+        ? order.map(readLabelPlace)
+        : platform === "macos_arm64"
+          ? [machinePlace]
+          : [machinePlace, boatPlace],
+      when_nothing_fits,
+    };
+  } catch (error) {
+    if (error instanceof ParseError) return undefined;
+    throw error;
+  }
 }
 
 export function repositoryInput(

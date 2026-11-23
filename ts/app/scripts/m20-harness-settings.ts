@@ -78,7 +78,10 @@ export async function settingsReply(
     return { status: 200, body: success };
   }
   if (method !== "POST" && method !== "PUT") return undefined;
-  const input = labelInput(await readJson(request));
+  const input = labelInput(
+    await readJson(request),
+    route === "labels" && method === "POST",
+  );
   if (input === undefined)
     return {
       status: 400,

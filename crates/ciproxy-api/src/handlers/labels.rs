@@ -5,17 +5,17 @@ use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
-use ciproxy_protocol::platform::Platform;
 use uuid::Uuid;
 
 use crate::access::Principal;
 use crate::error::{Error, ErrorResultExt, Result, ServiceResultExt};
+use crate::pages::PageServices;
 use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
-use crate::wire::settings::{LabelFit, LabelInput, LabelPath, LabelView};
+use crate::wire::job_fit::LabelFit;
+use crate::wire::settings::{LabelCreate, LabelInput, LabelPath, LabelView};
 
 use super::{label_facts::Facts, label_views};
-use crate::pages::PageServices;
 
 pub(super) async fn read(
     state: &ApiState,
@@ -29,10 +29,12 @@ pub(super) async fn read(
         .internal()?
         .api()?;
     let facts = Facts::read(state, workspace, pages).await?;
+    let observation = facts.observation();
     Ok(labels
         .into_iter()
         .map(|label| {
-            let mut view = label_views::label(label, &machines, state.capacity.as_ref());
+            let mut view =
+                label_views::label(label, &machines, state.capacity.as_ref(), &observation);
             facts.enrich(&mut view);
             view
         })
@@ -72,7 +74,7 @@ pub(crate) async fn preview(
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    label_views::stored(state.runtime.identifier(), input.clone())?;
+    let label = label_views::stored(state.runtime.identifier(), input.spec, input.order)?;
     let facts = Facts::read(
         &state,
         workspace_id,
@@ -84,26 +86,35 @@ pub(crate) async fn preview(
         .await
         .internal()?
         .api()?;
-    let mut fit = label_views::fit(&input, &machines, state.capacity.as_ref());
-    facts.preview(&input, &mut fit);
-    Ok(Json(fit))
+    Ok(Json(
+        label_views::label(
+            label,
+            &machines,
+            state.capacity.as_ref(),
+            &facts.observation(),
+        )
+        .fit,
+    ))
 }
 
-#[utoipa::path(operation_id = "labels_create", post, path = "/workspaces/{workspace_id}/labels", params(WorkspacePath), request_body = LabelInput, responses((status = 200, body = LabelView)), security(("session" = [])))]
+#[utoipa::path(operation_id = "labels_create", post, path = "/workspaces/{workspace_id}/labels", params(WorkspacePath), request_body = LabelCreate, responses((status = 200, body = LabelView)), security(("session" = [])))]
 pub(crate) async fn create(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
     pages: Option<Extension<Arc<PageServices>>>,
-    Json(input): Json<LabelInput>,
+    Json(input): Json<LabelCreate>,
 ) -> Result<Json<LabelView>> {
     let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    let use_default_order =
-        input.allow_machines && (input.allow_boat || input.platform == Platform::MacosArm64);
-    let label = label_views::stored(state.runtime.identifier(), input)?;
+    let use_default_order = input.order.is_none();
+    let label = label_views::stored(
+        state.runtime.identifier(),
+        input.spec,
+        input.order.unwrap_or_default(),
+    )?;
     if let Err(error) = state
         .github
         .prepare_label(workspace_id, label.clone())
@@ -151,10 +162,10 @@ pub(crate) async fn update(
         .into_iter()
         .find(|label| label.id == path.label_id)
         .ok_or(Error::NotFound)?;
-    if previous.name != input.name || previous.platform != input.platform {
+    if previous.name != input.spec.name || previous.platform != input.spec.platform {
         return Err(Error::Conflict);
     }
-    let label = label_views::stored(path.label_id, input)?;
+    let label = label_views::stored(path.label_id, input.spec, input.order)?;
     query(state.store.clone(), move |store| {
         store.update_label(workspace_id, &label)
     })

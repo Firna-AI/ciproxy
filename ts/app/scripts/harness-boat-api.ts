@@ -5,7 +5,7 @@
 // connection body.
 import type { IncomingMessage } from "node:http";
 
-import type { OverflowPolicy, OverflowSettings } from "../src/api/schema.ts";
+import type { OverflowPolicy, ProviderSettings } from "../src/api/schema.ts";
 import { boatSpend, boatWallets, fixtureBoatKey } from "./fixtures-boat.ts";
 import { fixtureTime } from "./fixtures-core.ts";
 import type { BoatFixture } from "./harness-boat.ts";
@@ -17,19 +17,18 @@ function positiveCents(value: unknown): value is string {
 
 function policy(value: unknown): OverflowPolicy | undefined {
   if (!fields(value)) return undefined;
-  const { enabled, wait_seconds, spend_limit_cents } = value;
-  if (typeof enabled !== "boolean" || !positiveCents(spend_limit_cents))
-    return undefined;
+  const { enabled, wait_seconds } = value;
+  if (typeof enabled !== "boolean") return undefined;
   if (
     typeof wait_seconds !== "number" ||
     ![0, 15, 30, 60, 120].includes(wait_seconds)
   )
     return undefined;
-  return { enabled, wait_seconds, spend_limit_cents };
+  return { enabled, wait_seconds };
 }
 
 /** The counted spend reaches the limit, as the API counts it exactly. */
-function reached(settings: OverflowSettings): void {
+function reached(settings: ProviderSettings): void {
   const spend = settings.spend ?? null;
   const limit = settings.spend_limit_cents ?? null;
   if (spend === null || limit === null || !spend.bounded) return;
@@ -50,9 +49,9 @@ export async function serveBoat(
 ): Promise<boolean> {
   const method = request.method ?? "GET";
   const unavailable = () => send(503, problem("unavailable", "Try again."));
-  const accepted = () => {
+  const accepted = (body = success) => {
     if (boat.failReadAfterChange) boat.nextReadFails = true;
-    send(200, success);
+    send(200, body);
   };
   if (action === "overflow" && method === "GET") {
     if (boat.readFails || boat.nextReadFails) {
@@ -67,32 +66,51 @@ export async function serveBoat(
     else if (boat.saveFails) unavailable();
     else {
       Object.assign(boat.settings, body);
-      reached(boat.settings);
       accepted();
     }
     return true;
   }
-  if (action === "overflow/wallets" && method === "POST") {
+  const provider = boat.settings.providers.find(
+    (item) => item.provider === "boat",
+  );
+  if (provider === undefined) return false;
+  const providerSuccess = { ...success, provider: provider.provider };
+  const keyRejected = {
+    ...problem("provider_key_rejected", "Boat did not accept this key."),
+    provider: provider.provider,
+  };
+  if (action === "overflow/providers/boat/spend-limit" && method === "PUT") {
     const body = await read(request);
-    if (!boat.settings.available) unavailable();
+    if (!fields(body) || !positiveCents(body.spend_limit_cents))
+      send(400, problem("invalid_request", "Check."));
+    else if (boat.saveFails) unavailable();
+    else {
+      provider.spend_limit_cents = body.spend_limit_cents;
+      reached(provider);
+      accepted(providerSuccess);
+    }
+    return true;
+  }
+  if (action === "overflow/providers/boat/key-check" && method === "POST") {
+    const body = await read(request);
+    if (!provider.available) unavailable();
     else if (!fields(body) || typeof body.api_key !== "string")
       send(400, problem("invalid_request", "Check the request."));
-    else if (body.api_key !== fixtureBoatKey)
-      send(422, problem("boat_key_rejected", "Boat did not accept this key."));
+    else if (body.api_key !== fixtureBoatKey) send(422, keyRejected);
     else send(200, boatWallets());
     return true;
   }
-  if (action !== "overflow/connection") return false;
-  if (!boat.settings.available || boat.connectFails) {
+  if (action !== "overflow/providers/boat/connection") return false;
+  if (boat.connectFails || (!provider.available && method !== "DELETE")) {
     unavailable();
     return true;
   }
   if (method === "DELETE") {
-    boat.settings = { ...boat.settings, account: null };
-    accepted();
+    provider.account = null;
+    accepted(providerSuccess);
     return true;
   }
-  if (method !== "POST") return false;
+  if (method !== "POST" && method !== "PUT") return false;
   const body = await read(request);
   if (boat.holdConnection) {
     await new Promise<void>((done) => {
@@ -105,26 +123,22 @@ export async function serveBoat(
   if (!fields(body) || !positiveCents(body.spend_limit_cents)) {
     send(400, problem("invalid_request", "Check the request."));
   } else if (body.api_key !== fixtureBoatKey) {
-    send(422, problem("boat_key_rejected", "Boat did not accept this key."));
+    send(422, keyRejected);
   } else {
-    boat.settings = {
-      ...boat.settings,
-      account: {
-        connected_at: fixtureTime,
-        name: "northstar",
-        rejected_at: null,
-      },
-      spend_limit_cents: body.spend_limit_cents,
-      spend:
-        boat.settings.spend ??
-        boatSpend({
-          confirmed_cents: "0",
-          unconfirmed_cents: "0",
-          settled_bound_cents: "0",
-        }),
+    provider.account = {
+      connected_at: fixtureTime,
+      name: "northstar",
+      rejected_at: null,
     };
-    reached(boat.settings);
-    accepted();
+    provider.offered = true;
+    provider.spend_limit_cents = body.spend_limit_cents;
+    provider.spend ??= boatSpend({
+      confirmed_cents: "0",
+      unconfirmed_cents: "0",
+      settled_bound_cents: "0",
+    });
+    reached(provider);
+    accepted(providerSuccess);
   }
   return true;
 }

@@ -6,6 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::jobs::{CacheSource, JobState, MachineHandledCacheCounts};
+use crate::overflow::provider::OverflowProvider;
 use crate::vm_size;
 
 /// One retained job with trusted placement and its organization identity.
@@ -64,6 +65,8 @@ pub struct DashboardJob {
     pub first_slot: Option<i32>,
     /// Actual overflow size name, absent for an own machine.
     pub overflow_size: Option<String>,
+    /// Provider of the exact stored overflow runner.
+    pub overflow_provider: Option<OverflowProvider>,
     /// Saved reason when the trusted routing service supplied one.
     pub routing_reason: Option<String>,
     /// Restored content origins, absent for zero or unknown restores.

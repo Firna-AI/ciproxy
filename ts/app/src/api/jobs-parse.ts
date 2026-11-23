@@ -3,15 +3,14 @@
 // screen can tell an unknown value from zero. Seconds stay exact decimals.
 
 import { readBannerField } from "./banner-reader.ts";
+import { readJobLocation, readVmSize } from "./parse-jobs.ts";
 import type {
   JobCacheCounts,
   JobCacheSource,
   JobDetailPage,
   JobLabel,
-  JobLocation,
   JobStatus,
   JobView,
-  JobVmSize,
   JobsHistoryPage,
 } from "./jobs-types.ts";
 import {
@@ -24,7 +23,6 @@ import {
   oneOf,
   optional,
   parser,
-  ParseError,
   string,
   time,
 } from "./parse-core.ts";
@@ -49,30 +47,6 @@ function label(value: unknown): JobLabel {
     memory_gb: optional(fields.memory_gb, integer),
     disk_gb: optional(fields.disk_gb, integer),
   };
-}
-
-export function readVmSize(value: unknown): JobVmSize {
-  const fields = object(value, "VM size");
-  return {
-    vcpus: integer(fields.vcpus),
-    memory_bytes: decimal(fields.memory_bytes),
-    disk_bytes: decimal(fields.disk_bytes),
-  };
-}
-
-function location(value: unknown): JobLocation {
-  const fields = object(value, "job place");
-  if (fields.kind === "machine") {
-    return {
-      kind: "machine",
-      id: string(fields.id),
-      name: optional(fields.name, string),
-      first_slot: optional(fields.first_slot, integer),
-    };
-  }
-  if (fields.kind === "boat")
-    return { kind: "boat", size: string(fields.size) };
-  throw new ParseError("job place");
 }
 
 function cacheCounts(value: unknown): JobCacheCounts {
@@ -103,7 +77,7 @@ export function readJob(value: unknown): JobView {
     waited_seconds: optional(fields.waited_seconds, fraction),
     runtime_seconds: optional(fields.runtime_seconds, fraction),
     label: label(fields.label),
-    location: optional(fields.location, location),
+    location: optional(fields.location, readJobLocation),
     actual_size: optional(fields.actual_size, readVmSize),
     routing_reason: optional(fields.routing_reason, string),
     github_url: optional(fields.github_url, string),

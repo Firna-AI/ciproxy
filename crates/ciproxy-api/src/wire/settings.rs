@@ -1,13 +1,17 @@
-//! Non-Boat setup, labels, and per-organization repository policy.
+//! Setup, labels, and per-organization repository policy.
 
-use crate::access::workspace::WorkspaceId;
 use chrono::{DateTime, Utc};
 use ciproxy_protocol::platform::Platform;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-/// Non-Boat setup progress for one workspace.
+use crate::access::workspace::WorkspaceId;
+
+use super::job_fit::LabelFit;
+use super::overflow::OverflowProvider;
+
+/// Setup progress for one workspace.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SetupView {
     /// Current release image disk metadata, separate from machine-selected images.
@@ -24,7 +28,7 @@ pub struct SetupView {
     pub labels: Vec<LabelView>,
 }
 
-/// Admin-only non-Boat Settings data.
+/// Admin-only workspace Settings data.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SettingsView {
     /// Workspace name editable by an Admin.
@@ -117,9 +121,30 @@ pub struct RepositoryView {
     pub allowed: bool,
 }
 
-/// Label definition whose name and platform never change after creation.
+/// Create a label with an explicit order or the workspace default.
+#[derive(Deserialize, ToSchema)]
+pub struct LabelCreate {
+    /// Definition of the new label.
+    #[serde(flatten)]
+    pub spec: LabelSpec,
+    /// Omit to use own machines followed by the offered providers on Linux.
+    /// An explicit empty order leaves all jobs waiting.
+    pub order: Option<Vec<LabelPlace>>,
+}
+
+/// A label with its complete stored order, also used for edits and previews.
 #[derive(Clone, Deserialize, Serialize, ToSchema)]
 pub struct LabelInput {
+    /// Definition of the label.
+    #[serde(flatten)]
+    pub spec: LabelSpec,
+    /// Places in the order in which the label tries them.
+    pub order: Vec<LabelPlace>,
+}
+
+/// Label definition whose name and platform never change after creation.
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
+pub struct LabelSpec {
     /// Workflow label accepted by GitHub.
     pub name: String,
     /// Platform of the label's job VMs. Jobs run only on machines of this platform.
@@ -132,16 +157,25 @@ pub struct LabelInput {
     pub memory_gb: i32,
     /// Free job disk in decimal GB, apart from the full image disk.
     pub disk_gb: i32,
-    /// Whether own machines may run this label.
-    pub allow_machines: bool,
-    /// Whether Boat may run this label. Always false for a macOS label.
-    pub allow_boat: bool,
-    /// What happens when neither destination fits. Always `wait` for a macOS label.
+    /// What happens when no place fits. Always `wait` for a macOS label.
     pub when_nothing_fits: NothingFits,
 }
 
 fn linux() -> Platform {
     Platform::LinuxX64
+}
+
+/// One place in the order of a label.
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum LabelPlace {
+    /// The workspace's own machines.
+    Machine,
+    /// One overflow provider.
+    Overflow {
+        /// Provider the label tries at this position.
+        provider: OverflowProvider,
+    },
 }
 
 /// Waiting policy for a label that currently fits nothing.
@@ -150,8 +184,8 @@ fn linux() -> Platform {
 pub enum NothingFits {
     /// Keep the job queued until capacity fits.
     Wait,
-    /// Permit the largest available Boat size.
-    LargestBoat,
+    /// Permit the largest eligible size of the first provider that can start it.
+    LargestOverflow,
 }
 
 /// A stored label with its current machine fit.
@@ -169,35 +203,6 @@ pub struct LabelView {
     pub job_count_until: Option<DateTime<Utc>>,
     /// Capacity range for connected machines that accept jobs.
     pub fit: LabelFit,
-}
-
-/// Computed machine capacity for a label preview.
-#[derive(Deserialize, Serialize, ToSchema)]
-pub struct LabelFit {
-    /// Physical offers from the eligible machines, before current occupancy.
-    pub machines: Vec<super::facts::LabelMachineFit>,
-    /// Account presence from a successful observation, absent when not observed.
-    pub boat_connected: Option<bool>,
-    /// Physical Boat fit under the label's exact routing policy.
-    pub boat: super::job_fit::BoatLabelFit,
-    /// Largest size in the trusted physical Boat catalog.
-    pub largest_boat: Option<super::facts::LabelBoatSize>,
-    /// Complete required root under the shared trusted Boat image policy.
-    pub boat_required_root_disk_bytes: Option<String>,
-    /// Current physical placement, with missing sources explicit.
-    pub placement: super::facts::LabelPlacement,
-    /// Count of connected, non-draining machines.
-    pub eligible_machines: u32,
-    /// Machines whose prepared capacity or required root allocation is unavailable.
-    pub unavailable_machines: u32,
-    /// Count of those machines that fit at least one job.
-    pub fitting_machines: u32,
-    /// Minimum whole jobs per fitting machine, absent when none fits.
-    pub minimum_jobs: Option<String>,
-    /// Maximum whole jobs per fitting machine, absent when none fits.
-    pub maximum_jobs: Option<String>,
-    /// Whether no allowed own machine currently fits this size.
-    pub no_machine_fits: bool,
 }
 
 /// One workspace-owned organization.
@@ -222,7 +227,7 @@ pub struct LabelPath {
     pub label_id: Uuid,
 }
 
-/// First-job progress for the last non-Boat Setup step.
+/// First-job progress for the last Setup step.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SetupJob {
     /// Stable job identity.
@@ -263,10 +268,13 @@ pub enum SetupPhase {
 
 /// Actual runner placement known from the matching durable runner record.
 #[derive(Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SetupPlace {
     /// A VM on an own machine.
     Machine,
-    /// A ciproxy-created Boat sandbox.
-    Boat,
+    /// A sandbox on an overflow provider.
+    Overflow {
+        /// Provider where the first job ran.
+        provider: OverflowProvider,
+    },
 }

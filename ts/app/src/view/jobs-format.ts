@@ -147,7 +147,7 @@ export function placeOf(
   if (location === null || location === undefined) {
     return countsAsStart ? { kind: "unknown" } : { kind: "none" };
   }
-  if (location.kind === "boat") return { kind: "boat" };
+  if (location.kind === "overflow") return { kind: "boat" };
   const slot = location.first_slot;
   return {
     kind: "machine",

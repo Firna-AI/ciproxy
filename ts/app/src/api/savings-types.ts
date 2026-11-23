@@ -13,4 +13,6 @@ export type SavingsPage = Schemas["SavingsPage"];
 export type SavingsPriceGap = Schemas["SavingsPriceGap"];
 export type SavingsPriceGapReason = Schemas["SavingsPriceGapReason"];
 export type SavingsRange = Schemas["SavingsRange"];
+export type SavingsProvider = Schemas["SavingsProvider"];
+export type SavingsProviderRuntime = Schemas["SavingsProviderRuntime"];
 export type SavingsRuntime = Schemas["SavingsRuntime"];

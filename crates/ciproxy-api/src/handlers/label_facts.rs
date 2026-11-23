@@ -1,8 +1,10 @@
-//! Shared page facts from real overflow observations and canonical taken jobs.
+//! Shared page facts from provider observations and canonical taken jobs.
+
+use std::collections::BTreeMap;
 
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
-use ciproxy_overflow::view::ProviderView;
+use ciproxy_overflow::view::OverflowView;
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use uuid::Uuid;
@@ -10,55 +12,55 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::pages::PageServices;
 use crate::state::{ApiState, query};
-use crate::wire::settings::{LabelFit, LabelInput, LabelView};
+use crate::wire::settings::LabelView;
 
-use super::{label_boat, overflow_views};
+use super::{label_provider::Observation, overflow_views};
 
-pub(super) struct Facts {
-    overflow: Option<ProviderView>,
-    sizing: RootSizing,
+pub(super) struct Facts<'a> {
+    overflow: Option<OverflowView>,
+    roots: Option<&'a BTreeMap<OverflowProvider, RootSizing>>,
+    image_root_bytes: u64,
+    enabled: bool,
     jobs: Vec<DashboardJob>,
     at: DateTime<Utc>,
 }
 
-impl Facts {
+impl<'a> Facts<'a> {
     pub(super) async fn read(
         state: &ApiState,
         workspace: Uuid,
-        pages: Option<&PageServices>,
+        pages: Option<&'a PageServices>,
     ) -> Result<Self> {
-        let overflow = pages
-            .and_then(|pages| pages.overflow.as_ref())
-            .or(state.overflow.as_ref());
-        let overflow = match overflow {
-            Some(service) => overflow_views::current_boat(service.as_ref(), workspace).await,
-            None => None,
-        };
-        let sizing = pages
-            .and_then(|pages| pages.provider_roots.get(&OverflowProvider::Boat).copied())
-            .unwrap_or(RootSizing {
-                image_root_bytes: state.config.image_disk_bytes,
-            });
+        let overflow = overflow_views::observe(state, pages, workspace).await;
         let at = state.runtime.now();
-        let jobs = query(state.store.clone(), move |store| {
-            store.dashboard_jobs(workspace, at - Duration::days(30))
+        let (jobs, settings) = query(state.store.clone(), move |store| {
+            Ok((
+                store.dashboard_jobs(workspace, at - Duration::days(30))?,
+                store.settings(workspace)?,
+            ))
         })
         .await?;
         Ok(Self {
             overflow,
-            sizing,
+            roots: pages.map(|pages| &pages.provider_roots),
+            image_root_bytes: state.config.image_disk_bytes,
+            enabled: settings.overflow_enabled,
             jobs,
             at,
         })
     }
 
+    pub(super) fn observation(&self) -> Observation<'_> {
+        Observation {
+            view: self.overflow.as_ref(),
+            roots: self.roots,
+            image_root_bytes: self.image_root_bytes,
+            enabled: self.enabled,
+            at: self.at,
+        }
+    }
+
     pub(super) fn enrich(&self, view: &mut LabelView) {
-        label_boat::enrich(
-            &mut view.fit,
-            &view.label,
-            self.overflow.as_ref(),
-            self.sizing,
-        );
         let id = Uuid::parse_str(&view.id).ok();
         let jobs = self
             .jobs
@@ -77,9 +79,5 @@ impl Facts {
         });
         view.job_count_since = Some(since);
         view.job_count_until = Some(self.at);
-    }
-
-    pub(super) fn preview(&self, input: &LabelInput, fit: &mut LabelFit) {
-        label_boat::enrich(fit, input, self.overflow.as_ref(), self.sizing);
     }
 }

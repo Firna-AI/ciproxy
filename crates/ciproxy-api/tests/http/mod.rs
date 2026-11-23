@@ -60,6 +60,7 @@ mod continuation_tests;
 mod direct_recovery_tests;
 mod install_endpoint_tests;
 mod install_start_tests;
+mod label_order_tests;
 mod late_approval_tests;
 mod link_final_tests;
 mod m18_access_tests;
@@ -85,6 +86,7 @@ mod m18_support;
 mod m18_usage_tests;
 #[path = "../../../ciproxy-control-plane/tests/runtime/overflow_ports.rs"]
 mod overflow_ports;
+mod overflow_provider_tests;
 mod overflow_spend_tests;
 mod overflow_support;
 mod overflow_tests;
@@ -100,6 +102,7 @@ mod m20_release_peer;
 mod m20_member_tests;
 mod m20_organization_tests;
 
+mod m20_label_support;
 mod m20_label_tests;
 
 mod m20_admission_tests;

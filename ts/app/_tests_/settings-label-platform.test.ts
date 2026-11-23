@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { machinePlace } from "../scripts/m20-fixtures-labels.ts";
+
 import { parseSettings } from "../src/api/settings-parse.ts";
 import {
   checkDraft,
@@ -26,18 +28,13 @@ test("a macOS label always goes to the API with Boat off and Wait", () => {
     ...editDraft(labelInput(mac)),
     allowBoat: true,
     allowMachines: false,
-    whenNothingFits: "largest_boat" as const,
+    whenNothingFits: "largest_overflow" as const,
   };
   const check = checkDraft(draft);
   assert.ok(check.ok);
   assert.deepEqual(
-    [
-      check.input.platform,
-      check.input.allow_boat,
-      check.input.allow_machines,
-      check.input.when_nothing_fits,
-    ],
-    ["macos_arm64", false, true, "wait"],
+    [check.input.platform, check.input.order, check.input.when_nothing_fits],
+    ["macos_arm64", [machinePlace], "wait"],
   );
 });
 
@@ -52,12 +49,12 @@ test("the free disk keeps a most value when the API gives one", () => {
 });
 
 test("the fit line of a macOS label names Macs and never Boat", () => {
-  const input = labelInput({ ...mac, allow_boat: false });
+  const input = labelInput({ ...mac, order: [machinePlace] });
   assert.deepEqual(
     fitLine(
       input,
       fit({
-        placement: "machines_only",
+        fitting_places: [machinePlace],
         eligible_machines: 1,
         fitting_machines: 1,
         minimum_jobs: "2",
@@ -72,7 +69,7 @@ test("the fit line of a macOS label names Macs and never Boat", () => {
   const none = fitLine(
     input,
     fit({
-      placement: "waits",
+      fitting_places: [],
       eligible_machines: 0,
       fitting_machines: 0,
       minimum_jobs: null,
@@ -86,7 +83,11 @@ test("the fit line of a macOS label names Macs and never Boat", () => {
 test("each label row names its platform, and a macOS label runs on Macs", () => {
   const rows = labelRows([
     label("1"),
-    label("2", { ...mac, allow_boat: false }, { placement: "machines_only" }),
+    label(
+      "2",
+      { ...mac, order: [machinePlace] },
+      { fitting_places: [machinePlace] },
+    ),
   ]);
   assert.deepEqual(
     rows.map((row) => [row.size.split(`${nbsp}· `)[0], row.where.text]),
@@ -99,7 +100,7 @@ test("each label row names its platform, and a macOS label runs on Macs", () => 
 
 test("the settings reader keeps the platform of a label, absent as absent", () => {
   const view = settingsView({
-    labels: [label("1"), label("2", { ...mac, allow_boat: false })],
+    labels: [label("1"), label("2", { ...mac, order: [machinePlace] })],
   });
   const read = parseSettings(JSON.parse(JSON.stringify(view)));
   assert.deepEqual(

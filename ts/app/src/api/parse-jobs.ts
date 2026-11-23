@@ -1,5 +1,5 @@
 // Readers for one job of the dashboard, as a busy slot of a machine names it,
-// and for an actual VM size, which Boat sizes share. Each reader narrows an
+// and for an actual VM size, which provider sizes share. Each reader narrows an
 // unknown value to its generated type, or throws a ParseError.
 
 import {
@@ -13,6 +13,7 @@ import {
   string,
   time,
 } from "./parse-core.ts";
+import { readProvider } from "./parse-overflow.ts";
 import type {
   JobCacheCounts,
   JobCacheSource,
@@ -68,7 +69,7 @@ function jobLabel(value: unknown): JobLabel {
   };
 }
 
-function location(value: unknown): JobLocation {
+export function readJobLocation(value: unknown): JobLocation {
   const fields = object(value, "job location");
   if (fields.kind === "machine") {
     return {
@@ -78,8 +79,12 @@ function location(value: unknown): JobLocation {
       name: optional(fields.name, string),
     };
   }
-  if (fields.kind === "boat") {
-    return { kind: "boat", size: string(fields.size) };
+  if (fields.kind === "overflow") {
+    return {
+      kind: "overflow",
+      provider: readProvider(fields.provider),
+      size: string(fields.size),
+    };
   }
   throw new ParseError("job location");
 }
@@ -104,7 +109,7 @@ export function readJob(value: unknown): JobView {
     head_branch: optional(fields.head_branch, string),
     id: string(fields.id),
     label: jobLabel(fields.label),
-    location: optional(fields.location, location),
+    location: optional(fields.location, readJobLocation),
     name: string(fields.name),
     organization: string(fields.organization),
     organization_id: string(fields.organization_id),

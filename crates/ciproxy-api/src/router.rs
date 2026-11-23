@@ -56,9 +56,11 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(links::enable))
         .routes(routes!(overflow::settings))
         .routes(routes!(overflow::summary))
-        .routes(routes!(overflow::wallets))
+        .routes(routes!(overflow::check_key))
         .routes(routes!(overflow::connect))
+        .routes(routes!(overflow::change_key))
         .routes(routes!(overflow::disconnect))
+        .routes(routes!(overflow::save_limit))
         .routes(routes!(overflow::save))
         .routes(routes!(jobs::live))
         .routes(routes!(jobs::history))
@@ -159,6 +161,7 @@ pub(crate) async fn protect(
             Json(Problem {
                 code,
                 message: "The request could not be processed.".to_owned(),
+                provider: None,
             }),
         )
             .into_response();

@@ -84,7 +84,8 @@ pub fn document() -> OpenApi {
                 operation
                     .responses
                     .responses
-                    .insert(status.to_owned(), response.into());
+                    .entry(status.to_owned())
+                    .or_insert_with(|| response.into());
             }
             for (status, response) in &mut operation.responses.responses {
                 normalize_response(response, Some(status));

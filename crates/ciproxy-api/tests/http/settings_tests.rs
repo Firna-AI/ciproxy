@@ -18,7 +18,7 @@ async fn labels_use_current_capacity_keep_names_and_allow_delete_then_readd() {
     fixture.state.capacity = capacity_fixture::standard();
     let admin = fixture.login(7, Some(Role::Admin)).await;
     let (machine, _connection) = register(&fixture, &admin).await;
-    let input = json!({"name":"custom","vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"});
+    let input = json!({"name":"custom","vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "order":[{"kind":"machine"},{"kind":"overflow","provider":"boat"}],"when_nothing_fits":"wait"});
     let preview = json(
         fixture
             .request(

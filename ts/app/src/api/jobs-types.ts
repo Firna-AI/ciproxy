@@ -6,7 +6,6 @@ import type { components, operations } from "../../../api/index.ts";
 
 type Schemas = components["schemas"];
 
-export type BoatLabelFit = Schemas["BoatLabelFit"];
 export type JobCacheCounts = Schemas["JobCacheCounts"];
 export type JobCacheSource = Schemas["JobCacheSource"];
 export type JobDetailPage = Schemas["JobDetailPage"];
@@ -19,6 +18,7 @@ export type JobVisibility = Schemas["JobVisibility"];
 export type JobVmSize = Schemas["JobVmSize"];
 export type JobsHistoryPage = Schemas["JobsHistoryPage"];
 export type JobsLivePage = Schemas["JobsLivePage"];
+export type ProviderRunningCount = Schemas["ProviderRunningCount"];
 export type StartingRunner = Schemas["StartingRunner"];
 export type WaitingLabelFit = Schemas["WaitingLabelFit"];
 
@@ -26,5 +26,3 @@ export type WaitingLabelFit = Schemas["WaitingLabelFit"];
 export type HistoryQuery = NonNullable<
   operations["jobs_history"]["parameters"]["query"]
 >;
-
-export type HistoryPlace = NonNullable<HistoryQuery["place"]>;

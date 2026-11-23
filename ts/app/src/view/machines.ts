@@ -7,6 +7,7 @@
 
 import type { MachineView, SlotState, SlotView } from "../api/schema.ts";
 import type { OverflowSettings } from "../api/machine-schema.ts";
+import { boatProvider } from "./boat.ts";
 import { cacheHits, type CacheHits } from "./machines-cache.ts";
 import {
   elsewhereCopy,
@@ -168,13 +169,14 @@ export function machineFigures(
 /** Whether Boat takes new jobs now, by the overflow summary. */
 export function boatTakesJobs(summary: OverflowSettings | null): boolean {
   if (summary === null) return false;
-  const account = summary.account ?? null;
+  const provider = boatProvider(summary);
+  const account = provider?.account ?? null;
   return (
-    summary.available &&
+    provider?.available === true &&
     summary.enabled &&
     account !== null &&
     (account.rejected_at ?? null) === null &&
-    summary.spend?.limit_reached !== true
+    provider.spend?.limit_reached !== true
   );
 }
 

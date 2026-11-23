@@ -16,7 +16,7 @@ import { useViewport } from "../../components/viewport.ts";
 import type { OverflowSettings } from "../../api/schema.ts";
 import { useValue } from "../../services/hooks.ts";
 import type { OverflowStore } from "../../state/overflow.ts";
-import { boatPanelModel } from "../../view/boat.ts";
+import { boatPanelModel, boatProvider } from "../../view/boat.ts";
 import { ConnectFormView } from "../boat/connect-form.tsx";
 import { useConnectForm } from "../boat/use-connect-form.ts";
 
@@ -104,7 +104,7 @@ export function BoatPanel({
   const [changing, setChanging] = useState(false);
   const locked = useValue(store.pending);
   const model = boatPanelModel(settings);
-  const savedLimit = settings.spend_limit_cents ?? null;
+  const savedLimit = boatProvider(settings)?.spend_limit_cents ?? null;
   const done = () => {
     setChanging(false);
     onChanged();

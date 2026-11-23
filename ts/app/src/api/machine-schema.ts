@@ -6,8 +6,6 @@ import type { components, operations } from "../../../api/index.ts";
 
 type Schemas = components["schemas"];
 
-export type BoatAccountView = Schemas["BoatAccountView"];
-export type BoatSpendView = Schemas["BoatSpendView"];
 export type CommandResult = Schemas["CommandResult"];
 export type MachineCostInput = Schemas["MachineCostInput"];
 export type OverflowSettings = Schemas["OverflowSettings"];

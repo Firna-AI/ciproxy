@@ -201,6 +201,7 @@ async fn m18_history_applies_plan_window_aliases_and_actual_job_metadata() {
     assert_eq!(unknown["runtime_seconds"], Value::Null);
     assert_eq!(unknown["counts_as_start"], true);
     assert_eq!(unknown["location"]["size"], "actual-medium");
+    assert_eq!(unknown["location"]["provider"], "boat");
     assert_eq!(unknown["cache_counts"], Value::Null);
     let detail = json(
         pages
@@ -245,7 +246,7 @@ async fn m18_history_applies_plan_window_aliases_and_actual_job_metadata() {
             .request(
                 Some(&viewer),
                 "GET",
-                "/jobs/history?place=boat&search=SCALE&from=2026-11-06&until=2026-11-07",
+                "/jobs/history?place=overflow&provider=boat&search=SCALE&from=2026-11-06&until=2026-11-07",
                 None,
             )
             .await,

@@ -47,7 +47,7 @@ test("an executed job without its saved request shows it as unknown and names th
   const boat = jobDetailModel(
     fixtureJob({
       label: unknownRequest,
-      location: { kind: "boat", size: "large" },
+      location: { kind: "overflow", provider: "boat", size: "large" },
       actual_size: {
         vcpus: 8,
         memory_bytes: "16000000000",
@@ -162,7 +162,8 @@ test("History filters round-trip through the address and ask the API from the UT
   assert.deepEqual(historyQuery(filters, evening), {
     from: "2026-11-02",
     search: "e2e",
-    place: "boat",
+    place: "overflow",
+    provider: "boat",
   });
   assert.deepEqual(filtersOf({ place: "own", days: "12" }), {
     search: "",

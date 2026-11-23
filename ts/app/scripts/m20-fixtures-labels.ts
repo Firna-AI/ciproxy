@@ -6,6 +6,12 @@ type Schemas = components["schemas"];
 type Fit = Schemas["LabelFit"];
 type Label = Schemas["LabelView"];
 
+export const machinePlace = { kind: "machine" } satisfies Schemas["LabelPlace"];
+export const boatPlace = {
+  kind: "overflow",
+  provider: "boat",
+} satisfies Schemas["LabelPlace"];
+
 export const labelIds = {
   default: "60000000-0000-4000-8000-000000000001",
   medium: "60000000-0000-4000-8000-000000000002",
@@ -25,7 +31,7 @@ export const boatSizes = {
     name: "xlarge",
     size: { vcpus: 16, memory_bytes: gb(32), disk_bytes: gb(251) },
   },
-} as const satisfies Record<string, Schemas["LabelBoatSize"]>;
+} as const satisfies Record<string, Schemas["ProviderCatalogSize"]>;
 
 /**
  * The offers of the three eligible machines for a size with this VM disk:
@@ -69,26 +75,34 @@ function machineFits(
 export function fixtureFit(
   root = gb(81),
   jobs: readonly [string, string] = ["6", "3"],
-  boat: Schemas["LabelBoatSize"] = boatSizes.large,
+  boat: Schemas["ProviderCatalogSize"] = boatSizes.large,
 ): Fit {
   const counts = jobs.map(Number).filter((count) => count > 0);
+  const places = counts.length === 0 ? [boatPlace] : [machinePlace, boatPlace];
   return {
-    boat: {
-      state: "fitting",
-      refused: false,
-      size: boat.size,
-      size_name: boat.name,
-    },
-    boat_connected: true,
-    boat_required_root_disk_bytes: root,
+    providers: [
+      {
+        provider: "boat",
+        fit: {
+          state: "fitting",
+          refused: false,
+          size: boat.size,
+          size_name: boat.name,
+        },
+        connected: true,
+        required_root_disk_bytes: root,
+        largest_size: boatSizes.xlarge,
+        hold: null,
+      },
+    ],
     eligible_machines: 3,
     fitting_machines: counts.length,
-    largest_boat: boatSizes.xlarge,
     machines: machineFits(root, jobs),
     minimum_jobs: counts.length === 0 ? null : String(Math.min(...counts)),
     maximum_jobs: counts.length === 0 ? null : String(Math.max(...counts)),
     no_machine_fits: counts.length === 0,
-    placement: counts.length === 0 ? "boat_only" : "machines_then_boat",
+    fitting_places: places,
+    routing: { kind: "places", places },
     unavailable_machines: 1,
   };
 }
@@ -97,14 +111,23 @@ export function fixtureFit(
 export function nothingFits(root: string): Fit {
   return {
     ...fixtureFit(root, ["0", "0"]),
-    boat: { state: "no_size_fits" },
+    providers: [
+      {
+        provider: "boat",
+        connected: true,
+        fit: { state: "no_size_fits" },
+        largest_size: boatSizes.xlarge,
+        required_root_disk_bytes: root,
+      },
+    ],
     eligible_machines: 2,
     fitting_machines: 0,
     machines: machineFits(root, ["0", "0"]).slice(0, 2),
     minimum_jobs: null,
     maximum_jobs: null,
     no_machine_fits: true,
-    placement: "waits",
+    fitting_places: [],
+    routing: { kind: "waits", reason: { kind: "nothing_fits" } },
     unavailable_machines: 0,
   };
 }
@@ -115,12 +138,28 @@ export function nothingFits(root: string): Fit {
  * decide where jobs run.
  */
 export function withoutBoat(fit: Fit): Fit {
+  const places = fit.fitting_machines > 0 ? [machinePlace] : [];
   return {
     ...fit,
-    boat: { state: "unavailable" },
-    boat_connected: false,
-    largest_boat: null,
-    placement: fit.fitting_machines > 0 ? "machines_only" : "waits",
+    providers: fit.providers.map((provider) => ({
+      ...provider,
+      fit: { state: "unavailable" },
+      connected: false,
+      largest_size: null,
+      hold: "not_connected",
+    })),
+    fitting_places: places,
+    routing:
+      places.length > 0
+        ? { kind: "places", places }
+        : {
+            kind: "waits",
+            reason: {
+              kind: "provider",
+              provider: "boat",
+              hold: "not_connected",
+            },
+          },
   };
 }
 
@@ -130,24 +169,37 @@ export function withoutBoat(fit: Fit): Fit {
  * Boat fit, and the placement follows from what still fits.
  */
 export function switchedFit(fit: Fit, input: Schemas["LabelInput"]): Fit {
-  const machines = input.allow_machines && fit.fitting_machines > 0;
-  const boat: Fit["boat"] = input.allow_boat ? fit.boat : { state: "disabled" };
-  const boatFits =
-    boat.state === "fitting" || boat.state === "largest_fallback";
+  const machines =
+    input.order.some((place) => place.kind === "machine") &&
+    fit.fitting_machines > 0;
+  const allowsBoat = input.order.some((place) => place.kind === "overflow");
+  const providers = fit.providers.map(
+    (provider): Schemas["ProviderLabelFit"] =>
+      allowsBoat ? provider : { ...provider, fit: { state: "disabled" } },
+  );
+  const boatFits = providers.some(
+    ({ fit }) => fit.state === "fitting" || fit.state === "largest_fallback",
+  );
+  const places = input.order.filter((place) =>
+    place.kind === "machine" ? machines : boatFits,
+  );
   return {
     ...fit,
-    boat,
+    providers,
     fitting_machines: machines ? fit.fitting_machines : 0,
     minimum_jobs: machines ? (fit.minimum_jobs ?? null) : null,
     maximum_jobs: machines ? (fit.maximum_jobs ?? null) : null,
     no_machine_fits: !machines,
-    placement: machines
-      ? boatFits
-        ? "machines_then_boat"
-        : "machines_only"
-      : boatFits
-        ? "boat_only"
-        : "waits",
+    fitting_places: places,
+    routing:
+      places.length > 0
+        ? { kind: "places", places }
+        : {
+            kind: "waits",
+            reason: {
+              kind: input.order.length === 0 ? "empty_order" : "nothing_fits",
+            },
+          },
   };
 }
 
@@ -164,8 +216,7 @@ function label(
       vcpus: 2,
       memory_gb: 8,
       disk_gb: 20,
-      allow_machines: true,
-      allow_boat: true,
+      order: [machinePlace, boatPlace],
       when_nothing_fits: "wait",
       ...input,
     },

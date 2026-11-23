@@ -122,9 +122,9 @@ function LinuxPlaces({
         <RadioCard
           title="Run on the largest Boat size"
           body={largestBoatText}
-          checked={draft.whenNothingFits === "largest_boat"}
+          checked={draft.whenNothingFits === "largest_overflow"}
           onPress={() =>
-            onChange({ ...draft, whenNothingFits: "largest_boat" })
+            onChange({ ...draft, whenNothingFits: "largest_overflow" })
           }
         />
       </RadioCardGroup>

@@ -660,7 +660,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/workspaces/{workspace_id}/overflow/connection": {
+    "/workspaces/{workspace_id}/overflow/providers/{provider}/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a provider key while its running jobs finish. */
+        put: operations["overflow_change_key"];
+        /** Connect a provider key and save its spend limit. */
+        post: operations["overflow_connect"];
+        delete: operations["overflow_disconnect"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace_id}/overflow/providers/{provider}/key-check": {
         parameters: {
             query?: never;
             header?: never;
@@ -669,8 +687,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["overflow_connect"];
-        delete: operations["overflow_disconnect"];
+        /** Check a provider key without saving it. Boat returns its billing wallets. */
+        post: operations["overflow_check_key"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace_id}/overflow/providers/{provider}/spend-limit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["overflow_save_limit"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -686,23 +721,6 @@ export interface paths {
         get: operations["overflow_summary"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspaces/{workspace_id}/overflow/wallets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Check a Boat key and list its billing wallets. */
-        post: operations["overflow_wallets"];
         delete?: never;
         options?: never;
         head?: never;
@@ -803,21 +821,6 @@ export interface components {
          * @enum {string}
          */
         BannerAction: "update_card" | "choose_plan" | "ask_admin_or_billing";
-        /** @description Safe connected-account metadata with no key or key ciphertext. */
-        BoatAccountView: {
-            /**
-             * Format: date-time
-             * @description The time this key version connected.
-             */
-            connected_at: string;
-            /** @description The account name returned by Boat during verification. */
-            name: string;
-            /**
-             * Format: date-time
-             * @description The first time Boat refused this key, absent while the key is accepted.
-             */
-            rejected_at?: string | null;
-        };
         /** @description Key verification and a required monthly limit for every Boat connection. */
         BoatConnection: {
             /** @description The customer's own Boat key, used only for this request. */
@@ -832,51 +835,6 @@ export interface components {
             /** @description The customer's Boat key. Wallet discovery does not save it. */
             api_key: string;
         };
-        /** @description Boat resources under the label policy, without claiming a start is available. */
-        BoatLabelFit: {
-            /** @enum {string} */
-            state: "unavailable";
-        } | {
-            /** @enum {string} */
-            state: "disabled";
-        } | {
-            /** @enum {string} */
-            state: "no_size_fits";
-        } | {
-            /** @description A provider refusal currently excludes this size from starts. */
-            refused: boolean;
-            /** @description Actual byte-precise catalog resources. */
-            size: components["schemas"]["JobVmSize"];
-            /** @description Actual catalog size name. */
-            size_name: string;
-            /** @enum {string} */
-            state: "fitting";
-        } | {
-            /** @description A provider refusal currently excludes this size from starts. */
-            refused: boolean;
-            /** @description Actual resources, which can be smaller than the requested label. */
-            size: components["schemas"]["JobVmSize"];
-            /** @description Actual catalog size name. */
-            size_name: string;
-            /** @enum {string} */
-            state: "largest_fallback";
-        };
-        /** @description Rounded display amounts. Exact decimal costs still govern Boat admission. */
-        BoatSpendView: {
-            /** @description Whether all current-month costs have either a known value or a safe bound. */
-            bounded: boolean;
-            /** @description Provider-confirmed costs, rounded once after aggregation to integer US cents. */
-            confirmed_cents: components["schemas"]["Cents"];
-            /** @description Whether exact counted costs have reached the saved monthly limit. */
-            limit_reached?: boolean | null;
-            /** @description The settled-bound portion of unconfirmed costs, rounded after aggregation. */
-            settled_bound_cents: components["schemas"]["Cents"];
-            /**
-             * @description Unconfirmed costs, including pending bounds and expired settled bounds.
-             *     Rounded once after both parts are added. This is not a provider-confirmed charge.
-             */
-            unconfirmed_cents: components["schemas"]["Cents"];
-        };
         /** @description A named billing wallet that the checked key can use. */
         BoatWallet: {
             /** @description The verified personal account or organization name. */
@@ -886,6 +844,8 @@ export interface components {
         };
         /** @description Safe key-check result with the likely wallet selected. */
         BoatWallets: {
+            /** @description Provider that accepted the key and returned these wallets. */
+            provider: components["schemas"]["OverflowProvider"];
             /** @description Boat's active wallet, or the first offered wallet when none is active. */
             selected_wallet: string;
             /** @description All wallets accessible to the key. */
@@ -1053,18 +1013,20 @@ export interface components {
             name?: string | null;
         } | {
             /** @enum {string} */
-            kind: "boat";
-            /** @description Actual billed Boat size name. */
+            kind: "overflow";
+            /** @description Provider that ran this job. */
+            provider: components["schemas"]["OverflowProvider"];
+            /** @description Actual billed size name. */
             size: string;
         };
-        /** @description Existing overflow service observations, absent when that source is unavailable. */
+        /** @description Current overflow observations for one provider. */
         JobOverflow: {
-            /** @description Boat requires account billing before it starts more sandboxes. */
+            /** @description The provider requires account billing before it starts more sandboxes. */
             billing_required: boolean;
-            /** @description An active Boat account is connected. */
+            /** @description An active account is connected. */
             connected: boolean;
             counted_cents?: components["schemas"]["Cents"] | null;
-            /** @description Boat rejected the active key. */
+            /** @description The provider rejected the active key. */
             key_rejected: boolean;
             limit_cents?: components["schemas"]["Cents"] | null;
             /** @description Current spend has reached the monthly limit, absent with incomplete bounds. */
@@ -1076,6 +1038,8 @@ export interface components {
              * @description First UTC instant at which the monthly budget resets.
              */
             next_month: string;
+            /** @description Provider whose account, refusals, and spend were observed. */
+            provider: components["schemas"]["OverflowProvider"];
             /** @description Provider-refused size names until a catalog refresh. */
             refused_sizes: string[];
             /**
@@ -1186,9 +1150,8 @@ export interface components {
             banner?: components["schemas"]["PageBanner"] | null;
             /** @description Current caller may change labels or overflow settings. */
             can_manage: boolean;
-            /** @description Number of running Boat jobs. */
-            on_boat: string;
-            overflow?: components["schemas"]["JobOverflow"] | null;
+            /** @description Current refusal and spend facts for providers with a successful observation. */
+            overflow: components["schemas"]["JobOverflow"][];
             /** @description Workspace overflow policy that explains queue wait. */
             overflow_enabled: boolean;
             /**
@@ -1202,6 +1165,8 @@ export interface components {
             own_slots_used?: string | null;
             /** @description Running jobs across all workspace organizations. */
             running: components["schemas"]["JobView"][];
+            /** @description Running counts for every supported provider, including zero counts. */
+            running_by_provider: components["schemas"]["ProviderRunningCount"][];
             /** @description Actual starting runners and their target places. */
             starting_runners: components["schemas"]["StartingRunner"][];
             /** @description Current suspensions and retained owner removals, excluding intentional take-outs. */
@@ -1215,21 +1180,16 @@ export interface components {
             /** @description Actual ready own-machine runners. */
             warm_runners: string;
         };
-        /** @description One trusted Boat catalog size with its complete actual allocation. */
-        LabelBoatSize: {
-            /** @description Actual catalog name. */
-            name: string;
-            /** @description Actual resources, with byte counts as decimal strings. */
-            size: components["schemas"]["JobVmSize"];
+        /** @description Create a label with an explicit order or the workspace default. */
+        LabelCreate: components["schemas"]["LabelSpec"] & {
+            /**
+             * @description Omit to use own machines followed by the offered providers on Linux.
+             *     An explicit empty order leaves all jobs waiting.
+             */
+            order?: components["schemas"]["LabelPlace"][] | null;
         };
-        /** @description Computed machine capacity for a label preview. */
+        /** @description Computed capacity and routing for a label or a label preview. */
         LabelFit: {
-            /** @description Physical Boat fit under the label's exact routing policy. */
-            boat: components["schemas"]["BoatLabelFit"];
-            /** @description Account presence from a successful observation, absent when not observed. */
-            boat_connected?: boolean | null;
-            /** @description Complete required root under the shared trusted Boat image policy. */
-            boat_required_root_disk_bytes?: string | null;
             /**
              * Format: int32
              * @description Count of connected, non-draining machines.
@@ -1240,7 +1200,11 @@ export interface components {
              * @description Count of those machines that fit at least one job.
              */
             fitting_machines: number;
-            largest_boat?: components["schemas"]["LabelBoatSize"] | null;
+            /**
+             * @description Physical choices in label order, including a fallback when applicable.
+             *     Absent when a missing observation prevents a conclusion.
+             */
+            fitting_places?: components["schemas"]["LabelPlace"][] | null;
             /** @description Physical offers from the eligible machines, before current occupancy. */
             machines: components["schemas"]["LabelMachineFit"][];
             /** @description Maximum whole jobs per fitting machine, absent when none fits. */
@@ -1249,20 +1213,69 @@ export interface components {
             minimum_jobs?: string | null;
             /** @description Whether no allowed own machine currently fits this size. */
             no_machine_fits: boolean;
-            /** @description Current physical placement, with missing sources explicit. */
-            placement: components["schemas"]["LabelPlacement"];
+            /** @description Physical fit and current holds for each provider. */
+            providers: components["schemas"]["ProviderLabelFit"][];
+            /** @description Routing choices after the workspace switch and provider holds. */
+            routing: components["schemas"]["LabelRouting"];
             /**
              * Format: int32
              * @description Machines whose prepared capacity or required root allocation is unavailable.
              */
             unavailable_machines: number;
         };
+        /** @description A label with its complete stored order, also used for edits and previews. */
+        LabelInput: components["schemas"]["LabelSpec"] & {
+            /** @description Places in the order in which the label tries them. */
+            order: components["schemas"]["LabelPlace"][];
+        };
+        /** @description One eligible machine's physical offer from the exact prepared snapshot. */
+        LabelMachineFit: {
+            /** @description Whole concurrent jobs, unavailable when disk or sizing is unknown. */
+            concurrent_jobs?: string | null;
+            /** @description Last reported host name. */
+            hostname: string;
+            /** @description Stable workspace machine identity. */
+            id: string;
+            /** @description Exact prepared job-area capacity. */
+            job_disk_bytes?: string | null;
+            /** @description Memory bytes supplied by those slots. */
+            memory_bytes: string;
+            /** @description Complete VM root required by this machine's selected image. */
+            required_root_disk_bytes?: string | null;
+            /** @description Whole slots available to job VMs before current occupancy. */
+            slots: string;
+            /** @description Hardware threads supplied by those slots. */
+            vcpus: string;
+        };
+        /** @description One place in the order of a label. */
+        LabelPlace: {
+            /** @enum {string} */
+            kind: "machine";
+        } | {
+            /** @enum {string} */
+            kind: "overflow";
+            /** @description Provider the label tries at this position. */
+            provider: components["schemas"]["OverflowProvider"];
+        };
+        /** @description Where a job of the label can run before own-machine occupancy is checked. */
+        LabelRouting: {
+            /** @enum {string} */
+            kind: "places";
+            /** @description Each place that can take the job. */
+            places: components["schemas"]["LabelPlace"][];
+        } | {
+            /** @enum {string} */
+            kind: "largest";
+            /** @description First provider that can start the fallback. */
+            provider: components["schemas"]["OverflowProvider"];
+        } | {
+            /** @enum {string} */
+            kind: "waits";
+            /** @description Reason for waiting. */
+            reason: components["schemas"]["LabelWaitReason"];
+        };
         /** @description Label definition whose name and platform never change after creation. */
-        LabelInput: {
-            /** @description Whether Boat may run this label. Always false for a macOS label. */
-            allow_boat: boolean;
-            /** @description Whether own machines may run this label. */
-            allow_machines: boolean;
+        LabelSpec: {
             /**
              * Format: int32
              * @description Free job disk in decimal GB, apart from the full image disk.
@@ -1285,33 +1298,9 @@ export interface components {
              * @description Requested hardware threads.
              */
             vcpus: number;
-            /** @description What happens when neither destination fits. Always `wait` for a macOS label. */
+            /** @description What happens when no place fits. Always `wait` for a macOS label. */
             when_nothing_fits: components["schemas"]["NothingFits"];
         };
-        /** @description One eligible machine's physical offer from the exact prepared snapshot. */
-        LabelMachineFit: {
-            /** @description Whole concurrent jobs, unavailable when disk or sizing is unknown. */
-            concurrent_jobs?: string | null;
-            /** @description Last reported host name. */
-            hostname: string;
-            /** @description Stable workspace machine identity. */
-            id: string;
-            /** @description Exact prepared job-area capacity. */
-            job_disk_bytes?: string | null;
-            /** @description Memory bytes supplied by those slots. */
-            memory_bytes: string;
-            /** @description Complete VM root required by this machine's selected image. */
-            required_root_disk_bytes?: string | null;
-            /** @description Whole slots available to job VMs before current occupancy. */
-            slots: string;
-            /** @description Hardware threads supplied by those slots. */
-            vcpus: string;
-        };
-        /**
-         * @description Current physical placement, independent of temporary start availability.
-         * @enum {string}
-         */
-        LabelPlacement: "machines_then_boat" | "machines_only" | "boat_only" | "waits" | "unavailable";
         /** @description A stored label with its current machine fit. */
         LabelView: {
             /** @description Capacity range for connected machines that accept jobs. */
@@ -1332,6 +1321,24 @@ export interface components {
             jobs_last_30_days?: string | null;
             /** @description Current label policy. */
             label: components["schemas"]["LabelInput"];
+        };
+        /** @description First applicable reason a label waits. */
+        LabelWaitReason: {
+            /** @enum {string} */
+            kind: "empty_order";
+        } | {
+            /** @enum {string} */
+            kind: "nothing_fits";
+        } | {
+            /** @enum {string} */
+            kind: "unavailable";
+        } | {
+            /** @description Reason it cannot take this label now. */
+            hold: components["schemas"]["ProviderHold"];
+            /** @enum {string} */
+            kind: "provider";
+            /** @description Provider whose hold explains the wait. */
+            provider: components["schemas"]["OverflowProvider"];
         };
         /**
          * @description Observable progress of one installed organization association.
@@ -1485,7 +1492,7 @@ export interface components {
          * @description Waiting policy for a label that currently fits nothing.
          * @enum {string}
          */
-        NothingFits: "wait" | "largest_boat";
+        NothingFits: "wait" | "largest_overflow";
         /** @description Complete typed picker/recovery result for the original requester. */
         OrganizationLinkView: {
             activation?: components["schemas"]["ActivationView"] | null;
@@ -1584,30 +1591,27 @@ export interface components {
         };
         /** @description Complete routing policy editable in Settings under Overflow. */
         OverflowPolicy: {
-            /** @description Whether the workspace permits new Boat runners. */
+            /** @description Whether the workspace permits new overflow runners. */
             enabled: boolean;
-            /** @description Positive monthly integer US cents as a decimal string. */
-            spend_limit_cents: components["schemas"]["Cents"];
             /**
              * Format: int32
              * @description The supported overflow waits are 0, 15, 30, 60, and 120 seconds.
              */
             wait_seconds: number;
         };
-        /** @description Boat Setup and Settings data shared by their connection form. */
+        /** @enum {string} */
+        OverflowProvider: "boat";
+        /** @description Workspace routing policy and provider options for Setup and Settings. */
         OverflowSettings: {
-            account?: components["schemas"]["BoatAccountView"] | null;
-            /** @description Whether the deployment has a shared Boat image and the Boat service. */
-            available: boolean;
-            /** @description The switch that permits new Boat starts. */
+            /** @description The switch that permits new overflow starts. */
             enabled: boolean;
             /**
              * Format: date-time
              * @description First instant of the next calendar month in UTC.
              */
             next_month_at: string;
-            spend?: components["schemas"]["BoatSpendView"] | null;
-            spend_limit_cents?: components["schemas"]["Cents"] | null;
+            /** @description Every supported provider, including unavailable or disconnected providers. */
+            providers: components["schemas"]["ProviderSettings"][];
             /**
              * Format: int32
              * @description The saved overflow wait in seconds.
@@ -1864,12 +1868,134 @@ export interface components {
             code: components["schemas"]["ProblemCode"];
             /** @description Safe explanation with no credentials or provider response body. */
             message: string;
+            provider?: components["schemas"]["OverflowProvider"] | null;
         };
         /**
          * @description Closed set of machine-readable dashboard failures.
          * @enum {string}
          */
-        ProblemCode: "boat_key_rejected" | "sign_in_required" | "access_denied" | "not_found" | "conflict" | "review_required" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
+        ProblemCode: "provider_key_rejected" | "sign_in_required" | "access_denied" | "not_found" | "conflict" | "review_required" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
+        /** @description Safe connected-account metadata with no key or key ciphertext. */
+        ProviderAccountView: {
+            /**
+             * Format: date-time
+             * @description The time this key version connected.
+             */
+            connected_at: string;
+            /** @description The account name returned by the provider during verification. */
+            name: string;
+            /**
+             * Format: date-time
+             * @description The first time the provider refused this key, absent while the key is accepted.
+             */
+            rejected_at?: string | null;
+        };
+        /** @description One trusted catalog size with its complete actual allocation. */
+        ProviderCatalogSize: {
+            /** @description Actual catalog name. */
+            name: string;
+            /** @description Actual resources, with byte counts as decimal strings. */
+            size: components["schemas"]["JobVmSize"];
+        };
+        /**
+         * @description Reason a provider cannot start a job now.
+         * @enum {string}
+         */
+        ProviderHold: "off" | "not_connected" | "unavailable" | "key_rejected" | "spend_limit" | "costs_unknown" | "retry_after" | "billing_required" | "size_refused";
+        /** @description One provider's fit and current start availability for the label. */
+        ProviderLabelFit: {
+            /** @description Account presence from a successful observation, absent when unknown. */
+            connected?: boolean | null;
+            eligible_size?: components["schemas"]["ProviderCatalogSize"] | null;
+            /** @description Physical fit under the label's resource policy. */
+            fit: components["schemas"]["ProviderSizeFit"];
+            hold?: components["schemas"]["ProviderHold"] | null;
+            largest_size?: components["schemas"]["ProviderCatalogSize"] | null;
+            /** @description Provider that owns the catalog and accounts for these resources. */
+            provider: components["schemas"]["OverflowProvider"];
+            /** @description Complete required root under the provider's trusted image policy. */
+            required_root_disk_bytes?: string | null;
+        };
+        /** @description Running jobs counted from their saved placement. */
+        ProviderRunningCount: {
+            /** @description Provider that runs the jobs. */
+            provider: components["schemas"]["OverflowProvider"];
+            /** @description Running job count as a decimal string. */
+            running: string;
+        };
+        /** @description Deployment and workspace facts for one supported provider. */
+        ProviderSettings: {
+            account?: components["schemas"]["ProviderAccountView"] | null;
+            /** @description The deployment has the configuration needed to offer this provider. */
+            available: boolean;
+            /** @description The key can use several billing accounts and the customer selects one. */
+            has_billing_account_choice: boolean;
+            /** @description Provider brand name. */
+            name: string;
+            /** @description The workspace can add this provider to its Linux label orders. */
+            offered: boolean;
+            /** @description Stable provider identity. */
+            provider: components["schemas"]["OverflowProvider"];
+            spend?: components["schemas"]["ProviderSpendView"] | null;
+            spend_limit_cents?: components["schemas"]["Cents"] | null;
+        };
+        /** @description Physical provider resources without a claim that a start is available. */
+        ProviderSizeFit: {
+            /** @enum {string} */
+            state: "unavailable";
+        } | {
+            /** @enum {string} */
+            state: "disabled";
+        } | {
+            /** @enum {string} */
+            state: "no_size_fits";
+        } | {
+            /** @description A provider refusal currently excludes this size from starts. */
+            refused: boolean;
+            /** @description Actual byte-precise catalog resources. */
+            size: components["schemas"]["JobVmSize"];
+            /** @description Actual catalog size name. */
+            size_name: string;
+            /** @enum {string} */
+            state: "fitting";
+        } | {
+            /** @description A provider refusal currently excludes this size from starts. */
+            refused: boolean;
+            /** @description Actual resources which can be smaller than the requested label. */
+            size: components["schemas"]["JobVmSize"];
+            /** @description Actual catalog size name. */
+            size_name: string;
+            /** @enum {string} */
+            state: "largest_fallback";
+        };
+        /** @description A monthly spend limit for the provider named in the path. */
+        ProviderSpendLimit: {
+            /** @description Positive monthly integer US cents as a decimal string. */
+            spend_limit_cents: components["schemas"]["Cents"];
+        };
+        /** @description Rounded display amounts. Exact decimal costs still govern admission. */
+        ProviderSpendView: {
+            /** @description Whether all current-month costs have either a known value or a safe bound. */
+            bounded: boolean;
+            /** @description Provider-confirmed costs, rounded once after aggregation to integer US cents. */
+            confirmed_cents: components["schemas"]["Cents"];
+            /** @description Whether exact counted costs have reached the saved monthly limit. */
+            limit_reached?: boolean | null;
+            /** @description The settled-bound portion of unconfirmed costs, rounded after aggregation. */
+            settled_bound_cents: components["schemas"]["Cents"];
+            /**
+             * @description Unconfirmed costs, including pending bounds and expired settled bounds.
+             *     Rounded once after both parts are added. This is not a provider-confirmed charge.
+             */
+            unconfirmed_cents: components["schemas"]["Cents"];
+        };
+        /** @description Confirmation of a change to one provider. */
+        ProviderSuccess: {
+            /** @description True when the change succeeded. */
+            ok: boolean;
+            /** @description Provider whose change succeeded. */
+            provider: components["schemas"]["OverflowProvider"];
+        };
         /** @description Organization removal metadata verified through this person's GitHub membership. */
         RemovedOrganization: {
             /**
@@ -1957,8 +2083,6 @@ export interface components {
         };
         /** @description One UTC date for the starts chart and runtime details. */
         SavingsDay: {
-            /** @description Boat starts and elapsed runtime. */
-            boat: components["schemas"]["SavingsRuntime"];
             /**
              * Format: date
              * @description Included UTC date.
@@ -1966,14 +2090,12 @@ export interface components {
             day: string;
             /** @description Own-machine starts and elapsed runtime. */
             machines: components["schemas"]["SavingsRuntime"];
+            /** @description Starts and elapsed runtime for each provider used on this date. */
+            providers: components["schemas"]["SavingsProviderRuntime"][];
         };
         /** @description Workspace-wide report independent of the plan's visible job history. */
         SavingsPage: {
             banner?: components["schemas"]["PageBanner"] | null;
-            /** @description Boat starts and minutes. */
-            boat: components["schemas"]["SavingsRuntime"];
-            /** @description Measured Boat cost in integer US cents, including idle sandboxes. */
-            boat_cents: components["schemas"]["Cents"];
             /** @description Current caller may enter a machine's monthly cost. */
             can_add_machine_costs: boolean;
             /** @description Both dated alternatives and their signed savings. */
@@ -1994,6 +2116,8 @@ export interface components {
             machines: components["schemas"]["SavingsRuntime"];
             /** @description Missing facts that prevent a complete ciproxy total. */
             missing_costs: components["schemas"]["SavingsCostGap"][];
+            /** @description Starts, minutes, and measured cost by provider. */
+            providers: components["schemas"]["SavingsProvider"][];
             /** @description Selected range. */
             range: components["schemas"]["SavingsRange"];
             /** @description False when another refresh raced and the client should read again. */
@@ -2017,6 +2141,22 @@ export interface components {
          * @enum {string}
          */
         SavingsPriceGapReason: "unavailable" | "ambiguous";
+        /** @description Total runtime and measured cost for one overflow provider in the range. */
+        SavingsProvider: {
+            /** @description Measured cost in integer US cents, including idle sandboxes. */
+            cost_cents: components["schemas"]["Cents"];
+            /** @description Provider that ran jobs or charged for sandboxes in the date range. */
+            provider: components["schemas"]["OverflowProvider"];
+            /** @description Runner-taken starts and elapsed runtime. */
+            usage: components["schemas"]["SavingsRuntime"];
+        };
+        /** @description Daily job runtime on one overflow provider. */
+        SavingsProviderRuntime: {
+            /** @description Provider that ran the jobs. */
+            provider: components["schemas"]["OverflowProvider"];
+            /** @description Runner-taken starts and elapsed runtime. */
+            usage: components["schemas"]["SavingsRuntime"];
+        };
         /**
          * @description One of the three UTC report ranges.
          * @enum {string}
@@ -2064,7 +2204,7 @@ export interface components {
             /** @description Workspaces whose organizations contain this person. */
             workspaces: components["schemas"]["WorkspaceView"][];
         };
-        /** @description Admin-only non-Boat Settings data. */
+        /** @description Admin-only workspace Settings data. */
         SettingsView: {
             /** @description Whether the current Admin may start Add, including an inactive link. */
             can_add_organization: boolean;
@@ -2082,7 +2222,7 @@ export interface components {
             /** @description Current organizations, including owner-removed records during retention. */
             organizations: components["schemas"]["OrganizationView"][];
         };
-        /** @description First-job progress for the last non-Boat Setup step. */
+        /** @description First-job progress for the last Setup step. */
         SetupJob: {
             /**
              * Format: date-time
@@ -2141,12 +2281,17 @@ export interface components {
          * @enum {string}
          */
         SetupPhase: "available" | "assigned" | "started" | "completed";
-        /**
-         * @description Actual runner placement known from the matching durable runner record.
-         * @enum {string}
-         */
-        SetupPlace: "machine" | "boat";
-        /** @description Non-Boat setup progress for one workspace. */
+        /** @description Actual runner placement known from the matching durable runner record. */
+        SetupPlace: {
+            /** @enum {string} */
+            kind: "machine";
+        } | {
+            /** @enum {string} */
+            kind: "overflow";
+            /** @description Provider where the first job ran. */
+            provider: components["schemas"]["OverflowProvider"];
+        };
+        /** @description Setup progress for one workspace. */
         SetupView: {
             /** @description Current release image disk metadata, separate from machine-selected images. */
             current_image_disk_bytes: string;
@@ -2187,14 +2332,13 @@ export interface components {
         };
         /** @description One runner that the runtime is preparing, without registration credentials. */
         StartingRunner: {
-            /** @description True for a Boat sandbox. */
-            boat: boolean;
             /** @description Stable runner identity. */
             id: string;
             /** @description Label it will serve. */
             label_id: string;
-            /** @description Registered own-machine identity, absent for Boat. */
+            /** @description Registered own-machine identity, absent for overflow. */
             machine_id?: string | null;
+            provider?: components["schemas"]["OverflowProvider"] | null;
         };
         /** @description One statistics section, with no figures when its producer could not measure it. */
         Statistics_DockerDiskView: ({
@@ -2252,8 +2396,6 @@ export interface components {
         WaitingLabelFit: {
             /** @description This notice asks an Admin because the current caller cannot edit the label. */
             ask_admin: boolean;
-            /** @description Boat resource fit, distinct from current provider availability. */
-            boat: components["schemas"]["BoatLabelFit"];
             /** @description The current caller may edit this active label. */
             can_edit: boolean;
             current?: components["schemas"]["LabelView"] | null;
@@ -2263,6 +2405,8 @@ export interface components {
             label_name: string;
             /** @description No permitted resource choice exists, absent while required facts are unknown. */
             nothing_fits?: boolean | null;
+            /** @description Physical provider fits, with the same observations as the label view. */
+            providers: components["schemas"]["ProviderLabelFit"][];
             /** @description Visible waiting jobs with this exact label as a decimal string. */
             waiting_jobs: string;
         };
@@ -5361,7 +5505,9 @@ export interface operations {
                 /** @description Case-insensitive job, workflow, repository, or organization search. */
                 search?: string;
                 /** @description Execution place, absent for all places. */
-                place?: "machine" | "boat";
+                place?: "machine" | "overflow";
+                /** @description One overflow provider, absent to include all providers allowed by the place filter. */
+                provider?: "boat";
                 /** @description First included UTC date, absent for the full plan window. */
                 from?: string;
                 /** @description First excluded UTC date. */
@@ -5919,7 +6065,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LabelInput"];
+                "application/json": components["schemas"]["LabelCreate"];
             };
         };
         responses: {
@@ -8710,7 +8856,7 @@ export interface operations {
             };
         };
     };
-    overflow_connect: {
+    overflow_change_key: {
         parameters: {
             query?: never;
             header: {
@@ -8722,6 +8868,8 @@ export interface operations {
             path: {
                 /** @description Stable workspace identity. */
                 workspace_id: string;
+                /** @description Provider whose connection or settings the request changes. */
+                provider: "boat";
             };
             cookie?: never;
         };
@@ -8738,7 +8886,293 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Success"];
+                    "application/json": components["schemas"]["ProviderSuccess"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Provider key refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_connect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+                /** @description Provider whose connection or settings the request changes. */
+                provider: "boat";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoatConnection"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSuccess"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Provider key refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_disconnect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+                /** @description Provider whose connection or settings the request changes. */
+                provider: "boat";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSuccess"];
                 };
             };
             /** @description Malformed request */
@@ -8853,7 +9287,7 @@ export interface operations {
             };
         };
     };
-    overflow_disconnect: {
+    overflow_check_key: {
         parameters: {
             query?: never;
             header: {
@@ -8865,10 +9299,16 @@ export interface operations {
             path: {
                 /** @description Stable workspace identity. */
                 workspace_id: string;
+                /** @description Provider whose connection or settings the request changes. */
+                provider: "boat";
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoatKeyCheck"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -8877,7 +9317,152 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Success"];
+                    "application/json": components["schemas"]["BoatWallets"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Provider key refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_save_limit: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+                /** @description Provider whose connection or settings the request changes. */
+                provider: "boat";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderSpendLimit"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSuccess"];
                 };
             };
             /** @description Malformed request */
@@ -9012,149 +9597,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverflowSettings"];
-                };
-            };
-            /** @description Malformed request */
-            400: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Sign-in absent, expired, or revoked */
-            401: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Workspace role, origin, or CSRF token refused */
-            403: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Resource absent in this workspace */
-            404: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Method not allowed */
-            405: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Conflicting resource state */
-            409: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Request body is too large */
-            413: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Unsupported content type */
-            415: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description GitHub label refusal or malformed body */
-            422: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Internal operation failed */
-            500: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Temporary upstream or agent failure */
-            503: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    overflow_wallets: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Exact configured dashboard origin. */
-                Origin: string;
-                /** @description The session's CSRF token returned by the session endpoint. */
-                "x-ciproxy-csrf": string;
-            };
-            path: {
-                /** @description Stable workspace identity. */
-                workspace_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BoatKeyCheck"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    "x-ciproxy-build"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BoatWallets"];
                 };
             };
             /** @description Malformed request */

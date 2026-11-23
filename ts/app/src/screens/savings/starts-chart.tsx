@@ -10,12 +10,12 @@ import { chartColors } from "@ciproxy/tokens";
 import { Panel } from "../../components/panel.tsx";
 import type { SavingsPage } from "../../api/savings-types.ts";
 import { formatCount, formatUtcRange } from "../../view/exact-format.ts";
-import { startsSeries } from "../../view/savings-report.ts";
+import { boatRuntime, startsSeries } from "../../view/savings-report.ts";
 
 export function StartsPanel({ page }: { page: SavingsPage }) {
   const series = startsSeries(page);
   const period = formatUtcRange(page.from, page.until);
-  const summary = `Starts by day, ${period}: ${formatCount(page.machines.starts)} on own machines and ${formatCount(page.boat.starts)} on Boat.`;
+  const summary = `Starts by day, ${period}: ${formatCount(page.machines.starts)} on own machines and ${formatCount(boatRuntime(page).starts)} on Boat.`;
   return (
     <Panel title="Starts by day">
       <BarChart

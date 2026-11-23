@@ -5,15 +5,27 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use super::money::Cents;
+use super::overflow::OverflowProvider;
 
-/// Existing overflow service observations, absent when that source is unavailable.
+/// Running jobs counted from their saved placement.
+#[derive(Serialize, ToSchema)]
+pub struct ProviderRunningCount {
+    /// Provider that runs the jobs.
+    pub provider: OverflowProvider,
+    /// Running job count as a decimal string.
+    pub running: String,
+}
+
+/// Current overflow observations for one provider.
 #[derive(Serialize, ToSchema)]
 pub struct JobOverflow {
-    /// An active Boat account is connected.
+    /// Provider whose account, refusals, and spend were observed.
+    pub provider: OverflowProvider,
+    /// An active account is connected.
     pub connected: bool,
-    /// Boat rejected the active key.
+    /// The provider rejected the active key.
     pub key_rejected: bool,
-    /// Boat requires account billing before it starts more sandboxes.
+    /// The provider requires account billing before it starts more sandboxes.
     pub billing_required: bool,
     /// Provider-supplied next retry date.
     pub retry_at: Option<DateTime<Utc>>,

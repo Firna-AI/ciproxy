@@ -8,7 +8,7 @@ use ciproxy_protocol::reports::SlotOccupancy;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::runners::RunnerState;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use super::capacity_fixture;
 use super::fixture_io::json;
@@ -27,6 +27,11 @@ async fn m18_live_counts_real_slots_attempts_and_marks_unknown_waiting_visibilit
     let own = runner(&pages, Some(machine), 1001);
     let boat = runner(&pages, None, 1002);
     let mut unknown_time = demand(&pages, &boat, None, DemandPhase::Started, None, None);
+    let setup = json(pages.request(Some(&admin), "GET", "/setup", None).await).await;
+    assert_eq!(
+        setup["first_job"]["place"],
+        json!({"kind":"overflow", "provider":"boat"})
+    );
     let mut attempt = demand(
         &pages,
         &own,
@@ -92,12 +97,16 @@ async fn m18_live_counts_real_slots_attempts_and_marks_unknown_waiting_visibilit
     let response = pages.request(Some(&admin), "GET", "/jobs/live", None).await;
     assert_eq!(response.status(), StatusCode::OK);
     let live = json(response).await;
+    assert_eq!(
+        live["running_by_provider"],
+        json!([{"provider":"boat", "running":"1"}])
+    );
     assert_eq!(live["running"].as_array().unwrap().len(), 2);
     let unknown = live["running"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|job| job["location"]["kind"] == "boat")
+        .find(|job| job["location"]["kind"] == "overflow")
         .unwrap();
     assert_eq!(unknown["counts_as_start"], true);
     assert_eq!(unknown["started_at"], Value::Null);
@@ -120,10 +129,11 @@ async fn m18_live_counts_real_slots_attempts_and_marks_unknown_waiting_visibilit
     assert_eq!(live["waiting_count"], "1");
     assert_eq!(live["own_slots_used"], "1");
     assert_eq!(live["own_slots_total"], "6");
-    assert_eq!(live["on_boat"], "1");
+    assert_eq!(unknown["location"]["provider"], "boat");
     assert_eq!(live["warm_runners"], "1");
     assert_eq!(live["starting_runners"].as_array().unwrap().len(), 1);
-    assert_eq!(live["overflow"], Value::Null);
+    assert_eq!(live["starting_runners"][0]["provider"], "boat");
+    assert_eq!(live["overflow"], json!([]));
     assert_eq!(live["waiting"][0]["counts_as_start"], false);
     assert_eq!(live["waiting"][0]["location"], Value::Null);
     let history = json(

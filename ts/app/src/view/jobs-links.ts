@@ -3,7 +3,8 @@
 // date choice counts UTC days back from today, as the API counts them, and a
 // value that the page does not know falls back to its default.
 
-import type { HistoryPlace, HistoryQuery } from "../api/jobs-types.ts";
+import type { HistoryQuery } from "../api/jobs-types.ts";
+import type { OverflowProvider } from "../api/schema.ts";
 import { workspaceHref } from "../routing/pages.ts";
 import { addUtcDays, utcDayOf } from "./exact-format.ts";
 
@@ -16,7 +17,7 @@ export type HistoryWindow = (typeof historyWindows)[number];
 
 export type HistoryFilters = {
   search: string;
-  place: HistoryPlace | null;
+  place: "machine" | OverflowProvider | null;
   days: HistoryWindow;
 };
 
@@ -99,7 +100,15 @@ export function historyQuery(
   return {
     from: addUtcDays(utcDayOf(now), 1 - filters.days),
     search: search === "" ? undefined : search,
-    place: filters.place ?? undefined,
+    place:
+      filters.place === null
+        ? undefined
+        : filters.place === "machine"
+          ? "machine"
+          : "overflow",
+    ...(filters.place === null || filters.place === "machine"
+      ? {}
+      : { provider: filters.place }),
   };
 }
 

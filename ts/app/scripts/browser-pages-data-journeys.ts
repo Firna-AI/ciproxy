@@ -75,7 +75,8 @@ export function dataJourneys(origin: string, output: string): PagesSmokeRun[] {
             (fact) =>
               fact.path.endsWith("/jobs/history") &&
               fact.query?.search?.[0] === "Browser" &&
-              fact.query.place?.[0] === "boat" &&
+              fact.query.place?.[0] === "overflow" &&
+              fact.query.provider?.[0] === "boat" &&
               fact.query.from?.[0] === "2026-10-31",
           ),
           "History must send the chosen filters to the API.",

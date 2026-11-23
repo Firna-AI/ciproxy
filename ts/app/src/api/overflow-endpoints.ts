@@ -1,45 +1,105 @@
-// The Boat routes of Setup and Settings under Overflow. The key check saves
-// nothing: it sends only the key and returns the wallets that the key can
-// use. A connection sends the generated request of its caller as it is: the
-// key, the limit, and the chosen wallet.
+// Workspace overflow policy and changes scoped to a single provider.
 
 import type { ApiClient } from "./client.ts";
-import { workspacePath } from "./endpoints.ts";
-import { parseBoatWallets, parseOverflowSettings } from "./parse-overflow.ts";
+import {
+  parseBoatWallets,
+  parseOverflowSettings,
+  parseProviderSuccess,
+} from "./parse-overflow.ts";
 import { parseSuccess } from "./parse-session.ts";
-import type { BoatConnection, BoatKeyCheck, OverflowPolicy } from "./schema.ts";
+import { routePath } from "./route-path.ts";
+import type {
+  BoatConnection,
+  BoatKeyCheck,
+  OverflowPolicy,
+  OverflowProvider,
+  ProviderSpendLimit,
+} from "./schema.ts";
 
-/**
- * A connection request that names its wallet. The API connects the personal
- * wallet when a request names none, so each connection sends the wallet that
- * the customer chose.
- */
+/** The current Boat form sends the wallet that the customer chose. */
 export type BoatConnectionWithWallet = BoatConnection &
   Required<Pick<BoatConnection, "wallet">>;
 
 export function createOverflowEndpoints(client: ApiClient) {
-  const overflow = (workspaceId: string) =>
-    workspacePath(workspaceId, "/overflow");
-  const connection = (workspaceId: string) =>
-    workspacePath(workspaceId, "/overflow/connection");
+  const overflow = (workspace_id: string) =>
+    routePath("/workspaces/{workspace_id}/overflow", { workspace_id });
+  const connection = (workspace_id: string, provider: OverflowProvider) =>
+    routePath(
+      "/workspaces/{workspace_id}/overflow/providers/{provider}/connection",
+      {
+        workspace_id,
+        provider,
+      },
+    );
   return {
     overflow: (workspaceId: string) =>
       client.read(overflow(workspaceId), parseOverflowSettings),
     saveOverflow: (workspaceId: string, policy: OverflowPolicy) =>
       client.change("PUT", overflow(workspaceId), parseSuccess, policy),
-    checkBoatKey: (workspaceId: string, apiKey: string) => {
+    checkKey: (
+      workspace_id: string,
+      provider: OverflowProvider,
+      apiKey: string,
+    ) => {
       const check: BoatKeyCheck = { api_key: apiKey };
       return client.change(
         "POST",
-        workspacePath(workspaceId, "/overflow/wallets"),
+        routePath(
+          "/workspaces/{workspace_id}/overflow/providers/{provider}/key-check",
+          {
+            workspace_id,
+            provider,
+          },
+        ),
         parseBoatWallets,
         check,
       );
     },
-    connectBoat: (workspaceId: string, request: BoatConnectionWithWallet) =>
-      client.change("POST", connection(workspaceId), parseSuccess, request),
-    disconnectBoat: (workspaceId: string) =>
-      client.change("DELETE", connection(workspaceId), parseSuccess),
+    connectProvider: (
+      workspaceId: string,
+      provider: OverflowProvider,
+      request: BoatConnection,
+    ) =>
+      client.change(
+        "POST",
+        connection(workspaceId, provider),
+        parseProviderSuccess,
+        request,
+      ),
+    changeProviderKey: (
+      workspaceId: string,
+      provider: OverflowProvider,
+      request: BoatConnection,
+    ) =>
+      client.change(
+        "PUT",
+        connection(workspaceId, provider),
+        parseProviderSuccess,
+        request,
+      ),
+    disconnectProvider: (workspaceId: string, provider: OverflowProvider) =>
+      client.change(
+        "DELETE",
+        connection(workspaceId, provider),
+        parseProviderSuccess,
+      ),
+    saveProviderLimit: (
+      workspace_id: string,
+      provider: OverflowProvider,
+      limit: ProviderSpendLimit,
+    ) =>
+      client.change(
+        "PUT",
+        routePath(
+          "/workspaces/{workspace_id}/overflow/providers/{provider}/spend-limit",
+          {
+            workspace_id,
+            provider,
+          },
+        ),
+        parseProviderSuccess,
+        limit,
+      ),
   };
 }
 

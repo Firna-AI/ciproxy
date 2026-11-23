@@ -3,7 +3,8 @@
 // spend of the month against its limit. The confirmed spend fills the meter;
 // the amount that Boat has not confirmed shows beside it.
 
-import type { OverflowSettings } from "../api/machine-schema.ts";
+import type { OverflowSettings, ProviderSettings } from "../api/schema.ts";
+import { boatProvider } from "./boat.ts";
 import { overflowCopy } from "./machines-copy.ts";
 import { formatCents, formatDay, waitText } from "./machines-format.ts";
 
@@ -28,10 +29,10 @@ function ratio(spent: string, limit: string | null): number {
   return Math.min(Math.max(Number(spent) / max, 0), 1);
 }
 
-function meter(summary: OverflowSettings): SpendMeter | null {
-  const spend = summary.spend ?? null;
+function meter(provider: ProviderSettings): SpendMeter | null {
+  const spend = provider.spend ?? null;
   if (spend === null) return null;
-  const limit = summary.spend_limit_cents ?? null;
+  const limit = provider.spend_limit_cents ?? null;
   const spent = formatCents(spend.confirmed_cents);
   return {
     ratio: ratio(spend.confirmed_cents, limit),
@@ -44,10 +45,14 @@ function meter(summary: OverflowSettings): SpendMeter | null {
   };
 }
 
-function caption(summary: OverflowSettings, account: string): string {
+function caption(
+  summary: OverflowSettings,
+  provider: ProviderSettings,
+  account: string,
+): string {
   if (!summary.enabled) return overflowCopy.off;
-  if (summary.spend?.limit_reached === true) {
-    const limit = summary.spend_limit_cents ?? null;
+  if (provider.spend?.limit_reached === true) {
+    const limit = provider.spend_limit_cents ?? null;
     return overflowCopy.limit(
       limit === null ? null : formatCents(limit),
       formatDay(summary.next_month_at),
@@ -57,19 +62,20 @@ function caption(summary: OverflowSettings, account: string): string {
 }
 
 export function overflowModel(summary: OverflowSettings): OverflowModel {
-  const account = summary.account ?? null;
-  if (!summary.available) {
+  const provider = boatProvider(summary);
+  if (!provider?.available) {
     return { caption: overflowCopy.machinesOnly, meter: null, note: null };
   }
+  const account = provider.account ?? null;
   if (account === null) {
     return { caption: overflowCopy.notConnected, meter: null, note: null };
   }
-  const spend = meter(summary);
+  const spend = meter(provider);
   const rejected = account.rejected_at ?? null;
   return {
     caption:
       rejected === null
-        ? caption(summary, account.name)
+        ? caption(summary, provider, account.name)
         : overflowCopy.rejected(formatDay(rejected)),
     meter: spend,
     note: spend === null ? overflowCopy.noSpend : null,

@@ -77,14 +77,14 @@ test("labels and repository access save on their routes, and a preview changes n
     response(settingsView()),
   );
   const store = settingsServices(app).settings(workspaceId);
-  await store.saveLabel(null, input);
+  await store.saveLabel(null, { ...input, order: undefined });
   await store.saveLabel("old", input);
   await store.deleteLabel("old");
   const preview = await store.previewLabel(input);
   await store.saveRepositories("org-1", selection);
   assert.equal(preview.ok, true);
   assert.deepEqual(requests(calls), [
-    ["POST", `${base}/labels`, JSON.stringify(input)],
+    ["POST", `${base}/labels`, JSON.stringify({ ...input, order: undefined })],
     ["GET", `${base}/settings`, undefined],
     ["PUT", `${base}/labels/old`, JSON.stringify(input)],
     ["GET", `${base}/settings`, undefined],

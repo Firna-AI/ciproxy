@@ -68,12 +68,13 @@ async fn m18_savings_keeps_exact_minutes_missing_costs_and_signed_display_roundi
     assert_eq!(missing["days"].as_array().unwrap().len(), 30);
     assert_eq!(missing["machines"]["starts"], "2");
     assert_eq!(missing["machines"]["minutes"], "1");
-    assert_eq!(missing["boat"]["starts"], "1");
-    assert_eq!(missing["boat"]["minutes"], "1.5");
+    assert_eq!(missing["providers"][0]["provider"], "boat");
+    assert_eq!(missing["providers"][0]["usage"]["starts"], "1");
+    assert_eq!(missing["providers"][0]["usage"]["minutes"], "1.5");
     assert_eq!(missing["total_cents"], Value::Null);
     assert_eq!(missing["comparisons"][0]["cost_cents"], "2");
     assert_eq!(missing["comparisons"][0]["savings_cents"], Value::Null);
-    assert_eq!(missing["boat_cents"], "1");
+    assert_eq!(missing["providers"][0]["cost_cents"], "1");
     assert_eq!(missing["known_plan_cents"], "0");
     assert_eq!(missing["can_add_machine_costs"], true);
     pages
@@ -107,6 +108,8 @@ async fn m18_savings_keeps_exact_minutes_missing_costs_and_signed_display_roundi
     assert_eq!(full["comparisons"][0]["price_list_date"], "2026-11-01");
     assert_eq!(full["can_add_machine_costs"], false);
     assert_eq!(full["days"][5]["machines"]["starts"], "2");
+    assert_eq!(full["days"][5]["providers"][0]["provider"], "boat");
+    assert_eq!(full["days"][5]["providers"][0]["usage"]["starts"], "1");
     let previous = json(
         pages
             .request(Some(&viewer), "GET", "/savings?range=last_month", None)

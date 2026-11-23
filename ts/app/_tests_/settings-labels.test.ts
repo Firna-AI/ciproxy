@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
+
 import type { Problem } from "../src/api/schema.ts";
 import {
   checkDraft,
@@ -14,49 +16,50 @@ import {
   jobsCaption,
   labelRows,
 } from "../src/view/settings-labels.ts";
-import { label, labelInput } from "./settings-support.ts";
+import { label, labelInput, providerFit } from "./settings-support.ts";
 
 test("the label list says where jobs run now, as the API places them, and the jobs of 30 days", () => {
   const noBoat = {
-    boat: { state: "unavailable" },
-    boat_connected: false,
-  } as const;
+    providers: [
+      providerFit({ fit: { state: "unavailable" }, connected: false }),
+    ],
+  };
   const rows = labelRows([
     label("a", { name: "ciproxy" }),
     label(
       "b",
-      { name: "own", allow_boat: false },
-      { placement: "machines_only" },
+      { name: "own", order: [machinePlace] },
+      { fitting_places: [machinePlace] },
     ),
-    label("c", { name: "huge" }, { placement: "boat_only" }),
-    label("d", { name: "giant" }, { placement: "waits" }),
+    label("c", { name: "huge" }, { fitting_places: [boatPlace] }),
+    label("d", { name: "giant" }, { fitting_places: [] }),
     label(
       "e",
-      { name: "giant-own", allow_boat: false },
-      { placement: "waits" },
+      { name: "giant-own", order: [machinePlace] },
+      { fitting_places: [] },
     ),
     label(
       "f",
-      { name: "giant-boat", allow_machines: false },
-      { placement: "waits" },
+      { name: "giant-boat", order: [boatPlace] },
+      { fitting_places: [] },
     ),
-    label(
-      "g",
-      { name: "off", allow_machines: false, allow_boat: false },
-      { placement: "waits" },
-    ),
-    label("h", { name: "new-box" }, { placement: "unavailable" }),
+    label("g", { name: "off", order: [] }, { fitting_places: [] }),
+    label("h", { name: "new-box" }, { fitting_places: null }),
     label(
       "i",
       { name: "unknown" },
-      { placement: "unavailable", fitting_machines: 0 },
+      { fitting_places: null, fitting_machines: 0 },
     ),
-    label("j", { name: "no-boat" }, { ...noBoat, placement: "machines_only" }),
-    label("k", { name: "no-boat-big" }, { ...noBoat, placement: "waits" }),
+    label(
+      "j",
+      { name: "no-boat" },
+      { ...noBoat, fitting_places: [machinePlace] },
+    ),
+    label("k", { name: "no-boat-big" }, { ...noBoat, fitting_places: [] }),
     label(
       "l",
-      { name: "no-boat-only", allow_machines: false },
-      { ...noBoat, placement: "waits" },
+      { name: "no-boat-only", order: [boatPlace] },
+      { ...noBoat, fitting_places: [] },
     ),
   ]);
   assert.deepEqual(
@@ -144,7 +147,11 @@ test("every label except ciproxy offers Delete label", () => {
 });
 
 test("an edit sends the saved name unchanged with the new size", () => {
-  const saved = labelInput({ name: "ciproxy-medium", disk_gb: 20 });
+  const saved = labelInput({
+    name: "ciproxy-medium",
+    disk_gb: 20,
+    order: [boatPlace, machinePlace],
+  });
   const draft = { ...editDraft(saved), disk: "40" };
   assert.deepEqual(checkDraft(draft), {
     ok: true,

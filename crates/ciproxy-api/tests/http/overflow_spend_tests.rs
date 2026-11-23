@@ -22,7 +22,7 @@ async fn spend_rounds_after_aggregation_and_keeps_settled_bounds_unconfirmed() {
             .request(
                 Some(&admin),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(json!({"api_key":"fake-key","spend_limit_cents":"20000"}))
             )
             .await
@@ -44,10 +44,10 @@ async fn spend_rounds_after_aggregation_and_keeps_settled_bounds_unconfirmed() {
                 .await,
         )
         .await;
-        assert_eq!(view["spend"]["confirmed_cents"], expected);
-        assert_eq!(view["spend"]["unconfirmed_cents"], "14");
-        assert_eq!(view["spend"]["settled_bound_cents"], "0");
-        assert_eq!(view["spend"]["bounded"], true);
+        assert_eq!(view["providers"][0]["spend"]["confirmed_cents"], expected);
+        assert_eq!(view["providers"][0]["spend"]["unconfirmed_cents"], "14");
+        assert_eq!(view["providers"][0]["spend"]["settled_bound_cents"], "0");
+        assert_eq!(view["providers"][0]["spend"]["bounded"], true);
     }
     *ports.usage_usd.lock().unwrap() = None;
     *ports.now.lock().unwrap() += Duration::hours(7);
@@ -57,9 +57,9 @@ async fn spend_rounds_after_aggregation_and_keeps_settled_bounds_unconfirmed() {
             .await,
     )
     .await;
-    assert_eq!(view["spend"]["confirmed_cents"], "200");
-    assert_eq!(view["spend"]["unconfirmed_cents"], "14");
-    assert_eq!(view["spend"]["settled_bound_cents"], "14");
+    assert_eq!(view["providers"][0]["spend"]["confirmed_cents"], "200");
+    assert_eq!(view["providers"][0]["spend"]["unconfirmed_cents"], "14");
+    assert_eq!(view["providers"][0]["spend"]["settled_bound_cents"], "14");
 }
 
 #[tokio::test]
@@ -72,7 +72,7 @@ async fn refreshed_key_rejection_date_appears_on_the_same_http_response() {
             .request(
                 Some(&admin),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(json!({"api_key":"fake-key","spend_limit_cents":"20000"}))
             )
             .await
@@ -87,6 +87,9 @@ async fn refreshed_key_rejection_date_appears_on_the_same_http_response() {
             .await,
     )
     .await;
-    assert_eq!(view["account"]["rejected_at"], "2026-11-06T12:05:00Z");
-    assert_eq!(view["spend_limit_cents"], "20000");
+    assert_eq!(
+        view["providers"][0]["account"]["rejected_at"],
+        "2026-11-06T12:05:00Z"
+    );
+    assert_eq!(view["providers"][0]["spend_limit_cents"], "20000");
 }

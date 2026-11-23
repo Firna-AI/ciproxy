@@ -73,7 +73,7 @@ function placeTitle(place: Place): string {
 function vmRow(job: JobView, place: Place): DetailRowModel {
   const request = requestText(job.label);
   const actual = job.actual_size ?? null;
-  if (job.location?.kind === "boat") {
+  if (job.location?.kind === "overflow") {
     return {
       label: "VM size",
       value: boatText(job.location.size, actual),
@@ -135,7 +135,7 @@ function labelRow(job: JobView): DetailRowModel {
     caption:
       request === null
         ? "Requested size unknown"
-        : job.location?.kind === "boat"
+        : job.location?.kind === "overflow"
           ? request
           : null,
   };

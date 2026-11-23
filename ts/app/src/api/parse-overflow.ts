@@ -1,7 +1,4 @@
-// Readers for the Boat settings of Setup and Settings under Overflow: the
-// account, the overflow switch and wait, the saved spend limit, and the
-// spend of the month, and for the wallets of a checked key. No response
-// holds the key.
+// Credential-free provider settings, connection results, and Boat wallets.
 
 import {
   array,
@@ -9,21 +6,27 @@ import {
   decimal,
   integer,
   object,
+  oneOf,
   optional,
   parser,
   string,
   time,
 } from "./parse-core.ts";
 import type {
-  BoatAccountView,
-  BoatSpendView,
   BoatWallet,
   BoatWallets,
+  OverflowProvider,
   OverflowSettings,
+  ProviderAccountView,
+  ProviderSettings,
+  ProviderSpendView,
+  ProviderSuccess,
 } from "./schema.ts";
 
-function account(value: unknown): BoatAccountView {
-  const fields = object(value, "Boat account");
+export const readProvider = oneOf<OverflowProvider>({ boat: true });
+
+function account(value: unknown): ProviderAccountView {
+  const fields = object(value, "provider account");
   return {
     connected_at: time(fields.connected_at),
     name: string(fields.name),
@@ -31,8 +34,8 @@ function account(value: unknown): BoatAccountView {
   };
 }
 
-function spend(value: unknown): BoatSpendView {
-  const fields = object(value, "Boat spend");
+function spend(value: unknown): ProviderSpendView {
+  const fields = object(value, "provider spend");
   return {
     bounded: boolean(fields.bounded),
     confirmed_cents: decimal(fields.confirmed_cents),
@@ -42,17 +45,35 @@ function spend(value: unknown): BoatSpendView {
   };
 }
 
-export const parseOverflowSettings = parser((value): OverflowSettings => {
-  const fields = object(value, "overflow settings");
+function providerSettings(value: unknown): ProviderSettings {
+  const fields = object(value, "provider settings");
   return {
     account: optional(fields.account, account),
     available: boolean(fields.available),
-    enabled: boolean(fields.enabled),
-    next_month_at: time(fields.next_month_at),
+    has_billing_account_choice: boolean(fields.has_billing_account_choice),
+    name: string(fields.name),
+    offered: boolean(fields.offered),
+    provider: readProvider(fields.provider),
     spend: optional(fields.spend, spend),
     spend_limit_cents: optional(fields.spend_limit_cents, decimal),
+  };
+}
+
+export function readOverflowSettings(value: unknown): OverflowSettings {
+  const fields = object(value, "overflow settings");
+  return {
+    enabled: boolean(fields.enabled),
+    next_month_at: time(fields.next_month_at),
+    providers: array(fields.providers, providerSettings),
     wait_seconds: integer(fields.wait_seconds),
   };
+}
+
+export const parseOverflowSettings = parser(readOverflowSettings);
+
+export const parseProviderSuccess = parser((value): ProviderSuccess => {
+  const fields = object(value, "provider result");
+  return { ok: boolean(fields.ok), provider: readProvider(fields.provider) };
 });
 
 function wallet(value: unknown): BoatWallet {
@@ -63,6 +84,7 @@ function wallet(value: unknown): BoatWallet {
 export const parseBoatWallets = parser((value): BoatWallets => {
   const fields = object(value, "Boat wallets");
   return {
+    provider: readProvider(fields.provider),
     selected_wallet: string(fields.selected_wallet),
     wallets: array(fields.wallets, wallet),
   };

@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
+
 import { fitLine } from "../src/view/settings-label-fit.ts";
-import { fit, labelInput } from "./settings-support.ts";
+import { fit, labelInput, providerFit } from "./settings-support.ts";
 
 const nbsp = "\u00a0";
 const request = `8${nbsp}vCPU, 32${nbsp}GB of memory, and 60${nbsp}GB of free disk`;
 
 test("a placement that the API cannot establish keeps the known facts and names the unknown one", () => {
   const unknown = {
-    placement: "unavailable",
-    boat: { state: "unavailable" },
-  } as const;
+    fitting_places: null,
+    providers: [providerFit({ fit: { state: "unavailable" } })],
+  };
   const none = { fitting_machines: 0, minimum_jobs: null, maximum_jobs: null };
   assert.deepEqual(fitLine(labelInput(), fit(unknown)), {
     kind: "caption",
@@ -28,10 +30,7 @@ test("a placement that the API cannot establish keeps the known facts and names 
     },
   );
   assert.deepEqual(
-    fitLine(
-      labelInput({ allow_machines: false }),
-      fit({ ...unknown, ...none }),
-    ),
+    fitLine(labelInput({ order: [boatPlace] }), fit({ ...unknown, ...none })),
     {
       kind: "caption",
       text: "Only Boat may run jobs with this label. Its Boat fit is not known yet.",
@@ -46,7 +45,15 @@ test("a placement that the API cannot establish keeps the known facts and names 
     },
   );
   assert.deepEqual(
-    fitLine(labelInput(), fit({ ...unknown, boat_connected: null })),
+    fitLine(
+      labelInput(),
+      fit({
+        ...unknown,
+        providers: [
+          providerFit({ fit: { state: "unavailable" }, connected: null }),
+        ],
+      }),
+    ),
     {
       kind: "caption",
       text: "Each of your machines runs 3 jobs of this size at a time. Its Boat fit is not known yet.",
@@ -60,8 +67,10 @@ test("a placement that the API cannot establish keeps the known facts and names 
         ...unknown,
         ...none,
         no_machine_fits: true,
-        placement: "waits",
-        boat_connected: null,
+        fitting_places: [],
+        providers: [
+          providerFit({ fit: { state: "unavailable" }, connected: null }),
+        ],
       }),
     ),
     {
@@ -75,10 +84,14 @@ test("a placement that the API cannot establish keeps the known facts and names 
 
 test("a workspace without Boat keeps the fit of the machines and says that Boat is not connected", () => {
   const noBoat = {
-    boat: { state: "unavailable" },
-    boat_connected: false,
-    largest_boat: null,
-  } as const;
+    providers: [
+      providerFit({
+        connected: false,
+        fit: { state: "unavailable" },
+        largest_size: null,
+      }),
+    ],
+  };
   const none = {
     fitting_machines: 0,
     minimum_jobs: null,
@@ -86,11 +99,11 @@ test("a workspace without Boat keeps the fit of the machines and says that Boat 
     no_machine_fits: true,
   };
   const lines = [
-    fitLine(labelInput(), fit({ ...noBoat, placement: "machines_only" })),
-    fitLine(labelInput(), fit({ ...noBoat, ...none, placement: "waits" })),
+    fitLine(labelInput(), fit({ ...noBoat, fitting_places: [machinePlace] })),
+    fitLine(labelInput(), fit({ ...noBoat, ...none, fitting_places: [] })),
     fitLine(
-      labelInput({ allow_machines: false }),
-      fit({ ...noBoat, ...none, placement: "waits" }),
+      labelInput({ order: [boatPlace] }),
+      fit({ ...noBoat, ...none, fitting_places: [] }),
     ),
   ];
   assert.deepEqual(lines, [
@@ -116,11 +129,11 @@ test("a workspace without Boat keeps the fit of the machines and says that Boat 
   );
   assert.deepEqual(
     fitLine(
-      labelInput({ allow_boat: false }),
+      labelInput({ order: [machinePlace] }),
       fit({
         ...noBoat,
-        boat: { state: "disabled" },
-        placement: "machines_only",
+        providers: [providerFit({ fit: { state: "disabled" } })],
+        fitting_places: [machinePlace],
       }),
     ),
     {

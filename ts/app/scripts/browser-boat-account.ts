@@ -23,7 +23,8 @@ async function disconnects(origin: string): Promise<number[]> {
   return (await facts(origin))
     .filter(
       (fact) =>
-        fact.method === "DELETE" && fact.path.endsWith("/overflow/connection"),
+        fact.method === "DELETE" &&
+        fact.path.endsWith("/overflow/providers/boat/connection"),
     )
     .map((fact) => fact.status);
 }

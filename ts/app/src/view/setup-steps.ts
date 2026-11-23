@@ -83,8 +83,8 @@ const outcomes: Readonly<Record<string, string>> = {
 };
 
 function placeText(job: SetupJob): string {
-  if (job.place === "machine") return " on your machine";
-  if (job.place === "boat") return " on Boat";
+  if (job.place?.kind === "machine") return " on your machine";
+  if (job.place?.kind === "overflow") return " on Boat";
   return "";
 }
 

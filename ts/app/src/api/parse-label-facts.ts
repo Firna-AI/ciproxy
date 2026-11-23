@@ -1,9 +1,7 @@
-// Readers for the nested facts of a label fit: where the jobs of a label can
-// run now, the offer of each eligible machine, and the Boat size that fits
-// or that the account starts at most. The label readers in parse-setup.ts
-// call them.
+// Physical fit and routing facts in the generated label contract.
 
 import {
+  array,
   boolean,
   decimal,
   object,
@@ -13,51 +11,113 @@ import {
   string,
 } from "./parse-core.ts";
 import { readVmSize } from "./parse-jobs.ts";
+import { readProvider } from "./parse-overflow.ts";
 import type {
-  BoatLabelFit,
-  LabelBoatSize,
   LabelMachineFit,
-  LabelPlacement,
+  LabelPlace,
+  LabelRouting,
+  LabelWaitReason,
+  ProviderCatalogSize,
+  ProviderHold,
+  ProviderLabelFit,
+  ProviderSizeFit,
 } from "./schema.ts";
 
-export const readPlacement = oneOf<LabelPlacement>({
-  machines_then_boat: true,
-  machines_only: true,
-  boat_only: true,
-  waits: true,
+const providerHold = oneOf<ProviderHold>({
+  off: true,
+  not_connected: true,
   unavailable: true,
+  key_rejected: true,
+  spend_limit: true,
+  costs_unknown: true,
+  retry_after: true,
+  billing_required: true,
+  size_refused: true,
 });
 
-export function readBoatFit(value: unknown): BoatLabelFit {
-  const fields = object(value, "Boat fit");
+export function readLabelPlace(value: unknown): LabelPlace {
+  const fields = object(value, "label place");
+  switch (fields.kind) {
+    case "machine":
+      return { kind: "machine" };
+    case "overflow":
+      return { kind: "overflow", provider: readProvider(fields.provider) };
+    default:
+      throw new ParseError("label place");
+  }
+}
+
+function labelWait(value: unknown): LabelWaitReason {
+  const fields = object(value, "label wait");
+  switch (fields.kind) {
+    case "empty_order":
+    case "nothing_fits":
+    case "unavailable":
+      return { kind: fields.kind };
+    case "provider":
+      return {
+        kind: "provider",
+        provider: readProvider(fields.provider),
+        hold: providerHold(fields.hold),
+      };
+    default:
+      throw new ParseError("label wait");
+  }
+}
+
+export function readLabelRouting(value: unknown): LabelRouting {
+  const fields = object(value, "label routing");
+  switch (fields.kind) {
+    case "places":
+      return { kind: "places", places: array(fields.places, readLabelPlace) };
+    case "largest":
+      return { kind: "largest", provider: readProvider(fields.provider) };
+    case "waits":
+      return { kind: "waits", reason: labelWait(fields.reason) };
+    default:
+      throw new ParseError("label routing");
+  }
+}
+
+function sizeFit(value: unknown): ProviderSizeFit {
+  const fields = object(value, "provider fit");
   switch (fields.state) {
     case "unavailable":
-      return { state: "unavailable" };
     case "disabled":
-      return { state: "disabled" };
     case "no_size_fits":
-      return { state: "no_size_fits" };
+      return { state: fields.state };
     case "fitting":
-      return {
-        refused: boolean(fields.refused),
-        size: readVmSize(fields.size),
-        size_name: string(fields.size_name),
-        state: "fitting",
-      };
     case "largest_fallback":
       return {
         refused: boolean(fields.refused),
         size: readVmSize(fields.size),
         size_name: string(fields.size_name),
-        state: "largest_fallback",
+        state: fields.state,
       };
+    default:
+      throw new ParseError("provider fit");
   }
-  throw new ParseError("Boat fit");
 }
 
-export function readBoatSize(value: unknown): LabelBoatSize {
-  const fields = object(value, "Boat size");
+function catalogSize(value: unknown): ProviderCatalogSize {
+  const fields = object(value, "provider size");
   return { name: string(fields.name), size: readVmSize(fields.size) };
+}
+
+export function readProviderFit(value: unknown): ProviderLabelFit {
+  const fields = object(value, "label provider fit");
+  return {
+    provider: readProvider(fields.provider),
+    connected: optional(fields.connected, boolean),
+    fit: sizeFit(fields.fit),
+    eligible_size: optional(fields.eligible_size, catalogSize),
+    largest_size: optional(fields.largest_size, catalogSize),
+    required_root_disk_bytes: optional(
+      fields.required_root_disk_bytes,
+      decimal,
+    ),
+    hold: optional(fields.hold, providerHold),
+  };
 }
 
 export function readMachineFit(value: unknown): LabelMachineFit {

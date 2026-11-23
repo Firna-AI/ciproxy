@@ -8,6 +8,7 @@
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type {
+  LabelCreate,
   LabelFit,
   LabelInput,
   LabelView,
@@ -48,10 +49,10 @@ export type SettingsStore = {
   /** Read once for this document; later calls share that read. */
   ensure(): Promise<void>;
   rename(name: string): Promise<ApiResult<Success>>;
-  /** Add a label, or save the size of one by its ID. */
+  /** Add a label, or save its size and order by ID. */
   saveLabel(
-    labelId: string | null,
-    input: LabelInput,
+    ...args:
+      [labelId: null, input: LabelCreate] | [labelId: string, input: LabelInput]
   ): Promise<ApiResult<LabelView>>;
   deleteLabel(labelId: string): Promise<ApiResult<Success>>;
   previewLabel(input: LabelInput): Promise<ApiResult<LabelFit>>;
@@ -107,7 +108,7 @@ export function createSettingsStore(deps: SettingsDeps): SettingsStore {
       return first;
     },
     rename: (name) => change(() => endpoints.rename(workspaceId, name), true),
-    saveLabel: (labelId, input) =>
+    saveLabel: (...[labelId, input]) =>
       change(
         () =>
           labelId === null

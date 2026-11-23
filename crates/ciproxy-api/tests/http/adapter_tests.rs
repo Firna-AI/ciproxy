@@ -213,7 +213,7 @@ async fn github_name_refusal_keeps_the_actual_sdk_validation_message() {
             token: server.token.clone(),
         }),
     );
-    let response=fixture.request(Some(&browser),"POST",&fixture.path("/labels"),Some(json!({"name":"refused label","vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"}))).await;
+    let response=fixture.request(Some(&browser),"POST",&fixture.path("/labels"),Some(json!({"name":"refused label","vcpus":2,"memory_gb":8,"disk_gb":20,"platform":"linux_x64", "order":[{"kind":"machine"},{"kind":"overflow","provider":"boat"}],"when_nothing_fits":"wait"}))).await;
     if response.status() != StatusCode::UNPROCESSABLE_ENTITY {
         println!("upstream paths: {:?}", server.seen.lock().unwrap());
     }

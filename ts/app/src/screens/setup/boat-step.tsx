@@ -16,7 +16,7 @@ import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import type { OverflowStore } from "../../state/overflow.ts";
 import type { OverflowSettings } from "../../api/schema.ts";
-import { rejectedNotice } from "../../view/boat.ts";
+import { boatProvider, rejectedNotice } from "../../view/boat.ts";
 import { ConnectFormView } from "../boat/connect-form.tsx";
 import { useConnectForm } from "../boat/use-connect-form.ts";
 
@@ -34,12 +34,13 @@ function BoatForm({
   skip: () => void;
   onConnected: () => void;
 }) {
+  const provider = boatProvider(settings);
   const form = useConnectForm(
     store,
-    settings.spend_limit_cents ?? null,
+    provider?.spend_limit_cents ?? null,
     onConnected,
   );
-  const rejectedAt = settings.account?.rejected_at ?? null;
+  const rejectedAt = provider?.account?.rejected_at ?? null;
   const notice = rejectedAt === null ? null : rejectedNotice(rejectedAt);
   return (
     <View style={styles.body}>
@@ -107,7 +108,7 @@ export function BoatStep({
       </View>
     );
   }
-  if (!snapshot.settings.available) {
+  if (!boatProvider(snapshot.settings)?.available) {
     return (
       <View style={styles.body}>
         <Notice tone="info" title="Boat is unavailable right now">

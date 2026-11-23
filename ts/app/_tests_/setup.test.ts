@@ -184,7 +184,11 @@ test("Setup reads again while a machine gets its first job image, also after the
   const ended = setup({
     machines: 1,
     waiting_for_machine: false,
-    first_job: job({ phase: "completed", result: "success", place: "boat" }),
+    first_job: job({
+      phase: "completed",
+      result: "success",
+      place: { kind: "overflow", provider: "boat" },
+    }),
   });
   const preparing = machine({ state: "preparing" });
   const { app, schedule } = appWith(

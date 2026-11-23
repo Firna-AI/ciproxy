@@ -18,7 +18,7 @@ import {
   sumDecimals,
 } from "./exact-format.ts";
 import { formatGigabytes, joinWords } from "./format.ts";
-import { totalStarts } from "./savings-report.ts";
+import { boatRuntime, totalStarts } from "./savings-report.ts";
 
 export type CostRow = {
   key: string;
@@ -51,6 +51,10 @@ export function costRows(page: SavingsPage): CostRow[] {
   );
   const planGap = gapped(page, new Set(["plan_price", "workspace_start"]));
   const total = page.total_cents ?? null;
+  const boat = boatRuntime(page);
+  const boatCost =
+    page.providers.find((provider) => provider.provider === "boat")
+      ?.cost_cents ?? "0";
   return [
     {
       key: "machines",
@@ -67,9 +71,9 @@ export function costRows(page: SavingsPage): CostRow[] {
     {
       key: "boat",
       label: "Boat overflow",
-      jobs: formatCount(page.boat.starts),
-      minutes: formatWhole(page.boat.minutes),
-      cost: formatCents(page.boat_cents, "column"),
+      jobs: formatCount(boat.starts),
+      minutes: formatWhole(boat.minutes),
+      cost: formatCents(boatCost, "column"),
       total: false,
     },
     {
@@ -84,9 +88,7 @@ export function costRows(page: SavingsPage): CostRow[] {
       key: "total",
       label: "Total",
       jobs: formatCount(totalStarts(page)),
-      minutes: formatWhole(
-        sumDecimals([page.machines.minutes, page.boat.minutes]),
-      ),
+      minutes: formatWhole(sumDecimals([page.machines.minutes, boat.minutes])),
       cost: total === null ? "Incomplete" : formatCents(total, "column"),
       total: true,
     },

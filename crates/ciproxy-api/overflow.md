@@ -1,47 +1,45 @@
-# Boat overflow API
+# Overflow API
 
 Set `ApiState.overflow` to the runtime's shared `Arc<dyn Overflow>`. Use
-`None` when the deployment has no shared Boat snapshot.
+`None` when the deployment has no configured provider.
 
-- GET `/workspaces/{workspace_id}/overflow` gives an Admin the data of the
-  Boat step of Setup and of Settings under Overflow.
-- GET `/workspaces/{workspace_id}/overflow/summary` gives the same data to
-  each current workspace role, for the Machines page.
-- POST `/workspaces/{workspace_id}/overflow/wallets` checks `api_key` and
-  returns the named `wallets` and `selected_wallet`. It saves no key.
-- POST `/workspaces/{workspace_id}/overflow/connection` connects a key or
-  replaces it. It needs `api_key` and a `spend_limit_cents` above zero.
-  `wallet` is `personal` by default.
-- DELETE `/workspaces/{workspace_id}/overflow/connection` disconnects Boat.
-- PUT `/workspaces/{workspace_id}/overflow` saves the complete policy:
-  `enabled`, `wait_seconds`, and a `spend_limit_cents` above zero.
+GET `/workspaces/{workspace_id}/overflow` serves Admins in Setup and
+Settings. The `/overflow/summary` route serves every current workspace role.
+Both return the workspace switch, the wait, the next UTC month, and one
+entry for each supported provider. Each entry gives its deployment
+availability, whether billing account selection is needed, and whether the
+workspace has offered the provider in label orders.
 
-Only an Admin can change Boat data. The waits are 0, 15, 30, 60, and 120
-seconds. Boat checks each key before ciproxy saves it. A key that Boat
-refuses returns HTTP 422 with `boat_key_rejected`, and the saved key stays.
+PUT `/workspaces/{workspace_id}/overflow` changes the workspace switch and
+wait together. Each connection and limit route takes one provider in
+`/workspaces/{workspace_id}/overflow/providers/{provider}`. The
+[OpenAPI document](../../ts/api/generated/openapi.json) gives the methods and
+request fields.
 
-Only an Admin can check the wallets of a key. Each choice gives its stable
-`wallet` and its `name`. The personal wallet uses `personal` as its identity.
-Each Boat organization uses its own Boat ID. The selected wallet follows
-Boat's active choice, or the first offered wallet when no choice is active.
-An organization key offers its own organization. An account key offers its
-personal wallet and the organizations that Boat lets it use. The dashboard
-sends the chosen `wallet` with the connection request.
+Only an Admin can check a key or make a change. A key check saves nothing.
+Connect and Change key both verify the key and save a positive monthly spend
+limit for that provider. A refused key leaves the saved key in place. The
+HTTP 422 problem has code `provider_key_rejected` and names the provider.
 
-Key replacement and disconnect let running Boat jobs finish. Disconnect
-keeps the saved limit for the next connection. Setup skips Boat when it
-sends no connection request.
+The Boat key check returns the accessible wallets and the likely wallet.
+A personal wallet uses the identifier `personal`. A Boat organization
+uses its own ID. The selected wallet follows Boat's active choice, or the
+first wallet when none is active. The connection request sends the chosen
+wallet. A request with no wallet uses `personal`.
 
-Responses hold no key or ciphertext. `account` gives the Boat account name,
-`connected_at`, and `rejected_at`. `available` is false when the deployment
-has no Boat service. Connection changes then return HTTP 503.
-`next_month_at` is the first instant of the next UTC month.
+The provider entry holds the account name and the connection and
+rejection dates. A deployment without that provider's configuration still
+serves its saved account facts and permits Disconnect. Disconnect keeps
+the spend limit and the offered mark. Key replacement and Disconnect let
+running jobs finish with their saved keys. Response bodies contain no
+key or ciphertext.
 
-`spend` is null when Boat is off or its refresh fails. `confirmed_cents`
-holds the provider-confirmed costs. `unconfirmed_cents` holds the pending
-bounds and the settled bounds, and `settled_bound_cents` gives the settled
-part. Each amount rounds once to the nearest cent, with half-cents away
-from zero. Spend admission still uses the exact amounts.
+Spend reports confirmed costs, unconfirmed costs, and the part of the
+unconfirmed costs whose bounds have settled. Each display amount rounds
+once to the nearest cent, with half cents rounded away from zero. The
+limit check uses exact costs. An unbounded start blocks admission and
+makes the exact limit comparison unavailable.
 
-`bounded` is false when a start has no safe cost bound. `limit_reached`
-compares the exact counted spend with the saved limit.
+[Overflow](../../docs/protocol/overflow.md) defines availability and the
+connection rules. [Spend limit](../../docs/protocol/overflow-spend.md)
+defines budget admission.

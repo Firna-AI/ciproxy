@@ -26,7 +26,8 @@ test("Jobs and Savings requests use the generated names, encoded IDs, and no emp
   const jobs = createJobsEndpoints(api);
   await jobs.history("opaque / id", {
     search: "",
-    place: "boat",
+    place: "overflow",
+    provider: "boat",
     from: "2026-11-01",
   });
   await jobs.history("opaque / id", {
@@ -40,7 +41,7 @@ test("Jobs and Savings requests use the generated names, encoded IDs, and no emp
     [
       [
         "GET",
-        "/api/workspaces/opaque%20%2F%20id/jobs/history?place=boat&from=2026-11-01",
+        "/api/workspaces/opaque%20%2F%20id/jobs/history?place=overflow&provider=boat&from=2026-11-01",
       ],
       [
         "GET",

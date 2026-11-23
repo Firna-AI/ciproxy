@@ -13,6 +13,7 @@ import {
   time,
 } from "./parse-core.ts";
 import { readLink } from "./parse-links.ts";
+import { readProvider } from "./parse-overflow.ts";
 import type {
   PendingInstallation,
   Problem,
@@ -40,7 +41,7 @@ export const workspaceRole = oneOf<WorkspaceRole>({
 });
 
 const problemCode = oneOf<ProblemCode>({
-  boat_key_rejected: true,
+  provider_key_rejected: true,
   sign_in_required: true,
   access_denied: true,
   not_found: true,
@@ -129,7 +130,12 @@ export const parseSession = parser((value): SessionView => {
 
 export const parseProblem = parser((value): Problem => {
   const fields = object(value, "problem");
-  return { code: problemCode(fields.code), message: string(fields.message) };
+  const provider = optional(fields.provider, readProvider);
+  return {
+    code: problemCode(fields.code),
+    message: string(fields.message),
+    ...(provider === null ? {} : { provider }),
+  };
 });
 
 export const parseSuccess = parser((value): Success => {

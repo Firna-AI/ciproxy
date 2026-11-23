@@ -6,6 +6,7 @@ import type { ProblemCode } from "../src/api/schema.ts";
 import {
   boatPanelModel,
   boatProgress,
+  boatProvider,
   connectedSummary,
   overflowNotice,
   spendFigures,
@@ -28,12 +29,22 @@ process.env.TZ = "America/Los_Angeles";
 
 const rejected = (at: string) => {
   const settings = overflowSettings();
-  const account = settings.account ?? null;
-  return { ...settings, account: account && { ...account, rejected_at: at } };
+  const account = boatProvider(settings)?.account ?? null;
+  return overflowSettings({
+    account: account && { ...account, rejected_at: at },
+  });
 };
 
 function problem(status: number, code: ProblemCode): ApiFailure {
-  return { kind: "problem", status, problem: { code, message: "API copy" } };
+  return {
+    kind: "problem",
+    status,
+    problem: {
+      code,
+      message: "API copy",
+      ...(code === "provider_key_rejected" ? { provider: "boat" } : {}),
+    },
+  };
 }
 
 test("the spend shows confirmed and unconfirmed parts, and only the API flag reaches the limit", () => {
@@ -91,10 +102,13 @@ test("the page notice names a rejected key, a reached limit with its UTC budget 
     },
   );
   assert.equal(
-    overflowNotice({
-      ...rejected("2026-11-12T20:00:00Z"),
-      spend: reached.spend,
-    })?.tone,
+    overflowNotice(
+      overflowSettings({
+        account:
+          boatProvider(rejected("2026-11-12T20:00:00Z"))?.account ?? null,
+        spend: boatProvider(reached)?.spend ?? null,
+      }),
+    )?.tone,
     "danger",
   );
   assert.deepEqual(
@@ -166,11 +180,11 @@ test("Setup counts Boat as connected only with an accepted key, and a skip only 
 });
 
 test("a refused key belongs to the key field, a refused limit to the limit field", () => {
-  assert.deepEqual(connectProblem(problem(422, "boat_key_rejected")), {
+  assert.deepEqual(connectProblem(problem(422, "provider_key_rejected")), {
     field: "key",
     message: keyRefused,
   });
-  assert.deepEqual(checkProblem(problem(422, "boat_key_rejected")), {
+  assert.deepEqual(checkProblem(problem(422, "provider_key_rejected")), {
     field: "key",
     message: keyRefused,
   });

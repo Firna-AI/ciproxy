@@ -10,6 +10,7 @@
 
 import type { LabelFit, LabelInput } from "../api/schema.ts";
 import { isMacLabel } from "./platform.ts";
+import { boatLabelFit, hasBoat, hasMachines } from "./settings-label-places.ts";
 import { largestBoatText, requestPhrase } from "./settings-label-sizes.ts";
 
 /** A caption, or a warning whose title can stand alone. */
@@ -89,7 +90,9 @@ const waitForMachine =
 
 /** The label allows Boat, and the API saw that the workspace has no account. */
 function boatNotConnected(label: LabelInput, fit: LabelFit): boolean {
-  return label.allow_boat && fit.boat_connected === false;
+  return (
+    hasBoat(label.order) && boatLabelFit(fit.providers)?.connected === false
+  );
 }
 
 /** The title of a size that no machine fits, with its full request. */
@@ -108,8 +111,9 @@ function afterMachines(fit: LabelFit, sentence: string): string {
 }
 
 function boatOnly(label: LabelInput, fit: LabelFit): FitLine {
-  const fallback = fit.boat.state === "largest_fallback";
-  if (!label.allow_machines) {
+  const fallback =
+    boatLabelFit(fit.providers)?.fit.state === "largest_fallback";
+  if (!hasMachines(label.order)) {
     return {
       kind: "caption",
       text: fallback ? `${onlyBoat} ${largestBoatText}` : onlyBoat,
@@ -125,7 +129,8 @@ function boatOnly(label: LabelInput, fit: LabelFit): FitLine {
 }
 
 function waits(label: LabelInput, fit: LabelFit): FitLine {
-  const { allow_machines: machines, allow_boat: boat } = label;
+  const machines = hasMachines(label.order);
+  const boat = hasBoat(label.order);
   if (!machines && !boat) {
     return {
       kind: "warning",
@@ -157,7 +162,7 @@ function waits(label: LabelInput, fit: LabelFit): FitLine {
     };
   }
   // A wait whose Boat fit the catalog does not give names only what is known.
-  if (fit.boat.state !== "no_size_fits") {
+  if (boatLabelFit(fit.providers)?.fit.state !== "no_size_fits") {
     return machines
       ? {
           kind: "warning",
@@ -181,7 +186,7 @@ function waits(label: LabelInput, fit: LabelFit): FitLine {
 }
 
 function unavailable(label: LabelInput, fit: LabelFit): FitLine {
-  if (!label.allow_machines) {
+  if (!hasMachines(label.order)) {
     return { kind: "caption", text: `${onlyBoat} ${noBoatFit}` };
   }
   if (fit.fitting_machines > 0) {
@@ -202,21 +207,17 @@ function unavailable(label: LabelInput, fit: LabelFit): FitLine {
 /** The line of the dialog that says, before the save, where jobs run. */
 export function fitLine(label: LabelInput, fit: LabelFit): FitLine {
   if (isMacLabel(label)) return macFit(label, fit);
-  switch (fit.placement) {
-    case "machines_then_boat":
-      return { kind: "caption", text: machineFit(fit) };
-    case "machines_only":
-      return {
-        kind: "caption",
-        text: boatNotConnected(label, fit)
+  const places = fit.fitting_places ?? null;
+  if (places === null) return unavailable(label, fit);
+  if (hasMachines(places)) {
+    return {
+      kind: "caption",
+      text:
+        !hasBoat(places) && boatNotConnected(label, fit)
           ? `${machineFit(fit)} ${notConnected}`
           : machineFit(fit),
-      };
-    case "boat_only":
-      return boatOnly(label, fit);
-    case "waits":
-      return waits(label, fit);
-    case "unavailable":
-      return unavailable(label, fit);
+    };
   }
+  if (hasBoat(places)) return boatOnly(label, fit);
+  return waits(label, fit);
 }

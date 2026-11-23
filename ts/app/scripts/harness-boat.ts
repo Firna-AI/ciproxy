@@ -67,10 +67,11 @@ function isBoatScenario(name: string): name is BoatScenario {
 
 function rejectedAccount(): OverflowSettings {
   const settings = overflowSettings();
-  const account = settings.account ?? null;
+  const account = settings.providers[0]?.account ?? null;
   return {
-    ...settings,
-    account: account && { ...account, rejected_at: "2026-11-12T08:30:00Z" },
+    ...overflowSettings({
+      account: account && { ...account, rejected_at: "2026-11-12T08:30:00Z" },
+    }),
   };
 }
 
@@ -81,7 +82,7 @@ function settingsFor(name: BoatScenario): OverflowSettings {
       return rejectedAccount();
     case "boat-setup-unavailable":
     case "overflow-unavailable":
-      return { ...notConnected(), available: false };
+      return notConnected(false);
     case "boat-setup":
     case "boat-setup-load-failure":
     case "boat-setup-job-running":

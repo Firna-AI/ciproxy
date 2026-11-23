@@ -65,7 +65,7 @@ export function historyJobs(): JobView[] {
       id: fixtureJobIds.boat,
       name: "Browser checks",
       workflow: "E2E",
-      location: { kind: "boat", size: "4vcpu-8gb" },
+      location: { kind: "overflow", provider: "boat", size: "4vcpu-8gb" },
       cache_source: "github",
       cache_counts: null,
       waited_seconds: "31.5",
@@ -148,6 +148,7 @@ export function filteredHistory(
 ): JobView[] {
   const search = (query.get("search") ?? "").toLowerCase();
   const place = query.get("place");
+  const provider = query.get("provider");
   const from = query.get("from");
   const until = query.get("until");
   return visibleHistory(historyDays).filter((job) => {
@@ -160,6 +161,9 @@ export function filteredHistory(
         value.toLowerCase().includes(search),
       ) &&
       (place === null || job.location?.kind === place) &&
+      (provider === null ||
+        (job.location?.kind === "overflow" &&
+          job.location.provider === provider)) &&
       (from === null || (day !== undefined && day >= from)) &&
       (until === null || (day !== undefined && day < until))
     );

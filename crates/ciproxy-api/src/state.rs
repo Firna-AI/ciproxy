@@ -32,7 +32,7 @@ pub struct ApiConfig {
 /// Runtime collaborators constructed by the hosted control-plane owner.
 #[derive(Clone)]
 pub struct ApiState {
-    /// Boat executor shared with the scaler, absent before snapshot configuration.
+    /// Overflow service shared with the scaler, absent without configured providers.
     pub overflow: Option<Arc<dyn Overflow>>,
     /// Public locations and immutable build metadata.
     pub config: ApiConfig,

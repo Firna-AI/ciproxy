@@ -2,7 +2,8 @@
 // the generated type, with fields that a test can replace.
 
 import type {
-  LabelBoatSize,
+  ProviderCatalogSize,
+  ProviderLabelFit,
   LabelFit,
   LabelInput,
   LabelMachineFit,
@@ -16,11 +17,12 @@ import type {
 } from "../src/api/settings-schema.ts";
 import { activation } from "../scripts/fixtures-core.ts";
 import { organization } from "../scripts/fixtures-setup.ts";
+import { boatPlace, machinePlace } from "../scripts/m20-fixtures-labels.ts";
 
 const gb = (value: number) => String(value * 1_000_000_000);
 
 /** The largest Boat size of the account: 16 vCPU, 32 GB, a 251 GB disk. */
-export const xlarge: LabelBoatSize = {
+export const xlarge: ProviderCatalogSize = {
   name: "xlarge",
   size: { vcpus: 16, memory_bytes: gb(32), disk_bytes: gb(251) },
 };
@@ -43,25 +45,48 @@ export function offer(
   } satisfies LabelMachineFit;
 }
 
-/** The fit of a size of 8 vCPU, 32 GB, and 60 GB of free disk. */
-export function fit(overrides: Partial<LabelFit> = {}): LabelFit {
+export function providerFit(
+  overrides: Partial<ProviderLabelFit> = {},
+): ProviderLabelFit {
   return {
-    boat: {
+    provider: "boat",
+    fit: {
       state: "fitting",
       refused: false,
       size: xlarge.size,
       size_name: xlarge.name,
     },
-    boat_connected: true,
-    boat_required_root_disk_bytes: gb(122),
+    connected: true,
+    eligible_size: xlarge,
+    required_root_disk_bytes: gb(122),
+    largest_size: xlarge,
+    hold: null,
+    ...overrides,
+  };
+}
+
+/** The fit of a size of 8 vCPU, 32 GB, and 60 GB of free disk. */
+export function fit(overrides: Partial<LabelFit> = {}): LabelFit {
+  const places =
+    overrides.fitting_places === undefined
+      ? [machinePlace, boatPlace]
+      : overrides.fitting_places;
+  return {
+    providers: [providerFit()],
     eligible_machines: 3,
     fitting_machines: 3,
-    largest_boat: xlarge,
     machines: [offer("1"), offer("2"), offer("3")],
     maximum_jobs: "3",
     minimum_jobs: "3",
     no_machine_fits: false,
-    placement: "machines_then_boat",
+    fitting_places: places,
+    routing:
+      places && places.length > 0
+        ? { kind: "places", places }
+        : {
+            kind: "waits",
+            reason: { kind: places === null ? "unavailable" : "nothing_fits" },
+          },
     unavailable_machines: 0,
     ...overrides,
   } satisfies LabelFit;
@@ -69,8 +94,7 @@ export function fit(overrides: Partial<LabelFit> = {}): LabelFit {
 
 export function labelInput(overrides: Partial<LabelInput> = {}): LabelInput {
   return {
-    allow_boat: true,
-    allow_machines: true,
+    order: [machinePlace, boatPlace],
     disk_gb: 60,
     memory_gb: 32,
     name: "ciproxy-large",

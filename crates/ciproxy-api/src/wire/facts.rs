@@ -4,8 +4,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::jobs::JobVmSize;
-
 /// One eligible machine's physical offer from the exact prepared snapshot.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct LabelMachineFit {
@@ -25,31 +23,6 @@ pub struct LabelMachineFit {
     pub required_root_disk_bytes: Option<String>,
     /// Whole concurrent jobs, unavailable when disk or sizing is unknown.
     pub concurrent_jobs: Option<String>,
-}
-
-/// One trusted Boat catalog size with its complete actual allocation.
-#[derive(Deserialize, Serialize, ToSchema)]
-pub struct LabelBoatSize {
-    /// Actual catalog name.
-    pub name: String,
-    /// Actual resources, with byte counts as decimal strings.
-    pub size: JobVmSize,
-}
-
-/// Current physical placement, independent of temporary start availability.
-#[derive(Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum LabelPlacement {
-    /// At least one own machine and a permitted Boat size fit.
-    MachinesThenBoat,
-    /// At least one own machine fits, and Boat has no known permitted fit.
-    MachinesOnly,
-    /// Only a permitted Boat size fits.
-    BoatOnly,
-    /// Every permitted destination is known not to fit.
-    Waits,
-    /// A missing resource fact prevents a placement conclusion.
-    Unavailable,
 }
 
 /// Counts from a complete installation-visible repository snapshot.

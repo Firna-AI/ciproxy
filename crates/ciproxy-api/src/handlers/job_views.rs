@@ -32,7 +32,13 @@ pub(super) fn job(value: DashboardJob, at: DateTime<Utc>) -> JobView {
             first_slot: value.first_slot,
         })
     } else {
-        value.overflow_size.map(|size| JobLocation::Boat { size })
+        value
+            .overflow_provider
+            .zip(value.overflow_size)
+            .map(|(provider, size)| JobLocation::Overflow {
+                provider: provider.into(),
+                size,
+            })
     };
     let github_url = value.run_id.map(|run| match value.actions_job_id {
         Some(id) => format!(

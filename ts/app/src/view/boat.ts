@@ -5,15 +5,25 @@
 // never from rounded amounts.
 
 import type {
-  BoatAccountView,
   BoatWallet,
   OverflowSettings,
+  ProviderAccountView,
+  ProviderSettings,
 } from "../api/schema.ts";
 import type { OverflowSnapshot } from "../state/overflow.ts";
 import { formatDay } from "./format.ts";
 import { formatCents, shareOf } from "./money.ts";
 import type { NoticeModel } from "./page-model.ts";
 import type { BoatProgress } from "./setup-steps.ts";
+
+/** Select the provider shown by the current Boat screens. */
+export function boatProvider(
+  settings: OverflowSettings | null,
+): ProviderSettings | null {
+  return (
+    settings?.providers.find((provider) => provider.provider === "boat") ?? null
+  );
+}
 
 /** The overflow waits of job-routing.md, in seconds. */
 export const waitChoices = [0, 15, 30, 60, 120] as const;
@@ -51,7 +61,7 @@ export type BoatPanelModel =
   | { kind: "rejected"; name: string; actions: AccountActions<false> };
 
 export function boatPanelModel(settings: OverflowSettings): BoatPanelModel {
-  const account = settings.account ?? null;
+  const account = boatProvider(settings)?.account ?? null;
   if (account === null) return { kind: "none" };
   if (account.rejected_at) {
     return {
@@ -88,8 +98,8 @@ export function walletOptions(wallets: readonly BoatWallet[]): WalletOption[] {
 /** The account that works now: connected, and its key not rejected. */
 export function activeAccount(
   settings: OverflowSettings,
-): BoatAccountView | null {
-  const account = settings.account ?? null;
+): ProviderAccountView | null {
+  const account = boatProvider(settings)?.account ?? null;
   return account !== null && !account.rejected_at ? account : null;
 }
 
@@ -108,8 +118,9 @@ export type SpendFigures = {
 
 /** The spend of the month, or null when the API could not read it. */
 export function spendFigures(settings: OverflowSettings): SpendFigures | null {
-  const spend = settings.spend ?? null;
-  const limit = settings.spend_limit_cents ?? null;
+  const provider = boatProvider(settings);
+  const spend = provider?.spend ?? null;
+  const limit = provider?.spend_limit_cents ?? null;
   if (spend === null || limit === null) return null;
   const confirmedShare = shareOf(spend.confirmed_cents, limit);
   return {
@@ -141,10 +152,11 @@ function budgetMonth(nextMonthAt: string): string {
 
 /** The one notice of the page: a rejected key, a reached limit, or costs. */
 export function overflowNotice(settings: OverflowSettings): NoticeModel | null {
-  const rejected = settings.account?.rejected_at ?? null;
+  const provider = boatProvider(settings);
+  const rejected = provider?.account?.rejected_at ?? null;
   if (rejected !== null) return rejectedNotice(rejected);
-  const spend = settings.spend ?? null;
-  const limit = settings.spend_limit_cents ?? null;
+  const spend = provider?.spend ?? null;
+  const limit = provider?.spend_limit_cents ?? null;
   if (spend?.limit_reached === true && limit !== null) {
     return {
       tone: "warning",
@@ -174,7 +186,7 @@ export function rejectedNotice(rejectedAt: string): NoticeModel {
 export function connectedSummary(settings: OverflowSettings): string | null {
   const account = activeAccount(settings);
   if (account === null) return null;
-  const limit = settings.spend_limit_cents ?? null;
+  const limit = boatProvider(settings)?.spend_limit_cents ?? null;
   const parts = [`Connected to the Boat account ${account.name}`];
   if (limit !== null) parts.push(`spend limit ${formatCents(limit)} a month`);
   return parts.join(" · ");

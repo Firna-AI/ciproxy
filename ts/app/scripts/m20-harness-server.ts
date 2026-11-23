@@ -1,3 +1,4 @@
+import { overflowSettings } from "./fixtures-boat.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -134,7 +135,7 @@ async function serve(
     method === "GET"
   ) {
     const unconnected = state.scenario === "overflow-unconnected";
-    const body: components["schemas"]["OverflowSettings"] = {
+    const body: components["schemas"]["OverflowSettings"] = overflowSettings({
       available: true,
       account: unconnected
         ? null
@@ -156,7 +157,7 @@ async function serve(
           },
       spend_limit_cents: unconnected ? null : "5000",
       wait_seconds: 30,
-    };
+    });
     return send(200, body);
   }
   const reply =

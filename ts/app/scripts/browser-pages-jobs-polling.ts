@@ -1,3 +1,5 @@
+import { boatObservation } from "../src/view/jobs-places.ts";
+import { boatLabelFit } from "../src/view/settings-label-places.ts";
 import assert from "node:assert/strict";
 
 import { parseJobsLive } from "../src/api/jobs-live-parse.ts";
@@ -14,11 +16,13 @@ async function readLive(response: BrowserResponse) {
   assert.equal(response.request().method(), "GET");
   const queue = parseJobsLive(await response.json());
   assert.ok(queue !== undefined, "The browser must read a valid live queue.");
-  assert.equal(queue.overflow?.retry_at, fixtureTemporaryRetryAt);
-  assert.deepEqual(queue.overflow?.refused_sizes, []);
+  assert.equal(boatObservation(queue)?.retry_at, fixtureTemporaryRetryAt);
+  assert.deepEqual(boatObservation(queue)?.refused_sizes, []);
   const waiting = queue.waiting_labels[0];
-  assert.ok(waiting !== undefined && waiting.boat.state === "fitting");
-  assert.equal(waiting.boat.refused, false);
+  assert.ok(waiting !== undefined);
+  const fit = boatLabelFit(waiting.providers)?.fit;
+  assert.ok(fit?.state === "fitting");
+  assert.equal(fit.refused, false);
   return queue;
 }
 
@@ -56,7 +60,11 @@ export function jobsPollingRuns(
         assert.equal(initial.waiting_count, "1");
         assert.equal(initial.waiting.length, 1);
         assert.equal(initial.warm_runners, "0");
-        assert.equal(initial.on_boat, "0");
+        assert.equal(
+          initial.running_by_provider.find((item) => item.provider === "boat")
+            ?.running,
+          "0",
+        );
         assert.deepEqual(initial.starting_runners, []);
         assert.deepEqual(
           initial.running.map((job) =>
@@ -99,7 +107,10 @@ export function jobsPollingRuns(
         const refreshed = await released;
         await refreshed.finished();
         const current = await readLive(refreshed);
-        assert.equal(current.overflow?.retry_at, initial.overflow?.retry_at);
+        assert.equal(
+          boatObservation(current)?.retry_at,
+          boatObservation(initial)?.retry_at,
+        );
         await visible(
           page.getByText("Your machines are full", { exact: true }),
         );

@@ -7,6 +7,8 @@ use internal_error::{ErrorContract, InternalError};
 use serde::Serialize;
 use utoipa::ToSchema;
 
+use crate::wire::overflow::OverflowProvider;
+
 /// Stable error body returned by every dashboard route.
 #[derive(Serialize, ToSchema)]
 pub struct Problem {
@@ -14,14 +16,17 @@ pub struct Problem {
     pub code: ProblemCode,
     /// Safe explanation with no credentials or provider response body.
     pub message: String,
+    /// Provider that refused a key, when the problem concerns a provider key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<OverflowProvider>,
 }
 
 /// Closed set of machine-readable dashboard failures.
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProblemCode {
-    /// Boat refused the submitted API key.
-    BoatKeyRejected,
+    /// The named provider refused the submitted API key.
+    ProviderKeyRejected,
     /// GitHub sign-in is absent, expired, or revoked.
     SignInRequired,
     /// Workspace access or browser proof did not authorize this request.
@@ -47,9 +52,9 @@ pub enum ProblemCode {
 /// Failures that dashboard callers can handle without inspecting diagnostics.
 #[derive(Debug, thiserror::Error, ErrorContract)]
 pub enum Error {
-    /// Boat refuses the submitted API key without exposing it.
-    #[error("[api] Boat rejected the key")]
-    BoatKeyRejected,
+    /// A provider refuses the submitted API key without exposing it.
+    #[error("[api] provider rejected the key")]
+    ProviderKeyRejected(OverflowProvider),
     /// Authentication is absent, expired, or revoked.
     #[error("[api] sign in with GitHub again")]
     Unauthorized,
@@ -88,9 +93,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, code) = match &self {
-            Self::BoatKeyRejected => (
+            Self::ProviderKeyRejected(_) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
-                ProblemCode::BoatKeyRejected,
+                ProblemCode::ProviderKeyRejected,
             ),
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, ProblemCode::SignInRequired),
             Self::Forbidden => (StatusCode::FORBIDDEN, ProblemCode::AccessDenied),
@@ -105,9 +110,16 @@ impl IntoResponse for Error {
             Self::Unavailable => (StatusCode::SERVICE_UNAVAILABLE, ProblemCode::Unavailable),
             Self::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, ProblemCode::Internal),
         };
+        let provider = match &self {
+            Self::ProviderKeyRejected(provider) => Some(*provider),
+            _ => None,
+        };
         let message = match self {
-            Self::BoatKeyRejected => {
-                "Boat did not accept this key. Copy the whole key from the Boat console.".to_owned()
+            Self::ProviderKeyRejected(provider) => {
+                format!(
+                    "{} did not accept this key.",
+                    provider.0.descriptor().display_name
+                )
             }
             Self::Unauthorized => "Sign in with GitHub again.".to_owned(),
             Self::Forbidden => "This request is not permitted.".to_owned(),
@@ -119,7 +131,15 @@ impl IntoResponse for Error {
             Self::Unavailable => "The action could not finish. Try again.".to_owned(),
             Self::Internal(_) => "The request could not finish. Try again.".to_owned(),
         };
-        (status, Json(Problem { code, message })).into_response()
+        (
+            status,
+            Json(Problem {
+                code,
+                message,
+                provider,
+            }),
+        )
+            .into_response()
     }
 }
 

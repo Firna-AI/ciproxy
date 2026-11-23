@@ -63,12 +63,13 @@ async fn connects_wallet(orgs: Value, expected_wallets: Value, selected_wallet: 
         .request(
             Some(&admin),
             "POST",
-            &fixture.path("/overflow/wallets"),
+            &fixture.path("/overflow/providers/boat/key-check"),
             Some(key),
         )
         .await;
     assert_eq!(checked.status(), StatusCode::OK);
     let checked = json(checked).await;
+    assert_eq!(checked["provider"], "boat");
     assert_eq!(checked["wallets"], expected_wallets);
     assert_eq!(checked["selected_wallet"], selected_wallet);
     assert!(!checked.to_string().contains("fixture-key"));
@@ -85,7 +86,7 @@ async fn connects_wallet(orgs: Value, expected_wallets: Value, selected_wallet: 
             .request(
                 Some(&admin),
                 "POST",
-                &fixture.path("/overflow/connection"),
+                &fixture.path("/overflow/providers/boat/connection"),
                 Some(json!({
                     "api_key":"fixture-key",
                     "wallet":ORGANIZATION,
@@ -117,7 +118,10 @@ async fn connects_wallet(orgs: Value, expected_wallets: Value, selected_wallet: 
             .await,
     )
     .await;
-    assert_eq!(displayed["account"]["name"], "Customer Organization");
+    assert_eq!(
+        displayed["providers"][0]["account"]["name"],
+        "Customer Organization"
+    );
     peer.assert_consumed();
     let captured = peer.captured();
     assert_eq!(captured.len(), 6);

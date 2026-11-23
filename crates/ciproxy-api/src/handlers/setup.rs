@@ -1,11 +1,10 @@
-//! Setup and Admin-only non-Boat workspace settings.
+//! Setup progress and Admin-only workspace settings.
 
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use ciproxy_store_interface::github::DemandPhase;
-use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 
 use crate::access::Principal;
@@ -56,10 +55,9 @@ pub(crate) async fn setup(
                         })
                         .map(|runner| match runner.place {
                             RunnerPlace::Machine { .. } => SetupPlace::Machine,
-                            RunnerPlace::Overflow {
-                                provider: OverflowProvider::Boat,
-                                ..
-                            } => SetupPlace::Boat,
+                            RunnerPlace::Overflow { provider, .. } => SetupPlace::Overflow {
+                                provider: provider.into(),
+                            },
                         })
                 } else {
                     None

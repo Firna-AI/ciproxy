@@ -2,7 +2,8 @@
 // generated Rust contract. The accepted key is a fixture word that the
 // harness accepts; it is not a Boat key and opens nothing.
 import type {
-  BoatSpendView,
+  ProviderSettings,
+  ProviderSpendView,
   BoatWallets,
   OverflowSettings,
 } from "../src/api/schema.ts";
@@ -14,8 +15,8 @@ export const fixtureBoatKey = "fixture-only-accepted-key";
 export const refusedBoatKey = "fixture-only-refused-key";
 
 export function boatSpend(
-  overrides: Partial<BoatSpendView> = {},
-): BoatSpendView {
+  overrides: Partial<ProviderSpendView> = {},
+): ProviderSpendView {
   return {
     bounded: true,
     confirmed_cents: "4810",
@@ -23,31 +24,49 @@ export function boatSpend(
     settled_bound_cents: "120",
     unconfirmed_cents: "1310",
     ...overrides,
-  } satisfies BoatSpendView;
+  } satisfies ProviderSpendView;
 }
 
-export function overflowSettings(
-  overrides: Partial<OverflowSettings> = {},
-): OverflowSettings {
+export function fixtureProvider(
+  overrides: Partial<ProviderSettings> = {},
+): ProviderSettings {
   return {
+    provider: "boat",
+    name: "Boat",
+    has_billing_account_choice: true,
+    offered: true,
+    available: true,
     account: {
       connected_at: "2026-11-02T09:00:00Z",
       name: "northstar",
       rejected_at: null,
     },
-    available: true,
-    enabled: true,
-    next_month_at: "2026-12-01T00:00:00Z",
     spend: boatSpend(),
     spend_limit_cents: "20000",
-    wait_seconds: 30,
     ...overrides,
-  } satisfies OverflowSettings;
+  };
+}
+
+export function overflowSettings({
+  enabled = true,
+  next_month_at = "2026-12-01T00:00:00Z",
+  wait_seconds = 30,
+  ...provider
+}: Partial<OverflowSettings> &
+  Partial<ProviderSettings> = {}): OverflowSettings {
+  return {
+    enabled,
+    next_month_at,
+    wait_seconds,
+    providers: [fixtureProvider(provider)],
+  };
 }
 
 /** A workspace that never connected Boat. */
-export function notConnected(): OverflowSettings {
+export function notConnected(available = true): OverflowSettings {
   return overflowSettings({
+    available,
+    offered: false,
     account: null,
     spend: null,
     spend_limit_cents: null,
@@ -61,6 +80,7 @@ export function notConnected(): OverflowSettings {
  */
 export function boatWallets(): BoatWallets {
   return {
+    provider: "boat",
     selected_wallet: "boat-org-1001",
     wallets: [
       { wallet: "personal", name: "Mira Patel" },

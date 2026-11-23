@@ -7,7 +7,11 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import type { OverflowPolicy, OverflowSettings } from "../../api/schema.ts";
+import type {
+  OverflowPolicy,
+  OverflowSettings,
+  ProviderSpendLimit,
+} from "../../api/schema.ts";
 import { useValue } from "../../services/hooks.ts";
 import type { OverflowStore, PolicyEdit } from "../../state/overflow.ts";
 import {
@@ -22,7 +26,7 @@ export type PolicySource = "wait" | "limit";
 
 export type PolicyEditor = {
   /** The saved policy, with the edit on its way to the API. */
-  shown: OverflowPolicy;
+  shown: OverflowPolicy & ProviderSpendLimit;
   /** The control whose save runs, for its busy state. */
   saving: PolicySource | null;
   /** A Boat change of the workspace runs, so every control waits. */

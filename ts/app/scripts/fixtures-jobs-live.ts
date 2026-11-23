@@ -10,6 +10,8 @@ import {
   fixtureVmSize,
 } from "./fixtures-jobs.ts";
 
+import { boatPlace, machinePlace } from "./m20-fixtures-labels.ts";
+
 export const jobsModes = [
   "live",
   "quiet",
@@ -64,10 +66,24 @@ export function liveJobs(
             routing_reason: null,
           }),
         ];
+  const provider: components["schemas"]["ProviderLabelFit"] = {
+    provider: "boat",
+    fit: unknownFit
+      ? { state: "unavailable" }
+      : noFit
+        ? { state: "no_size_fits" }
+        : {
+            state: "fitting",
+            size: fixtureVmSize,
+            size_name: "4vcpu-8gb",
+            refused: mode === "boat-refused",
+          },
+  };
+  const places = noFit ? [] : [machinePlace, boatPlace];
   return {
     banner,
     can_manage: canManage,
-    on_boat: "0",
+    running_by_provider: [{ provider: "boat", running: "0" }],
     overflow_enabled: true,
     overflow_wait_seconds: 30,
     own_slots_total: unknownFit ? null : "6",
@@ -131,7 +147,7 @@ export function liveJobs(
             {
               id: "80000000-0000-4000-8000-000000000001",
               label_id: fixtureLabelId,
-              boat: true,
+              provider: "boat",
               machine_id: null,
             },
           ],
@@ -153,8 +169,7 @@ export function liveJobs(
                   vcpus: noFit ? 128 : 4,
                   memory_gb: noFit ? 256 : 8,
                   disk_gb: noFit ? 1000 : 20,
-                  allow_boat: true,
-                  allow_machines: true,
+                  order: [machinePlace, boatPlace],
                   when_nothing_fits: "wait",
                 },
                 fit: {
@@ -164,42 +179,48 @@ export function liveJobs(
                   unavailable_machines: unknownFit ? 1 : 0,
                   minimum_jobs: noFit || unknownFit ? null : "6",
                   maximum_jobs: noFit || unknownFit ? null : "6",
-                  boat: { state: "unavailable" },
+                  providers: [provider],
                   machines: [],
-                  placement: noFit || unknownFit ? "waits" : "machines_only",
+                  fitting_places: unknownFit ? null : places,
+                  routing:
+                    noFit || unknownFit
+                      ? {
+                          kind: "waits",
+                          reason: {
+                            kind: unknownFit ? "unavailable" : "nothing_fits",
+                          },
+                        }
+                      : {
+                          kind: "places",
+                          places: mode === "live" ? places : [machinePlace],
+                        },
                 },
               },
-              boat: unknownFit
-                ? { state: "unavailable" }
-                : noFit
-                  ? { state: "no_size_fits" }
-                  : {
-                      state: "fitting",
-                      size: fixtureVmSize,
-                      size_name: "4vcpu-8gb",
-                      refused: mode === "boat-refused",
-                    },
+              providers: [provider],
             },
           ],
     overflow:
       mode === "overflow-unknown"
-        ? null
-        : {
-            billing_required: false,
-            connected: true,
-            counted_cents: mode === "spend-limit" ? "10000" : "1200",
-            limit_cents: "10000",
-            limit_reached: mode === "spend-limit",
-            key_rejected: false,
-            measured_complete: true,
-            next_month: "2026-12-01T00:00:00Z",
-            refused_sizes: mode === "boat-refused" ? ["4vcpu-8gb"] : [],
-            retry_at:
-              mode === "boat-refused"
-                ? "2026-11-06T13:00:00Z"
-                : temporaryRetry
-                  ? fixtureTemporaryRetryAt
-                  : null,
-          },
+        ? []
+        : [
+            {
+              provider: "boat",
+              billing_required: false,
+              connected: true,
+              counted_cents: mode === "spend-limit" ? "10000" : "1200",
+              limit_cents: "10000",
+              limit_reached: mode === "spend-limit",
+              key_rejected: false,
+              measured_complete: true,
+              next_month: "2026-12-01T00:00:00Z",
+              refused_sizes: mode === "boat-refused" ? ["4vcpu-8gb"] : [],
+              retry_at:
+                mode === "boat-refused"
+                  ? "2026-11-06T13:00:00Z"
+                  : temporaryRetry
+                    ? fixtureTemporaryRetryAt
+                    : null,
+            },
+          ],
   } satisfies components["schemas"]["JobsLivePage"];
 }
