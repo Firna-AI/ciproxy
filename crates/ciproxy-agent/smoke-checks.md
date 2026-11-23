@@ -21,6 +21,15 @@ crates/ciproxy-agent/scripts/smoke-warm.sh
 crates/ciproxy-agent/scripts/smoke-restart.sh
 ```
 
+After an image change, dispatch the workflow with mode `swap`. The job
+fails unless the job VM has an active zram swap of its `MemTotal`, at most
+8 GiB, as [Compressed swap](../../image/README.md#compressed-swap) says:
+
+```sh
+gh workflow run ciproxy-agent-smoke.yml --repo "$CIPROXY_SMOKE_REPO" \
+  --ref "$CIPROXY_SMOKE_REF" -f mode=swap -f smoke_id="swap-$(date +%s)"
+```
+
 The [ext4 host smoke](host-preparation.md#ext4-and-kvm-smoke) also checks
 first install, repair, two real reflink jobs, and uninstall.
 

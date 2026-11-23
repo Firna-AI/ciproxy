@@ -34,6 +34,12 @@ default label.
 | `ciproxy-macos`                             | macOS    | 2 vCPU · 8 GB · 20 GB free disk  | 1     |
 | `ciproxy-macos-medium`                      | macOS    | 4 vCPU · 16 GB · 20 GB free disk | 2     |
 
+Each Linux job also gets compressed swap in memory, called zram, when its
+kernel supports it. The swap matches the memory that Linux reports for the
+job, up to 8 GiB. For data that compresses well, this gives the job memory
+headroom similar to a GitHub-hosted runner of the same size. Label memory
+stays in decimal GB. macOS manages its own swap.
+
 Like the disk of a GitHub-hosted runner, the disk of a label is the free
 disk that each job gets. Its VM also holds the image: with the current
 image, a job of `ciproxy` has a VM disk of about {defaultJobDiskGb} GB.

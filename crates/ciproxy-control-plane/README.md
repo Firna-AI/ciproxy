@@ -318,5 +318,5 @@ GitHub, and database access, so they stay operator work.
 - [Dashboard API](../ciproxy-api/README.md) defines the `/api` routes.
 - [GitHub integration](../ciproxy-github/README.md) defines App boundaries.
 - [Runtime setup](../../deploy/runtime.md) defines the deployed interface.
-- [Agent images](../../docs/protocol/agent-images.md#the-macos-image)
+- [The macOS image](../../docs/protocol/agent-images-macos.md)
   defines how ciproxy serves the macOS image.

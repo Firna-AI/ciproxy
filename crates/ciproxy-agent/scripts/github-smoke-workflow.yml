@@ -9,7 +9,7 @@ on:
       mode:
         required: true
         type: choice
-        options: [docker, warm, restart, host, cache, sticky-write, sticky-read, sticky-copy]
+        options: [docker, warm, restart, host, cache, sticky-write, sticky-read, sticky-copy, swap]
       runner_label:
         required: false
         default: ciproxy
@@ -43,6 +43,25 @@ jobs:
             restart) sleep 120 ;;
             *) sleep 45 ;;
           esac
+      - name: Check the compressed swap of the job VM
+        if: inputs.mode == 'swap'
+        run: |
+          swapon --show
+          awk '
+            $1 == "MemTotal:" {
+              cap_kib = 8 * 1024 * 1024
+              expected_kib = ($2 < cap_kib ? $2 : cap_kib)
+            }
+            $1 ~ /^\/dev\/zram[0-9]+$/ && expected_kib > 0 &&
+              $3 >= expected_kib - 64 && $3 <= expected_kib + 64 { found = 1 }
+            END {
+              if (!found) {
+                printf "Expected an active zram swap within 64 KiB of %d KiB.\n",
+                  expected_kib > "/dev/stderr"
+                exit 1
+              }
+            }
+          ' /proc/meminfo /proc/swaps
       - name: Restore the machine-cache smoke entry
         id: cache
         if: inputs.mode == 'cache'

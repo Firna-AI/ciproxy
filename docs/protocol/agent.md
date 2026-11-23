@@ -68,7 +68,7 @@ runs on own machines.
   - The agent binary has the entitlement
     `com.apple.security.virtualization` in its signature.
   - The macOS release of the Mac can run the
-    [macOS image](agent-images.md#the-macos-image).
+    [macOS image](agent-images-macos.md).
 - The report gives the result: `available`, or the cause of the failure.
 
 | Cause | Platform | Fix that the dashboard names |

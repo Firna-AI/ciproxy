@@ -18,7 +18,7 @@ the warm runners.
 - It holds two full images and one compressed download during an update.
 - A Mac has its own default image budget, for two full macOS images and
   one compressed download. Its value is a placeholder until the size of the
-  [macOS image](agent-images.md#the-macos-image) is measured.
+  [macOS image](agent-images-macos.md) is measured.
 - An explicit image budget override stays separate from the job disk.
 - The host reserve keeps a quarter of the remaining disk for the system
   and filesystem overhead.

@@ -6,6 +6,29 @@ jobs:
   image:
     runs-on: ciproxy-image-smoke
     steps:
+      - name: Check compressed swap
+        run: |
+          swapon --show
+          if [ ! -e /sys/class/zram-control ] && ! modinfo zram >/dev/null 2>&1; then
+            echo '::warning::This kernel has no zram, so the job runs without compressed swap.'
+            exit 0
+          fi
+          awk '
+            $1 == "MemTotal:" {
+              cap_kib = 8 * 1024 * 1024
+              expected_kib = ($2 < cap_kib ? $2 : cap_kib)
+              tolerance_kib = 64
+            }
+            $1 ~ /^\/dev\/zram[0-9]+$/ && expected_kib > 0 &&
+              $3 >= expected_kib - tolerance_kib && $3 <= expected_kib + tolerance_kib { found = 1 }
+            END {
+              if (!found) {
+                printf "Expected an active zram swap within 64 KiB of %d KiB.\n",
+                  expected_kib > "/dev/stderr"
+                exit 1
+              }
+            }
+          ' /proc/meminfo /proc/swaps
       - run: |
           uname -a
           id

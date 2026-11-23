@@ -199,8 +199,10 @@ The [Boat launch](boat.md#boat-launch) moves the file to a root-only path,
 and the guest removes it before the runner starts.
 
 Copy [smoke-workflow.yml](smoke-workflow.yml) to a private smoke repository.
-It prints the account of the job. It checks the tools, Docker, and a
-PostgreSQL start with `systemctl`.
+It checks the compressed swap first, as the
+[swap check](checks.md#compressed-swap) says. It prints the account of
+the job. It checks the tools, Docker, and a PostgreSQL start with
+`systemctl`.
 Queue the job with an authorized user account or use an already queued job.
 The ciproxy App has Actions read permission and cannot dispatch workflows.
 Give the runner the workflow's `ciproxy-image-smoke` label.

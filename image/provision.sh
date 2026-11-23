@@ -25,6 +25,8 @@ else
 fi
 install -m 0755 "$definition/docker-attach.sh" /usr/local/libexec/ciproxy-docker-attach
 install -m 0755 "$definition/runner-patch/container-proxy-url.sh" /usr/local/libexec/ciproxy-container-proxy-url
+install -m 0755 "$definition/ciproxy-swap.sh" /usr/local/libexec/ciproxy-swap
+install -m 0644 "$definition/ciproxy-swap.service" /etc/systemd/system/
 if [[ $mode == boat ]]; then
     install -m 0644 "$definition/ciproxy-boat-start.service" \
         "$definition/ciproxy-boat-guest.service" /etc/systemd/system/
@@ -52,7 +54,7 @@ if [[ $mode == boat ]]; then
     exit 0
 fi
 bash "$definition/boat-build-clean-image.sh"
-systemctl enable docker ciproxy-guest
+systemctl enable docker ciproxy-swap ciproxy-guest
 systemctl disable walinuxagent cloud-init cloud-config cloud-final || true
 rm -f /etc/netplan/50-cloud-init.yaml
 install -d /etc/systemd/network

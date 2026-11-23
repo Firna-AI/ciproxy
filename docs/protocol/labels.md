@@ -17,6 +17,12 @@ machine and where each job runs.
   product says "VM size" where the word needs a qualifier.
 - **Decision:** "size" is the one word for it. Rejected: "shape". Rejected:
   "machine size", because "machine" names only the hardware of the customer.
+- A Linux job also gets a compressed swap in memory, as
+  [One definition, two builds](agent-images.md#one-definition-two-builds)
+  says. The swap is not part of the size, and it does not change the vCPU,
+  memory, or free job disk of a label.
+- A macOS job gets no compressed swap from ciproxy, because macOS manages
+  its own swap.
 
 ## Jobs that use ciproxy
 
@@ -70,6 +76,11 @@ machine and where each job runs.
   in GB.
 - Every label has at least 1 GB of free job disk.
 - Disk and memory sizes use SI GB, with 1 GB equal to 1,000,000,000 bytes.
+- **Decision:** memory stays in SI GB, also though a GitHub-hosted runner of
+  8 GB shows about 7.75 GiB. Rejected: memory in GiB, because each machine
+  then fits fewer slots. Rejected: the GiB figure from the host reserve,
+  because the host then keeps less than a quarter. Reason: the compressed
+  swap covers the gap.
 - The free disk excludes the image, filesystem metadata, and the 1% root
   reserve. It is available to the runner when the fresh VM starts.
 - **Decision:** label disk means free job bytes, so image growth cannot
@@ -161,7 +172,7 @@ machine and where each job runs.
 - These rules are planned, and they are a proposal until the user decides
   them.
 - The free job disk of a macOS label is at most the measured free bytes of
-  the current [macOS image](agent-images.md#the-macos-image).
+  the current [macOS image](agent-images-macos.md).
 - The dialog shows that limit, and it refuses a larger value.
 - Each macOS job VM gets all the free space of its image, which is at least
   the free disk of its label.
@@ -172,7 +183,7 @@ machine and where each job runs.
   the label above the limit.
 - **Decision:** the disk of a macOS label is at most the free space of the
   fixed image disk. Rejected: a disk that the agent grows for each label,
-  as [The macOS image](agent-images.md#the-macos-image) says. This is a
+  as [The macOS image](agent-images-macos.md) says. This is a
   proposal until the user decides it.
 
 ## Own machines, Boat, or both

@@ -120,7 +120,7 @@ command, and the wait for the first image.
 - Virtualization.framework runs no macOS guest that is newer than the macOS
   of the Mac.
 - So the macOS of a Mac must be the macOS version of the
-  [macOS image](agent-images.md#the-macos-image) or later.
+  [macOS image](agent-images-macos.md) or later.
 - `install` refuses a Mac with an older macOS, with a message that names
   the version that the Mac needs.
 - The minimum is macOS 26.7.3 (25G342), the macOS of the macOS image. The

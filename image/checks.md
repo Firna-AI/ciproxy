@@ -13,6 +13,10 @@ python3 image/check-kernel-metadata.py
 ```
 
 This fixture checks neutral metadata at the Make process boundary.
+With a fake `scripts/config`, it also checks the zram options that
+[Compressed swap](README.md#compressed-swap) names. Each option must be `y`
+before `olddefconfig`. When `olddefconfig` drops one, the build must stop
+with its error before it compiles `vmlinux`.
 It needs Git, Bash, and Python. It does not prove a real kernel build.
 
 ## Kernel build metadata
@@ -148,6 +152,33 @@ at `/var/lib/docker`. The check then makes each step fail in turn.
 Each failure must leave both mount points unmounted and Docker running on
 the root disk, with its data unchanged.
 It needs root for `chroot` and its private `/proc` mount.
+
+### Compressed swap
+
+```sh
+python3 image/check-swap.py
+```
+
+It runs the real `ciproxy-swap.sh` on a private `/proc` and `/sys`, with
+stub zram and swap tools. It needs Bash, Python, and `awk`, and no root.
+The script must select zstd before it sets the size, as the kernel
+requires, and cap the size at 8 GiB. Without zstd, it must warn and use
+the default compressor of the kernel. It must load the `zram` module when
+needed, and leave an active zram swap alone. Without zram, it must warn
+and exit 0. When `mkswap` or `swapon` fails, it must release the device.
+When only `vm.page-cluster` cannot be set, it must warn and keep the swap.
+
+These checks cannot see a real zram device. Two live checks print
+`swapon --show` in a job and fail unless a zram swap is active with the
+size that the script sets, within 64 KiB:
+
+- In a job VM, the `swap` mode of the
+  [agent smoke workflow](../crates/ciproxy-agent/scripts/github-smoke-workflow.yml),
+  as the [KVM and GitHub smoke checks](../crates/ciproxy-agent/smoke-checks.md)
+  say.
+- In a Boat job, the first step of [smoke-workflow.yml](smoke-workflow.yml).
+  When the Boat kernel has no zram, this step warns and passes, because
+  such a job still runs without the swap.
 
 ### Boat build
 

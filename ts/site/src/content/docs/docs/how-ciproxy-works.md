@@ -57,6 +57,12 @@ A slot is 2 vCPU and 8 GB of memory of a machine. The machine keeps a
 quarter of its threads and memory for the host, and the rest forms slots. A
 job takes as many slots as its size needs.
 
+Each Linux job also gets compressed swap in memory, called zram, when its
+kernel supports it. The swap matches the memory that Linux reports for the
+job, up to 8 GiB. For data that compresses well, this gives the job memory
+headroom similar to a GitHub-hosted runner of the same size. Label memory
+stays in decimal GB. macOS manages its own swap.
+
 A running job also holds the disk of its VM: the image and the free disk of
 its label. A machine first keeps disk for the images, then a quarter of the
 rest for the host. The machine cache uses the disk that the jobs leave.

@@ -16,7 +16,19 @@ export KBUILD_BUILD_VERSION=1
 KBUILD_BUILD_TIMESTAMP=$(LC_ALL=C date -u --date="@$SOURCE_DATE_EPOCH" '+%a %b %e %T UTC %Y')
 export KBUILD_BUILD_TIMESTAMP
 cp "$work_dir/kernel.config" "$kernel_dir/.config"
+zram_options=(ZRAM ZRAM_BACKEND_ZSTD ZRAM_DEF_COMP_ZSTD)
+config_args=()
+for option in "${zram_options[@]}"; do
+    config_args+=(--enable "$option")
+done
+"$kernel_dir/scripts/config" --file "$kernel_dir/.config" "${config_args[@]}"
 make -C "$kernel_dir" olddefconfig
+for option in "${zram_options[@]}"; do
+    if ! grep -Fqx "CONFIG_${option}=y" "$kernel_dir/.config"; then
+        printf 'Error: CONFIG_%s must be set to y after olddefconfig.\n' "$option" >&2
+        exit 1
+    fi
+done
 make -C "$kernel_dir" -j "${BUILD_CPUS:-4}" vmlinux
 cp "$kernel_dir/vmlinux" "$work_dir/vmlinux"
 sha256sum "$work_dir/vmlinux"

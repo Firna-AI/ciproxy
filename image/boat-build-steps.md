@@ -69,7 +69,9 @@ The bundle also changes some upstream scripts and tests for Boat. The main
 changes are:
 
 - It removes the Azure swap, resource disk, boot loader, and root mount
-  setup, because Boat owns them. It skips the tests of that setup.
+  setup, because Boat owns its disks and its boot. It skips the tests of
+  that setup. ciproxy adds its own zram swap at each launch, as
+  [Compressed swap](README.md#compressed-swap) says.
 - It runs the read-ahead test of the disks only on a SCSI or NVMe disk.
 - It gives each folder that the upstream recipe makes writable, such as
   `/opt`, mode 777, as upstream does. Boat's existing entries below that

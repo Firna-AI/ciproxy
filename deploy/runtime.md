@@ -196,7 +196,7 @@ access or a real Boat start.
 
 The settings `MACOS_IMAGE_URL_PREFIX`, `MACOS_IMAGE_MANIFEST_PATH`, and
 `R2_IMAGES_KEY` turn on the
-[macOS image](../docs/protocol/agent-images.md#the-macos-image).
+[macOS image](../docs/protocol/agent-images-macos.md).
 When one of them is absent or empty, the runtime offers no macOS image and
 logs that once. Linux machines and Boat run as before.
 

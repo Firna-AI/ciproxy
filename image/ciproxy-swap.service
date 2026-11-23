@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+[Unit]
+Description=Set up ciproxy zram swap
+Before=ciproxy-guest.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/ciproxy-swap
+
+[Install]
+WantedBy=ciproxy-guest.service

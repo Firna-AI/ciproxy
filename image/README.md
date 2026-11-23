@@ -83,6 +83,7 @@ Kernel builds also need `make`, GCC, `flex`, `bison`, `bc`, `libelf-dev`,
 and `libssl-dev`.
 Kernel builds use [neutral metadata](checks.md#kernel-build-metadata)
 and a source-derived timestamp.
+They also turn on zram, as [Compressed swap](#compressed-swap) says.
 The build user needs KVM access and `sudo` for extraction and ext4 creation.
 Run from the repository root:
 
@@ -196,6 +197,42 @@ reboot, as [Boat launch](boat.md#boat-launch) says.
 The [checks and growth proofs](checks.md) cover the bootstrap and artifacts.
 Offline checks need no KVM. They grow a release copy with plain `resize2fs`,
 without forcing it.
+
+## Compressed swap
+
+Each Linux job starts with a compressed swap in memory, on zram.
+[Agent images](../docs/protocol/agent-images.md#one-definition-two-builds)
+gives the requirement and the size of the swap.
+The pinned Firecracker kernel configuration has zram off.
+`build-kernel.sh` turns on `CONFIG_ZRAM`, `CONFIG_ZRAM_BACKEND_ZSTD`, and
+`CONFIG_ZRAM_DEF_COMP_ZSTD` with the kernel's `scripts/config` before
+`olddefconfig`.
+The options are built in, because the image has no modules for the job VM
+kernel.
+`olddefconfig` drops an option without an error when a dependency is
+missing. So the kernel build stops with an error when one of the three
+options is not `y` after `olddefconfig`.
+
+In both builds, `provision.sh` installs `ciproxy-swap.sh` as
+`/usr/local/libexec/ciproxy-swap` and installs `ciproxy-swap.service`.
+The machine image enables the unit. It runs the script at boot, before
+`ciproxy-guest.service`.
+A Boat restore does not boot the saved system, so the unit stays disabled
+there. `boat-start.sh` runs the script before it starts the guest.
+The script changes nothing when a zram swap is already active.
+When zram is a module, the script loads it.
+It sizes a zram device at `MemTotal` of `/proc/meminfo`, but at most
+8 GiB, with the zstd compressor.
+Without zstd, it warns and keeps the default compressor of the kernel.
+It turns the swap on with priority 100, so the kernel fills it before a
+disk swap that Boat adds.
+It sets `vm.page-cluster` to 0, because zram has no seek cost.
+It does not change `vm.swappiness`.
+When zram is missing, or another step fails, the script prints a warning
+and exits 0. It leaves no partial swap behind, so the job runs without
+swap. Only a failed `vm.page-cluster` write keeps the swap, because that
+setting only tunes it.
+The [swap check](checks.md#compressed-swap) covers these cases.
 
 ## Publish and keep the runner current
 

@@ -27,7 +27,8 @@ def adapt(upstream):
     start = environment.index("# Change waagent entries")
     end = environment.index("# Add localhost alias", start)
     edit("configure-environment.sh", environment[start:end], "",
-         "Boat owns its resource disks, swap and cloud-init boot configuration; Azure resource-disk setup does not apply.")
+         "The Boat build removes the Azure swap and resource-disk setup. "
+         "ciproxy adds its own zram swap at launch.")
     environment = (scripts / "configure-environment.sh").read_text()
     start = environment.index("# Relax root filesystem durability")
     end = environment.index("# Create symlink for tests", start)

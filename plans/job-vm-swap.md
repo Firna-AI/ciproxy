@@ -90,9 +90,19 @@ All design calls are my calls, made on 23 November 2026.
 - Warn and continue when zram is not available. Reason: a job without
   swap still runs as today, and the always-on rules prefer graceful
   handling.
-- Check the swap at job start in `image/smoke-workflow.yml`, not in
+- Check the swap at job start in the live smoke workflows, not in
   `image/check-runner-environment.py`. Reason: that check runs the guest
   in a chroot with no KVM, so it cannot see a zram device.
+- In a job VM, check the swap in a new `swap` mode of
+  `crates/ciproxy-agent/scripts/github-smoke-workflow.yml`. Reason:
+  `image/smoke-workflow.yml` runs only on Boat, and a step in every mode
+  of the agent smoke would fail each agent smoke on an older image.
+- In the Boat smoke, warn and pass when the Boat kernel has no zram.
+  Reason: such a job still runs, as the protocol says, and Milestone 4
+  records whether Boat has zram.
+- When only the `vm.page-cluster` write fails, keep the swap and warn.
+  Reason: the setting only tunes the swap. The first version of the
+  script turned the whole swap off.
 - The one-off parity test holds data that compresses like CI data: the
   files of `/usr` and the tool cache, read into memory. Reason: zram
   stores zero pages almost free and gains nothing on random data, so
@@ -205,8 +215,9 @@ Open. The options check of decision 1 found it on 23 November 2026.
 - **Source:** Review.
 - **Category:** Test.
 - **Location:** `image/smoke-workflow.yml` and `docs/protocol/labels.md`.
-- **Background:** Milestone 4 runs the parity test once. The release smoke
-  runs `image/smoke-workflow.yml` in a real job VM for each image release.
+- **Background:** Milestone 4 runs the parity test once. The live smoke
+  workflows run in a real job VM and in a Boat job. Their swap steps check
+  only that the swap is active.
 - **Problem:** Nothing checks the headroom after this change. A lost
   kernel option, a Boat kernel without zram, or a change of GitHub's
   runners can bring back the gap.
@@ -232,7 +243,8 @@ Open. The options check of decision 1 found it on 23 November 2026.
 
 ### 4. The build fails when a zram option is lost
 
-Open. The options check of decision 1 found it on 23 November 2026.
+Answered on 23 November 2026: A. The options check of decision 1 found it
+on the same day.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Review.
@@ -268,21 +280,21 @@ Depends on: none
 State the swap as a requirement of both builds and as part of what a label
 gives a job.
 
-- [ ] In `docs/protocol/agent-images.md`, under "One definition, two
+- [x] In `docs/protocol/agent-images.md`, under "One definition, two
       builds", state that a Linux job starts with a zram swap the size of
       its memory, capped at 8 GiB, in both builds. State the decision with
       its rejected options. State that a Boat kernel without zram gives no
       swap, and that the job still runs.
-- [ ] In `docs/protocol/labels.md`, state under the size term that a Linux
+- [x] In `docs/protocol/labels.md`, state under the size term that a Linux
       job also gets the compressed swap, and that the size itself does not
       change.
-- [ ] Update `image/README.md` and `image/checks.md` with the kernel
+- [x] Update `image/README.md` and `image/checks.md` with the kernel
       options, the swap unit, and the new checks.
-- [ ] In `image/boat-build-steps.md` and the reason text of
+- [x] In `image/boat-build-steps.md` and the reason text of
       `image/boat_build_native.py:30`, say that the Boat build still
       removes the Azure swap, and that ciproxy adds its zram swap at
       launch.
-- [ ] Update the site pages `ts/site/src/content/docs/docs/reference/labels.mdx`
+- [x] Update the site pages `ts/site/src/content/docs/docs/reference/labels.mdx`
       and `ts/site/src/content/docs/docs/how-ciproxy-works.md` with the
       swap of a Linux job.
 
@@ -290,29 +302,35 @@ gives a job.
 
 Depends on: 1
 
-- [ ] In `image/build-kernel.sh`, turn on `CONFIG_ZRAM`,
+- [x] In `image/build-kernel.sh`, turn on `CONFIG_ZRAM`,
       `CONFIG_ZRAM_BACKEND_ZSTD`, and `CONFIG_ZRAM_DEF_COMP_ZSTD` with
       `scripts/config` before `olddefconfig`.
-- [ ] After `olddefconfig`, apply the answer of decision 4.
-- [ ] Update the fixture of `image/check-kernel-metadata.py` for the new
+- [x] After `olddefconfig`, apply the answer of decision 4.
+- [x] Update the fixture of `image/check-kernel-metadata.py` for the new
       `scripts/config` call, and run the check.
 
 ## Milestone 3: The swap unit
 
 Depends on: 2
 
-- [ ] Add `image/ciproxy-swap.sh` and `image/ciproxy-swap.service`, as
+- [x] Add `image/ciproxy-swap.sh` and `image/ciproxy-swap.service`, as
       the design says.
-- [ ] Install both in `image/provision.sh` in both modes. Enable the unit
+- [x] Install both in `image/provision.sh` in both modes. Enable the unit
       in the machine mode, ordered before `ciproxy-guest.service`.
-- [ ] Run the script from `image/boat-start.sh` before the Boat guest
+- [x] Run the script from `image/boat-start.sh` before the Boat guest
       starts.
-- [ ] Add `image/check-swap.py`, which runs the script against a fake
+- [x] Add `image/check-swap.py`, which runs the script against a fake
       `/sys`, `/proc`, and fake tools. Cover the size cap, the order of
       the compressor and the size, the zstd fallback, the module load,
       the active swap, and the warning when zram is missing.
-- [ ] Add a step to `image/smoke-workflow.yml` that checks that a zram
+- [x] Add a step to `image/smoke-workflow.yml` that checks that a zram
       swap of the expected size is active at job start.
+- [x] Add a `swap` mode to
+      `crates/ciproxy-agent/scripts/github-smoke-workflow.yml` that does
+      the same check in a job VM, and document it in
+      `crates/ciproxy-agent/smoke-checks.md`.
+- [x] Keep the swap when only the `vm.page-cluster` write fails, and list
+      the swap step of Boat launch in `image/boat.md`.
 - [ ] Apply the answer of decision 3.
 
 ## Milestone 4: Verification, commit, review, and pull request
@@ -323,7 +341,7 @@ Depends on: every other milestone
       named in `AGENTS.md`.
 - [ ] Build the machine image and start one job VM on a disposable KVM
       machine. Record MemTotal, and correct the figures of this plan and
-      the docs. Check that `swapon --show` lists the zram device.
+      the docs. Run the `swap` mode of the agent smoke workflow.
 - [ ] Run a `ciproxy` job that holds 9.25 GiB of CI-like data, as the
       design calls say, and check that it passes.
 - [ ] Start one Boat sandbox from a test snapshot. Record whether Boat
