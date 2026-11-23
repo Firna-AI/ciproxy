@@ -5,12 +5,20 @@ use std::fs;
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 
+use super::area;
 use crate::boundaries::Service;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos::area_access::{Access, FULL_DISK_ACCESS_REPAIR, clear_result, wait_result};
 use crate::macos::launchd::{agent_plist, launchctl, newsyslog_conf};
-use crate::macos::paths::{AGENT_PLIST, BINARY, BINARY_FOLDER, LOG_FOLDER, NEWSYSLOG};
+use crate::macos::paths::{
+    AGENT_PLIST, BINARY, BINARY_FOLDER, CONTROL, LOG, LOG_FOLDER, NEWSYSLOG,
+};
 use crate::persistence::private_directory;
+
+/// How long install waits for the daemon's access check.
+const ACCESS_WAIT: Duration = Duration::from_secs(30);
 
 pub(crate) struct LaunchdService;
 
@@ -20,12 +28,20 @@ impl Service for LaunchdService {
         private_directory(Path::new(LOG_FOLDER))?;
         write_public(Path::new(NEWSYSLOG), newsyslog_conf().as_bytes())?;
         write_public(Path::new(AGENT_PLIST), agent_plist().as_bytes())?;
+        let other_disk = area::record()?.is_some_and(|record| record.disk.is_some());
+        if other_disk {
+            clear_result(Path::new(CONTROL))?;
+        }
         if loaded() {
-            launchctl_run(&launchctl::restart_agent())
+            launchctl_run(&launchctl::restart_agent())?;
         } else {
             launchctl_run(&launchctl::bootstrap_agent())?;
-            launchctl_run(&launchctl::enable_agent())
+            launchctl_run(&launchctl::enable_agent())?;
         }
+        if other_disk {
+            daemon_access()?;
+        }
+        Ok(())
     }
 
     fn stop(&self) -> Result<()> {
@@ -55,6 +71,26 @@ impl Service for LaunchdService {
                 Err(error).context("remove agent logs")
             }
             _ => Ok(()),
+        }
+    }
+}
+
+/// Wait for the daemon's first access check of an area on another disk.
+/// The daemon writes the result at start, so it comes within seconds. With
+/// no result, install goes on and names the log.
+fn daemon_access() -> Result<()> {
+    match wait_result(Path::new(CONTROL), ACCESS_WAIT, Duration::from_millis(250)) {
+        Some(Access::Open) => Ok(()),
+        Some(Access::Blocked) => Err(Error::Preparation {
+            component: "area volume",
+            repair: FULL_DISK_ACCESS_REPAIR,
+        }),
+        None => {
+            tracing::warn!(
+                log = LOG,
+                "the agent has not checked its area volume yet; check the log"
+            );
+            Ok(())
         }
     }
 }

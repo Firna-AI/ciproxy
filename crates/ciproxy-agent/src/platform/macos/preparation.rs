@@ -14,6 +14,7 @@ use super::recovery::remove_orphans;
 use crate::boundaries::{Images, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos::area_access::{Access, FULL_DISK_ACCESS_REPAIR, probe, record_result};
 use crate::macos::area_disk::AreaDisk;
 use crate::macos::guests::VmFolders;
 use crate::macos::hardware::install_check;
@@ -75,6 +76,9 @@ impl Preparation for MacPreparation {
                 "Mount the ciproxy volume in Disk Utility. Then restart the agent.",
             )
         })?;
+        if record.disk.is_some() {
+            check_access()?;
+        }
         let folders = VmFolders {
             area: PathBuf::from(AREA),
         };
@@ -94,6 +98,22 @@ impl Preparation for MacPreparation {
             }
             _ => Ok(()),
         }
+    }
+}
+
+/// Check that this process can use an area on another disk, and keep the
+/// result for install. See [`crate::macos::area_access`].
+fn check_access() -> Result<()> {
+    let access = probe(Path::new(AREA))?;
+    if let Err(error) = record_result(Path::new(CONTROL), access) {
+        tracing::warn!(%error, "install cannot read the area access result");
+    }
+    match access {
+        Access::Open => Ok(()),
+        Access::Blocked => Err(Error::Preparation {
+            component: "area volume",
+            repair: FULL_DISK_ACCESS_REPAIR,
+        }),
     }
 }
 

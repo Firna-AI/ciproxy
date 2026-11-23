@@ -12,7 +12,8 @@ use std::path::{Path, PathBuf};
 use super::area_target::target;
 use super::diskutil::{Plist, area_error, diskutil, info_value, new_device, run_checked};
 use crate::error::{Error, ErrorResultExt, Result};
-pub(crate) use crate::macos::area_disk::AreaRecord;
+pub(crate) use crate::macos::area_access::clear_result;
+use crate::macos::area_disk::AreaRecord;
 use crate::macos::area_disk::{AreaDisk, Deletion, MISSING_REPAIR, area_mounted, deletion};
 use crate::macos::paths::{AREA, CONTROL};
 use crate::persistence::{atomic_private_write, private_directory};
@@ -201,6 +202,7 @@ pub(crate) fn remove() -> Result<()> {
     }
     remove_mount_point()?;
     remove_fstab_line(&record.volume_uuid)?;
+    clear_result(Path::new(CONTROL))?;
     // The record goes last, so a failed step above repeats on a retry.
     std::fs::remove_file(record_path()).context("remove the area record")
 }
