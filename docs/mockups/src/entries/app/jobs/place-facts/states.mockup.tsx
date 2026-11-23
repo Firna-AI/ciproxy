@@ -29,8 +29,8 @@ export const spendUncounted = defineScreen({
   description:
     "Every own slot runs a job and six jobs wait. The API gives no safe count of the Boat costs, so Boat starts no new sandbox, and the notice promises no Boat start.",
   rationale:
-    "overflow.md: when a start has no safe bound, new starts wait until that cost resolves. The API then leaves out whether the spend reached the limit.",
-  relatedDocs: related("overflow", "jobRouting"),
+    "overflow-spend.md: when a start has no safe bound, the limit holds new starts on that provider until that cost resolves. The API then leaves out whether the spend reached the limit.",
+  relatedDocs: related("overflowSpend", "overflow", "jobRouting"),
   address,
   render: (_props, context) => (
     <JobsLiveScreen viewport={context.viewport} state="spend-uncounted" />
@@ -43,7 +43,7 @@ export const limitBoatOnly = defineScreen({
   description:
     "Boat reached its spend limit. Six jobs of ciproxy wait for a free own slot. No own machine runs ciproxy-16vcpu, so its two jobs cannot take a free slot, and the notice says that only the jobs whose label fits your machines wait there. Raise the limit opens the overflow settings.",
   rationale,
-  relatedDocs: related("overflow", "labels", "jobRouting"),
+  relatedDocs: related("overflow", "overflowSpend", "labels", "jobRouting"),
   address,
   render: (_props, context) => (
     <JobsLiveScreen viewport={context.viewport} state="limit-boat-only" />

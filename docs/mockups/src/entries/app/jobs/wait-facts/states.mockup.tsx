@@ -26,7 +26,7 @@ export const largestBoat = defineScreen({
   slug: "largest-boat",
   title: "A label starts on the largest Boat size",
   description:
-    "Friday 27 November: ciproxy-32vcpu now runs on the largest size when nothing fits. Boat is the first available provider of its order, so its jobs start on Boat xlarge. Two load tests wait for their sandbox, and the notice says where the jobs of the label run.",
+    "Friday 27 November: ciproxy-32vcpu now runs on the largest size when nothing fits. Boat is the first provider of its order that can take jobs, so its jobs start on Boat xlarge. Two load tests wait for their sandbox, and the notice says where the jobs of the label run.",
   rationale:
     "labels.md: the live queue shows where the jobs of each label run now. The largest size can be smaller than the label, so the notice names both. It names the full request with fits, and no resource that is short, because the API does not say which one is.",
   relatedDocs: related("labels", "overflow", "jobRouting"),

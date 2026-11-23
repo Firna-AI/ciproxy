@@ -1,11 +1,12 @@
 // The spend of each provider account of mokly-ai in November, apart by what
-// the provider confirmed and what it has not confirmed yet, as "Spend limit"
-// of overflow.md says. A cost that a provider has not confirmed counts at its
-// bound: the hourly price of its size for the whole sandbox lifetime, plus
-// the highest start fee on Boat. A bound whose lifetime ended without a
-// report stays counted, and it stays unconfirmed. The two parts add up to the
-// spend of the month in overflow.ts. In the what-ifs with two providers,
-// Second provider took a part of the spend that Boat has in the main story.
+// the provider confirmed and what it has not confirmed yet, as "What the
+// limit counts" of overflow-spend.md says. A cost that a provider has not
+// confirmed counts at its bound: the hourly price of its size for the whole
+// sandbox lifetime, plus the highest start fee on Boat. A bound whose
+// lifetime ended without a report stays counted, and it stays unconfirmed.
+// The two parts add up to the spend of the month in overflow.ts. In the
+// what-ifs with two providers, Second provider took a part of the spend that
+// Boat has in the main story.
 
 import { boat, secondProvider } from "./overflow.ts";
 

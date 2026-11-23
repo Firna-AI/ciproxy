@@ -11,7 +11,7 @@ export const connectProvider = defineScreen({
     "The third step. The customer picks the overflow provider where ciproxy starts jobs when the machines are busy. Boat and Second provider, the fixture name of a later provider, are available in the deployment. Boat is picked, so the Boat form shows: an API key of the customer's own Boat account and the monthly spend limit on Boat. Check key asks Boat for the wallets of the key, which show under Boat branch. Skip for now continues without overflow. The other states of the step are under Provider step states.",
   rationale:
     "The user's decisions of 23 November 2026: a workspace can connect several providers, and each provider has its own monthly spend limit, so each connection asks for the limit of its provider. A provider that the workspace connects for the first time goes last in the order of each Linux label. The wallet choice is Boat's, so only the Boat branch asks for a wallet.",
-  relatedDocs: related("overflow", "security"),
+  relatedDocs: related("overflow", "overflowSpend", "security"),
   address: orgAddress("setup"),
   useCasePaths: [paths.flowFirstGreenJob, paths.flowSkipBoat],
   render: (_props, context) => (

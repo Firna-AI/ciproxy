@@ -13,7 +13,7 @@ export const twoProviders = defineScreen({
     "A what-if: mokly-ai connected Second provider, the fixture name of a later provider, on 9 November. The Overflow panel has a row for each provider, with its account and its spend of November against its own limit: Boat against $200 and Second provider against $100. The overflow wait shows once, under the rows, because it holds for every provider.",
   rationale:
     "The user's decisions of 23 November 2026: a workspace can connect several providers, and each provider has its own monthly spend limit.",
-  relatedDocs: related("overflow", "jobRouting"),
+  relatedDocs: related("overflow", "overflowSpend", "jobRouting"),
   address,
   render: (_props, context) => (
     <MachinesScreen viewport={context.viewport} state="two-providers" />

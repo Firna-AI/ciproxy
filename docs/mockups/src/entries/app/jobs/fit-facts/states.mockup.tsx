@@ -34,3 +34,17 @@ export const machinesOnly = defineScreen({
     <JobsLiveScreen viewport={context.viewport} state="machines-only" />
   ),
 });
+
+export const largestHeld = defineScreen({
+  slug: "largest-held",
+  title: "A largest-size label while its provider is at its limit",
+  description:
+    "Thursday 26 November: Boat reached its spend limit. ciproxy-32vcpu runs on the largest size when nothing fits, and Boat is the first connected and available provider of its order whose largest size holds the image. Boat cannot take jobs now, so the notice gives the reason of Boat, its spend limit, and not that nothing fits. Raise the limit opens the overflow settings for an Admin. The label list says Waits: Boat reached its spend limit for the label. The other labels run on the own machines, which have free slots.",
+  rationale:
+    "labels.md, A size that nothing can run: while a label with Run on the largest size waits because the provider that would run it cannot take jobs now, the label list and the Jobs notice give the reason of that provider, such as its spend limit.",
+  relatedDocs: related("labels", "jobRouting", "overflowSpend"),
+  address,
+  render: (_props, context) => (
+    <JobsLiveScreen viewport={context.viewport} state="largest-held" />
+  ),
+});

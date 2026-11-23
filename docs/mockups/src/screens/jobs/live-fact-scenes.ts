@@ -5,8 +5,8 @@
 // not counted, the Boat limit while a label that only Boat runs waits, a
 // refused Boat size of one label, a label whose order holds only Boat while
 // overflow is off, a label that no place of its order fits, a label whose
-// order holds no provider, a removed organization, and a quiet queue with no
-// warm runners. Each list shows every job that the API sends, so no row says
+// order holds no provider, a largest-size label while Boat is at its limit,
+// a removed organization, and a quiet queue with no warm runners. Each list shows every job that the API sends, so no row says
 // "N more". A full queue lists one running job in each own slot.
 
 import { none, own, rows, type Job } from "../../fixtures/jobs.ts";
@@ -35,6 +35,7 @@ export const factStates = [
   "providers-only-off",
   "nothing-fits-request",
   "machines-only",
+  "largest-held",
   "app-removed",
   "quiet-no-warm",
 ] as const;
@@ -204,6 +205,11 @@ export const factScenes: Readonly<Record<FactState, LiveScene>> = {
   ),
   "nothing-fits-request": scene(steadyRunning, nothingFits.waiting),
   "machines-only": scene(steadyRunning, nothingFits.waiting),
+  "largest-held": scene(
+    steadyRunning.filter((job) => job.where.kind === "own"),
+    largestBoat.waiting,
+    { warm: 3 },
+  ),
   "app-removed": scene(ownOrganizationJobs, [], { warm: 2 }),
   "quiet-no-warm": scene([], []),
 };

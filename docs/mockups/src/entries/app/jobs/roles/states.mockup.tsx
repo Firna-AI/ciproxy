@@ -13,7 +13,7 @@ export const viewer = defineScreen({
     "Jonas Weber, a Viewer, sees the live queue of 26 November at the Boat spend limit, read-only. In place of Raise the limit, he reads Ask an Admin, because only an Admin changes Settings, and Settings is not in his navigation.",
   rationale:
     "Every role sees the jobs of all repositories. A notice keeps its state for everyone, and only the role that may act gets its action.",
-  relatedDocs: related("security", "jobRouting", "overflow"),
+  relatedDocs: related("security", "jobRouting", "overflow", "overflowSpend"),
   address,
   render: (_props, context) => (
     <JobsLiveScreen

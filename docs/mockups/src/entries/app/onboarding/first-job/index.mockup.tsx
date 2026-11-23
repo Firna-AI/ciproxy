@@ -10,7 +10,7 @@ export const firstJob = defineScreen({
   title: "Run the first job",
   description:
     "The last step. The page shows the one-line change to runs-on and waits for the first job with the ciproxy label.",
-  relatedDocs: related("labels", "jobRouting"),
+  relatedDocs: related("labels", "jobRouting", "overflowSpend"),
   address: orgAddress("setup"),
   useCasePaths: [paths.flowFirstGreenJob],
   propSchema: stateSchema([
@@ -39,6 +39,7 @@ export const firstJob = defineScreen({
         "The provider step shows a dash, does not count as done, and links to Settings under Overflow. The first job is open. Setup completes with the first job, also without a provider.",
       rationale:
         "The API keeps no record of a skip, so a skip lasts only for the browser tab. Setup ends with the first job, so the provider step never holds a finished Setup open.",
+      relatedDocs: related("labels", "jobRouting"),
       props: { state: "provider-skipped" },
       useCasePaths: [paths.flowSkipBoat],
     },

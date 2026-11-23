@@ -7,7 +7,7 @@ export const adminSkipsBoat = defineUseCase({
   title: "Skip the provider step in setup, and connect Boat later",
   description:
     "Cal Moore has no Boat key at hand during setup. He skips the provider step, runs the first job on his own machine, and connects Boat later in Settings under Overflow. Boat then goes last in the order of each Linux label.",
-  relatedDocs: related("overflow", "security", "labels"),
+  relatedDocs: related("overflow", "overflowSpend", "security", "labels"),
   steps: [
     {
       screenPath: paths.connectProvider,

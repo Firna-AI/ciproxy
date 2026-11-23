@@ -4,12 +4,22 @@
 // sizes fits. A provider cannot take a job while the workspace switch is off,
 // while it is not connected or not available in the deployment, or while it
 // is at its limit, rejected the key, refuses new sandboxes, or waits for
-// billing. A place that cannot run the label is skipped. When no place can
-// run it, the label waits for the reason of the first place of its order
-// that fits its size. ciproxy reads the sizes of a provider from its
-// account, so a provider that is not connected counts as one that fits. When no place fits, "When nothing fits" decides: the
-// jobs wait, or they run on the largest size of the first provider of the
-// order that can take a job and whose largest size holds the image.
+// billing. A place that cannot run the label is skipped.
+//
+// When no place of the order fits, "When nothing fits" decides: the jobs
+// wait, or they run on the largest size of the first provider of the order
+// that can take a job and whose largest size holds the image. Only a
+// provider that is connected and available has known sizes, so only such a
+// provider can be a place that fits for this rule. While the provider that
+// would run such a label cannot take a job now, the label waits for its
+// reason, as "A size that nothing can run" of labels.md says. That provider
+// is the first connected and available provider of the order whose largest
+// size holds the image.
+//
+// Otherwise the jobs wait for the reason of the first place of the order
+// that fits the size. For the reason only, a provider that is not connected
+// or not available counts as one that fits, because ciproxy reads the sizes
+// of a provider from its account in the deployment.
 
 import type { Place } from "./label-order.ts";
 import { machineScenes, type Machine } from "./machines.ts";
@@ -67,6 +77,12 @@ export const boatUnavailable: PlaceContext = {
 /** The busy afternoon while "Use overflow providers" is off. */
 export const overflowOff: PlaceContext = { ...boatReady, overflowOn: false };
 
+/** The same moment while Boat is at its spend limit. */
+export const boatAtLimit: PlaceContext = {
+  ...boatReady,
+  providers: { boat: "limit" },
+};
+
 /** Why a provider cannot take a job now, or nothing when it can. */
 export function holdOf(
   provider: ProviderKey,
@@ -100,6 +116,15 @@ export function placeRuns(
   return holdOf(place, context) === undefined && fitsProvider(place, label);
 }
 
+/** ciproxy knows the sizes of a provider that is connected and available. */
+export function sizesKnown(
+  provider: ProviderKey,
+  context: PlaceContext,
+): boolean {
+  const hold = holdOf(provider, context);
+  return hold !== "not-connected" && hold !== "unavailable";
+}
+
 /** The provider whose largest size runs a label that nothing fits. */
 function largestProviderOf(
   label: Label,
@@ -123,17 +148,50 @@ export function placementOf(label: Label, context: PlaceContext): Placement {
     placeRuns(place, label, context),
   );
   if (places.length > 0) return { kind: "places", places };
+  const somePlaceFits = label.order.some(
+    (place) =>
+      place !== "machines" &&
+      sizesKnown(place, context) &&
+      fitsProvider(place, label),
+  );
+  if (!somePlaceFits && label.whenNothingFits === "largest-size") {
+    const largest = largestProviderOf(label, context);
+    if (largest) return { kind: "largest", provider: largest };
+    const held = heldLargestOf(label, context);
+    if (held) return waits(held);
+  }
+  return waits(waitReasonOf(label, context));
+}
+
+/**
+ * The reason of the provider that would run a label on its largest size,
+ * while it cannot take a job now: the first connected and available
+ * provider of the order whose largest size holds the image.
+ */
+function heldLargestOf(
+  label: Label,
+  context: PlaceContext,
+): WaitReason | undefined {
+  const provider = label.order.find(
+    (place): place is ProviderKey =>
+      place !== "machines" &&
+      sizesKnown(place, context) &&
+      largestHoldsImage(place),
+  );
+  const hold = provider ? holdOf(provider, context) : undefined;
+  return provider && hold ? { kind: "held", provider, hold } : undefined;
+}
+
+/**
+ * The reason of the first place of the order that fits the size. A provider
+ * with unknown sizes counts as one that fits, for the reason only.
+ */
+function waitReasonOf(label: Label, context: PlaceContext): WaitReason {
   for (const place of label.order) {
     if (place === "machines") continue;
+    if (sizesKnown(place, context) && !fitsProvider(place, label)) continue;
     const hold = holdOf(place, context);
-    if (hold !== "not-connected" && !fitsProvider(place, label)) continue;
-    if (hold) return waits({ kind: "held", provider: place, hold });
+    if (hold) return { kind: "held", provider: place, hold };
   }
-  const largest =
-    label.whenNothingFits === "largest-size"
-      ? largestProviderOf(label, context)
-      : undefined;
-  return largest
-    ? { kind: "largest", provider: largest }
-    : waits({ kind: "nothing-fits" });
+  return { kind: "nothing-fits" };
 }

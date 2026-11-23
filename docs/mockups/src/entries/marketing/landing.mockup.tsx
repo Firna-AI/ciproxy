@@ -18,6 +18,7 @@ export const landing = defineScreen({
     "security",
     "securityIsolation",
     "securityData",
+    "overflowSpend",
   ),
   address: siteAddress(),
   useCasePaths: [paths.flowLandingToSignIn],

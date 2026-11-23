@@ -26,7 +26,13 @@ const savedOnBlacksmith = savings.alternatives.blacksmith - yourCost;
 export const peakOverflowToBoat = defineUseCase({
   title: "A peak in which jobs overflow to Boat",
   description: `mokly-ai on Team with three own machines and Boat as its one provider. The order of each label is the own machines, then Boat. A release on ${formatDay(releaseDay)} fills every own slot; ciproxy starts runners on Boat for the jobs that wait, and the savings report of the last 30 days, which end that day, shows what the overflow cost.`,
-  relatedDocs: related("jobRouting", "overflow", "labels", "metering"),
+  relatedDocs: related(
+    "jobRouting",
+    "overflow",
+    "overflowSpend",
+    "labels",
+    "metering",
+  ),
   steps: [
     {
       screenPath: paths.jobs,

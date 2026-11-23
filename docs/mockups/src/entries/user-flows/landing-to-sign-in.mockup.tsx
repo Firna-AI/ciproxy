@@ -9,7 +9,7 @@ export const landingToSignIn = defineUseCase({
   title: "A visitor goes from the landing page to sign-in",
   description:
     "A developer whose team pays too much for hosted runners finds ciproxy.dev, checks the setup in the quickstart, compares the plans, and signs in with GitHub.",
-  relatedDocs: related("architecture", "billing", "security"),
+  relatedDocs: related("architecture", "billing", "overflowSpend", "security"),
   steps: [
     {
       screenPath: paths.landing,

@@ -4,9 +4,9 @@
 // platform with a lock, as it shows the name. A macOS label runs on the Macs
 // only, because a cloud Mac bills 24 hours at least, so its dialog has no
 // choice of "When nothing fits": its jobs wait for a free Mac. The largest
-// size names no provider: it is the largest size of the first available
-// provider of the order whose largest size holds the image. An order with no
-// provider says to add one first.
+// size names no provider: it is the largest size of the first provider of
+// the order that can take jobs and whose largest size holds the image. An
+// order with no provider says to add one first.
 
 import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 import { SegmentedControl } from "@firna/ui/segmented";
@@ -66,7 +66,7 @@ export function WhenNothingFitsField({ label }: { label: Label }) {
         title="Run on the largest size"
         body={
           providersOf(label.order).length > 0
-            ? "Jobs run on the largest size of the first available provider of the order."
+            ? "Jobs run on the largest size of the first provider of the order that can take jobs."
             : "Add a provider to the order to use this choice."
         }
         checked={label.whenNothingFits === "largest-size"}

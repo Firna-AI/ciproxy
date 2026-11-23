@@ -27,7 +27,7 @@ export const spendLimit = defineScreen({
   title: "Boat reached the spend limit",
   description:
     "Boat spend reached the monthly limit that the customer set. Jobs run on own machines only and wait longer for a slot; Raise the limit opens the overflow settings.",
-  relatedDocs: related("jobRouting", "overflow", "metering"),
+  relatedDocs: related("jobRouting", "overflow", "overflowSpend", "metering"),
   address,
   render: (_props, context) => (
     <JobsLiveScreen viewport={context.viewport} state="spend-limit" />

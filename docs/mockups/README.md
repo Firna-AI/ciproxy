@@ -146,12 +146,16 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   of a label that only Boat runs, of a label whose Boat size Boat refused,
   and of a label whose order holds only Boat while overflow is off.
   `fit-facts` shows a label that no place of its order fits, with its full
-  request, and a label whose order holds the own machines only.
+  request, a label whose order holds the own machines only, and a label that
+  runs on the largest size while Boat, which would run it, is at its limit.
 - When no place of the order of a label can take a job now, the label list
   and the Jobs notice give the reason of the first place of the order that
   fits the size, such as "overflow providers are off" or the spend limit of
-  that provider. Both take the reason from `placementOf` in `placement.ts`,
-  and `src/components/hold-text.ts` words it.
+  that provider. A label that runs on the largest size gives the reason of
+  the provider that would run it: the first connected and available provider
+  of the order whose largest size holds the image. Both take the reason from
+  `placementOf` in `placement.ts`, and `src/components/hold-text.ts` words
+  it.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -306,9 +310,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the key of Cal Moore can use.
 - `src/components/provider-spend.tsx`: the spend of one provider in the month
   against its own monthly limit, on Settings under Overflow and on the
-  Machines page. As the [overflow doc](../protocol/overflow.md#spend-limit)
-  asks, it shows the costs that the provider confirmed and the costs that it
-  has not confirmed yet apart. `src/fixtures/provider-spend.ts` splits each
+  Machines page. As the
+  [spend doc](../protocol/overflow-spend.md#what-the-limit-counts) asks, it
+  shows the costs that the provider confirmed and the costs that it has not
+  confirmed yet apart. `src/fixtures/provider-spend.ts` splits each
   total of November into these two parts. Each total comes from
   `overflow.ts`: the spend of the month, or the limit when the spend reaches
   it. The unconfirmed part holds each start that the provider has not

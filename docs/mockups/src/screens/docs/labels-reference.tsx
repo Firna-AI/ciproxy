@@ -192,8 +192,8 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
           A job whose size fits none of your machines runs on a provider of its
           order that has a size that fits. When no place of the order fits, the
           label setting <strong>When nothing fits</strong> decides: its jobs
-          wait, or run on the largest size of the first available provider of
-          the order.
+          wait, or run on the largest size of the first provider of the order
+          that can take jobs.
         </Notice>
         <DocsH2 id="where-jobs-run">Where a job runs</DocsH2>
         <p>

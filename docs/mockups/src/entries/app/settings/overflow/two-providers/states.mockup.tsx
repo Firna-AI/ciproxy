@@ -5,7 +5,7 @@ import { orgAddress } from "../../../../../fixtures/org.ts";
 import { OverflowScreen } from "../../../../../screens/settings/overflow.tsx";
 
 const address = orgAddress("settings/overflow");
-const docs = related("overflow", "labels", "jobRouting");
+const docs = related("overflow", "overflowSpend", "labels", "jobRouting");
 
 const rationale =
   "The user's decisions of 23 November 2026: a workspace can connect several providers, each with one active key, its own Change key and Disconnect, and its own monthly spend limit. A provider that the workspace connects for the first time goes last in the order of each Linux label. Second provider is a fixture name, because this change ships no second real provider.";

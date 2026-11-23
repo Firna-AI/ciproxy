@@ -7,7 +7,7 @@ export const adminChangesBoatKey = defineUseCase({
   title: "Change the Boat key, then disconnect Boat",
   description:
     "Cal Moore replaces the Boat key of mokly-ai, and later disconnects Boat, its one provider. Each connection asks for the spend limit on Boat, and running Boat jobs always finish. The labels keep Boat in their order while it is not connected.",
-  relatedDocs: related("overflow", "security", "labels"),
+  relatedDocs: related("overflow", "overflowSpend", "security", "labels"),
   steps: [
     {
       screenPath: paths.overflow,

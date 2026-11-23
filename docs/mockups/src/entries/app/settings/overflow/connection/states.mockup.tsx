@@ -6,7 +6,7 @@ import { orgAddress } from "../../../../../fixtures/org.ts";
 import { OverflowScreen } from "../../../../../screens/settings/overflow.tsx";
 
 const address = orgAddress("settings/overflow");
-const docs = related("overflow", "security");
+const docs = related("overflow", "overflowSpend", "security");
 
 export const notConnected = defineScreen({
   slug: "not-connected",
@@ -64,7 +64,7 @@ export const unavailable = defineScreen({
   title: "No provider is available",
   description:
     "The deployment runs without the settings of every provider, so no connection can start, and jobs run on own machines only. Try again reads the settings again. When only some providers are unavailable, the provider choice shows each of them as unavailable right now, as setup does.",
-  relatedDocs: docs,
+  relatedDocs: related("overflow", "security"),
   address,
   render: (_props, context) => (
     <OverflowScreen viewport={context.viewport} state="unavailable" />

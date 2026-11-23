@@ -12,6 +12,7 @@ export const firstGreenJob = defineUseCase({
     "security",
     "agent",
     "overflow",
+    "overflowSpend",
     "labels",
     "jobRouting",
   ),

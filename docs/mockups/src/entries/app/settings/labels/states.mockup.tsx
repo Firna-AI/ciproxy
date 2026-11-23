@@ -38,7 +38,7 @@ export const nothingFits = defineScreen({
   slug: "nothing-fits",
   title: "A size that nothing fits",
   description:
-    "ciproxy-32vcpu asks for 32 vCPU, 128 GB, and 200 GB of free disk, more than any own machine and the largest Boat size, and each row of the order says so. Its setting When nothing fits decides: Wait, the default, keeps its jobs queued; Run on the largest size starts them on the largest size of the first available provider of the order, here Boat xlarge, 16 vCPU and 32 GB. The 251 GB disk of that size holds the image but gives a job less free disk than the label.",
+    "ciproxy-32vcpu asks for 32 vCPU, 128 GB, and 200 GB of free disk, more than any own machine and the largest Boat size, and each row of the order says so. Its setting When nothing fits decides: Wait, the default, keeps its jobs queued; Run on the largest size starts them on the largest size of the first provider of the order that can take jobs, here Boat xlarge, 16 vCPU and 32 GB. The 251 GB disk of that size holds the image but gives a job less free disk than the label.",
   rationale:
     "A label can stop fitting after a machine leaves or a provider plan changes, so ciproxy never rejects such a label on save. The answer to item 77: the largest size can give less free disk than the label, as it gives less vCPU and memory, but never a size that cannot hold the image. The setting names no provider, because the order can hold several.",
   relatedDocs: relatedMvp("labels", "jobRouting", "overflow"),

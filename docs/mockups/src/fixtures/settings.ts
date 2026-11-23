@@ -23,8 +23,8 @@ import { defaultLabelSize, defaultMacosLabelSize, type Size } from "./sizes.ts";
 
 /**
  * The label setting "When nothing fits": wait, or run on the largest size of
- * the first available provider of the order whose largest size holds the
- * image.
+ * the first provider of the order that can take jobs and whose largest size
+ * holds the image.
  */
 export type WhenNothingFits = "wait" | "largest-size";
 

@@ -7,7 +7,7 @@ export const newMachineGetsImage = defineUseCase({
   title: "A new machine gets its job image",
   description:
     "On the busy afternoon of 18 November, Cal Moore adds a fourth AX42, hetzner-ax42-4. The machine connects at once, and then it gets its first job image. Every page that shows it says that it takes no job until the image is ready, and the other machines and Boat run the jobs meanwhile.",
-  relatedDocs: relatedMvp("agent", "jobRouting", "metering"),
+  relatedDocs: relatedMvp("agent", "jobRouting", "metering", "overflowSpend"),
   steps: [
     {
       screenPath: paths.addMachine,

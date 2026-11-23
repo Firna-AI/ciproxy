@@ -5,7 +5,7 @@ import { orgAddress } from "../../../../../fixtures/org.ts";
 import { OverflowScreen } from "../../../../../screens/settings/overflow.tsx";
 
 const address = orgAddress("settings/overflow");
-const docs = related("overflow", "jobRouting");
+const docs = related("overflowSpend", "overflow", "jobRouting");
 
 export const limitReached = defineScreen({
   slug: "limit-reached",
@@ -14,7 +14,7 @@ export const limitReached = defineScreen({
     "The confirmed and the unconfirmed Boat costs together reached the limit on Boat. ciproxy starts no new jobs on Boat until the month ends or the limit rises, and the labels go on to their next place. The title names the budget month, November, as the Jobs notice does. The date when Boat takes jobs again is the first day of the next month in UTC, and the budget month is the UTC month before it.",
   rationale:
     "The user's answer C to item 109, 8 November 2026: the notice names the budget month and the day when Boat takes jobs again. Both come from the API date of the next month, and the API gives no day on which the spend reached the limit. Each provider has its own limit, so the notice names the provider.",
-  relatedDocs: relatedMvp("overflow", "jobRouting"),
+  relatedDocs: relatedMvp("overflowSpend", "overflow", "jobRouting"),
   address,
   render: (_props, context) => (
     <OverflowScreen viewport={context.viewport} state="limit-reached" />

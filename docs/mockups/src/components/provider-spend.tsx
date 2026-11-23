@@ -1,9 +1,10 @@
 // The spend of one provider in the month against its monthly limit, as
 // Settings under Overflow and the Machines page show it: the costs that the
 // provider confirmed and the costs that it has not confirmed yet, each with
-// its own figure and never as one combined figure, as "Spend limit" of
-// overflow.md says. The bar stacks both parts against the limit. A bound
-// whose lifetime ended without a report stays with the unconfirmed costs.
+// its own figure and never as one combined figure, as "What the limit
+// counts" of overflow-spend.md says. The bar stacks both parts against the
+// limit. A bound whose lifetime ended without a report stays with the
+// unconfirmed costs.
 
 import { formatMoney } from "../fixtures/format.ts";
 import type { ProviderSpend } from "../fixtures/provider-spend.ts";

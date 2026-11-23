@@ -14,7 +14,7 @@ export const viewer = defineScreen({
     "Jonas Weber, a Viewer, sees the three machines, their slots, and the Boat spend, read-only. The page has no Add machine and no link to the overflow settings, and Settings is not in his navigation. A machine opens its page read-only.",
   rationale:
     "Only an Admin changes the machines and the providers, so the read-only roles see the state without the actions.",
-  relatedDocs: related("security", "agent"),
+  relatedDocs: related("security", "agent", "overflowSpend"),
   address,
   render: (_props, context) => (
     <MachinesScreen viewport={context.viewport} state="steady" role="viewer" />
@@ -26,7 +26,7 @@ export const billing = defineScreen({
   title: "Machines, seen by a Billing person",
   description:
     "Dana Kim has the Billing role. A fourth machine passed the three of Team, and the banner gives her its action, Plan and usage, because she pays. She cannot add a machine or open the overflow settings.",
-  relatedDocs: related("security", "billing", "metering"),
+  relatedDocs: related("security", "billing", "metering", "overflowSpend"),
   address,
   render: (_props, context) => (
     <MachinesScreen

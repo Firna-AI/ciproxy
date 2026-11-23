@@ -7,6 +7,9 @@ import { OnboardingScreen } from "../../../../../screens/onboarding/onboarding.t
 const address = orgAddress("setup");
 const docs = related("overflow", "security");
 
+/** The docs of the states whose form asks for the spend limit. */
+const formDocs = related("overflow", "overflowSpend", "security");
+
 export const secondProvider = defineScreen({
   slug: "second-provider",
   title: "Second provider is picked",
@@ -14,7 +17,7 @@ export const secondProvider = defineScreen({
     "Cal picks Second provider, the fixture name of a later provider. Its form asks for its API key and the monthly spend limit on Second provider. It has no wallets, so Connect Second provider checks the key and connects in one step. The plan of the real second provider sets its key check and its copy.",
   rationale:
     "The user's decisions of 23 November 2026: several providers, one spend limit for each provider, and no second real provider in this change, so a fixture name stands in for it.",
-  relatedDocs: docs,
+  relatedDocs: formDocs,
   address,
   render: (_props, context) => (
     <OnboardingScreen viewport={context.viewport} state="second-provider" />
@@ -26,7 +29,7 @@ export const unavailable = defineScreen({
   title: "Boat is unavailable",
   description:
     "The deployment runs without the Boat settings, so Boat shows as unavailable right now and cannot be picked. Second provider is available and picked, with its form. Skip for now continues to the first job.",
-  relatedDocs: docs,
+  relatedDocs: formDocs,
   address,
   render: (_props, context) => (
     <OnboardingScreen

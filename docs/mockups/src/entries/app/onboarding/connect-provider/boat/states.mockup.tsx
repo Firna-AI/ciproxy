@@ -6,7 +6,7 @@ import { orgAddress } from "../../../../../fixtures/org.ts";
 import { OnboardingScreen } from "../../../../../screens/onboarding/onboarding.tsx";
 
 const address = orgAddress("setup");
-const docs = related("overflow", "security");
+const docs = related("overflow", "overflowSpend", "security");
 
 export const chooseWallet = defineScreen({
   slug: "choose-wallet",
@@ -15,7 +15,7 @@ export const chooseWallet = defineScreen({
     "Boat accepted the key. The form lists the wallets that the key can use: Cal Moore's personal wallet and the wallets of the Boat organizations mokly and driftwood. The key check names mokly as likely, so it starts picked, and Cal can pick another wallet. Connect Boat then connects the key, the wallet, and the limit. A change of the key clears the wallets, and Check key runs again.",
   rationale:
     "The owner's answer B to item 94, 8 November 2026: after the key check, the form lists the personal wallet and each Boat organization wallet, with the likely one preselected. Each Boat organization has its own wallet. Wallets are a Boat thing, so only the Boat branch shows them.",
-  relatedDocs: relatedMvp("overflow", "security"),
+  relatedDocs: relatedMvp("overflow", "overflowSpend", "security"),
   address,
   useCasePaths: [paths.flowFirstGreenJob],
   render: (_props, context) => (

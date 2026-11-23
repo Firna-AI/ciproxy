@@ -15,6 +15,7 @@ const docs = {
   labels: "docs/protocol/labels.md",
   metering: "docs/protocol/metering.md",
   overflow: "docs/protocol/overflow.md",
+  overflowSpend: "docs/protocol/overflow-spend.md",
   paidMoves: "docs/protocol/billing-paid-moves.md",
   security: "docs/protocol/security.md",
   securityData: "docs/protocol/security-data.md",

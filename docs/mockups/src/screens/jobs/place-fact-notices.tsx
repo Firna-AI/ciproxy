@@ -1,7 +1,8 @@
 // The notices of waiting labels from the facts of the API: a label that no
 // place of its order fits, a label whose order holds no provider, a label
-// whose Boat size Boat refused while other labels still start on Boat, and a
-// label whose order holds only Boat while overflow is off.
+// whose Boat size Boat refused while other labels still start on Boat, a
+// label whose order holds only Boat while overflow is off, and a label that
+// runs on the largest size while Boat, which would run it, is at its limit.
 // A fit notice names the full request with "fits" and never names the
 // resource that is short, because the API does not say which one is. A
 // refused size holds only its own label, so the full queue still promises
@@ -17,9 +18,10 @@ import { unbroken } from "../../fixtures/format.ts";
 import type { Role } from "../../fixtures/members.ts";
 import { providersOnlyLabel } from "../../fixtures/order-scenes.ts";
 import { overflow } from "../../fixtures/overflow.ts";
-import { overflowOff } from "../../fixtures/placement.ts";
+import { boatAtLimit, overflowOff } from "../../fixtures/placement.ts";
 import { boatOnlyLabel, nothingFitsLabel } from "../../fixtures/settings.ts";
 import type { Size } from "../../fixtures/sizes.ts";
+import { largestBoat } from "../../fixtures/wait-facts.ts";
 import { HeldNotice } from "./held-notice.tsx";
 import type { LiveScene, LiveState } from "./live-scenes.ts";
 
@@ -86,6 +88,15 @@ export function placeFactNotice(
         <HeldNotice
           label={providersOnlyLabel}
           context={overflowOff}
+          count={scene.waiting}
+          role={role}
+        />
+      );
+    case "largest-held":
+      return (
+        <HeldNotice
+          label={largestBoat.label}
+          context={boatAtLimit}
           count={scene.waiting}
           role={role}
         />

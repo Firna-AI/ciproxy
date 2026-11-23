@@ -6,7 +6,7 @@ import { orgAddress } from "../../../../../fixtures/org.ts";
 import { OverflowScreen } from "../../../../../screens/settings/overflow.tsx";
 
 const address = orgAddress("settings/overflow");
-const docs = relatedMvp("overflow", "security");
+const docs = relatedMvp("overflow", "overflowSpend", "security");
 
 export const connect = defineScreen({
   slug: "connect",
