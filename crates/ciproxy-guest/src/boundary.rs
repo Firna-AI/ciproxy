@@ -51,6 +51,10 @@ pub enum RunnerEvent {
 pub trait Runner: Send {
     /// Start one listener with one just-in-time registration.
     async fn start(&mut self, registration: Secret) -> Result<()>;
+    /// Root process for observing a stock runner's descendants, if available.
+    fn pid(&self) -> Option<u32> {
+        None
+    }
     /// Wait for readiness or exit while the supervisor handles commands.
     fn next_event(&mut self) -> EventFuture<'_>;
     /// Stop the runner when the agent explicitly sends `Shutdown`.

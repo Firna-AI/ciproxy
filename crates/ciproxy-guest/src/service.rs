@@ -11,6 +11,7 @@ use tracing::warn;
 
 use crate::boundary::{Channel, Power, Runner, RunnerEvent};
 use crate::error::Result;
+use crate::usage::Usage;
 
 /// One fresh VM or Boat namespace lifecycle.
 #[async_trait]
@@ -29,12 +30,14 @@ pub struct Supervisor {
     pub runner: Box<dyn Runner>,
     /// Shutdown appropriate for this image's execution mode.
     pub power: Box<dyn Power>,
+    pub(crate) usage: Option<Usage>,
 }
 
 #[async_trait]
 impl Guest for Supervisor {
     async fn run(&mut self) -> Result<()> {
         let result = self.run_one().await;
+        self.usage = None;
         let shutdown = self.power.shutdown().await;
         result?;
         shutdown
@@ -72,6 +75,9 @@ impl Supervisor {
                             .await;
                         return Err(error);
                     }
+                    if let Some(usage) = &mut self.usage {
+                        usage.runner_started(self.runner.pid(), &runner_id);
+                    }
                     let result = self.supervise(&runner_id).await;
                     if result.is_err() {
                         let exit = self.runner.stop().await;
@@ -90,10 +96,14 @@ impl Supervisor {
     }
 
     async fn report_exit(&mut self, runner_id: &RunnerId, exit: RunnerExit) {
+        let usage = match &mut self.usage {
+            Some(usage) => usage.finish().await,
+            None => None,
+        };
         self.report(GuestToAgent::RunnerExited {
             runner_id: runner_id.clone(),
             exit,
-            usage: None,
+            usage,
         })
         .await;
     }
@@ -147,6 +157,7 @@ impl Supervisor {
                 },
                 event = self.runner.next_event() => match event? {
                     RunnerEvent::Starting { job_id, runtime } => {
+                        if let Some(usage) = &mut self.usage { usage.handoff(); }
                         running = Some(job_id.clone());
                         self.report(GuestToAgent::JobStarting { runner_id: runner_id.clone(), job_id: job_id.clone(), runtime }).await;
                         if let Some(decision) = decision.clone() { self.prepare_job(runner_id, job_id.clone(), decision).await; }

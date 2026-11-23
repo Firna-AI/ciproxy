@@ -111,6 +111,10 @@ impl Runner for StockRunner {
         Ok(())
     }
 
+    fn pid(&self) -> Option<u32> {
+        self.process.as_ref()?.child.id()
+    }
+
     fn next_event(&mut self) -> EventFuture<'_> {
         Box::pin(async move {
             let running = self.process.as_mut().ok_or_internal("runner not started")?;

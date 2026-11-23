@@ -756,6 +756,15 @@ decision 7:
   the control plane keeps the samples of the newest sample report. Reason:
   those samples passed the checks.
 
+Design calls, my calls, 23 November 2026, from Milestone 5:
+
+- **Read gaps:** after a failed read, the guest keeps the longest unbroken
+  run of samples. Reason: the wire format holds no gap, and a rare failed
+  read then costs only the shorter run.
+- **One post in flight:** a Boat guest keeps at most one sample report in
+  flight, and it cancels that post when the runner exits. Reason: the exit
+  report must never wait for a sample report.
+
 Contract sketch, for the protocol crate:
 
 - Times in the agent protocol are whole milliseconds since the Unix epoch,
@@ -898,23 +907,23 @@ Depends on: 3
 
 The guest program measures Linux job VMs and Boat sandboxes.
 
-- [ ] Add the points to `ciproxy-guest`, without platform code: one sample
+- [x] Add the points to `ciproxy-guest`, without platform code: one sample
       per second, and the merge at 3,600 points. Test the merge with a fake
       clock.
-- [ ] Read the CPU from `/proc/stat`, the memory from `/proc/meminfo`, and
+- [x] Read the CPU from `/proc/stat`, the memory from `/proc/meminfo`, and
       the kills from `/proc/vmstat`. Test each reader with fixture files.
-- [ ] Start the samples at the job handoff in `vsock` mode. In `boat` mode,
+- [x] Start the samples at the job handoff in `vsock` mode. In `boat` mode,
       start them when the stock runner starts the worker process of its
       job. End them when the runner exits.
-- [ ] Send the samples with the exit report in `vsock` mode and in `boat`
+- [x] Send the samples with the exit report in `vsock` mode and in `boat`
       mode.
-- [ ] In `boat` mode, also post the samples every 30 seconds, as the sample
+- [x] In `boat` mode, also post the samples every 30 seconds, as the sample
       reports design call says. A failed post logs a warning and changes
       nothing else.
-- [ ] Prove that a failed sample changes neither the runner nor its exit
+- [x] Prove that a failed sample changes neither the runner nor its exit
       report. Log a warning, as the guest does for other failed
       observations.
-- [ ] Update the `ciproxy-guest` README.
+- [x] Update the `ciproxy-guest` README.
 
 ## Milestone 6: Guest sampler on macOS
 

@@ -16,6 +16,7 @@ mod power;
 mod preparation;
 mod process;
 mod proxy;
+mod usage;
 mod vsock;
 
 /// Construct the guest application at the binary composition root.

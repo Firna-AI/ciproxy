@@ -37,6 +37,7 @@ async fn end_commands(platform: Platform) -> Vec<String> {
                 .answers(&|_| Box::pin(async { Ok(Some(AgentToGuest::Shutdown)) })),
         ))),
         runner: Box::new(Unimock::new(())),
+        usage: None,
         power: Box::new(VmPower {
             platform,
             command: Box::new(Unimock::new(

@@ -14,6 +14,8 @@ use crate::platform::{Account, Platform};
 use crate::power::{BoatPower, SystemShutdownCommand, VmPower};
 use crate::process::StockRunner;
 use crate::service::{Guest, Supervisor};
+#[cfg(target_os = "linux")]
+use crate::usage::{Usage, linux::Proc};
 use crate::vsock::VsockChannel;
 
 /// Options for one fresh guest. Registrations never use command-line flags.
@@ -42,7 +44,7 @@ enum Mode {
         #[arg(long)]
         port: u32,
     },
-    /// Consume one private launch file and POST the runner exit over HTTPS.
+    /// Consume one private launch file and POST runner reports over HTTPS.
     Boat {
         /// Root-owned mode 0600 file in a private runtime directory.
         #[arg(long)]
@@ -65,6 +67,8 @@ impl Application for GuestApplication {
     async fn run(&self, cli: Cli) -> Result<()> {
         let platform = Platform::current();
         let own_machine = matches!(cli.mode, Mode::Vsock { .. });
+        #[cfg(target_os = "linux")]
+        let mut usage_reporter = None;
         let (channel, power): (Box<dyn Channel>, Box<dyn Power>) = match cli.mode {
             Mode::Vsock { port } => (
                 Box::new(VsockChannel::accept(port).await?),
@@ -73,10 +77,14 @@ impl Application for GuestApplication {
                     command: Box::new(SystemShutdownCommand),
                 }),
             ),
-            Mode::Boat { registration_file } => (
-                Box::new(BoatChannel::from_file(&registration_file)?),
-                Box::new(BoatPower),
-            ),
+            Mode::Boat { registration_file } => {
+                let boat = BoatChannel::from_file(&registration_file)?;
+                #[cfg(target_os = "linux")]
+                {
+                    usage_reporter = Some(boat.usage_reporter());
+                }
+                (Box::new(boat), Box::new(BoatPower))
+            }
         };
         let account = Account::lookup(&cli.runner_account)?;
         let setup: Box<dyn GuestSetup> = match platform {
@@ -94,6 +102,10 @@ impl Application for GuestApplication {
                 setup,
             )),
             power,
+            #[cfg(target_os = "linux")]
+            usage: Some(Usage::new(Box::new(Proc::new()), usage_reporter)),
+            #[cfg(not(target_os = "linux"))]
+            usage: None,
         });
         guest.run().await
     }

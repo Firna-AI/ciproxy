@@ -77,13 +77,34 @@ In `boat` mode, consume a private registration file.
 The guest does not follow a symbolic link to the file.
 The file must belong to the guest's user, with no group or other access.
 Remove the file before starting the runner.
-POST only the existing `GuestToAgent::RunnerExited` value.
+POST `GuestToAgent::RunnerExited` when the runner exits.
+On Linux, also POST `GuestToAgent::UsageSamples` every 30 seconds during
+the job. Each sample report contains the whole series so far.
 Use the file's HTTPS URL and its sandbox-scoped bearer token.
 Disable HTTP redirects to keep that token at its intended endpoint.
-The control plane must validate the token and delete the sandbox.
-If the report fails, the Boat lifetime remains the backstop.
+The control plane must validate the token. It deletes the sandbox after
+the exit report, not after a sample report.
+If the exit report fails, the Boat lifetime remains the backstop.
 A missing file ends the guest with exit code 1 and the error
 `registration file is missing`. The error names no path.
+
+### Linux job usage
+
+The guest samples the whole VM once per second. It reads busy CPU time
+from `/proc/stat`, used memory from `/proc/meminfo`, and out-of-memory
+kills from `/proc/vmstat`. In `vsock` mode, the trusted job handoff starts
+sampling. In `boat` mode, the guest looks for `Runner.Worker` in the
+runner's process tree. It checks once per second until it finds the worker.
+The guest stops sampling when the runner exits. It sends the final
+samples with the exit report when available. macOS guests do not send usage.
+
+When the series would exceed 3,600 points, the guest merges adjacent
+points. Each merged point keeps the average CPU, peak memory, and total
+kill count. The last point can cover part of its stated width. After a
+read gap, the guest keeps the longest series of consecutive samples.
+A failed read or sample post logs a warning without figures. The runner
+and its exit report do not depend on a sample or a sample post.
+See [Job usage](../../docs/protocol/job-usage.md).
 The guest then starts no runner and sends no report.
 In a Boat sandbox, the guest runs as a service of Boat's own systemd.
 The [Boat launcher](../../image/boat.md#boat-launch) starts that service
@@ -188,7 +209,12 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
   interfaces.
 - [src/service.rs](src/service.rs) supervises the single runner lifecycle.
 - [src/vsock.rs](src/vsock.rs) carries cancellation-safe JSON lines.
-- [src/boat.rs](src/boat.rs) consumes the private file and sends exit reports.
+- [src/boat.rs](src/boat.rs) consumes the private file and posts reports.
+- [src/usage/mod.rs](src/usage/mod.rs) runs the sampler for the job window.
+- [src/usage/linux.rs](src/usage/linux.rs) reads Linux counters and detects
+  the Boat worker.
+- [src/usage/series.rs](src/usage/series.rs) bounds the series by merging
+  points.
 - [src/assignment.rs](src/assignment.rs) owns the cancellation-safe handoff.
 - [src/guest_setup.rs](src/guest_setup.rs) measures the preloaded Docker
   facts before the runner can take its job.

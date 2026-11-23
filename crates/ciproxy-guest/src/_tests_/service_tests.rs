@@ -17,6 +17,10 @@ pub(super) mod support;
 #[path = "command_tests.rs"]
 mod command_tests;
 
+#[cfg(target_os = "linux")]
+#[path = "usage_tests.rs"]
+mod usage_tests;
+
 use support::{
     Observation, channel, configure, configured, exited, hello, runner, shutdown_pair, supervisor,
 };

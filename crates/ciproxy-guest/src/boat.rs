@@ -1,8 +1,9 @@
-//! Private Boat launch files and sandbox-scoped runner-exit callbacks.
+//! Private Boat launch files and sandbox-scoped callbacks.
 
 use std::future::pending;
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, io::ErrorKind, io::Read};
 
@@ -16,6 +17,7 @@ use tracing::info;
 
 use crate::boundary::{Channel, CommandFuture};
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::usage::{ReportFuture, Reporter};
 
 #[derive(Deserialize)]
 struct Registration {
@@ -26,9 +28,34 @@ struct Registration {
 
 pub(crate) struct BoatChannel {
     configure: Option<AgentToGuest>,
+    callback: Arc<BoatCallback>,
+}
+
+struct BoatCallback {
     report_url: Secret,
     token: Secret,
     client: Client,
+}
+
+impl BoatCallback {
+    async fn post(&self, message: &GuestToAgent) -> Result<()> {
+        let response = self
+            .client
+            .post(self.report_url.expose_secret())
+            .bearer_auth(self.token.expose_secret())
+            .json(message)
+            .send()
+            .await
+            .context("send scoped Boat report")?;
+        response.error_for_status().context("accept Boat report")?;
+        Ok(())
+    }
+}
+
+impl Reporter for BoatCallback {
+    fn post_samples(&self, message: GuestToAgent) -> ReportFuture<'_> {
+        Box::pin(async move { self.post(&message).await })
+    }
 }
 
 impl BoatChannel {
@@ -57,13 +84,21 @@ impl BoatChannel {
             .redirect(Policy::none())
             .timeout(Duration::from_secs(30))
             .build()
-            .context("build exit-report client")?;
+            .context("build Boat report client")?;
         Ok(Self {
             configure: Some(registration.configure),
-            report_url: registration.exit_report_url,
-            token: registration.exit_report_token,
-            client,
+            callback: Arc::new(BoatCallback {
+                report_url: registration.exit_report_url,
+                token: registration.exit_report_token,
+                client,
+            }),
         })
+    }
+
+    /// Share the callback with the Linux sampler, without borrowing the channel.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn usage_reporter(&self) -> Arc<dyn Reporter> {
+        self.callback.clone()
     }
 }
 
@@ -80,15 +115,7 @@ impl Channel for BoatChannel {
 
     async fn send(&mut self, message: GuestToAgent) -> Result<()> {
         if matches!(message, GuestToAgent::RunnerExited { .. }) {
-            let response = self
-                .client
-                .post(self.report_url.expose_secret())
-                .bearer_auth(self.token.expose_secret())
-                .json(&message)
-                .send()
-                .await
-                .context("send scoped exit report")?;
-            response.error_for_status().context("accept exit report")?;
+            self.callback.post(&message).await?;
             info!("runner exit report accepted");
         }
         Ok(())

@@ -1,0 +1,98 @@
+//! Turn successive counter reads into one contiguous usage series.
+
+use std::time::Duration;
+
+use ciproxy_protocol::platform::Platform;
+use ciproxy_protocol::usage::JobUsage;
+use tokio::time::Instant;
+use tracing::warn;
+
+use super::Source;
+use super::series::{Sample, Series};
+
+/// A read of the VM clock, counters, and memory.
+#[derive(Clone, Copy)]
+pub struct Reading {
+    /// The UTC time of this read, in whole milliseconds.
+    pub(crate) at_ms: i64,
+    /// Total busy CPU time since boot.
+    pub(crate) busy_cpu_micros: u64,
+    /// Online CPU capacity. Limits rounding at full load.
+    pub(crate) max_cpu_milli_vcpu: u32,
+    /// Current used memory in MiB.
+    pub(crate) memory_mib: u32,
+    /// The cumulative number of out-of-memory kills since boot.
+    pub(crate) oom_kills: u64,
+}
+
+impl Reading {
+    fn since(self, previous: Self, elapsed: Duration) -> Option<Sample> {
+        let busy = self.busy_cpu_micros.checked_sub(previous.busy_cpu_micros)?;
+        let cpu = (u128::from(busy) * 1_000).checked_div(elapsed.as_micros())?;
+        let kills = self.oom_kills.checked_sub(previous.oom_kills)?;
+        Some(Sample {
+            cpu_milli_vcpu: cpu.min(u128::from(self.max_cpu_milli_vcpu)) as u32,
+            memory_mib: self.memory_mib,
+            oom_kills: u32::try_from(kills).ok()?,
+        })
+    }
+}
+
+/// A sampled job window. After a gap, retain the longest contiguous segment.
+#[derive(Default)]
+pub(super) struct Window {
+    previous: Option<(Instant, Reading)>,
+    current: Option<Series>,
+    longest: Option<Series>,
+}
+
+impl Window {
+    /// Take a baseline or measure the next second. A bad read breaks the segment.
+    pub(super) fn capture(&mut self, source: &dyn Source) {
+        let now = Instant::now();
+        let Ok(next) = source.read() else {
+            warn!("job usage sample unavailable");
+            self.previous = None;
+            self.end_segment();
+            return;
+        };
+        let Some((taken, previous)) = self.previous.replace((now, next)) else {
+            return;
+        };
+        let elapsed = now - taken;
+        if elapsed < Duration::from_secs(2)
+            && let Some(sample) = next.since(previous, elapsed)
+        {
+            self.current
+                .get_or_insert_with(|| Series::new(previous.at_ms))
+                .push(sample);
+        } else {
+            warn!("job usage sample window unavailable");
+            self.end_segment();
+        }
+    }
+
+    /// Report the longest segment without shifting points across unread seconds.
+    pub(super) fn report(&self) -> Option<JobUsage> {
+        self.segment()
+            .map(|series| series.report(Platform::LinuxX64))
+    }
+
+    fn segment(&self) -> Option<&Series> {
+        [self.longest.as_ref(), self.current.as_ref()]
+            .into_iter()
+            .flatten()
+            .max_by_key(|series| series.seconds())
+    }
+
+    fn end_segment(&mut self) {
+        if let Some(current) = self.current.take()
+            && self
+                .longest
+                .as_ref()
+                .is_none_or(|longest| current.seconds() >= longest.seconds())
+        {
+            self.longest = Some(current);
+        }
+    }
+}

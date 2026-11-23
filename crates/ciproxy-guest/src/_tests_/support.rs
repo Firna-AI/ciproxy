@@ -185,6 +185,7 @@ pub(in crate::service) fn supervisor(
         image_id: ImageId("image-1".into()),
         channel: Box::new(channel),
         runner: Box::new(runner),
+        usage: None,
         power: Box::new(Unimock::new(
             PowerMock::shutdown
                 .some_call(matching!())

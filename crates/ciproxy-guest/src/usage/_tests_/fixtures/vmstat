@@ -1,0 +1,4 @@
+pgfault 54913
+pgmajfault 71
+oom_kill 12
+numa_hit 18201
