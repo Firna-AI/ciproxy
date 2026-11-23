@@ -119,3 +119,23 @@ fn zero_blocks_become_holes() {
     );
     assert_eq!(written[SPARSE_BLOCK + 5], 7);
 }
+
+/// A failed extraction leaves no archive and no pending folder behind, so
+/// it holds no space that new job VMs need.
+#[test]
+fn a_failed_publication_discards_its_staged_files() {
+    let folder = std::env::temp_dir().join(format!("ciproxy-staged-{}", uuid::Uuid::new_v4()));
+    let pending = folder.join("image.pending");
+    let archive = folder.join("image.tar");
+    std::fs::create_dir_all(pending.join("bundle")).unwrap();
+    std::fs::write(pending.join("bundle").join("disk.img"), b"partial").unwrap();
+    std::fs::write(&archive, b"checked archive").unwrap();
+
+    crate::macos::image_extract::discard_staged(&pending, &archive);
+
+    assert!(!pending.exists());
+    assert!(!archive.exists());
+    // A second call, or files that were never written, is no error.
+    crate::macos::image_extract::discard_staged(&pending, &archive);
+    std::fs::remove_dir_all(&folder).unwrap();
+}

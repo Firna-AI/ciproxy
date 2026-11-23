@@ -51,18 +51,25 @@ impl Usage {
             .saturating_add(other.started_disk_bytes);
     }
 
+    /// Whether a VM of `size` can start now: it fits what the machine holds
+    /// and the real free space of its last report.
     pub(crate) fn fits(self, machine: &Machine, size: VmSize) -> bool {
+        // The agent refuses a new VM that the real free space cannot hold,
+        // so placement picks a machine whose last report has that space.
+        let real_space = machine
+            .free_bytes
+            .is_none_or(|free| free >= self.started_disk_bytes.saturating_add(size.disk_bytes));
+        real_space && self.fits_held(machine, size)
+    }
+
+    /// Whether a VM of `size` fits the slots, the VM limit, and the job disk
+    /// that the machine holds. A retirement projection uses this: a stop
+    /// frees real space that only the next report measures, and the start
+    /// that follows checks it then.
+    pub(crate) fn fits_held(self, machine: &Machine, size: VmSize) -> bool {
         let Some(leased_bytes) = machine.docker_leased_bytes else {
             return false;
         };
-        // The agent refuses a new VM that the real free space cannot hold,
-        // so placement picks a machine whose last report has that space.
-        if machine
-            .free_bytes
-            .is_some_and(|free| free < self.started_disk_bytes.saturating_add(size.disk_bytes))
-        {
-            return false;
-        }
         if machine
             .platform
             .vm_limit()

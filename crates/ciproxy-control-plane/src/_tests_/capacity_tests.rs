@@ -10,7 +10,7 @@ use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::machines::Machine;
 use uuid::Uuid;
 
-use ciproxy_agent::root_sizing::MACOS_ROOT_MARGIN_BYTES;
+use ciproxy_agent::root_sizing::{MACOS_ROOT_MARGIN_BYTES, RootFit};
 
 use super::ReportedCapacity;
 
@@ -71,10 +71,10 @@ fn dashboard_capacity_subtracts_only_active_leases_and_sizes_the_selected_local_
     assert_eq!(capacity.job_disk_bytes, Some(137_000_000_000));
     assert_eq!(capacity.image_disk_bytes, Some(59_000_000_000));
     assert_eq!(
-        adapter.required_root_bytes(&snapshot, 20_000_000_000),
-        Some(79_635_853_312)
+        adapter.required_root(&snapshot, 20_000_000_000),
+        RootFit::Holds(79_635_853_312)
     );
-    assert_eq!(adapter.required_root_bytes(&snapshot, u64::MAX), None);
+    assert_eq!(adapter.required_root(&snapshot, u64::MAX), RootFit::Unknown);
 
     snapshot.report.as_mut().unwrap().report.cache = Statistics::Unavailable;
     assert_eq!(
@@ -101,7 +101,10 @@ fn dashboard_capacity_subtracts_only_active_leases_and_sizes_the_selected_local_
     let capacity = adapter.capacity(&snapshot);
     assert_eq!(capacity.job_disk_bytes, Some(0));
     assert_eq!(capacity.image_disk_bytes, None);
-    assert_eq!(adapter.required_root_bytes(&snapshot, 20_000_000_000), None);
+    assert_eq!(
+        adapter.required_root(&snapshot, 20_000_000_000),
+        RootFit::Unknown
+    );
 }
 
 #[test]
@@ -112,7 +115,10 @@ fn dashboard_capacity_without_a_report_remains_unavailable() {
     assert_eq!(capacity.slots, Slots(0));
     assert_eq!(capacity.job_disk_bytes, None);
     assert_eq!(capacity.image_disk_bytes, None);
-    assert_eq!(adapter.required_root_bytes(&snapshot, 20_000_000_000), None);
+    assert_eq!(
+        adapter.required_root(&snapshot, 20_000_000_000),
+        RootFit::Unknown
+    );
 }
 
 /// A Mac sends no Docker report, and its VM is an APFS clone of the image.
@@ -144,16 +150,19 @@ fn a_mac_counts_its_job_disk_and_the_label_disk_of_each_vm() {
     let capacity = adapter.capacity(&snapshot);
     assert_eq!(capacity.job_disk_bytes, Some(120_000_000_000));
     assert_eq!(
-        adapter.required_root_bytes(&snapshot, 20_000_000_000),
-        Some(20_000_000_000 + MACOS_ROOT_MARGIN_BYTES)
+        adapter.required_root(&snapshot, 20_000_000_000),
+        RootFit::Holds(20_000_000_000 + MACOS_ROOT_MARGIN_BYTES)
     );
     assert_eq!(
-        adapter.required_root_bytes(&snapshot, 121_000_000_001),
-        Some(u64::MAX)
+        adapter.required_root(&snapshot, 121_000_000_001),
+        RootFit::AboveImage
     );
 
     // An older agent reports no free bytes: the facts are unknown.
     let report = &mut snapshot.report.as_mut().unwrap().report;
     report.images.available[0].free_job_bytes = None;
-    assert_eq!(adapter.required_root_bytes(&snapshot, 20_000_000_000), None);
+    assert_eq!(
+        adapter.required_root(&snapshot, 20_000_000_000),
+        RootFit::Unknown
+    );
 }

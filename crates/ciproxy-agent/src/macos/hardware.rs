@@ -25,6 +25,19 @@ pub(crate) const IMAGE_BUDGET_BYTES: u64 = 100 * GIGABYTE;
 /// download and 77 GB image take about 123 GB at the peak.
 pub(crate) const MINIMUM_AREA_BYTES: u64 = 132 * GIGABYTE;
 
+/// The smallest volume that `CIPROXY_AREA_BYTES` may set, for example for a
+/// host check with no image.
+const MINIMUM_SET_BYTES: u64 = 20 * 1024 * 1024 * 1024;
+
+/// The area quota that install sets on a container with `free` bytes:
+/// `requested`, from `CIPROXY_AREA_BYTES`, or three quarters of the free
+/// space. `None` when it is below its minimum or above the free space.
+pub(crate) fn area_quota(free: u64, requested: Option<u64>) -> Option<u64> {
+    let quota = requested.unwrap_or(free / 4 * 3);
+    let minimum = requested.map_or(MINIMUM_AREA_BYTES, |_| MINIMUM_SET_BYTES);
+    (minimum..=free).contains(&quota).then_some(quota)
+}
+
 /// A macOS release, such as 26.7.3.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(crate) struct MacosVersion {

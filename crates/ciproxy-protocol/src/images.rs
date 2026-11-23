@@ -30,9 +30,11 @@ pub struct ImageMetadata {
     pub image_id: ImageId,
     /// Logical length of that release's verified root disk.
     pub root_disk_bytes: u64,
-    /// Measured free bytes inside a macOS image disk, the most that one APFS
-    /// clone of it can grow. A Linux image has none, because its job root
-    /// grows to the label's free disk before boot.
+    /// Measured free bytes inside a macOS image disk: the space that a job
+    /// in the guest can write. It is not a cap on the host space of a clone,
+    /// because a write to a shared block also takes a new host block. A
+    /// Linux image has none, because its job root grows to the label's free
+    /// disk before boot.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub free_job_bytes: Option<u64>,
 }

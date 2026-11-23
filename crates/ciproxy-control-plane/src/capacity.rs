@@ -44,20 +44,20 @@ impl MachineCapacity for ReportedCapacity {
         }
     }
 
-    fn required_root_bytes(&self, snapshot: &MachineSnapshot, requested: u64) -> Option<u64> {
-        let image = snapshot.report.as_ref()?.report.images.selected()?;
-        let rule = RootRule::for_platform(
+    fn required_root(&self, snapshot: &MachineSnapshot, requested: u64) -> RootFit {
+        let Some(image) = snapshot
+            .report
+            .as_ref()
+            .and_then(|report| report.report.images.selected())
+        else {
+            return RootFit::Unknown;
+        };
+        RootRule::for_platform(
             snapshot.machine.platform,
             Some(image),
             RootSizing::for_image(image),
-        );
-        match rule.fit(requested) {
-            RootFit::Holds(bytes) => Some(bytes),
-            // A known refusal: no disk holds such a root, so the label fit
-            // shows that the Mac runs no job of it, not unknown facts.
-            RootFit::AboveImage => Some(u64::MAX),
-            RootFit::Unknown => None,
-        }
+        )
+        .fit(requested)
     }
 }
 

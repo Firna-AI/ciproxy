@@ -21,7 +21,9 @@ the warm runners.
   [macOS image](agent-images.md#the-macos-image), a 100 GB disk with about
   77 GB allocated, and headroom. During an update, the new image and its
   download need space beside the old image. The check of the real free
-  space below stops new macOS VMs while that space is short.
+  space below stops new macOS VMs while that space is short. A failed
+  extraction, such as on a full volume, removes its download and its
+  partial image, so the old image goes on running jobs.
 - **Decision (23 November 2026):** the default macOS image budget is
   100 GB, so a Mac with about 176 GB of free disk runs a default job.
   Rejected for now: a budget for two macOS images and a download, about

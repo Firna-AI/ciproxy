@@ -136,7 +136,7 @@ mod area_size {
     use ciproxy_protocol::platform::Platform;
     use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
 
-    use super::super::hardware::{IMAGE_BUDGET_BYTES, MINIMUM_AREA_BYTES};
+    use super::super::hardware::{IMAGE_BUDGET_BYTES, MINIMUM_AREA_BYTES, area_quota};
 
     /// The default macOS label on the standard image: 100 GB disk, 21.8 GB
     /// free.
@@ -166,17 +166,18 @@ mod area_size {
         assert_eq!(jobs(MINIMUM_AREA_BYTES - 1), 0);
     }
 
-    /// A 256 GB Mac: the default quota is three quarters of the free space.
+    /// A 256 GB Mac, through the quota that install sets.
     #[test]
     fn a_small_mac_runs_one_default_job_from_about_176_gb_free() {
-        for (free_gb, expected) in [(160, 0), (176, 1), (180, 1), (200, 1)] {
-            let quota = free_gb * GIGABYTE / 4 * 3;
-            let runs = if quota < MINIMUM_AREA_BYTES {
-                0
-            } else {
-                jobs(quota)
-            };
-            assert_eq!(runs, expected, "free={free_gb} GB quota={quota}");
+        assert_eq!(area_quota(160 * GIGABYTE, None), None);
+        for (free_gb, quota_gb) in [(176, 132), (180, 135), (200, 150)] {
+            let quota = area_quota(free_gb * GIGABYTE, None);
+            assert_eq!(quota, Some(quota_gb * GIGABYTE), "free={free_gb} GB");
+            assert_eq!(jobs(quota.unwrap()), 1, "free={free_gb} GB");
         }
+        // With 160 GB free, a set quota of 132 GB runs one default job.
+        let set = area_quota(160 * GIGABYTE, Some(MINIMUM_AREA_BYTES));
+        assert_eq!(set.map(jobs), Some(1));
+        assert_eq!(area_quota(100 * GIGABYTE, Some(120 * GIGABYTE)), None);
     }
 }

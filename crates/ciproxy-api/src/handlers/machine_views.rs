@@ -1,6 +1,7 @@
 //! Report mappings retain hardware and cache facts while marking stale values.
 
 use chrono::{DateTime, Utc};
+use ciproxy_agent::root_sizing::RootFit;
 use ciproxy_gateway::types::{MachineView, Presence};
 use ciproxy_protocol::reports::SlotOccupancy;
 use ciproxy_protocol::resources::{Resources, Slots, VmSize};
@@ -18,8 +19,8 @@ use super::machine_jobs;
 pub(super) struct DefaultSize {
     /// Saved default-label CPU, memory, and free-disk request.
     pub requested: VmSize,
-    /// Runtime allocation under the machine-selected image policy.
-    pub root_bytes: Option<u64>,
+    /// Runtime root under the machine-selected image policy.
+    pub root: RootFit,
 }
 
 pub(super) fn machine(
@@ -94,23 +95,39 @@ pub(super) fn machine(
             .checked_div(Slots::for_vm(size.requested).0)
             .map(|count| platform_vms(machine.platform, count))
     });
-    let root = default_size.as_ref().and_then(|size| size.root_bytes);
+    let root = default_size.as_ref().and_then(|size| match size.root {
+        RootFit::Holds(bytes) => Some(bytes),
+        RootFit::AboveImage | RootFit::Unknown => None,
+    });
+    // The default label asks for more free disk than the image has: the
+    // machine runs none of its jobs, and more host disk would not help.
+    let refused = default_size
+        .as_ref()
+        .is_some_and(|size| size.root == RootFit::AboveImage);
     let allocated = default_size.as_ref().and_then(|size| {
-        size.root_bytes.map(|disk_bytes| VmSize {
+        root.map(|disk_bytes| VmSize {
             disk_bytes,
             ..size.requested
         })
     });
-    let concurrent = resources
-        .zip(allocated)
-        .map(|(resources, size)| platform_vms(machine.platform, resources.concurrent_vms(size)));
+    let concurrent = if refused {
+        Some(0)
+    } else {
+        resources
+            .zip(allocated)
+            .map(|(resources, size)| platform_vms(machine.platform, resources.concurrent_vms(size)))
+    };
     machines::MachineView {
         default_jobs_by_slots: by_slots.map(|count| count.to_string()),
         default_root_disk_bytes: root.map(|bytes| bytes.to_string()),
         job_disk_bytes: capacity.job_disk_bytes.map(|bytes| bytes.to_string()),
-        disk_limited: concurrent
-            .zip(by_slots)
-            .map(|(concurrent, slots)| concurrent < slots),
+        disk_limited: if refused {
+            Some(false)
+        } else {
+            concurrent
+                .zip(by_slots)
+                .map(|(concurrent, slots)| concurrent < slots)
+        },
         agent_up_to_date: latest_agent_version.map(|latest| latest == machine.agent_version),
         latest_agent_version: latest_agent_version.map(str::to_owned),
         id: machine.id.to_string(),

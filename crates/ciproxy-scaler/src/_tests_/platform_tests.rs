@@ -189,3 +189,16 @@ fn a_full_mac_passes_the_job_to_a_mac_with_real_free_space() {
         "60 GB holds two VMs of 24 GB, and 20 GB holds none"
     );
 }
+
+/// One pass counts its own starts against the real free space: 47 GB holds
+/// one VM of 24 GB, not two, also when slots and the job disk hold two.
+#[test]
+fn one_pass_keeps_its_starts_within_the_real_free_space() {
+    let mut state = with_mac_label();
+    let mut machine = mac("mac");
+    machine.free_bytes = Some(47 * GIGABYTE);
+    state.machines = vec![machine];
+    state.queue = vec![queued("a", "macos", 100), queued("a", "macos", 99)];
+
+    assert_eq!(decide(&state), vec![mac_start("mac")]);
+}

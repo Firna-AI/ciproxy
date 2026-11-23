@@ -22,7 +22,7 @@ use crate::boundaries::{ImageLease, Images};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::macos::hardware::{ImageNeeds, MacosVersion};
 use crate::macos::image_bundle::{ImageIndex, IndexedImage, folder_name};
-use crate::macos::image_extract::extract;
+use crate::macos::image_extract::{discard_staged, extract};
 use crate::persistence::{atomic_private_write, private_directory};
 use crate::resumable_download::{self, ResumableDownload, Retry};
 
@@ -183,10 +183,20 @@ impl MacImages {
         let name = folder_name(image_id);
         let pending = self.inner.folder.join(format!("{name}.pending"));
         let (archive_path, pending_path) = (archive.to_path_buf(), pending.clone());
-        let manifest =
+        let extracted =
             tokio::task::spawn_blocking(move || extract(&archive_path, &pending_path, root))
                 .await
-                .context("join image extraction")??;
+                .context("join image extraction")?;
+        let manifest = match extracted {
+            Ok(manifest) => manifest,
+            Err(error) => {
+                // A failed extraction, such as a full area, must not keep its
+                // files: they hold the space that new job VMs need. A later
+                // update downloads the archive again.
+                discard_staged(&pending, archive);
+                return Err(error);
+            }
+        };
         std::fs::remove_file(archive).context("remove the image download")?;
         let target = self.inner.folder.join(&name);
         remove_folder(&target)?;

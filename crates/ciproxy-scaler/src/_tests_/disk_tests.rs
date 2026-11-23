@@ -93,6 +93,41 @@ fn warm_preemption_frees_job_disk_even_when_slots_are_available() {
     assert_eq!(decide(&state), vec![own("a", "large", size)]);
 }
 
+/// A stop frees real space that only the next report measures. So a real
+/// free space that is short still lets a warm runner retire for a waiting
+/// job, and the start waits for a report with the space. Only a Mac reports
+/// real free space, but the rule is the same for each machine.
+#[test]
+fn warm_preemption_retires_a_runner_when_the_real_free_space_is_short() {
+    let mut state = snapshot();
+    let mut size = large();
+    size.disk_bytes = 120 * GIGABYTE;
+    state.labels[1].size = size;
+    state.machines[0].disk_budget_bytes = 279 * GIGABYTE;
+    state.machines[0].free_bytes = Some(10 * GIGABYTE);
+    state.machines[0].warm_count = 2;
+    state.machines[0].warm_allocation =
+        vec![OrganizationId("a".into()), OrganizationId("b".into())];
+    state.machines[0].runners = vec![warm("first", "a"), warm("second", "b")];
+    state.queue = vec![queued("a", "large", 0)];
+    assert_eq!(
+        decide(&state),
+        vec![Action::StopRunner {
+            runner_id: RunnerId("first".into()),
+            reason: StopReason::WarmPreemption,
+        }]
+    );
+    state.machines[0].runners.remove(0);
+    assert_eq!(
+        decide(&state),
+        vec![],
+        "the old report still lacks the space"
+    );
+    let allocated = super::fixtures::allocated(size).disk_bytes;
+    state.machines[0].free_bytes = Some(allocated);
+    assert_eq!(decide(&state), vec![own("a", "large", size)]);
+}
+
 #[test]
 fn warm_replenishment_reserves_the_job_disk_held_by_running_vms() {
     let mut state = snapshot();

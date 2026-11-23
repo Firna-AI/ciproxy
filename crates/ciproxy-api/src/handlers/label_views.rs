@@ -1,5 +1,6 @@
 //! Label resources and connected-machine fit from the shared capacity arithmetic.
 
+use ciproxy_agent::root_sizing::RootFit;
 use ciproxy_gateway::types::{MachineView, Presence};
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
@@ -98,8 +99,16 @@ pub(super) fn fit(
     let mut unavailable = 0u32;
     for view in &eligible {
         let facts = capacity.capacity(&view.snapshot);
-        let root_bytes = capacity.required_root_bytes(&view.snapshot, size.disk_bytes);
-        let concurrent_jobs =
+        let root = capacity.required_root(&view.snapshot, size.disk_bytes);
+        let root_bytes = match root {
+            RootFit::Holds(bytes) => Some(bytes),
+            RootFit::AboveImage | RootFit::Unknown => None,
+        };
+        // A known refusal runs no job here, so it is a fit of 0, not unknown.
+        let refused = root == RootFit::AboveImage;
+        let concurrent_jobs = if refused {
+            Some(0)
+        } else {
             facts
                 .job_disk_bytes
                 .zip(root_bytes)
@@ -117,7 +126,8 @@ pub(super) fn fit(
                     } else {
                         0
                     }
-                });
+                })
+        };
         offers.push(LabelMachineFit {
             id: view.snapshot.machine.id.to_string(),
             hostname: view.snapshot.machine.hostname.clone(),
@@ -128,6 +138,9 @@ pub(super) fn fit(
             required_root_disk_bytes: root_bytes.map(|bytes| bytes.to_string()),
             concurrent_jobs: concurrent_jobs.map(|jobs| jobs.to_string()),
         });
+        if refused {
+            continue;
+        }
         let (Some(job_disk_bytes), Some(root_bytes)) = (facts.job_disk_bytes, root_bytes) else {
             unavailable += 1;
             continue;

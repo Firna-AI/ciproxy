@@ -15,16 +15,12 @@ use crate::error::{Error, ErrorResultExt, Result};
 pub(crate) use crate::macos::area_access::clear_result;
 use crate::macos::area_disk::AreaRecord;
 use crate::macos::area_disk::{AreaDisk, Deletion, MISSING_REPAIR, area_mounted, deletion};
-use crate::macos::hardware::MINIMUM_AREA_BYTES;
+use crate::macos::hardware::area_quota;
 use crate::macos::paths::{AREA, CONTROL};
 use crate::persistence::{atomic_private_write, private_directory};
 
 const NAME: &str = "ciproxy";
 const FSTAB: &str = "/etc/fstab";
-
-/// The smallest volume that `CIPROXY_AREA_BYTES` may set, for example for a
-/// host check with no image.
-const MINIMUM_SET_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 
 fn record_path() -> PathBuf {
     Path::new(CONTROL).join("area.json")
@@ -59,15 +55,12 @@ pub(crate) fn prepare(requested_bytes: Option<u64>, disk: &AreaDisk) -> Result<A
             "the area volume is on an external or removable disk. Keep the disk connected: when it is gone, the Mac takes no jobs and its running jobs stop"
         );
     }
-    let free = target.free;
-    let quota = requested_bytes.unwrap_or(free / 4 * 3);
-    let minimum = requested_bytes.map_or(MINIMUM_AREA_BYTES, |_| MINIMUM_SET_BYTES);
-    if quota < minimum || quota > free {
+    let Some(quota) = area_quota(target.free, requested_bytes) else {
         return Err(Error::Preparation {
             component: "area volume",
             repair: "Free at least 176 GB on the disk of the area, set CIPROXY_AREA_DISK to another APFS disk, or set CIPROXY_AREA_BYTES to a size that fits, of at least 20 GB. Then rerun install.",
         });
-    }
+    };
     private_directory(Path::new(AREA))?;
     let output = diskutil(&[
         "apfs",

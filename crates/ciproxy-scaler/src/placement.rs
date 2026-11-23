@@ -44,7 +44,7 @@ pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, lab
         let mut future = projected_usage(snapshot, plan, index);
         let mut retire = Vec::new();
         for runner in &machine.runners {
-            if future.fits(machine, size) {
+            if future.fits_held(machine, size) {
                 break;
             }
             if warm_candidate(runner)
@@ -55,7 +55,7 @@ pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, lab
                 retire.push(runner);
             }
         }
-        if future.fits(machine, size) {
+        if future.fits_held(machine, size) {
             for runner in retire {
                 plan.stop(runner, StopReason::WarmPreemption);
             }

@@ -15,13 +15,21 @@ fn macs_keep_their_platform_and_lease_no_docker_bytes() {
     input.labels[0].platform = Platform::MacosArm64;
     let machine = &mut input.machines[0];
     machine.machine.platform = Platform::MacosArm64;
-    machine.report.as_mut().unwrap().report.docker_disks = Statistics::Unavailable;
+    let report = &mut machine.report.as_mut().unwrap().report;
+    report.docker_disks = Statistics::Unavailable;
+    report.hardware.disks[0].free_bytes = 47_000_000_000;
     let snapshot = build(&input, &runnable, at(), RootSizing::default());
     assert_eq!(snapshot.labels[0].platform, Platform::MacosArm64);
     assert_eq!(snapshot.machines[0].platform, Platform::MacosArm64);
     assert_eq!(snapshot.machines[0].docker_leased_bytes, Some(0));
+    assert_eq!(
+        snapshot.machines[0].free_bytes,
+        Some(47_000_000_000),
+        "the real free space of the area, not its capacity"
+    );
 
     input.machines[0].machine.platform = Platform::LinuxX64;
     let snapshot = build(&input, &runnable, at(), RootSizing::default());
     assert_eq!(snapshot.machines[0].docker_leased_bytes, None, "Linux");
+    assert_eq!(snapshot.machines[0].free_bytes, None, "Linux");
 }
