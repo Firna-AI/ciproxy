@@ -32,7 +32,7 @@ const features: readonly Feature[] = [
   {
     icon: Cloud,
     title: "Overflow on demand",
-    text: "When every slot is busy, ciproxy starts runners in your Boat account, billed by the second, up to the limit you set.",
+    text: "When every slot is busy, ciproxy starts runners in your own account at an overflow provider, such as Boat, up to the limit that you set.",
   },
   {
     icon: HardDrive,

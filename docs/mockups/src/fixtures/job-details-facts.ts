@@ -9,7 +9,7 @@
 import type { JobDetail } from "./job-details.ts";
 import { none, onBoat, own, repositoryName } from "./jobs.ts";
 import { labelNamed } from "./settings.ts";
-import { boatSizeFor } from "./sizes.ts";
+import { providerSizeFor } from "./sizes.ts";
 
 const label = labelNamed("ciproxy");
 
@@ -81,7 +81,7 @@ export const factDetails = {
     where: onBoat,
     label: label.name,
     request: label,
-    boatSize: boatSizeFor(label),
+    providerSize: providerSizeFor("boat", label),
     why: null,
     currentContract: true,
     timeline: [

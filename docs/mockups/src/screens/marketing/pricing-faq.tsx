@@ -23,7 +23,7 @@ const faqs: readonly Faq[] = [
   {
     question: "What is a start?",
     answer:
-      "A start is one job that a ciproxy runner takes, on your machine or on Boat, whatever its result. A re-run is a new start. A warm runner that waits without a job is not a start.",
+      "A start is one job that a ciproxy runner takes, on your machine or on an overflow provider, whatever its result. A re-run is a new start. A warm runner that waits without a job is not a start.",
   },
   {
     question: "What counts as an own machine?",
@@ -37,7 +37,7 @@ const faqs: readonly Faq[] = [
   {
     question: "Who pays for overflow?",
     answer:
-      "You pay Boat directly. Overflow runners start in your own Boat account, which bills by the second. Set a monthly spend limit in ciproxy; at the limit, jobs wait for a free slot on your machines.",
+      "You pay your overflow provider directly. Overflow runners start in your own account there, such as your Boat account, which bills by the second. Set a monthly spend limit for each provider in ciproxy; at the limit, ciproxy starts no new jobs there.",
   },
   {
     question: "How do I cancel?",

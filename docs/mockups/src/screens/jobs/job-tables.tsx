@@ -23,7 +23,8 @@ import {
   jobDetailStates,
   type JobDetailState,
 } from "../../fixtures/job-details.ts";
-import { repositoryName, type Job } from "../../fixtures/jobs.ts";
+import { providerOf, repositoryName, type Job } from "../../fixtures/jobs.ts";
+import type { ProviderKey } from "../../fixtures/providers.ts";
 
 export type JobListKind = "running" | "waiting" | "finished";
 
@@ -61,11 +62,19 @@ const detailPaths: Readonly<Record<JobDetailState, CataloguePath>> = {
   "unknown-facts": paths.jobUnknownFacts,
   "current-own": paths.jobCurrentOwn,
   "current-boat": paths.jobCurrentBoat,
+  "second-provider": paths.jobSecondProvider,
+};
+
+/** The job page of a job of each provider, for a row with no page of its own. */
+const providerPaths: Readonly<Record<ProviderKey, CataloguePath>> = {
+  boat: paths.jobBoat,
+  second: paths.jobSecondProvider,
 };
 
 /**
  * The job page of a finished job: the page of the job with its name and ref,
- * the Boat job for another job on Boat, and the own job for the rest.
+ * the job of its provider for another job on a provider, and the own job for
+ * the rest.
  */
 function detailPath(job: Job): CataloguePath {
   const state = jobDetailStates.find(
@@ -73,7 +82,8 @@ function detailPath(job: Job): CataloguePath {
       jobDetails[key].name === job.name && jobDetails[key].ref === job.ref,
   );
   if (state) return detailPaths[state];
-  return job.where.kind === "boat" ? paths.jobBoat : paths.job;
+  const provider = providerOf(job.where);
+  return provider ? providerPaths[provider] : paths.job;
 }
 
 function LabelName({ job }: { job: Job }) {

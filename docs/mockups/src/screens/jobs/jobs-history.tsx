@@ -21,8 +21,13 @@ import {
   noRunnerJob,
   untimedJob,
 } from "../../fixtures/history-facts.ts";
-import { history, jobsToday } from "../../fixtures/job-history.ts";
+import {
+  history,
+  jobsToday,
+  twoProviderHistory,
+} from "../../fixtures/job-history.ts";
 import type { Job } from "../../fixtures/jobs.ts";
+import type { ProviderKey } from "../../fixtures/providers.ts";
 import { tiers } from "../../fixtures/tiers.ts";
 import {
   HistoryFilters,
@@ -39,22 +44,28 @@ export const historyStates = [
   "date-menu",
   "filtered",
   "current",
+  "two-providers",
 ] as const;
 export type HistoryState = (typeof historyStates)[number];
+
+/** The providers that ran jobs on 18 November in the main story. */
+const boatOnly: readonly ProviderKey[] = ["boat"];
 
 const allToday: HistoryFilterValues = {
   search: "",
   place: "all",
+  providers: boatOnly,
   date: "Today",
 };
 
 const filters: Readonly<Record<HistoryState, HistoryFilterValues>> = {
   history: allToday,
-  empty: allToday,
-  "no-match": { search: "deploy", place: "boat", date: "Today" },
+  empty: { ...allToday, providers: [] },
+  "no-match": { ...allToday, search: "deploy", place: "boat" },
   "date-menu": { ...allToday, menu: true },
-  filtered: { ...historyFilter, date: "Today" },
+  filtered: { ...allToday, ...historyFilter },
   current: allToday,
+  "two-providers": { ...allToday, providers: ["boat", "second"] },
 };
 
 const lists: Readonly<Record<HistoryState, readonly Job[]>> = {
@@ -64,6 +75,7 @@ const lists: Readonly<Record<HistoryState, readonly Job[]>> = {
   "date-menu": history,
   filtered: filteredHistory,
   current: currentHistory,
+  "two-providers": twoProviderHistory,
 };
 
 /** In the current-API state, rows open the pages of the current API. */
@@ -80,8 +92,26 @@ function currentFooter(count: number): string {
   return `${jobs} today · Your plan keeps ${historyDays} days of history`;
 }
 
+/** In the two-provider state, docker image opens its job on Second provider. */
+const secondProviderJob = twoProviderHistory.find(
+  (job) => job.where.kind === "provider" && job.where.provider === "second",
+);
+const twoProviderLinks: RowLinks = secondProviderJob
+  ? { [secondProviderJob.id]: paths.jobSecondProvider }
+  : {};
+
+/** The rows that open a page other than the fixture page, in each state. */
+function linksOf(state: HistoryState): RowLinks | undefined {
+  if (state === "current") return currentLinks;
+  return state === "two-providers" ? twoProviderLinks : undefined;
+}
+
 function footer(state: HistoryState, count: number): string {
-  if (state === "history" || state === "date-menu") {
+  if (
+    state === "history" ||
+    state === "date-menu" ||
+    state === "two-providers"
+  ) {
     return `${count} of ${formatCount(jobsToday)} jobs today · ${tiers.team.name} keeps ${tiers.team.history} of history`;
   }
   return currentFooter(count);
@@ -141,7 +171,7 @@ export function JobsHistoryScreen({
             viewport={viewport}
             kind="finished"
             jobs={jobs}
-            links={state === "current" ? currentLinks : undefined}
+            links={linksOf(state)}
           />
           <p className="more-row caption">{footer(state, jobs.length)}</p>
         </Panel>

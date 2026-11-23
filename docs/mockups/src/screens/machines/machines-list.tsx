@@ -1,7 +1,8 @@
 // The own machines of the workspace, their slots, warm runners, health, and
-// cache, and the Boat account that takes overflow. Every role sees them. Only
-// an Admin adds a machine and opens the overflow settings. A failed read of
-// the Overflow panel shows in the panel, and the machines stay on the page.
+// cache, and each connected provider that takes overflow. Every role sees
+// them. Only an Admin adds a machine and opens the overflow settings. A
+// failed read of the Overflow panel shows in the panel, and the machines
+// stay on the page.
 // The slot figures count only the machines that run jobs or can take them,
 // never an offline machine or one that gets its first job image.
 
@@ -31,7 +32,7 @@ import {
   MachineTable,
   slotsLive,
 } from "./machine-table.tsx";
-import { OverflowPanel } from "./overflow-panel.tsx";
+import { OverflowPanel, overflowScenes } from "./overflow-panel.tsx";
 import "./machines.css";
 
 export const machinesStates = [
@@ -46,6 +47,8 @@ export const machinesStates = [
   "error",
   "overflow-refresh",
   "macs",
+  "two-providers",
+  "no-provider",
 ] as const;
 export type MachinesState = (typeof machinesStates)[number];
 
@@ -61,7 +64,17 @@ const machinesOf: Record<MachinesState, readonly Machine[]> = {
   error: machineScenes.steady,
   "overflow-refresh": machineScenes.steady,
   macs: macScene,
+  "two-providers": machineScenes.steady,
+  "no-provider": machineScenes.steady,
 };
+
+/** The connected providers of each state. */
+function accountsOf(state: MachinesState) {
+  if (state === "two-providers") return overflowScenes.twoProviders;
+  return state === "no-provider"
+    ? overflowScenes.none
+    : overflowScenes.boatOnly;
+}
 
 /** A fourth machine, also a Mac, passes the three machines of Team. */
 function overMachines(state: MachinesState): boolean {
@@ -163,7 +176,7 @@ function MachinesBody({
           }
         >
           Run one command on a Linux machine or a Mac. Jobs start there first.
-          When it is busy, Linux jobs run on Boat.
+          When it is busy, Linux jobs can run on an overflow provider.
         </StateBlock>
       </Panel>
     );
@@ -200,6 +213,7 @@ function MachinesBody({
       <OverflowPanel
         settings={admin}
         refreshFailed={state === "overflow-refresh"}
+        accounts={accountsOf(state)}
       />
     </>
   );

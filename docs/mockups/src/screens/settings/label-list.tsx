@@ -1,10 +1,13 @@
 // The labels of the organization: a table on desktop and cards on mobile,
 // each with its platform and size, where its jobs run now, and its jobs of 30
 // days. As in the machine table, the platform and size are a caption under
-// the name. Without a Boat account, the labels that fit a machine run on the
-// machines only. A macOS label runs on the Macs only, with or without Boat.
-// The list shows the Linux labels first, then the macOS labels, each from the
-// smallest size to the largest.
+// the name. Where jobs run names the places of the order that can run the
+// label now, in order, so a provider that cannot take a job or has no size
+// that fits drops out. A label with an empty order, or one that no place
+// fits, waits. So does a label whose fitting places cannot take a job now:
+// the list gives the reason of the first place of its order that fits its
+// size. A macOS label runs on the Macs only. The list shows the Linux labels
+// first, then the macOS labels, each from the smallest size to the largest.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -15,18 +18,20 @@ import {
   LoadingRows,
   type Column,
 } from "../../components/data-table.tsx";
-import { paths, type CataloguePath } from "../../components/paths.ts";
+import type { CataloguePath } from "../../components/paths.ts";
+import { holdText } from "../../components/hold-text.ts";
 import { DotLabel, Tag } from "../../components/status.tsx";
 import { dotJoin, formatCount } from "../../fixtures/format.ts";
-import type { Machine } from "../../fixtures/machines.ts";
-import { platformName, type Platform } from "../../fixtures/platform.ts";
+import { orderText } from "../../fixtures/label-order.ts";
 import {
-  macosLabel,
-  nothingFitsLabel,
   placementOf,
-  type Label,
+  type PlaceContext,
   type Placement,
-} from "../../fixtures/settings.ts";
+  type WaitReason,
+} from "../../fixtures/placement.ts";
+import { platformName, type Platform } from "../../fixtures/platform.ts";
+import { providerName } from "../../fixtures/providers.ts";
+import type { Label } from "../../fixtures/settings.ts";
 import { sizeText } from "../../fixtures/sizes.ts";
 
 const columns: readonly Column[] = [
@@ -36,23 +41,32 @@ const columns: readonly Column[] = [
   { key: "edit", label: "", width: 90, align: "right" },
 ];
 
-const placementText: Record<Placement, string> = {
-  "machines-then-boat": "Your machines, then Boat",
-  "machines-only": "Your machines only",
-  "macs-only": "Your Macs only",
-  "boat-only": "Boat only",
-  waits: "Waits: nothing fits",
-};
+/** Why the jobs of a label wait, after "Waits: ". */
+function waitText(reason: WaitReason): string {
+  switch (reason.kind) {
+    case "empty-order":
+      return "no place";
+    case "nothing-fits":
+      return "nothing fits";
+    case "held":
+      return holdText(reason.provider, reason.hold);
+  }
+}
 
-/** The labels whose dialog has a screen of its own, with and without Boat. */
-const editPaths: Readonly<Record<string, CataloguePath>> = {
-  "ciproxy-large": paths.editLabel,
-  [nothingFitsLabel.name]: paths.nothingFits,
-  [macosLabel.name]: paths.editMacosLabel,
-};
-const editPathsNoBoat: Readonly<Record<string, CataloguePath>> = {
-  "ciproxy-large": paths.editLabelNoBoat,
-};
+/** "Your machines, then Boat", or why the jobs of the label wait. */
+function placementText(placement: Placement, platform: Platform): string {
+  switch (placement.kind) {
+    case "places":
+      return orderText(placement.places, platform);
+    case "largest":
+      return `${providerName(placement.provider)}, largest size`;
+    case "waits":
+      return `Waits: ${waitText(placement.reason)}`;
+  }
+}
+
+/** The labels whose dialog has a screen of its own. */
+export type EditPaths = Readonly<Record<string, CataloguePath>>;
 
 /** Linux labels come before macOS labels in the list. */
 const platformRank: Readonly<Record<Platform, number>> = {
@@ -104,20 +118,18 @@ function LabelCell({ label }: { label: Label }) {
   );
 }
 
-/** Where the jobs of a label run, and the machines that decide it. */
-type Where = { boat: boolean; machines?: readonly Machine[] };
-
-function Placed({ label, where }: { label: Label; where: Where }) {
-  const placement = placementOf(label, where.boat, where.machines);
-  return placement === "waits" ? (
-    <DotLabel tone="warn">{placementText.waits}</DotLabel>
+function Placed({ label, context }: { label: Label; context: PlaceContext }) {
+  const placement = placementOf(label, context);
+  const text = placementText(placement, label.platform);
+  return placement.kind === "waits" ? (
+    <DotLabel tone="warn">{text}</DotLabel>
   ) : (
-    <span>{placementText[placement]}</span>
+    <span>{text}</span>
   );
 }
 
-function EditLabel({ label, boat }: { label: Label; boat: boolean }) {
-  const to = (boat ? editPaths : editPathsNoBoat)[label.name];
+function EditLabel({ label, edits }: { label: Label; edits: EditPaths }) {
+  const to = edits[label.name];
   return to ? (
     <LinkAction to={to} size="sm" icon={Pencil}>
       Edit
@@ -129,16 +141,18 @@ function EditLabel({ label, boat }: { label: Label; boat: boolean }) {
   );
 }
 
-function cell(label: Label, key: string, where: Where) {
+type ListScene = { context: PlaceContext; edits: EditPaths };
+
+function cell(label: Label, key: string, scene: ListScene) {
   switch (key) {
     case "label":
       return <LabelCell label={label} />;
     case "where":
-      return <Placed label={label} where={where} />;
+      return <Placed label={label} context={scene.context} />;
     case "jobs":
       return <span className="num">{formatCount(label.jobs)}</span>;
     default:
-      return <EditLabel label={label} boat={where.boat} />;
+      return <EditLabel label={label} edits={scene.edits} />;
   }
 }
 
@@ -146,18 +160,17 @@ export function LabelList({
   viewport,
   labels,
   loading,
-  boat = true,
-  machines,
+  context,
+  edits,
 }: {
   viewport: Viewport;
   labels: readonly Label[];
   loading: boolean;
-  /** The workspace has a Boat account. */
-  boat?: boolean;
-  /** The machines of the moment, when they are not the busy afternoon's. */
-  machines?: readonly Machine[];
+  /** The ready providers and the machines of the moment. */
+  context: PlaceContext;
+  edits: EditPaths;
 }) {
-  const where: Where = { boat, machines };
+  const scene: ListScene = { context, edits };
   const ordered = [...labels].sort(listOrder);
   if (viewport === "desktop") {
     return (
@@ -165,7 +178,7 @@ export function LabelList({
         columns={columns}
         rows={loading ? [] : ordered}
         rowKey={(label) => label.name}
-        cell={(label, key) => cell(label, key, where)}
+        cell={(label, key) => cell(label, key, scene)}
         loading={loading}
         loadingRowCount={3}
       />
@@ -180,13 +193,13 @@ export function LabelList({
             <LabelName label={label} />
             <span className="small">{labelText(label)}</span>
             <span className="small">
-              <Placed label={label} where={where} />
+              <Placed label={label} context={context} />
             </span>
             <span className="caption">
               {formatCount(label.jobs)} jobs in 30 days
             </span>
           </span>
-          <EditLabel label={label} boat={boat} />
+          <EditLabel label={label} edits={edits} />
         </li>
       ))}
     </ul>

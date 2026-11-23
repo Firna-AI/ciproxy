@@ -126,7 +126,14 @@
   align-items: flex-start;
 }
 
-/* The spend of the month when ciproxy cannot read it from Boat. */
+/* The spend limit of a provider, under its account on Settings under
+   Overflow, apart by a hairline. */
+.provider-limit {
+  padding-top: 16px;
+  border-top: 1px solid var(--c-border);
+}
+
+/* The spend of the month when ciproxy cannot read it from a provider. */
 .spend-missing {
   display: flex;
   align-items: flex-start;
@@ -135,5 +142,41 @@
 
 .spend-missing .stack-tight {
   flex: 1;
+  min-width: 0;
+}
+
+/* A place of a label order: a row with a full hairline border, its position,
+   its name with what it does with a job, and Remove. The grab handle of the
+   list sits before it. */
+.order-row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+}
+
+.order-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--c-border2);
+  border-radius: var(--r-pill);
+  color: var(--c-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.order-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }

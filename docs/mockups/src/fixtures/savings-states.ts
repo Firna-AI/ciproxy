@@ -3,11 +3,22 @@
 // needs: a cost that is not set or known in part, an alternative without a
 // complete price, a quiet day on which ciproxy costs more than Blacksmith, a
 // report that still refreshes, and empty ranges. The current-API report
-// names no tier and no machine count, because the API gives neither.
+// names no tier and no machine count, because the API gives neither. In the
+// what-if with two providers, Second provider ran the overflow of
+// ciproxy-large from 9 November, so a part of the Boat row moves to its own
+// row, and the totals stay.
 
 import { dateRange, formatDay } from "./format.ts";
 import { ax42 } from "./hardware.ts";
-import { dailyStarts, savings, savingsPeriod } from "./savings.ts";
+import {
+  dailyStarts,
+  providerCost,
+  providerStarts,
+  savings,
+  savingsPeriod,
+  type PlaceFigures,
+  type ProviderFigures,
+} from "./savings.ts";
 import { ownMachines, tiers } from "./tiers.ts";
 
 export type Alternative = "blacksmith" | "github";
@@ -18,13 +29,14 @@ export type ReportFigures = {
   range: ReportRange;
   /** The first and the last included UTC day, such as "1 November". */
   period: string;
-  starts: { own: number; boat: number };
-  minutes: { own: number; boat: number };
+  /** The jobs of the own machines. */
+  own: PlaceFigures;
+  /** A row for each provider that ran jobs in the range. */
+  providers: readonly ProviderFigures[];
   /** The known cost of the own machines, or null when none is set. */
   ownCost: number | null;
   /** Some machine costs are missing, so ownCost is the known part. */
   ownPartial?: true;
-  boatCost: number;
   planCost: number;
   /** Some plan prices are not known, so planCost is the known part. */
   planPartial?: true;
@@ -33,21 +45,27 @@ export type ReportFigures = {
   priceGap?: { alternative: Alternative; size: string };
   ownLabel: string;
   planLabel: string;
+  /** The starts of each day, on own machines and on the providers together. */
   daily: {
     labels: readonly string[];
     own: readonly number[];
-    boat: readonly number[];
+    overflow: readonly number[];
   };
   /** The report still refreshes, so the page reads it again. */
   updating?: true;
 };
+
+/** The jobs of the range, on own machines and on every provider. */
+export function jobCount(figures: ReportFigures): number {
+  return figures.own.starts + providerStarts(figures.providers);
+}
 
 /** The complete cost with ciproxy, or null while a cost is missing. */
 export function totalCost(figures: ReportFigures): number | null {
   if (figures.ownCost === null || figures.ownPartial || figures.planPartial) {
     return null;
   }
-  return figures.ownCost + figures.boatCost + figures.planCost;
+  return figures.ownCost + providerCost(figures.providers) + figures.planCost;
 }
 
 /** The cheaper alternative, when every cost is known. */
@@ -62,27 +80,39 @@ export function leadOf(figures: ReportFigures): Alternative | null {
 const known: ReportFigures = {
   range: "30",
   period: savingsPeriod,
-  starts: savings.starts,
-  minutes: savings.minutes,
-  ownCost: savings.cost.own,
-  boatCost: savings.cost.boat,
-  planCost: savings.cost.plan,
+  own: savings.own,
+  providers: savings.providers,
+  ownCost: savings.ownCost,
+  planCost: savings.planCost,
   alternatives: savings.alternatives,
   ownLabel: ownMachines(3),
   planLabel: `ciproxy ${tiers.team.name}`,
   daily: dailyStarts,
 };
 
-const none = { own: 0, boat: 0 } as const;
-
 const emptyFigures: ReportFigures = {
   ...known,
-  starts: none,
-  minutes: none,
-  boatCost: 0,
+  own: { starts: 0, minutes: 0 },
+  providers: [],
   alternatives: { blacksmith: 0, github: 0 },
-  daily: { labels: [], own: [], boat: [] },
+  daily: { labels: [], own: [], overflow: [] },
 };
+
+/** The overflow of ciproxy-large on Second provider, from 9 November. */
+const secondShare = { starts: 412, minutes: 2_118, cost: 17.4 };
+
+/** The provider rows of the what-if with two providers. */
+function withSecond(boat: ProviderFigures): readonly ProviderFigures[] {
+  return [
+    {
+      provider: "boat",
+      starts: boat.starts - secondShare.starts,
+      minutes: boat.minutes - secondShare.minutes,
+      cost: Math.round((boat.cost - secondShare.cost) * 100) / 100,
+    },
+    { provider: "second", ...secondShare },
+  ];
+}
 
 /** Sunday 1 November: the first day of the month, quiet as a weekend. */
 const quietDay = formatDay(new Date(Date.UTC(2026, 10, 1)));
@@ -94,13 +124,12 @@ export const savingsFigures = {
     ...known,
     range: "month",
     period: quietDay,
-    starts: { own: 102, boat: 7 },
-    minutes: { own: 498, boat: 41 },
+    own: { starts: 102, minutes: 498 },
+    providers: [{ provider: "boat", starts: 7, minutes: 41, cost: 0.16 }],
     ownCost: (3 * ax42.monthlyCost) / 30,
-    boatCost: 0.16,
     planCost: tiers.team.price / 30,
     alternatives: { blacksmith: 5.86, github: 8.62 },
-    daily: { labels: ["1"], own: [102], boat: [7] },
+    daily: { labels: ["1"], own: [102], overflow: [7] },
   },
   "missing-price": {
     ...known,
@@ -109,12 +138,12 @@ export const savingsFigures = {
   },
   "partial-costs": {
     ...known,
-    ownCost: (savings.cost.own * 2) / 3,
+    ownCost: (savings.ownCost * 2) / 3,
     ownPartial: true,
   },
   "unknown-costs": {
     ...known,
-    planCost: (savings.cost.plan * 20) / 30,
+    planCost: (savings.planCost * 20) / 30,
     planPartial: true,
   },
   updating: { ...known, updating: true },
@@ -128,6 +157,10 @@ export const savingsFigures = {
     ),
   },
   current: { ...known, ownLabel: "Own machines", planLabel: "ciproxy plan" },
+  "two-providers": {
+    ...known,
+    providers: savings.providers.flatMap(withSecond),
+  },
   loading: known,
   error: known,
 } as const satisfies Readonly<Record<string, ReportFigures>>;

@@ -275,17 +275,3 @@ export function countSlots(
     0,
   );
 }
-
-/** The Boat overflow account of mokly-ai. */
-export const boat = {
-  account: "mokly",
-  spendLimit: 200,
-  spentThisMonth: 61.2,
-  waitSeconds: 30,
-  /** The day Boat stopped accepting the key. */
-  keyRejectedOn: unbroken("12 November"),
-  /** The UTC month whose Boat spend reached the limit: the budget month. */
-  budgetMonth: "November",
-  /** The first day of the next month, when Boat takes jobs again. */
-  nextMonth: unbroken("1 December"),
-} as const;

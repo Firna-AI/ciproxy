@@ -197,9 +197,9 @@ export function AddMachineGuideScreen({ viewport }: { viewport: Viewport }) {
           {macosVmLimit} macOS VMs on one Mac. A Mac with{" "}
           {unbroken(`${macMini.memoryGb} GB`)} of memory has room for{" "}
           {machineSlots(macMini)} slot, so it runs {machineSlots(macMini)} job
-          at a time. Jobs of a macOS label never run on Boat. They wait for a
-          free Mac. A Mac counts as one machine of your plan, as a Linux machine
-          does.
+          at a time. Jobs of a macOS label never run on an overflow provider.
+          They wait for a free Mac. A Mac counts as one machine of your plan, as
+          a Linux machine does.
         </p>
         <p>
           Run the same install command in Terminal on the Mac. The agent runs as

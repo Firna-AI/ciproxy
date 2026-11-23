@@ -33,7 +33,11 @@ const toc: readonly TocItem[] = [
     nested: true,
   },
   { id: "add-a-machine", label: "Add a machine", nested: true },
-  { id: "connect-boat", label: "Connect Boat", nested: true },
+  {
+    id: "connect-provider",
+    label: "Connect an overflow provider",
+    nested: true,
+  },
   { id: "change-runs-on", label: "Change runs-on", nested: true },
   { id: "push", label: "Push the change", nested: true },
   { id: "next-steps", label: "Next steps" },
@@ -91,12 +95,13 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
               is ready.
             </p>
           </Step>
-          <Step id="connect-boat" title="Connect Boat">
+          <Step id="connect-provider" title="Connect an overflow provider">
             <p>
-              To start jobs on Boat when your machines are full, connect your
-              Boat account in Setup, or in <strong>Settings</strong> under{" "}
-              <strong>Overflow</strong>. Give an API key of your Boat account
-              and a monthly spend limit. You can connect Boat later.
+              To start jobs on an overflow provider when your machines are full,
+              connect one in Setup, or in <strong>Settings</strong> under{" "}
+              <strong>Overflow</strong>. Pick the provider, such as Boat, and
+              give an API key of your account there and a monthly spend limit.
+              You can connect a provider later.
             </p>
           </Step>
           <Step id="change-runs-on" title="Change runs-on">

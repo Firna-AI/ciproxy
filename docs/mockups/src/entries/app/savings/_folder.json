@@ -1,1 +1,9 @@
-{ "order": ["report-states", "states", "current-contract", "roles"] }
+{
+  "order": [
+    "report-states",
+    "states",
+    "two-providers",
+    "current-contract",
+    "roles"
+  ]
+}

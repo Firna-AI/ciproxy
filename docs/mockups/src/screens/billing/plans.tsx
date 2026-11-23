@@ -22,7 +22,7 @@ import { formatCount } from "../../fixtures/format.ts";
 import type { Role } from "../../fixtures/members.ts";
 import { decemberOrganizationCount } from "../../fixtures/org-links.ts";
 import { organizationsText, type TierKey } from "../../fixtures/org.ts";
-import { savings } from "../../fixtures/savings.ts";
+import { providerStarts, savings } from "../../fixtures/savings.ts";
 import { ownMachines, tierOrder, tiers } from "../../fixtures/tiers.ts";
 import { freePeriodEnd, usageScenes } from "../../fixtures/usage.ts";
 import { PendingNotice } from "./api-notices.tsx";
@@ -44,7 +44,7 @@ export type PlansState = (typeof plansStates)[number];
 
 const freeUse = usageScenes["free-over"];
 const teamUse = usageScenes.steady;
-const lastThirtyDays = savings.starts.own + savings.starts.boat;
+const lastThirtyDays = savings.own.starts + providerStarts(savings.providers);
 
 type PlansContext = {
   current: TierKey;

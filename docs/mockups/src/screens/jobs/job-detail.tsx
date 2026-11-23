@@ -1,11 +1,13 @@
 // One finished job: where it ran, why it ran there, how long it waited, its
-// label, and the VM size that ran it. A job on Boat names the Boat size,
-// which Boat bills, with its whole disk as Boat states it, while a label
-// states the free disk of its jobs. The cache counts show only when the
-// machine cache handled the restores; a job on Boat, and a job that fell back
-// to the GitHub cache, show only the cache source. When ciproxy has no saved
-// request for a job, the label says so in place of a size, and the VM size
-// comes from the VM that ran the job, never from the label as it is now.
+// label, and the VM size that ran it. A job on a provider names the provider
+// and its size, which the provider bills, with its whole disk as the
+// provider states it, while a label states the free disk of its jobs. The
+// reason names each place of the order that the job passed. The cache counts
+// show only when the machine cache handled the restores; a job on a provider,
+// and a job that fell back to the GitHub cache, show only the cache source.
+// When ciproxy has no saved request for a job, the label says so in place of
+// a size, and the VM size comes from the VM that ran the job, never from the
+// label as it is now.
 
 import { CircleDashed, Cloud, ExternalLink, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -27,8 +29,13 @@ import {
   type JobDetail,
   type JobDetailState,
 } from "../../fixtures/job-details.ts";
-import type { Where } from "../../fixtures/jobs.ts";
-import { boatSizeText, sizeText, vmSizeText } from "../../fixtures/sizes.ts";
+import { providerOf, type Where } from "../../fixtures/jobs.ts";
+import { providerName } from "../../fixtures/providers.ts";
+import {
+  providerSizeText,
+  sizeText,
+  vmSizeText,
+} from "../../fixtures/sizes.ts";
 import "./jobs.css";
 import "./job-detail.css";
 
@@ -37,7 +44,7 @@ const noReason = "Why the job ran here is not available.";
 
 function WhereTitle({ where }: { where: Where }) {
   if (where.kind === "none") return "No runner";
-  if (where.kind !== "own") return "Boat";
+  if (where.kind === "provider") return providerName(where.provider);
   return (
     <>
       <span className="mono">{where.machine}</span>
@@ -47,36 +54,43 @@ function WhereTitle({ where }: { where: Where }) {
 }
 
 /**
- * The VM size that ran the job: the request on a machine, Boat's on Boat. For
- * an unknown request, the VM that ran it, with its whole VM disk, and a Boat
- * size without the claim that it fits the label.
+ * The VM size that ran the job: the request on a machine, the size of the
+ * provider on a provider. For an unknown request, the VM that ran it, with
+ * its whole VM disk, and a provider size without the claim that it fits the
+ * label.
  */
 function VmSize({ job }: { job: JobDetail }) {
-  if (!job.boatSize) {
+  const provider = providerOf(job.where);
+  if (!job.providerSize || !provider) {
     if (job.request !== "unknown") return <>{sizeText(job.request)}</>;
     return <>{job.vm ? vmSizeText(job.vm) : "Unknown"}</>;
   }
+  const name = providerName(provider);
   return (
     <span className="detail-stack">
       <span>
-        {dotJoin(`Boat ${job.boatSize.name}`, boatSizeText(job.boatSize))}
+        {dotJoin(
+          `${name} ${job.providerSize.name}`,
+          providerSizeText(job.providerSize),
+        )}
       </span>
       <span className="caption">
         {job.request === "unknown" || job.currentContract
-          ? "Boat bills this size."
-          : "The cheapest Boat size that fits the label and the image. Boat bills this size."}
+          ? `${name} bills this size.`
+          : `The cheapest ${name} size that fits the label and the image. ${name} bills this size.`}
       </span>
     </span>
   );
 }
 
 /**
- * The label of the job. On Boat, the size of the label shows under its name,
- * because the Boat size can be larger. An unknown request shows there too.
+ * The label of the job. On a provider, the size of the label shows under its
+ * name, because the provider size can be larger. An unknown request shows
+ * there too.
  */
 function LabelValue({ job }: { job: JobDetail }) {
   const name = <span className="inline-code">{job.label}</span>;
-  if (job.request !== "unknown" && !job.boatSize) return name;
+  if (job.request !== "unknown" && !job.providerSize) return name;
   return (
     <span className="detail-stack">
       {name}
@@ -167,7 +181,7 @@ export function JobDetailScreen({
 }) {
   const job = jobDetails[state];
   const Icon =
-    job.where.kind === "boat"
+    job.where.kind === "provider"
       ? Cloud
       : job.where.kind === "none"
         ? CircleDashed

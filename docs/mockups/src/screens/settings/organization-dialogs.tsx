@@ -91,7 +91,7 @@ export function TurnOnDialog() {
     >
       <p className="small">
         The jobs of {login} then run on the machines of this workspace, with its
-        labels, settings, and Boat account.
+        labels, settings, and overflow providers.
       </p>
       <p className="small">
         {formerAdmin.name} added {login} on {studioOrg.joined} and is no longer

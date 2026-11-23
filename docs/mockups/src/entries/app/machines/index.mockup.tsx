@@ -8,7 +8,7 @@ import { MachinesScreen } from "../../../screens/machines/machines-list.tsx";
 export const machines = defineScreen({
   title: "Machines",
   description:
-    "The three own machines of mokly-ai on a busy afternoon, with their slots, warm runners, health, and cache, and the Boat account that takes overflow.",
+    "The three own machines of mokly-ai on a busy afternoon, with their slots, warm runners, health, and cache. The Overflow panel has a row for each connected provider, here Boat, with its account and its spend against its own limit, and the overflow wait under the rows.",
   rationale:
     "The slot bar shows at a glance how full each machine is and how many warm runners wait, which decides whether the next job starts at once.",
   relatedDocs: related("agent", "jobRouting", "cache", "overflow"),

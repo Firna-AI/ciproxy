@@ -5,7 +5,8 @@
 // from the CI of mokly-ai (.context/ciproxy-pricing). The release day counts
 // the starts up to 14:32: the 612 finished jobs and the 21 that run, with the
 // overflow of the release on Boat. The minutes and the costs count the same
-// days.
+// days. The overflow has a row for each provider that ran jobs in the range;
+// in the main story, Boat is the only one.
 //
 // A monthly price counts for each UTC day of the range: the price divided by
 // the days of the calendar month of that day, so the range counts 12/31 of
@@ -16,6 +17,7 @@
 import { dateRange, formatDay } from "./format.ts";
 import { ax42 } from "./hardware.ts";
 import { releaseDay } from "./live-jobs.ts";
+import type { ProviderKey } from "./providers.ts";
 import { tiers } from "./tiers.ts";
 
 const dayMs = 86_400_000;
@@ -50,8 +52,8 @@ function rangeCost(monthlyPrice: number): number {
 }
 
 /**
- * Starts per day, own machines and Boat, one value for each day of the
- * report. The busiest day was 12 November.
+ * Starts per day, on own machines and on the providers together, one value
+ * for each day of the report. The busiest day was 12 November.
  */
 export const dailyStarts = {
   /** Day of the month; the chart caption names the months. */
@@ -60,7 +62,7 @@ export const dailyStarts = {
     512, 490, 539, 493, 132, 127, 489, 514, 491, 492, 514, 147, 102, 527, 524,
     523, 512, 501, 130, 113, 496, 494, 506, 1640, 539, 106, 132, 527, 510, 401,
   ],
-  boat: [
+  overflow: [
     202, 128, 187, 165, 1, 6, 130, 172, 149, 189, 126, 18, 7, 199, 126, 193,
     125, 124, 4, 13, 187, 191, 189, 976, 205, 3, 18, 142, 130, 232,
   ],
@@ -70,16 +72,44 @@ function total(values: readonly number[]): number {
   return values.reduce((sum, value) => sum + value, 0);
 }
 
-const ownCost = 3 * rangeCost(ax42.monthlyCost);
-const boatCost = 102;
+/** The starts and the minutes of the jobs of one place in the range. */
+export type PlaceFigures = { starts: number; minutes: number };
+
+/** The jobs of one provider in the range, and what the provider billed. */
+export type ProviderFigures = PlaceFigures & {
+  provider: ProviderKey;
+  cost: number;
+};
+
+/** The jobs of the own machines, which their monthly costs pay for. */
+const own: PlaceFigures = { starts: total(dailyStarts.own), minutes: 80_604 };
+
+/** The overflow of the range, all on Boat. */
+const boatFigures: ProviderFigures = {
+  provider: "boat",
+  starts: total(dailyStarts.overflow),
+  minutes: 35_556,
+  cost: 102,
+};
 
 export const savings = {
-  starts: { own: total(dailyStarts.own), boat: total(dailyStarts.boat) },
-  minutes: { own: 80_604, boat: 35_556 },
-  cost: { own: ownCost, boat: boatCost, plan: rangeCost(tiers.team.price) },
+  own,
+  ownCost: 3 * rangeCost(ax42.monthlyCost),
+  providers: [boatFigures],
+  planCost: rangeCost(tiers.team.price),
   /** The same jobs at list prices, for the same VM sizes. */
   alternatives: { blacksmith: 699, github: 1_046 },
 } as const;
 
+/** The starts of the range on every provider together. */
+export function providerStarts(figures: readonly ProviderFigures[]): number {
+  return figures.reduce((sum, entry) => sum + entry.starts, 0);
+}
+
+/** What every provider billed in the range together. */
+export function providerCost(figures: readonly ProviderFigures[]): number {
+  return figures.reduce((sum, entry) => sum + entry.cost, 0);
+}
+
 export const yourCost =
-  savings.cost.own + savings.cost.boat + savings.cost.plan;
+  savings.ownCost + providerCost(savings.providers) + savings.planCost;

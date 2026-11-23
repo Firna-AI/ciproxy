@@ -4,6 +4,7 @@
     "boat-at-once",
     "spend-uncounted",
     "limit-boat-only",
-    "size-refused"
+    "size-refused",
+    "providers-only-off"
   ]
 }

@@ -32,8 +32,8 @@ export function GrantAdminDialog({ person }: { person: Member }) {
         tone="warning"
         title="An Admin controls the runners of every organization"
       >
-        An Admin can add machines and connect Boat. They run the jobs of{" "}
-        {organizationList("and")}, with their secrets.
+        An Admin can add machines and connect overflow providers. They run the
+        jobs of {organizationList("and")}, with their secrets.
       </Notice>
       <p className="small">
         If other people should control the runners of an organization, give it a

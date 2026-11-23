@@ -63,3 +63,17 @@ export const sizeRefused = defineScreen({
     <JobsLiveScreen viewport={context.viewport} state="size-refused" />
   ),
 });
+
+export const providersOnlyOff = defineScreen({
+  slug: "providers-only-off",
+  title: "A label that only providers run, while overflow is off",
+  description:
+    "Use overflow providers is off. An Admin removed the own machines from the order of ciproxy-16vcpu, which no own machine fits, so Boat is its one place. No place of its order can take its two jobs now, so the notice gives the reason of the first place of the order that fits their size: overflow providers are off. Turn on overflow opens the overflow settings for an Admin. The label list says Waits: overflow providers are off for the label. The other labels run on the own machines, which have free slots.",
+  rationale:
+    "The design call of 23 November 2026: when no place of a label's order can take a job, the Jobs notice gives the reason of the first place of the order that fits the size. The notice and the label list take the reason from the same placement of the label.",
+  relatedDocs: related("jobRouting", "labels", "overflow"),
+  address,
+  render: (_props, context) => (
+    <JobsLiveScreen viewport={context.viewport} state="providers-only-off" />
+  ),
+});

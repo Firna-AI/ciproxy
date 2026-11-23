@@ -1,29 +1,38 @@
-// Overflow settings: the Boat account, how long a job waits for an own
-// machine before it starts on Boat, and the monthly Boat spend limit with the
-// spend of the month. Before Boat connects, the page asks for the key and the
-// limit, as setup does. After Boat rejects the key, it asks for a new key and
-// the limit again, and the limit starts with the saved limit.
+// Overflow settings: the workspace switch and the overflow wait, which hold
+// for every provider, then a panel for each provider that is connected or
+// available. A connected provider shows its account, its own monthly spend
+// limit, and the spend of the month. While the deployment has no settings
+// for a connected provider, its panel keeps the account and Disconnect. A
+// provider that the workspace never connected shows Connect. With no
+// connected provider, the page asks for a provider and its key and limit, as
+// setup does. After a provider rejects the key, its panel asks for a new key
+// and the limit again, and the limit starts with the saved limit. The labels
+// set the order of the places.
 
 import type { Viewport } from "@mokly/mokly";
 import { DropdownSelector } from "@firna/ui/dropdown";
 import { Switch } from "@firna/ui/switch";
 
-import { noop } from "../../components/actions.tsx";
-import { Notice } from "../../components/feedback.tsx";
+import { noop, TextLink } from "../../components/actions.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
-import { formatMoney } from "../../fixtures/format.ts";
-import { boat } from "../../fixtures/machines.ts";
+import { boat, overflow, secondProvider } from "../../fixtures/overflow.ts";
+import { spendScenes } from "../../fixtures/provider-spend.ts";
 import { waitChoices } from "../../fixtures/settings.ts";
 import {
   AccountPanel,
-  BoatUnavailablePanel,
+  NotConnectedPanel,
+  type SpendState,
+} from "./overflow-account.tsx";
+import {
   ChangeKeyPanel,
-  ConnectBoatPanel,
+  ConnectPanel,
+  ConnectSecondPanel,
   DisconnectDialog,
-  ReconnectBoatPanel,
-} from "./overflow-boat.tsx";
-import { SpendLimitPanel, type SpendState } from "./overflow-spend.tsx";
+  NoProviderPanel,
+  ReconnectPanel,
+} from "./overflow-connect.tsx";
+import { OverflowNotice } from "./overflow-notices.tsx";
 import { SettingsFrame } from "./settings-frame.tsx";
 
 export const overflowStates = [
@@ -40,6 +49,10 @@ export const overflowStates = [
   "wallet-connect",
   "wallet-reconnect",
   "wallet-change-key",
+  "two-providers",
+  "connect-second",
+  "second-limit-reached",
+  "boat-unavailable",
 ] as const;
 export type OverflowState = (typeof overflowStates)[number];
 
@@ -54,78 +67,106 @@ const waitOptions = waitChoices.map((seconds) => ({
   value: String(seconds),
 }));
 
+/** The workspace switch and the overflow wait, for every provider. */
 function WaitPanel() {
   return (
-    <Panel title="When jobs start on Boat">
+    <Panel title="When jobs start on a provider">
       <div className="stack settings-form">
         <div className="toggle-row">
-          <span className="strong">Use Boat when your machines are busy</span>
+          <span className="stack-tight">
+            <span className="strong">Use overflow providers</span>
+            <span className="caption">
+              Each label sets the order of its places, under{" "}
+              <TextLink to={paths.settings}>Labels</TextLink>.
+            </span>
+          </span>
           <Switch
             value
             onValueChange={noop}
-            accessibilityLabel="Use Boat when your machines are busy"
+            accessibilityLabel="Use overflow providers"
           />
         </div>
         <DropdownSelector
           variant="field"
-          label="Start on Boat after a job waits"
+          label="Wait for a free slot on your machines"
           options={waitOptions}
-          value={String(boat.waitSeconds)}
+          value={String(overflow.waitSeconds)}
           onValueChange={noop}
-          hint="Warm runners on your machines take jobs first."
+          hint="Then a job goes to the next place of its label."
         />
       </div>
     </Panel>
   );
 }
 
-function spendState(state: OverflowState): SpendState {
+/** The states in which Second provider is connected too. */
+function withSecond(state: OverflowState): boolean {
+  return (
+    state === "two-providers" ||
+    state === "second-limit-reached" ||
+    state === "boat-unavailable"
+  );
+}
+
+function boatSpendState(state: OverflowState): SpendState {
   if (state === "limit-reached") return "limit-reached";
-  if (state === "spend-unavailable") return "unavailable";
+  if (state === "spend-unavailable") return "unread";
   if (state === "save-failed") return "save-failed";
   return "steady";
 }
 
-function PageNotice({ state }: { state: OverflowState }) {
+/** The Boat panel of each state: its account, or the form in its place. */
+function BoatPanel({ state }: { state: OverflowState }) {
   switch (state) {
-    case "limit-reached":
-      return (
-        <Notice
-          tone="warning"
-          title={`Boat spend reached the ${formatMoney(boat.spendLimit)} limit for ${boat.budgetMonth}`}
-        >
-          Jobs run on your machines only, and wait there for a free slot. Boat
-          takes jobs again on {boat.nextMonth}, or when you raise the limit.
-        </Notice>
-      );
     case "boat-rejected":
+      return <ReconnectPanel />;
     case "wallet-reconnect":
-      return (
-        <Notice
-          tone="danger"
-          title={`Boat rejected the API key on ${boat.keyRejectedOn}`}
-        >
-          Jobs run on your machines only until you connect Boat with a new key.
-        </Notice>
-      );
-    case "unknown-costs":
-      return (
-        <Notice tone="warning" title="Boat costs are not known yet">
-          Jobs run on your machines only until Boat reports the cost of each
-          start.
-        </Notice>
-      );
+      return <ReconnectPanel checked />;
+    case "change-key":
+      return <ChangeKeyPanel />;
+    case "wallet-change-key":
+      return <ChangeKeyPanel checked />;
     default:
-      return null;
+      return (
+        <AccountPanel
+          account={boat}
+          spend={
+            state === "limit-reached"
+              ? spendScenes.limitReached
+              : withSecond(state)
+                ? spendScenes.boatBesideSecond
+                : spendScenes.steady
+          }
+          state={boatSpendState(state)}
+          links={{
+            changeKey: paths.overflowChangeKey,
+            disconnect: paths.overflowDisconnect,
+          }}
+          available={state !== "boat-unavailable"}
+        />
+      );
   }
 }
 
-function BoatPanel({ state }: { state: OverflowState }) {
-  if (state === "boat-rejected") return <ReconnectBoatPanel />;
-  if (state === "wallet-reconnect") return <ReconnectBoatPanel checked />;
-  if (state === "change-key") return <ChangeKeyPanel />;
-  if (state === "wallet-change-key") return <ChangeKeyPanel checked />;
-  return <AccountPanel />;
+/** The Second provider panel: not connected, its connect form, or connected. */
+function SecondPanel({ state }: { state: OverflowState }) {
+  if (state === "connect-second") return <ConnectSecondPanel />;
+  if (!withSecond(state)) {
+    return (
+      <NotConnectedPanel
+        provider="second"
+        connect={paths.overflowConnectSecond}
+      />
+    );
+  }
+  const reached = state === "second-limit-reached";
+  return (
+    <AccountPanel
+      account={secondProvider}
+      spend={reached ? spendScenes.secondLimitReached : spendScenes.second}
+      state={reached ? "limit-reached" : "steady"}
+    />
+  );
 }
 
 export function OverflowScreen({
@@ -143,9 +184,9 @@ export function OverflowScreen({
     return (
       <SettingsFrame viewport={viewport} active={paths.overflow}>
         {state === "unavailable" ? (
-          <BoatUnavailablePanel />
+          <NoProviderPanel />
         ) : (
-          <ConnectBoatPanel checked={state === "wallet-connect"} />
+          <ConnectPanel checked={state === "wallet-connect"} />
         )}
       </SettingsFrame>
     );
@@ -156,12 +197,10 @@ export function OverflowScreen({
       active={paths.overflow}
       overlay={state === "disconnect" ? <DisconnectDialog /> : undefined}
     >
-      <PageNotice state={state} />
-      <BoatPanel state={state} />
+      <OverflowNotice state={state} />
       <WaitPanel />
-      {state === "boat-rejected" || state === "wallet-reconnect" ? null : (
-        <SpendLimitPanel state={spendState(state)} />
-      )}
+      <BoatPanel state={state} />
+      <SecondPanel state={state} />
     </SettingsFrame>
   );
 }

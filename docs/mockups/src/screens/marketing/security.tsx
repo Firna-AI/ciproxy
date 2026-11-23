@@ -39,7 +39,7 @@ export function Security() {
         <SectionHead
           eyebrow="Security"
           title="Your code stays in your accounts"
-          lead="Jobs run on your machines and in your Boat account. Code and secrets go from GitHub straight to the runner; ciproxy decides only where the runner starts."
+          lead="Jobs run on your machines and in your own account at your overflow provider. Code and secrets go from GitHub straight to the runner; ciproxy decides only where the runner starts."
         />
         <ul className="security-points">
           {points.map((point) => (

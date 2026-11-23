@@ -23,7 +23,7 @@ export const legalPages: Readonly<
       { id: "service", title: "The service" },
       { id: "accounts", title: "Accounts, workspaces, and organizations" },
       { id: "plans", title: "Plans and payment" },
-      { id: "machines", title: "Your machines and Boat" },
+      { id: "machines", title: "Your machines and overflow providers" },
       { id: "use", title: "Acceptable use" },
       { id: "data", title: "Your data" },
       { id: "agent", title: "The open-source agent" },

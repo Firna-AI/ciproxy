@@ -5,9 +5,11 @@
 // account address. A full queue promises Boat only to the jobs of a label
 // that Boat can start now, at once when no own machine runs the label, and a
 // Boat hold promises a free own slot only to the jobs whose label fits the
-// own machines. A label that starts on the largest Boat size names its full
-// request, and never the resource that is short. A setting that only an Admin
-// changes gets its action for an Admin and Ask an Admin for everyone else.
+// own machines. A label that starts on the largest size of a provider names
+// its full request, and never the resource that is short. The switch and a
+// workspace with no provider hold every provider, so their notices name
+// none. A setting that only an Admin changes gets its action for an Admin
+// and Ask an Admin for everyone else.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
@@ -17,11 +19,12 @@ import { Notice } from "../../components/feedback.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import { AskAdmin } from "../../components/role-actions.tsx";
 import { formatMoney } from "../../fixtures/format.ts";
-import { boat } from "../../fixtures/machines.ts";
 import type { Role } from "../../fixtures/members.ts";
 import { labsOrg, org } from "../../fixtures/org.ts";
+import { boat, overflow } from "../../fixtures/overflow.ts";
+import { providerName } from "../../fixtures/providers.ts";
 import { boatOnlyLabel } from "../../fixtures/settings.ts";
-import { boatSizeNamed, sizePhrase } from "../../fixtures/sizes.ts";
+import { providerSizeNamed, sizePhrase } from "../../fixtures/sizes.ts";
 import { boatRefused } from "../../fixtures/waiting-jobs.ts";
 import { largestBoat, unknownFit } from "../../fixtures/wait-facts.ts";
 import type { LiveScene, LiveState } from "./live-scenes.ts";
@@ -45,7 +48,8 @@ export function factNotice(
   scene: LiveScene,
   role: Role,
 ): ReactNode {
-  const largest = boatSizeNamed(largestBoat.boatSize);
+  const largest = providerSizeNamed(largestBoat.provider, largestBoat.size);
+  const largestName = providerName(largestBoat.provider);
   switch (state) {
     case "unknown-fit":
       return (
@@ -62,12 +66,12 @@ export function factNotice(
       return (
         <Notice
           tone="info"
-          title={`Jobs with the label ${largestBoat.label.name} start on the largest Boat size`}
+          title={`Jobs with the label ${largestBoat.label.name} start on the largest ${largestName} size`}
           actions={adminLink(role, paths.nothingFits, "Edit label")}
         >
-          No machine of yours and no Boat size fits a job of{" "}
-          {requestPhrase(largestBoat.label)}, so ciproxy starts them on Boat{" "}
-          {largest.name}, with {sizePhrase(largest)}.
+          No machine of yours and no {largestName} size fits a job of{" "}
+          {requestPhrase(largestBoat.label)}, so ciproxy starts them on{" "}
+          {largestName} {largest.name}, with {sizePhrase(largest)}.
         </Notice>
       );
     case "boat-key":
@@ -97,21 +101,25 @@ export function factNotice(
         <Notice
           tone="info"
           title="Your machines are full"
-          actions={adminLink(role, paths.overflow, "Turn on Boat")}
+          actions={adminLink(role, paths.overflow, "Turn on overflow")}
         >
-          {jobsWord(scene.waiting)} wait for a free slot. Boat overflow is off,
-          so each one starts when a slot is free.
+          {jobsWord(scene.waiting)} wait for a free slot. Overflow providers are
+          off, so each one starts when a slot is free.
         </Notice>
       );
-    case "boat-not-connected":
+    case "no-provider":
       return (
         <Notice
           tone="info"
           title="Your machines are full"
-          actions={adminLink(role, paths.overflowNotConnected, "Connect Boat")}
+          actions={adminLink(
+            role,
+            paths.overflowNotConnected,
+            "Connect a provider",
+          )}
         >
-          {jobsWord(scene.waiting)} wait for a free slot. Boat is not connected,
-          so each one starts when a slot is free.
+          {jobsWord(scene.waiting)} wait for a free slot. No overflow provider
+          is connected, so each one starts when a slot is free.
         </Notice>
       );
     case "boat-at-once": {
@@ -121,7 +129,7 @@ export function factNotice(
       return (
         <Notice tone="info" title="Your machines are full">
           {jobsWord(scene.waiting - atOnce)} wait for a free slot. Each one
-          starts on Boat when it has waited {boat.waitSeconds} seconds.{" "}
+          starts on Boat when it has waited {overflow.waitSeconds} seconds.{" "}
           {jobsWord(atOnce)} start on Boat at once.
         </Notice>
       );
@@ -137,7 +145,7 @@ export function factNotice(
       return (
         <Notice
           tone="warning"
-          title={`Boat reached its ${formatMoney(boat.spendLimit)} limit for November`}
+          title={`Boat reached its ${formatMoney(boat.spendLimit)} limit for ${overflow.budgetMonth}`}
           actions={adminLink(
             role,
             paths.overflowLimitReached,
@@ -145,7 +153,7 @@ export function factNotice(
           )}
         >
           Jobs whose label fits your machines wait there for a free slot. Boat
-          takes jobs again on {boat.nextMonth}.
+          takes jobs again on {overflow.nextMonth}.
         </Notice>
       );
     case "app-removed":

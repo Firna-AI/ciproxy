@@ -1,8 +1,10 @@
 // The notices above the live queue: why jobs wait. Every notice says what
 // happens to the waiting jobs and offers one way forward. The way forward is
-// a setting or the Boat account, which only an Admin changes, so a Viewer or
-// a Billing person reads Ask an Admin in its place. A suspended App is the
-// exception: an owner unsuspends it on GitHub, so everyone gets the link.
+// a setting or a provider account, which only an Admin changes, so a Viewer
+// or a Billing person reads Ask an Admin in its place. A suspended App is the
+// exception: an owner unsuspends it on GitHub, so everyone gets the link. In
+// the main story, the order of each label is the own machines, then Boat, so
+// a notice about the next place names Boat.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
@@ -12,7 +14,7 @@ import { Notice } from "../../components/feedback.tsx";
 import { paths } from "../../components/paths.ts";
 import { AskAdmin } from "../../components/role-actions.tsx";
 import { formatMoney } from "../../fixtures/format.ts";
-import { boat } from "../../fixtures/machines.ts";
+import { boat, overflow } from "../../fixtures/overflow.ts";
 import { org } from "../../fixtures/org.ts";
 import type { Role } from "../../fixtures/members.ts";
 import { nothingFitsLabel } from "../../fixtures/settings.ts";
@@ -34,14 +36,14 @@ export function liveNotice(
       return (
         <Notice tone="info" title="Your machines are full">
           {scene.waiting} jobs wait for a free slot. Each one starts on Boat
-          when it has waited {boat.waitSeconds} seconds.
+          when it has waited {overflow.waitSeconds} seconds.
         </Notice>
       );
     case "spend-limit":
       return (
         <Notice
           tone="warning"
-          title={`Boat reached its ${formatMoney(boat.spendLimit)} limit for November`}
+          title={`Boat reached its ${formatMoney(boat.spendLimit)} limit for ${overflow.budgetMonth}`}
           actions={admin(
             <LinkAction to={paths.overflowLimitReached} size="sm">
               Raise the limit
@@ -49,7 +51,7 @@ export function liveNotice(
           )}
         >
           Jobs run on your machines only, and wait there for a free slot. Boat
-          takes jobs again on {boat.nextMonth}.
+          takes jobs again on {overflow.nextMonth}.
         </Notice>
       );
     case "boat-refused":
@@ -80,7 +82,7 @@ export function liveNotice(
           )}
         >
           No machine and no Boat size has {sizePhrase(nothingFitsLabel)}. Change
-          the label, or let it run on the largest Boat size.
+          the label, or let it run on the largest size.
         </Notice>
       );
     case "app-suspended":

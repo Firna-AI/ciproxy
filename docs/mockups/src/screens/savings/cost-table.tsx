@@ -1,11 +1,14 @@
-// The parts of the ciproxy cost: own machines, Boat overflow, and the plan. A
-// money column, so every amount shows cents. A cost that is known only in
-// part shows its known part as "At least", a machine cost that nobody set
-// says Not set, and the total of an incomplete report says Incomplete.
+// The parts of the ciproxy cost: own machines, a row for the overflow of each
+// provider that ran jobs in the range, and the plan. A money column, so
+// every amount shows cents. A cost that is known only in part shows its
+// known part as "At least", a machine cost that nobody set says Not set, and
+// the total of an incomplete report says Incomplete.
 
 import { DataTable, type Column } from "../../components/data-table.tsx";
 import { formatCount, formatMoneyCents } from "../../fixtures/format.ts";
+import { providerName } from "../../fixtures/providers.ts";
 import {
+  jobCount,
   totalCost,
   type ReportFigures,
 } from "../../fixtures/savings-states.ts";
@@ -27,23 +30,26 @@ function partCost(cost: number | null, partial: boolean | undefined): string {
 }
 
 function rows(figures: ReportFigures): CostRow[] {
-  const { starts, minutes } = figures;
   const total = totalCost(figures);
+  const minutes = figures.providers.reduce(
+    (sum, entry) => sum + entry.minutes,
+    figures.own.minutes,
+  );
   return [
     {
       key: "own",
       label: figures.ownLabel,
-      jobs: formatCount(starts.own),
-      minutes: formatCount(minutes.own),
+      jobs: formatCount(figures.own.starts),
+      minutes: formatCount(figures.own.minutes),
       cost: partCost(figures.ownCost, figures.ownPartial),
     },
-    {
-      key: "boat",
-      label: "Boat overflow",
-      jobs: formatCount(starts.boat),
-      minutes: formatCount(minutes.boat),
-      cost: formatMoneyCents(figures.boatCost),
-    },
+    ...figures.providers.map((entry) => ({
+      key: entry.provider,
+      label: `${providerName(entry.provider)} overflow`,
+      jobs: formatCount(entry.starts),
+      minutes: formatCount(entry.minutes),
+      cost: formatMoneyCents(entry.cost),
+    })),
     {
       key: "plan",
       label: figures.planLabel,
@@ -54,8 +60,8 @@ function rows(figures: ReportFigures): CostRow[] {
     {
       key: "total",
       label: "Total",
-      jobs: formatCount(starts.own + starts.boat),
-      minutes: formatCount(minutes.own + minutes.boat),
+      jobs: formatCount(jobCount(figures)),
+      minutes: formatCount(minutes),
       cost: total === null ? "Incomplete" : formatMoneyCents(total),
       total: true,
     },

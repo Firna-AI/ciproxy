@@ -1,16 +1,14 @@
-// The open step of setup: the install command, the Boat key with the monthly
-// spend limit, and the first job. The first Admin adds the machine, also
-// after a member asked for the install, because the Admin role alone adds a
-// machine, as the answer to item 50 says. A machine that connected gets its
-// first job image; while a first job waits for it, the step says why. A Mac
-// connects with the same command, and the step says that it runs the jobs
-// of macOS labels.
+// The open step of setup: the install command and the first job. The
+// provider step is in provider-step.tsx. The first Admin adds the machine,
+// also after a member asked for the install, because the Admin role alone
+// adds a machine, as the answer to item 50 says. A machine that connected
+// gets its first job image; while a first job waits for it, the step says
+// why. A Mac connects with the same command, and the step says that it runs
+// the jobs of macOS labels.
 
 import { CircleCheck } from "lucide-react";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
-import { BoatFields } from "../../components/boat-fields.tsx";
-import { Notice } from "../../components/feedback.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
 import {
   ConnectedMachine,
@@ -23,7 +21,6 @@ import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
 import { ax42 } from "../../fixtures/hardware.ts";
 import { macStudioMachine } from "../../fixtures/macs.ts";
-import { boat } from "../../fixtures/machines.ts";
 import { org, workspace } from "../../fixtures/org.ts";
 import { runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import type { OnboardingState } from "./onboarding.tsx";
@@ -56,7 +53,7 @@ export function MachineStep({ state }: { state: OnboardingState }) {
             preparing={state === "machine-preparing"}
           />
           <div className="row">
-            <LinkAction to={paths.connectBoat} tone="primary">
+            <LinkAction to={paths.connectProvider} tone="primary">
               Continue
             </LinkAction>
           </div>
@@ -65,81 +62,6 @@ export function MachineStep({ state }: { state: OnboardingState }) {
       {state === "machine-waiting" ? (
         <WaitingLine>Waiting for the machine to connect…</WaitingLine>
       ) : null}
-    </div>
-  );
-}
-
-function SkipAction() {
-  return (
-    <LinkAction to={paths.firstJobAfterSkip} tone="ghost">
-      Skip for now
-    </LinkAction>
-  );
-}
-
-/** The Boat step when no form can work: Boat is off or did not load. */
-function BoatStepBlocked({ state }: { state: OnboardingState }) {
-  const failed = state === "boat-load-failed";
-  return (
-    <div className="stack">
-      <Notice
-        tone={failed ? "danger" : "info"}
-        title={failed ? "Unable to load Boat" : "Boat is unavailable right now"}
-      >
-        {failed
-          ? "Check the connection, then try again."
-          : "Connect Boat later in Settings under Overflow. Jobs run on your machines."}
-      </Notice>
-      <div className="row-wrap">
-        {failed ? <Action tone="primary">Try again</Action> : null}
-        <SkipAction />
-      </div>
-    </div>
-  );
-}
-
-export function BoatStep({ state }: { state: OnboardingState }) {
-  if (state === "boat-unavailable" || state === "boat-load-failed") {
-    return <BoatStepBlocked state={state} />;
-  }
-  const rejected = state === "boat-rejected";
-  const typed = state !== "boat";
-  const checked = state === "boat-wallet" || state === "boat-connect-failed";
-  return (
-    <div className="stack">
-      {rejected ? (
-        <Notice
-          tone="danger"
-          title={`Boat rejected the API key on ${boat.keyRejectedOn}`}
-        >
-          Jobs run on your machines only until you connect Boat with a new key.
-        </Notice>
-      ) : (
-        <p className="small">
-          When your machines are busy, ciproxy starts jobs in your own Boat
-          account. Boat bills you by the second.
-        </p>
-      )}
-      <BoatFields
-        invalid={state === "boat-invalid"}
-        wallets={checked}
-        reconnect={rejected}
-        limit={typed ? boat.spendLimit : undefined}
-      />
-      {state === "boat-connect-failed" ? (
-        <Notice tone="danger" title="Unable to connect Boat">
-          Check the connection, then try Connect Boat again.
-        </Notice>
-      ) : null}
-      <div className="row-wrap">
-        <LinkAction
-          to={checked ? paths.firstJob : paths.connectBoatWallet}
-          tone="primary"
-        >
-          {checked ? "Connect Boat" : "Check key"}
-        </LinkAction>
-        <SkipAction />
-      </div>
     </div>
   );
 }

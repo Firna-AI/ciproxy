@@ -7,7 +7,7 @@ import { LabelsScreen } from "../../../../screens/settings/labels.tsx";
 const address = orgAddress("settings/labels");
 
 const rationale =
-  "The labels doc says that a label has a platform, Linux or macOS, which never changes after the label is created, as its name does not. A macOS label runs only on the Macs and never on Boat, because a cloud Mac bills 24 hours at least. A Mac uses the slot rule of a Linux machine, and it runs at most 2 job VMs at a time, because Apple allows at most 2 macOS VMs at a time on one Mac. The sizes of the default macOS labels and the size of the macOS image are placeholders until the protocol docs and the image build set them.";
+  "The labels doc says that a label has a platform, Linux or macOS, which never changes after the label is created, as its name does not. A macOS label runs only on the Macs and never on a provider, because a cloud Mac bills 24 hours at least, so its order holds the own machines only. A Mac uses the slot rule of a Linux machine, and it runs at most 2 job VMs at a time, because Apple allows at most 2 macOS VMs at a time on one Mac. The sizes of the default macOS labels and the size of the macOS image are placeholders until the protocol docs and the image build set them.";
 
 export const labels = defineScreen({
   slug: "labels",
@@ -26,7 +26,7 @@ export const addLabel = defineScreen({
   slug: "add-label",
   title: "Add a macOS label",
   description:
-    "The add dialog of ciproxy-macos-xcode, 8 vCPU and 32 GB for Xcode builds, with macOS picked as the platform. The hint says that the platform cannot change later. The VM disk uses the macOS image. The fit line counts the Macs only: a job of this size takes 4 slots, so mac-studio-1 runs 1 at a time. The dialog has no Boat switch and no choice of When nothing fits: the jobs wait for a free Mac.",
+    "The add dialog of ciproxy-macos-xcode, 8 vCPU and 32 GB for Xcode builds, with macOS picked as the platform. The hint says that the platform cannot change later. The VM disk uses the macOS image. The fit line counts the Macs only: a job of this size takes 4 slots, so mac-studio-1 runs 1 at a time. The order holds Your Macs only, with no grab handle, no Remove, and no Add a place, and the dialog has no choice of When nothing fits: the jobs wait for a free Mac.",
   rationale,
   relatedDocs: related("labels", "jobRouting", "overflow"),
   address,

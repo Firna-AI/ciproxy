@@ -1,10 +1,11 @@
 // Setup of a new organization: install the GitHub App, add a machine with one
-// command, connect Boat, and run the first job. One screen; the state picks
-// the open step. The Boat step can be skipped: it then shows a dash and a
-// link to Settings under Overflow, and it does not count as done. A machine
-// that connected gets its first job image before it takes a job. Setup goes
-// on meanwhile, and the machine step and the first job name the image. The
-// same command connects a Mac, which runs the jobs of macOS labels.
+// command, connect an overflow provider, and run the first job. One screen;
+// the state picks the open step. The provider step can be skipped: it then
+// shows a dash and a link to Settings under Overflow, and it does not count
+// as done. A machine that connected gets its first job image before it takes
+// a job. Setup goes on meanwhile, and the machine step and the first job name
+// the image. The same command connects a Mac, which runs the jobs of macOS
+// labels.
 
 import { Check, Minus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -14,14 +15,10 @@ import { PageHeader } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { dotJoin, monthly } from "../../fixtures/format.ts";
-import { boat } from "../../fixtures/machines.ts";
 import { org, workspace } from "../../fixtures/org.ts";
-import {
-  BoatStep,
-  FirstJobStep,
-  MachineStep,
-  setupMachine,
-} from "./step-bodies.tsx";
+import { boat } from "../../fixtures/overflow.ts";
+import { ProviderStep } from "./provider-step.tsx";
+import { FirstJobStep, MachineStep, setupMachine } from "./step-bodies.tsx";
 import "./onboarding.css";
 
 export const onboardingStates = [
@@ -30,14 +27,16 @@ export const onboardingStates = [
   "machine-connected",
   "machine-no-kvm",
   "machine-mac",
-  "boat",
+  "provider",
+  "boat-wallet",
   "boat-invalid",
   "boat-connect-failed",
   "boat-rejected",
-  "boat-unavailable",
-  "boat-load-failed",
-  "boat-wallet",
-  "boat-skipped",
+  "second-provider",
+  "provider-unavailable",
+  "no-provider-available",
+  "provider-load-failed",
+  "provider-skipped",
   "first-job-waiting",
   "first-job-preparing",
   "first-job-passed",
@@ -45,7 +44,7 @@ export const onboardingStates = [
 
 export type OnboardingState = (typeof onboardingStates)[number];
 
-type StepKey = "github" | "machine" | "boat" | "job";
+type StepKey = "github" | "machine" | "provider" | "job";
 type StepStatus = "done" | "active" | "todo" | "skipped";
 
 const steps: readonly {
@@ -67,9 +66,9 @@ const steps: readonly {
     done: `${setupMachine} · 6 slots`,
   },
   {
-    key: "boat",
-    title: "Connect Boat for overflow",
-    todo: "Jobs start on Boat when your machines are busy.",
+    key: "provider",
+    title: "Connect an overflow provider",
+    todo: "Jobs start on a provider when your machines are busy.",
     done: dotJoin(
       `Connected to the Boat account ${boat.account}`,
       `spend limit ${monthly(boat.spendLimit)}`,
@@ -89,22 +88,24 @@ const openStep: Record<OnboardingState, StepKey> = {
   "machine-connected": "machine",
   "machine-no-kvm": "machine",
   "machine-mac": "machine",
-  boat: "boat",
-  "boat-invalid": "boat",
-  "boat-connect-failed": "boat",
-  "boat-rejected": "boat",
-  "boat-unavailable": "boat",
-  "boat-load-failed": "boat",
-  "boat-wallet": "boat",
-  "boat-skipped": "job",
+  provider: "provider",
+  "boat-wallet": "provider",
+  "boat-invalid": "provider",
+  "boat-connect-failed": "provider",
+  "boat-rejected": "provider",
+  "second-provider": "provider",
+  "provider-unavailable": "provider",
+  "no-provider-available": "provider",
+  "provider-load-failed": "provider",
+  "provider-skipped": "job",
   "first-job-waiting": "job",
   "first-job-preparing": "job",
   "first-job-passed": "job",
 };
 
-/** The states after Skip for now, while Boat is not connected. */
-function skipsBoat(state: OnboardingState): boolean {
-  return state === "boat-skipped" || state === "first-job-preparing";
+/** The states after Skip for now, while no provider is connected. */
+function skipsProvider(state: OnboardingState): boolean {
+  return state === "provider-skipped" || state === "first-job-preparing";
 }
 
 /** The states in which the machine gets its first job image. */
@@ -113,9 +114,9 @@ function machinePreparing(state: OnboardingState): boolean {
 }
 
 function statusOf(state: OnboardingState, key: StepKey): StepStatus {
-  const order: StepKey[] = ["github", "machine", "boat", "job"];
+  const order: StepKey[] = ["github", "machine", "provider", "job"];
   const open = openStep[state];
-  if (skipsBoat(state) && key === "boat") return "skipped";
+  if (skipsProvider(state) && key === "provider") return "skipped";
   if (state === "first-job-passed") return "done";
   if (open === key) return "active";
   return order.indexOf(key) < order.indexOf(open) ? "done" : "todo";
@@ -191,11 +192,11 @@ export function OnboardingScreen({
   );
 }
 
-/** The line of a skipped Boat step, which leads to Settings under Overflow. */
+/** The line of a skipped provider step, which leads to Settings. */
 function SkippedLine() {
   return (
     <p className="muted small">
-      Skipped for now. Connect Boat in{" "}
+      Skipped for now. Connect a provider in{" "}
       <TextLink to={paths.overflowNotConnected}>
         Settings under Overflow
       </TextLink>
@@ -208,8 +209,8 @@ function StepBody({ state, step }: { state: OnboardingState; step: StepKey }) {
   switch (step) {
     case "machine":
       return <MachineStep state={state} />;
-    case "boat":
-      return <BoatStep state={state} />;
+    case "provider":
+      return <ProviderStep state={state} />;
     case "job":
       return <FirstJobStep state={state} />;
     case "github":

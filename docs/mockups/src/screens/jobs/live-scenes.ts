@@ -1,6 +1,8 @@
-// The moments that the live queue shows, from the fixtures.
+// The moments that the live queue shows, from the fixtures. Each moment
+// counts the running jobs of each connected provider; in the main story,
+// Boat is the only one.
 
-import type { Job } from "../../fixtures/jobs.ts";
+import { providerOf, type Job } from "../../fixtures/jobs.ts";
 import {
   freeRunning,
   limitRunning,
@@ -11,6 +13,7 @@ import {
 } from "../../fixtures/live-jobs.ts";
 import { countSlots, machineScenes } from "../../fixtures/machines.ts";
 import type { TierKey } from "../../fixtures/org.ts";
+import type { ProviderKey } from "../../fixtures/providers.ts";
 import { boatRefused, nothingFits } from "../../fixtures/waiting-jobs.ts";
 import { factScenes, factStates } from "./live-fact-scenes.ts";
 
@@ -32,13 +35,37 @@ export const liveStates = [
 
 export type LiveState = (typeof liveStates)[number];
 
+/** The jobs that run on one provider now. */
+export type ProviderCount = { provider: ProviderKey; running: number };
+
+/** The running jobs on Boat, the one provider of the main story. */
+export function onBoat(running: number): readonly ProviderCount[] {
+  return [{ provider: "boat", running }];
+}
+
+/** The running jobs of a scene on one provider, 0 when it runs none. */
+export function runningOn(scene: LiveScene, provider: ProviderKey): number {
+  const entry = scene.onProviders.find((count) => count.provider === provider);
+  return entry?.running ?? 0;
+}
+
+/** The running jobs of a list on each provider, for the moments that list all. */
+export function countOn(
+  jobs: readonly Job[],
+  provider: ProviderKey,
+): ProviderCount {
+  const running = jobs.filter((job) => providerOf(job.where) === provider);
+  return { provider, running: running.length };
+}
+
 export type LiveScene = {
   tier: TierKey;
   running: number;
   waiting: number;
   ownBusy: number;
   ownSlots: number;
-  onBoat: number;
+  /** The running jobs of each connected provider, in the order of connection. */
+  onProviders: readonly ProviderCount[];
   warm: number;
   runningJobs: readonly Job[];
   waitingJobs: readonly Job[];
@@ -71,7 +98,7 @@ const steady: LiveScene = {
   waiting: 0,
   ownBusy: countSlots(steadySlots, "busy"),
   ownSlots: 18,
-  onBoat: 6,
+  onProviders: onBoat(6),
   warm: countSlots(steadySlots, "warm"),
   runningJobs: steadyRunning,
   waitingJobs: [],
@@ -83,7 +110,7 @@ const appSuspended: LiveScene = {
   waiting: 0,
   ownBusy: countWhere(suspendedRunning, "own"),
   ownSlots: steadySlotCount,
-  onBoat: countWhere(suspendedRunning, "boat"),
+  onProviders: [countOn(suspendedRunning, "boat")],
   warm: 0,
   runningJobs: suspendedRunning,
   waitingJobs: [],
@@ -96,7 +123,7 @@ const boatRefusedScene: LiveScene = {
   waiting: 9,
   ownBusy: 18,
   ownSlots: 18,
-  onBoat: 36,
+  onProviders: onBoat(36),
   warm: 0,
   runningJobs: boatRefused.running,
   waitingJobs: boatRefused.waiting,
@@ -110,7 +137,7 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     waiting: 12,
     ownBusy: countSlots(peakSlots, "busy"),
     ownSlots: 18,
-    onBoat: 46,
+    onProviders: onBoat(46),
     warm: 0,
     runningJobs: peakRunning,
     waitingJobs: peakWaiting,
@@ -121,7 +148,7 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     waiting: 23,
     ownBusy: 18,
     ownSlots: 18,
-    onBoat: 0,
+    onProviders: onBoat(0),
     warm: 0,
     runningJobs: limitRunning,
     waitingJobs: limitWaiting,
@@ -132,7 +159,7 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     waiting: 0,
     ownBusy: 5,
     ownSlots: 6,
-    onBoat: 1,
+    onProviders: onBoat(1),
     warm: 1,
     runningJobs: freeRunning,
     waitingJobs: [],
@@ -143,7 +170,7 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     waiting: 0,
     ownBusy: 0,
     ownSlots: 18,
-    onBoat: 0,
+    onProviders: onBoat(0),
     warm: countSlots(quietSlots, "warm"),
     runningJobs: [],
     waitingJobs: [],
@@ -153,7 +180,7 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     ...steady,
     running: 19,
     waiting: 2,
-    onBoat: 4,
+    onProviders: onBoat(4),
     waitingJobs: nothingFits.waiting,
   },
   "app-suspended": appSuspended,

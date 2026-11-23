@@ -19,7 +19,9 @@
   --sc-color: var(--c-chart-own);
 }
 
-.sc-boat {
+/* The token keeps the name of the first provider; the series holds every
+   provider. */
+.sc-overflow {
   --sc-color: var(--c-chart-boat);
 }
 

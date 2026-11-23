@@ -1,11 +1,13 @@
-// The labels of mokly-ai with their sizes, and its repositories. A label
-// runs on the own machines first and on Boat when they are busy. A size that
-// fits no machine runs on Boat only, and a size that fits nothing follows the
-// label setting "When nothing fits". The disk of a label is the free disk of
-// each of its jobs, and the fit counts the whole VM disk of vm-disk.ts. A
-// label keeps its platform, and its jobs run only on machines of that
-// platform. A macOS label runs on the Macs only and never on Boat, so its
-// jobs wait when no Mac fits them.
+// The labels of mokly-ai with their sizes, and its repositories. Each label
+// has an order: the places where its jobs run, in order, from label-order.ts.
+// In the main story, each Linux label runs on the own machines first and on
+// Boat when they are busy. A size that fits no machine runs on Boat only, and
+// a size that fits nothing follows the label setting "When nothing fits". The
+// disk of a label is the free disk of each of its jobs, and the fit counts
+// the whole VM disk of vm-disk.ts. A label keeps its platform, and its jobs
+// run only on machines of that platform. A macOS label runs on the Macs only,
+// so its jobs wait when no Mac fits them. placement.ts says where the jobs of
+// a label run at a moment.
 
 import {
   jobsAtOnce,
@@ -13,19 +15,18 @@ import {
   slotsFor,
   type Hardware,
 } from "./hardware.ts";
+import { machinesOnly, machinesThenBoat, type Place } from "./label-order.ts";
 import { machineScenes, type Machine } from "./machines.ts";
 import { labsOrg, org, type Organization } from "./org.ts";
 import type { Platform } from "./platform.ts";
-import {
-  defaultLabelSize,
-  defaultMacosLabelSize,
-  fitsBoat,
-  largestBoatSizeHoldsImage,
-  type Size,
-} from "./sizes.ts";
+import { defaultLabelSize, defaultMacosLabelSize, type Size } from "./sizes.ts";
 
-/** The label setting "When nothing fits". */
-export type WhenNothingFits = "wait" | "largest-boat-size";
+/**
+ * The label setting "When nothing fits": wait, or run on the largest size of
+ * the first available provider of the order whose largest size holds the
+ * image.
+ */
+export type WhenNothingFits = "wait" | "largest-size";
 
 export type Label = Size & {
   name: string;
@@ -33,6 +34,8 @@ export type Label = Size & {
   platform: Platform;
   /** Jobs in the last 30 days. */
   jobs: number;
+  /** The places where its jobs run, in order. */
+  order: readonly Place[];
   whenNothingFits: WhenNothingFits;
 };
 
@@ -42,6 +45,7 @@ export const labels: readonly Label[] = [
     platform: "linux",
     ...defaultLabelSize,
     jobs: 14_371,
+    order: machinesThenBoat,
     whenNothingFits: "wait",
   },
   {
@@ -51,6 +55,7 @@ export const labels: readonly Label[] = [
     memoryGb: 16,
     freeDiskGb: 20,
     jobs: 502,
+    order: machinesThenBoat,
     whenNothingFits: "wait",
   },
   {
@@ -60,6 +65,7 @@ export const labels: readonly Label[] = [
     memoryGb: 32,
     freeDiskGb: 60,
     jobs: 2_899,
+    order: machinesThenBoat,
     whenNothingFits: "wait",
   },
 ];
@@ -79,6 +85,7 @@ export const boatOnlyLabel: Label = {
   memoryGb: 32,
   freeDiskGb: 120,
   jobs: 0,
+  order: machinesThenBoat,
   whenNothingFits: "wait",
 };
 
@@ -90,6 +97,7 @@ export const nothingFitsLabel: Label = {
   memoryGb: 128,
   freeDiskGb: 200,
   jobs: 0,
+  order: machinesThenBoat,
   whenNothingFits: "wait",
 };
 
@@ -101,6 +109,7 @@ export const refusedLabel: Label = {
   memoryGb: 16,
   freeDiskGb: 100,
   jobs: 0,
+  order: machinesThenBoat,
   whenNothingFits: "wait",
 };
 
@@ -110,6 +119,7 @@ export const macosLabel: Label = {
   platform: "macos",
   ...defaultMacosLabelSize,
   jobs: 1_204,
+  order: machinesOnly,
   whenNothingFits: "wait",
 };
 
@@ -127,6 +137,7 @@ export const macosLabels: readonly Label[] = [
     memoryGb: 16,
     freeDiskGb: 20,
     jobs: 318,
+    order: machinesOnly,
     whenNothingFits: "wait",
   },
 ];
@@ -139,6 +150,7 @@ export const largerMacosLabel: Label = {
   memoryGb: 32,
   freeDiskGb: 60,
   jobs: 0,
+  order: machinesOnly,
   whenNothingFits: "wait",
 };
 
@@ -196,34 +208,6 @@ export function defaultLabelJobs(hardware: Hardware): {
     bySlots: Math.floor(slots / slotsFor(label)),
     atOnce: jobsAtOnce(hardware, slots, label),
   };
-}
-
-/** Where the jobs of a label run now. */
-export type Placement =
-  "machines-then-boat" | "machines-only" | "macs-only" | "boat-only" | "waits";
-
-/**
- * Where the jobs of a label run now. Without a Boat account, as after a setup
- * that skipped Boat, they run on the machines only, and a size that fits no
- * machine waits; no Boat size is checked.
- */
-export function placementOf(
-  label: Label,
-  boatConnected = true,
-  machines: readonly Machine[] = steadyMachines,
-): Placement {
-  if (label.platform === "macos") {
-    return fitsOwnMachine(label, machines) ? "macs-only" : "waits";
-  }
-  if (!boatConnected) return fitsOwnMachine(label) ? "machines-only" : "waits";
-  if (fitsOwnMachine(label)) return "machines-then-boat";
-  if (fitsBoat(label)) return "boat-only";
-  if (
-    label.whenNothingFits === "largest-boat-size" &&
-    largestBoatSizeHoldsImage
-  )
-    return "boat-only";
-  return "waits";
 }
 
 /** Overflow wait times the customer can pick, in seconds. */

@@ -11,9 +11,9 @@ export const limitReached = defineScreen({
   slug: "limit-reached",
   title: "The spend limit is reached",
   description:
-    "The confirmed and the unconfirmed costs together reached the limit. Jobs run on own machines only until the month ends or the limit rises. The title names the budget month, November, as the Jobs notice does. The date when Boat takes jobs again is the first day of the next month in UTC, and the budget month is the UTC month before it.",
+    "The confirmed and the unconfirmed Boat costs together reached the limit on Boat. ciproxy starts no new jobs on Boat until the month ends or the limit rises, and the labels go on to their next place. The title names the budget month, November, as the Jobs notice does. The date when Boat takes jobs again is the first day of the next month in UTC, and the budget month is the UTC month before it.",
   rationale:
-    "The user's answer C to item 109, 8 November 2026: the notice names the budget month and the day when Boat takes jobs again. Both come from the API date of the next month, and the API gives no day on which the spend reached the limit.",
+    "The user's answer C to item 109, 8 November 2026: the notice names the budget month and the day when Boat takes jobs again. Both come from the API date of the next month, and the API gives no day on which the spend reached the limit. Each provider has its own limit, so the notice names the provider.",
   relatedDocs: relatedMvp("overflow", "jobRouting"),
   address,
   render: (_props, context) => (
@@ -25,7 +25,7 @@ export const unknownCosts = defineScreen({
   slug: "unknown-costs",
   title: "A cost is not known yet",
   description:
-    "A start has no safe bound yet, so new Boat starts wait until Boat reports its cost. The figures show the costs that ciproxy knows, and the page claims no reached limit.",
+    "A Boat start has no safe bound yet, so new Boat starts wait until Boat reports its cost. The figures show the costs that ciproxy knows, and the page claims no reached limit.",
   relatedDocs: docs,
   address,
   render: (_props, context) => (
@@ -49,7 +49,7 @@ export const saveFailed = defineScreen({
   slug: "save-failed",
   title: "The limit did not save",
   description:
-    "Save did not finish. The field keeps the typed $300, and the saved limit stays $200 until Save succeeds.",
+    "Save limit of Boat did not finish. The field keeps the typed $300, and the saved limit stays $200 until Save limit succeeds.",
   relatedDocs: docs,
   address,
   render: (_props, context) => (

@@ -1,7 +1,8 @@
-/* The Boat spend against its limit: a thin bar with the confirmed costs and
-   the costs that Boat has not confirmed yet, and a key for each part. */
+/* The spend of a provider against its limit: a thin bar with the confirmed
+   costs and the costs that the provider has not confirmed yet, and a key for
+   each part. */
 
-.boat-spend {
+.provider-spend {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -15,7 +16,7 @@
   background: var(--c-primary-soft);
 }
 
-.boat-spend-warning .spend-bar {
+.provider-spend-warning .spend-bar {
   background: var(--c-amber-soft);
 }
 
@@ -23,8 +24,8 @@
   background: var(--c-primary);
 }
 
-.boat-spend-warning .spend-confirmed,
-.boat-spend-warning .spend-key-confirmed {
+.provider-spend-warning .spend-confirmed,
+.provider-spend-warning .spend-key-confirmed {
   background: var(--c-amber);
 }
 

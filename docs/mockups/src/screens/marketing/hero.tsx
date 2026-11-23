@@ -25,7 +25,8 @@ export function Hero({ viewport }: { viewport: Viewport }) {
         </h1>
         <p className="hero-lead">
           ciproxy runs your GitHub Actions jobs on your own machines first, and
-          starts runners in your Boat account only when they are full.
+          starts runners in your own account at an overflow provider only when
+          they are full.
         </p>
         <Actions center>
           <LinkAction to={paths.signIn} tone="primary" size="lg">

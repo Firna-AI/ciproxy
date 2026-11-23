@@ -266,7 +266,16 @@ My calls from the mockups, 23 November 2026:
 - When no place of a label's order can take a job, the Jobs notice gives
   the reason of the first place of the order that fits the size, such as
   "Overflow providers are off" or the spend limit of that provider. Reason:
-  one short reason per label, as each wait reason has one notice today.
+  one short reason per label, as each wait reason has one notice today. A
+  provider that is not connected or is unavailable counts as fitting, so
+  its reason shows. Its sizes are unknown, and a skip could show a false
+  reason. The label list, the order rows, and the Jobs notice take the
+  reason from one function. An order row shows "off", "not connected", or
+  "unavailable" before it says whether a size fits.
+- An unavailable provider keeps its account, spend, and Disconnect in
+  Settings, and hides Change key. Reason: no new connection can start.
+- The job history place filter wraps its choices onto a second line on a
+  narrow screen. Reason: each provider adds a choice.
 - "Add a place" in the label order offers own machines and each offered
   provider. Reason: it matches the offered mark and the append rule of item
   6. A provider that the workspace never connected joins the labels on its
@@ -343,41 +352,46 @@ The overflow screens show providers. Boat keeps its wallet and start-fee
 states. Copy that names Boat for a rule of every provider names the provider.
 The label dialog shows the label order.
 
-- [ ] Change the overflow step of Setup to a provider choice. Turn
+- [x] Change the overflow step of Setup to a provider choice. Turn
       `app/onboarding/connect-boat` into a provider-neutral entry with a
       Boat branch.
-- [ ] Update Settings under Overflow: a list of providers, each with its
+- [x] Update Settings under Overflow: a list of providers, each with its
       account name, spend limit, spend, Change key, and Disconnect. Keep the
       workspace switch and the overflow wait.
-- [ ] Turn `app/settings/no-boat` into a state with no connected provider.
-- [ ] Replace the "Your machines" and "Boat" switches of the label dialog
+- [x] Turn `app/settings/no-boat` into a state with no connected provider.
+- [x] Replace the "Your machines" and "Boat" switches of the label dialog
       with the label order: own machines and each provider, in an order the
       customer can change, add to, and remove from. Show the empty order and
       a macOS label with own machines only.
-- [ ] Change "Run on the largest Boat size" to copy that names no single
+- [x] Change "Run on the largest Boat size" to copy that names no single
       provider.
-- [ ] Update the Jobs notices, the live queue, and the job page so that they
+- [x] Update the Jobs notices, the live queue, and the job page so that they
       name the provider that ran a job and why the job went there.
-- [ ] Update the overflow panel of the Machines page and the savings rows,
+- [x] Update the overflow panel of the Machines page and the savings rows,
       with a row for each provider.
-- [ ] Add the states with two providers, with the fixture "Second
+- [x] Add the states with two providers, with the fixture "Second
       provider": Settings, the label order, the job page, and the savings.
-- [ ] Update the user flows `peak-overflow-to-boat`,
+- [x] Update the user flows `peak-overflow-to-boat`,
       `admin-changes-boat-key`, `admin-skips-boat`, and `first-green-job`.
-- [ ] Update the shared components and fixtures, such as `boat-fields.tsx`,
+- [x] Update the shared components and fixtures, such as `boat-fields.tsx`,
       `boat-spend.tsx`, `boat-wallets.tsx`, `fixtures/sizes.ts`, and
       `fixtures/boat-spend.ts`.
-- [ ] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
+- [x] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
       pages.
-- [ ] Add a state for a connected provider that becomes unavailable in the
+- [x] Add a state for a connected provider that becomes unavailable in the
       deployment: Settings keeps its account and Disconnect, and its order
       row says that jobs skip it.
-- [ ] Add one job history filter choice for each provider that ran jobs.
-- [ ] Make the site mockups provider-neutral where they state a rule of
+- [x] Add one job history filter choice for each provider that ran jobs.
+- [x] Make the site mockups provider-neutral where they state a rule of
       every provider: `labels-reference.tsx`, `quickstart.tsx`,
-      `docs-home.tsx`, `docs-nav.ts`, `tiers.ts`, and `hero-panel.tsx`.
-- [ ] Update the design and the TODOs of this plan for each problem that the
+      `docs-home.tsx`, `docs-nav.ts`, `tiers.ts`, `hero-panel.tsx`,
+      `hero.tsx`, `features.tsx`, `how-it-works.tsx`, `security.tsx`,
+      `pricing.tsx`, `pricing-faq.tsx`, `add-machine-guide.tsx`, and the
+      legal and terms fixtures.
+- [x] Update the design and the TODOs of this plan for each problem that the
       mockups show.
+
+Evidence: `.context/providers-interface/m1-screens/`.
 
 ## Milestone 2: Documentation and protocol
 
@@ -631,7 +645,8 @@ The app shows the approved mockups.
 - [ ] Update the Jobs notices, the job page, the live queue, the Machines
       page, and the savings report.
 - [ ] Update the app tests, the harness scripts, and the browser checks.
-- [ ] Add one job history filter choice for each provider.
+- [ ] Add one job history filter choice for each provider. Wrap the choices
+      on a narrow screen.
 - [ ] Make the shared dialog scroll its body between the title and the
       footer, as the mockups do.
 - [ ] Replace `chartColors.boat` in `ts/tokens/index.ts` with a neutral
@@ -646,7 +661,10 @@ Depends on: 2
 
 Pages that name Boat for a rule of every provider become provider-neutral.
 
-- [ ] Update `connect-boat.md`, `set-a-spend-limit.md`,
+- [ ] Rename or split `guides/connect-boat.md` to match the mockup docs
+      sidebar and Quickstart step "Connect an overflow provider". Keep the
+      Boat key and wallet steps.
+- [ ] Update `set-a-spend-limit.md`,
       `how-ciproxy-works.md`, `reference/labels.mdx`, `plans.mdx`, the
       security pages, the quickstart, and the index. Describe the label
       order.

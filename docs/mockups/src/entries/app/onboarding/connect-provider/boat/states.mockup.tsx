@@ -1,11 +1,27 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { related } from "../../../../../components/related-docs.ts";
+import { paths } from "../../../../../components/paths.ts";
+import { related, relatedMvp } from "../../../../../components/related-docs.ts";
 import { orgAddress } from "../../../../../fixtures/org.ts";
 import { OnboardingScreen } from "../../../../../screens/onboarding/onboarding.tsx";
 
 const address = orgAddress("setup");
 const docs = related("overflow", "security");
+
+export const chooseWallet = defineScreen({
+  slug: "choose-wallet",
+  title: "Choose the wallet",
+  description:
+    "Boat accepted the key. The form lists the wallets that the key can use: Cal Moore's personal wallet and the wallets of the Boat organizations mokly and driftwood. The key check names mokly as likely, so it starts picked, and Cal can pick another wallet. Connect Boat then connects the key, the wallet, and the limit. A change of the key clears the wallets, and Check key runs again.",
+  rationale:
+    "The owner's answer B to item 94, 8 November 2026: after the key check, the form lists the personal wallet and each Boat organization wallet, with the likely one preselected. Each Boat organization has its own wallet. Wallets are a Boat thing, so only the Boat branch shows them.",
+  relatedDocs: relatedMvp("overflow", "security"),
+  address,
+  useCasePaths: [paths.flowFirstGreenJob],
+  render: (_props, context) => (
+    <OnboardingScreen viewport={context.viewport} state="boat-wallet" />
+  ),
+});
 
 export const invalidKey = defineScreen({
   slug: "invalid-key",
@@ -35,34 +51,10 @@ export const rejected = defineScreen({
   slug: "rejected",
   title: "Boat rejected the saved key",
   description:
-    "Boat connected earlier, and on 12 November it stopped accepting the key. The step asks for a new key, and the limit starts with the saved $200.",
+    "Boat connected earlier, and on 12 November it stopped accepting the key. The step asks for a new Boat key, with no provider choice, and the limit starts with the saved $200.",
   relatedDocs: docs,
   address,
   render: (_props, context) => (
     <OnboardingScreen viewport={context.viewport} state="boat-rejected" />
-  ),
-});
-
-export const unavailable = defineScreen({
-  slug: "unavailable",
-  title: "Boat is unavailable",
-  description:
-    "The deployment runs without the Boat service, so no key can connect now. Skip for now continues to the first job, and Settings under Overflow connects Boat later.",
-  relatedDocs: docs,
-  address,
-  render: (_props, context) => (
-    <OnboardingScreen viewport={context.viewport} state="boat-unavailable" />
-  ),
-});
-
-export const loadFailed = defineScreen({
-  slug: "load-failed",
-  title: "The Boat step did not load",
-  description:
-    "The Boat settings did not load. Try again reads them again; Skip for now continues to the first job.",
-  relatedDocs: docs,
-  address,
-  render: (_props, context) => (
-    <OnboardingScreen viewport={context.viewport} state="boat-load-failed" />
   ),
 });

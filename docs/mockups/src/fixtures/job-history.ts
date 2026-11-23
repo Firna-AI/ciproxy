@@ -1,11 +1,14 @@
 // Finished jobs of the workspace mokly-ai on Wednesday 18 November, from its
-// two organizations.
+// two organizations. In the what-if with two providers, Boat refused new
+// sandboxes at 14:19, so docker image ran on Second provider, the next place
+// of the order of ciproxy.
 
 import {
   defaultLabel,
   type Job,
   type JobState,
   onBoat,
+  onSecond,
   own,
   type Where,
 } from "./jobs.ts";
@@ -154,4 +157,9 @@ export const history: Job[] = (
     waited,
     finished,
   }),
+);
+
+/** The same jobs in the what-if with two providers. */
+export const twoProviderHistory: Job[] = history.map((job) =>
+  job.name === "docker image" ? { ...job, where: onSecond } : job,
 );

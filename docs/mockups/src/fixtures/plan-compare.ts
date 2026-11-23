@@ -70,7 +70,7 @@ export const compareGroups: readonly CompareGroup[] = [
     title: "Runners",
     rows: [
       featureRow("ownMachines"),
-      featureRow("boat"),
+      featureRow("overflow"),
       featureRow("warmRunners"),
       featureRow("cache"),
       featureRow("stickyDisks"),

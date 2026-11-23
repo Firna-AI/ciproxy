@@ -1,5 +1,6 @@
 /* A static dialog: a scrim over the page and a card in its middle, or a
-   sheet at the bottom of a phone. */
+   sheet at the bottom of a phone. A dialog never grows past the screen: its
+   title and footer stay, and a long body scrolls between them. */
 
 .dialog-scrim {
   position: fixed;
@@ -23,6 +24,7 @@
   gap: 16px;
   width: 100%;
   max-width: 520px;
+  max-height: 100%;
   padding: 20px 24px;
   border: 1px solid var(--c-border);
   border-radius: var(--r-xl);
@@ -32,6 +34,7 @@
 
 .mockup-mobile .dialog {
   max-width: none;
+  max-height: calc(100% - 24px);
   padding: 20px 16px 24px;
   border-radius: var(--r-xl) var(--r-xl) 0 0;
 }
@@ -45,6 +48,14 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* The parts of a long body keep their height, so the body scrolls. */
+.dialog-body > * {
+  flex-shrink: 0;
 }
 
 .dialog-footer {

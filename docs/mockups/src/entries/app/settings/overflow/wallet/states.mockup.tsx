@@ -12,9 +12,9 @@ export const connect = defineScreen({
   slug: "connect",
   title: "Choose the wallet of a first connection",
   description:
-    "Boat accepted the key. The same wallet choice as in setup lists the personal wallet and each Boat organization wallet of the key, with the likely mokly wallet picked. Connect Boat connects the key, the wallet, and the limit.",
+    "Boat is picked and accepted the key. The same wallet choice as in setup lists the personal wallet and each Boat organization wallet of the key, with the likely mokly wallet picked. Connect Boat connects the key, the wallet, and the limit.",
   rationale:
-    "The owner's answer B to item 94, 8 November 2026. Setup and Settings under Overflow use one wallet choice.",
+    "The owner's answer B to item 94, 8 November 2026. Setup and Settings under Overflow use one wallet choice. Wallets are a Boat thing, so only the Boat branch of a connection shows them.",
   relatedDocs: docs,
   address,
   useCasePaths: [paths.flowSkipBoat],

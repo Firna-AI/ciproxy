@@ -57,7 +57,7 @@ export const tierOrder: readonly TierKey[] = ["free", "team", "business"];
 
 export type FeatureKey =
   | "ownMachines"
-  | "boat"
+  | "overflow"
   | "cache"
   | "warmRunners"
   | "savings"
@@ -86,7 +86,7 @@ export const features: Readonly<Record<FeatureKey, TierFeature>> = {
     from: "free",
     launch: true,
   },
-  boat: { name: "Boat overflow", from: "free", launch: true },
+  overflow: { name: "Overflow providers", from: "free", launch: true },
   cache: { name: "Transparent cache", from: "free", launch: true },
   warmRunners: { name: "Warm runners", from: "free", launch: true },
   savings: { name: "Savings report", from: "free", launch: true },

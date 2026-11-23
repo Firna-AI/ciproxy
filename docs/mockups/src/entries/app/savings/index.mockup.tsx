@@ -5,19 +5,20 @@ import { related } from "../../../components/related-docs.ts";
 import { formatCount, formatMoney } from "../../../fixtures/format.ts";
 import { orgAddress } from "../../../fixtures/org.ts";
 import {
+  providerStarts,
   savings as report,
   savingsPeriod,
   yourCost,
 } from "../../../fixtures/savings.ts";
 import { SavingsScreen } from "../../../screens/savings/savings.tsx";
 
-const jobs = report.starts.own + report.starts.boat;
+const jobs = report.own.starts + providerStarts(report.providers);
 
 export const savings = defineScreen({
   title: "Savings",
-  description: `The last 30 days of mokly-ai, ${savingsPeriod}, all on Team: ${formatCount(jobs)} jobs cost ${formatMoney(yourCost)} with ciproxy (three own machines, Boat overflow, and Team), against ${formatMoney(report.alternatives.blacksmith)} on Blacksmith and ${formatMoney(report.alternatives.github)} on GitHub-hosted runners.`,
+  description: `The last 30 days of mokly-ai, ${savingsPeriod}, all on Team: ${formatCount(jobs)} jobs cost ${formatMoney(yourCost)} with ciproxy (three own machines, the overflow on Boat, and Team), against ${formatMoney(report.alternatives.blacksmith)} on Blacksmith and ${formatMoney(report.alternatives.github)} on GitHub-hosted runners.`,
   rationale:
-    "One hero figure leads against the cheaper alternative, so the claim stays conservative. The bars put the three costs on one axis. The note names the day of the price lists that the report uses.",
+    "One hero figure leads against the cheaper alternative, so the claim stays conservative. The bars put the three costs on one axis. The note names the day of the price lists that the report uses. The cost table has a row for each provider that ran jobs in the range; in the main story, Boat is the only one.",
   relatedDocs: related("metering"),
   address: orgAddress("savings"),
   useCasePaths: [paths.flowPeakOverflow],

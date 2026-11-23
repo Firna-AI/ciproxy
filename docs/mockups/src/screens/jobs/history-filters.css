@@ -1,6 +1,18 @@
 /* The date choice of History (history-filters.tsx): a menu under its button,
    with hairline borders and a check beside the current choice. */
 
+/* The place choice keeps to the width of the row, so its choices wrap. */
+.history-place {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.history-place > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .date-choice {
   position: relative;
   display: inline-flex;

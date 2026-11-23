@@ -44,7 +44,7 @@ export const inactiveAdmin = defineScreen({
   description:
     "On 11 December, mokly-ai moves to Team, which clears only the plan hold of mokly-studio. The hold for an Admin stays from 8 December, because Ana Souza, who added it, is no longer an Admin. The banner and the row offer Turn on to an Admin, and mokly-ai and mokly-labs keep running.",
   rationale:
-    "A current Admin decides whether an organization that a former Admin added may use the machines, the labels, the settings, and the Boat account of the workspace.",
+    "A current Admin decides whether an organization that a former Admin added may use the machines, the labels, the settings, and the overflow providers of the workspace.",
   relatedDocs,
   address,
   useCasePaths: [paths.flowTurnOnOrganization],
@@ -57,7 +57,7 @@ export const turnOn = defineScreen({
   slug: "turn-on",
   title: "Turn on an organization",
   description:
-    "Cal Moore turns on mokly-studio. The dialog asks first, because its jobs then use the machines, the labels, the settings, and the Boat account of the workspace, and it names the person who added it.",
+    "Cal Moore turns on mokly-studio. The dialog asks first, because its jobs then use the machines, the labels, the settings, and the overflow providers of the workspace, and it names the person who added it.",
   relatedDocs,
   address,
   useCasePaths: [paths.flowTurnOnOrganization],

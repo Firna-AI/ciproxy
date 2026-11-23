@@ -55,7 +55,8 @@ function WorkspacePanel() {
           <p className="strong">{workspace.name}</p>
           <p className="caption">
             Its organizations share its plan, members, machines, labels, and
-            Boat account. Each machine runs the jobs of every organization.
+            overflow providers. Each machine runs the jobs of every
+            organization.
           </p>
         </div>
         <LinkAction to={paths.renameWorkspace} size="sm">

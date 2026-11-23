@@ -38,7 +38,7 @@ export function AppRemovedScreen({ viewport }: { viewport: Viewport }) {
         ciproxy keeps the labels, settings, and job history of{" "}
         <span className="nowrap">{workspace.name}</span> for{" "}
         {unbroken(`${appRemoval.keepDays} days`)}. Each machine then needs the
-        install command again, and Boat a new connection.
+        install command again, and each overflow provider a new connection.
       </Notice>
       <div className="auth-actions">
         <Action tone="primary" size="lg" icon={Github} block>

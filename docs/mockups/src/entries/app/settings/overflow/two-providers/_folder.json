@@ -1,0 +1,9 @@
+{
+  "title": "Two providers",
+  "order": [
+    "connected",
+    "connect-second",
+    "second-limit-reached",
+    "boat-unavailable"
+  ]
+}

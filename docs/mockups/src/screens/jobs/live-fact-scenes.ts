@@ -1,9 +1,11 @@
 // The moments of the live queue whose wait reason comes from current facts of
-// the API: an unknown fit with unknown own slots, the largest Boat size, Boat
-// unable to take jobs, a full queue with a label that only Boat runs, a full
-// queue while Boat costs are not counted, the Boat limit while a label that
-// only Boat runs waits, a refused Boat size of one label, a label that no
-// permitted place fits, a removed organization, and a quiet queue with no
+// the API: an unknown fit with unknown own slots, the largest size of Boat,
+// Boat unable to take jobs, the switch off, no connected provider, a full
+// queue with a label that only Boat runs, a full queue while Boat costs are
+// not counted, the Boat limit while a label that only Boat runs waits, a
+// refused Boat size of one label, a label whose order holds only Boat while
+// overflow is off, a label that no place of its order fits, a label whose
+// order holds no provider, a removed organization, and a quiet queue with no
 // warm runners. Each list shows every job that the API sends, so no row says
 // "N more". A full queue lists one running job in each own slot.
 
@@ -25,13 +27,14 @@ export const factStates = [
   "boat-key",
   "boat-billing",
   "overflow-off",
-  "boat-not-connected",
+  "no-provider",
   "boat-at-once",
   "spend-uncounted",
   "limit-boat-only",
   "size-refused",
+  "providers-only-off",
   "nothing-fits-request",
-  "boat-forbidden",
+  "machines-only",
   "app-removed",
   "quiet-no-warm",
 ] as const;
@@ -145,7 +148,7 @@ const otherSlotJobs = rows("full-run", [
   ["storybook (a11y)", "CI", "mokly", "#1562", "running", own(3, 6), "35s"],
 ]);
 
-/** Every own slot runs a job, and no job runs on Boat. */
+/** Every own slot runs a job, and no job runs on a provider. */
 const fullRunning: readonly Job[] = [...limitRunning, ...otherSlotJobs];
 
 function scene(
@@ -160,7 +163,7 @@ function scene(
     waiting: waitingJobs.length,
     ownBusy: own,
     ownSlots: ownSlotCount,
-    onBoat: runningJobs.length - own,
+    onProviders: [{ provider: "boat", running: runningJobs.length - own }],
     warm: 0,
     runningJobs,
     waitingJobs,
@@ -189,13 +192,18 @@ export const factScenes: Readonly<Record<FactState, LiveScene>> = {
   "boat-key": full,
   "boat-billing": full,
   "overflow-off": full,
-  "boat-not-connected": full,
+  "no-provider": { ...full, onProviders: [] },
   "boat-at-once": withBoatOnly,
   "spend-uncounted": full,
   "limit-boat-only": withBoatOnly,
   "size-refused": withBoatOnly,
+  "providers-only-off": scene(
+    steadyRunning.filter((job) => job.where.kind === "own"),
+    boatOnlyWaiting,
+    { warm: 3 },
+  ),
   "nothing-fits-request": scene(steadyRunning, nothingFits.waiting),
-  "boat-forbidden": scene(steadyRunning, nothingFits.waiting),
+  "machines-only": scene(steadyRunning, nothingFits.waiting),
   "app-removed": scene(ownOrganizationJobs, [], { warm: 2 }),
   "quiet-no-warm": scene([], []),
 };

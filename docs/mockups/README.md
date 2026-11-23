@@ -65,6 +65,18 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   own period, which begins on the day the tier begins. Cal Moore installs the
   GitHub App, so he is the first Admin. `members.ts` names the person of each
   role, the owner with the Billing role, and a second Admin.
+- Two overflow providers are available in the deployment of the story: Boat,
+  and Second provider, the fixture name of a later provider, which the plan
+  of the second real provider replaces with its brand. mokly-ai connects Boat
+  in Setup, so the order of each Linux label is the own machines, then Boat.
+  `providers.ts` holds the facts of each provider, and `overflow.ts` the
+  workspace switch, the overflow wait, and the account of each provider with
+  its own monthly spend limit. In the what-ifs with two providers, mokly-ai
+  also connects Second provider on 9 November: it goes last in the order of
+  each Linux label, and an Admin moves it before Boat for ciproxy-large. The
+  `two-providers` folders of Settings, Jobs, and Savings and the `overflow`
+  folder of Machines show them, also while the deployment has no settings
+  for Boat and the history lists a job on Second provider.
 - Some screens are what-ifs of November, in `access.ts`, `machines.ts`,
   `new-machine.ts`, and `settings.ts`: a fourth machine, the mini PC
   office-mini-1, whose disk holds fewer jobs than its slots; a fourth AX42,
@@ -73,10 +85,11 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   measured figures of its machine cache, its Docker disks, or both; a moment in
   which no machine measured its machine cache; Tom Becker suspends or removes
   the GitHub App; an owner of mokly-labs removes the App from mokly-labs alone;
-  Jonas Weber leaves the organizations on GitHub; and a setup that skipped Boat,
-  so the labels run on the machines only. `hardware.ts` holds the slot rule and
-  the disk rule, in which each running job holds its VM disk: the current image
-  with the free disk of its label, as `vm-disk.ts` gives it. In
+  Jonas Weber leaves the organizations on GitHub; and a setup that skipped the
+  provider step, so the labels run on the machines only. `hardware.ts` holds
+  the slot rule and the disk rule, in which each running job holds its VM
+  disk: the current image with the free disk of its label, as `vm-disk.ts`
+  gives it. In
   `job-details.ts`, ciproxy has no saved request for two jobs of the history, so
   their pages show an unknown request and the VM that ran each job.
 - A machine that gets its first job image takes no job until the image is
@@ -130,9 +143,15 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   that come from facts of the API, such as an unknown fit, a job that no
   runner took, a negative saving, and a missing comparison price.
   `place-facts` shows where the waiting jobs of each label can start, also
-  of a label that only Boat runs and of a label whose Boat size Boat
-  refused. `fit-facts` shows a label that no permitted place fits, with its
-  full request, and a label that does not run on Boat.
+  of a label that only Boat runs, of a label whose Boat size Boat refused,
+  and of a label whose order holds only Boat while overflow is off.
+  `fit-facts` shows a label that no place of its order fits, with its full
+  request, and a label whose order holds the own machines only.
+- When no place of the order of a label can take a job now, the label list
+  and the Jobs notice give the reason of the first place of the order that
+  fits the size, such as "overflow providers are off" or the spend limit of
+  that provider. Both take the reason from `placementOf` in `placement.ts`,
+  and `src/components/hold-text.ts` words it.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -187,8 +206,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 ## Words
 
 - "Workspace" is the customer of ciproxy: one or more GitHub organizations
-  with one tier, members, machines, labels, settings, and Boat account. Never
-  write "team" for it, because Team is a tier.
+  with one tier, members, machines, labels, settings, and overflow providers.
+  Never write "team" for it, because Team is a tier.
 - "Machine" is the customer's own hardware, on every screen and in the
   pricing. Never write "node" or "server", and never call a VM a machine.
 - "Size" is what a label gives a job: its vCPU, memory, and free disk. Write
@@ -196,9 +215,19 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   size". Code names use the same words, such as `sizeText` and `LabelDialog`.
 - "Free disk" is the disk of a label: the space that each job gets, as GitHub
   states the disk of its runners. "VM disk" is the whole disk of a job VM: the
-  image with the free disk. A Boat size states its whole disk. Write "free
-  disk" or "VM disk" where a reader could mix them up, and use the same words
-  in code, such as `freeDiskGb` and `vmDiskBytes`.
+  image with the free disk. A provider size, such as a Boat size, states its
+  whole disk. Write "free disk" or "VM disk" where a reader could mix them up,
+  and use the same words in code, such as `freeDiskGb` and `vmDiskBytes`.
+- "Overflow provider", or "provider" where the context is clear, is a service
+  that runs jobs in the customer's own account at it, such as Boat. Copy names
+  the brand of a provider for its own things, such as the Boat key, Boat
+  wallets, and start fees, and names no provider for a rule of every provider.
+- "Order" is the list of places of a label, in which its jobs run: the own
+  machines and each provider. "Place" is one entry of the order.
+- A provider is "available" when the deployment has its settings, and
+  "offered" when the workspace connected it once. Add a place of the order
+  lists the own machines and each offered provider. Code names use the same
+  words.
 
 ## Visual smoke test
 
@@ -257,30 +286,47 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   starts chart.
 - `src/components/paths.ts`: every catalogue path of a screen and a flow.
 - `src/components/dialog.tsx`: the dialog over a page, a sheet on mobile, such
-  as Edit label, Clear cache, and Move to Free.
-- `src/components/boat-fields.tsx`: the Boat key and the monthly spend limit,
-  which every connection of Boat asks for, in setup and in Settings. A typed
-  key shows masked. `src/fixtures/boat-form.ts` holds what the person typed:
-  a key that is not real, and a limit that did not save. Each connection
-  checks the key first with Check key. The wallet choice then shows between
-  the key and the limit, and Connect Boat connects.
-- `src/components/boat-wallets.tsx`: the wallet choice of a connection. It
-  lists the personal wallet and each Boat organization wallet that the key
+  as Edit label, Clear cache, and Move to Free. A dialog never grows past the
+  screen: a long body scrolls between the title and the footer.
+- `src/components/provider-choice.tsx`: the provider choice of a connection,
+  in Setup and in Settings under Overflow, with a card for each provider of
+  ciproxy. A provider that is not available shows as unavailable right now.
+  It also holds the first sentence of a connection and its submit button.
+- `src/components/provider-fields.tsx`: the key of a provider and the monthly
+  spend limit on it, which every connection asks for, in Setup and in
+  Settings. A typed key shows masked. `src/fixtures/provider-form.ts` holds
+  what the person typed: keys that are not real, and a limit that did not
+  save. A Boat connection checks the key first with Check key; the wallet
+  choice then shows between the key and the limit, and Connect Boat connects.
+  A provider with no choice of billing account connects in one step.
+- `src/components/boat-wallets.tsx`: the wallet choice of a Boat connection.
+  It lists the personal wallet and each Boat organization wallet that the key
   can use, with the likely wallet picked. The person can pick another wallet
   before Connect Boat. `src/fixtures/boat-wallets.ts` holds the wallets that
   the key of Cal Moore can use.
-- `src/components/boat-spend.tsx`: the Boat spend of the month against the
-  monthly limit, on Settings under Overflow and on the Machines page. As the
-  [overflow doc](../protocol/overflow.md#spend-limit) asks, it shows the costs
-  that Boat confirmed and the costs that it has not confirmed yet apart.
-  `src/fixtures/boat-spend.ts` splits a total of November into these two
-  parts. Each total comes from `machines.ts`: the spend of the month, or the
-  limit when the spend reaches it. The unconfirmed part holds each start that
-  Boat has not reported, at its highest cost, also after its lifetime ends.
+- `src/components/provider-spend.tsx`: the spend of one provider in the month
+  against its own monthly limit, on Settings under Overflow and on the
+  Machines page. As the [overflow doc](../protocol/overflow.md#spend-limit)
+  asks, it shows the costs that the provider confirmed and the costs that it
+  has not confirmed yet apart. `src/fixtures/provider-spend.ts` splits each
+  total of November into these two parts. Each total comes from
+  `overflow.ts`: the spend of the month, or the limit when the spend reaches
+  it. The unconfirmed part holds each start that the provider has not
+  reported, at its highest cost, also after its lifetime ends.
 - `src/fixtures/sizes.ts`: the size of a label as text, the size of the
   default label, the least free disk of a label, the VM that ran a job with
-  its VM disk, and the sizes that the Boat account can start, with their
+  its VM disk, and the sizes that each provider account can start, with their
   whole disks, which decide where the jobs of a label run.
+- `src/fixtures/label-order.ts`: the places of a label order and their names.
+  `placement.ts` holds the state of each provider at a moment and gives where
+  the jobs of a label run: the places of its order that can run its size, the
+  reason of the first place that fits when none can take a job now, or the
+  largest size of the first provider that can take a job when nothing fits.
+  `order-scenes.ts` holds the labels of the what-ifs: an empty order, Boat
+  before the own machines, Boat as the one place, and two providers.
+  `src/screens/settings/label-order.tsx` is the order control of the label
+  dialog, on the sortable list of `@firna/ui`, and `labels-scenes.ts` holds
+  the states of the Labels page.
 - `src/fixtures/vm-disk.ts`: the VM disk of a job, which grows the root disk
   of the current image by the free disk of its label. It mirrors `RootSizing`
   of `ciproxy-agent`, and it holds the root size of the current image. No
@@ -325,8 +371,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   cheapest plan that covers a use, and `plan-compare.ts` the feature
   comparison of the pricing page, from the tier features in `tiers.ts`.
 - `src/fixtures/job-details.ts`: the jobs of the job page, with the label, the
-  request that it gave the job or an unknown request, the Boat size that ran
-  a job on Boat, and the cache source and counts.
+  request that it gave the job or an unknown request, the size of the
+  provider that ran a job on a provider, and the cache source and counts.
+  `job-details-providers.ts` holds a job of the two-provider what-if that
+  passed Boat and ran on Second provider, and `twoProviderHistory` of
+  `job-history.ts` lists it. The place filter of History has one choice for
+  each provider that ran jobs in the window.
 - `src/fixtures/usage.ts`: Plan and usage at each moment, the included starts
   and own machines of a use, and the day on which the pace passes the
   included starts, which decides the pace notice of Free.
@@ -343,11 +393,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   `src/screens/jobs/live-fact-scenes.ts` and `live-fact-notices.tsx` build
   these moments of the live queue and their notices, and the moments of
   `place-facts` and `fit-facts`. `place-fact-notices.tsx` words the notices
-  of a refused Boat size and of a label that no permitted place fits.
+  of a refused Boat size and of a label that no place of its order fits.
 - `src/fixtures/savings-states.ts`: the figures of each Savings state,
   changed from the known report only where the state needs it: a cost that
   nobody set or that is known in part, a missing comparison price, a negative
-  saving on a quiet day, a refresh, and ranges with no jobs.
+  saving on a quiet day, a refresh, ranges with no jobs, and a row for each of
+  two providers.
 - `src/fixtures/current-api.ts`: the offer of the API for each usage moment,
   and the moments that pass a limit, for the banners and the billing pages of
   the current API. `src/components/api-banner.tsx` words every banner as the

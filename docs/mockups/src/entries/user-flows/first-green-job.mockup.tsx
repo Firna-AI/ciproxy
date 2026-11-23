@@ -6,7 +6,7 @@ import { relatedMvp } from "../../components/related-docs.ts";
 export const firstGreenJob = defineUseCase({
   title: "From sign-in to the first green job",
   description:
-    "Cal Moore signs in on 1 September 2026, installs the GitHub App on mokly-ai, continues with GitHub on the terms step, adds one Hetzner machine with one command, waits while it gets its job image, connects Boat, and sees the first job pass on the own machine.",
+    "Cal Moore signs in on 1 September 2026, installs the GitHub App on mokly-ai, continues with GitHub on the terms step, adds one Hetzner machine with one command, waits while it gets its job image, picks Boat as the overflow provider and connects it, and sees the first job pass on the own machine.",
   relatedDocs: relatedMvp(
     "workspaces",
     "security",
@@ -50,19 +50,19 @@ export const firstGreenJob = defineUseCase({
       screenPath: paths.machineConnected,
       title: "The machine is ready",
       description:
-        "hetzner-ax42-1 has its job image, so it takes jobs. Continue opens the Boat step.",
+        "hetzner-ax42-1 has its job image, so it takes jobs. Continue opens the provider step.",
     },
     {
-      screenPath: paths.connectBoat,
-      title: "Connect Boat",
+      screenPath: paths.connectProvider,
+      title: "Pick a provider and connect Boat",
       description:
-        "Cal pastes an API key of the mokly Boat account for overflow, and sets a spend limit of $200 a month. Check key asks Boat for the wallets of the key.",
+        "Setup lists the available providers, and Cal picks Boat. He pastes an API key of the mokly Boat account, and sets a spend limit of $200 a month on Boat. Check key asks Boat for the wallets of the key.",
     },
     {
       screenPath: paths.connectBoatWallet,
       title: "Choose the wallet",
       description:
-        "The likely mokly wallet starts picked. Connect Boat connects the key, the wallet, and the limit.",
+        "The likely mokly wallet starts picked. Connect Boat connects the key, the wallet, and the limit, and Boat goes last in the order of each Linux label.",
     },
     {
       screenPath: paths.firstJob,

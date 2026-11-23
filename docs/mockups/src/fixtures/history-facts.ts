@@ -5,7 +5,7 @@
 // history window of the plan in days.
 
 import { history } from "./job-history.ts";
-import { none, own, type Job } from "./jobs.ts";
+import { none, own, providerOf, type Job } from "./jobs.ts";
 
 /** The history window of Team, in days, as the API gives it. */
 export const historyDays = 30;
@@ -19,7 +19,7 @@ export const historyFilter = { search: "e2e", place: "boat" } as const;
 /** Finished jobs that ran on Boat and match "e2e". */
 export const filteredHistory: Job[] = history.filter(
   (job) =>
-    job.where.kind === historyFilter.place &&
+    providerOf(job.where) === historyFilter.place &&
     job.name.includes(historyFilter.search),
 );
 

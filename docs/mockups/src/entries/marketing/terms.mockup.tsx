@@ -9,7 +9,7 @@ export const terms = defineScreen({
   description:
     "The frame of the terms of ciproxy.dev: the title, the switch to the privacy policy, On this page on a wide desktop, and the section headings. The footer of every marketing page and the sign-in page link here.",
   rationale:
-    "The user writes or approves the text of each section before the launch, so grey lines hold its place. The headings name what the terms must cover: the service, accounts, plans and payment, the machines and Boat of the customer, use, data, the open-source agent, the end of the service, liability, changes, and contact.",
+    "The user writes or approves the text of each section before the launch, so grey lines hold its place. The headings name what the terms must cover: the service, accounts, plans and payment, the machines and overflow providers of the customer, use, data, the open-source agent, the end of the service, liability, changes, and contact.",
   relatedDocs: relatedMvp("billing", "security", "appRemoval"),
   address: siteAddress("terms"),
   render: (_props, context) => (

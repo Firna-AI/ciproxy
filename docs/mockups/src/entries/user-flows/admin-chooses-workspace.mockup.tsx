@@ -31,7 +31,7 @@ export const adminChoosesWorkspace = defineUseCase({
       screenPath: paths.organizations,
       title: "Two organizations",
       description:
-        "mokly-labs joined mokly-ai, and its jobs use the machines, the labels, and the Boat account at once.",
+        "mokly-labs joined mokly-ai, and its jobs use the machines, the labels, and the overflow providers at once.",
     },
   ],
 });

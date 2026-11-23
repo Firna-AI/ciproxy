@@ -1,8 +1,9 @@
 // The wallet choice of a Boat connection, after the key check: the personal
 // wallet and each Boat organization wallet that the key can use, with the
-// likely wallet preselected. Setup and Settings under Overflow show it for a
-// first connection, a reconnect, and Change key. A change of the key clears
-// the choice, and the key check runs again.
+// likely wallet preselected. Only the Boat branch of a connection shows it,
+// because only Boat bills one of several wallets. Setup and Settings under
+// Overflow show it for a first connection, a reconnect, and Change key. A
+// change of the key clears the choice, and the key check runs again.
 
 import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 

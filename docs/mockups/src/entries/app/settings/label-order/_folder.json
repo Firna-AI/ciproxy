@@ -1,0 +1,10 @@
+{
+  "title": "Label order",
+  "order": [
+    "empty-order",
+    "boat-first",
+    "two-providers",
+    "two-providers-edit",
+    "boat-unavailable"
+  ]
+}

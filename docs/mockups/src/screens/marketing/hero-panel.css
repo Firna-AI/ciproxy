@@ -108,7 +108,7 @@
   border-top: 1px solid var(--c-border);
 }
 
-.hp-boat {
+.hp-provider {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -119,7 +119,7 @@
   background: var(--c-bg);
 }
 
-.hp-boat-name {
+.hp-provider-name {
   display: inline-flex;
   align-items: center;
   gap: 8px;

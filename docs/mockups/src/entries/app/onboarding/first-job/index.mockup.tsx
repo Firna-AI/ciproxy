@@ -16,7 +16,7 @@ export const firstJob = defineScreen({
   propSchema: stateSchema([
     "first-job-waiting",
     "first-job-passed",
-    "boat-skipped",
+    "provider-skipped",
     "first-job-preparing",
   ]),
   props: { state: "first-job-waiting" },
@@ -36,19 +36,19 @@ export const firstJob = defineScreen({
       slug: "after-skip",
       title: "After Skip for now",
       description:
-        "The Boat step shows a dash, does not count as done, and links to Settings under Overflow. The first job is open. Setup completes with the first job, also without Boat.",
+        "The provider step shows a dash, does not count as done, and links to Settings under Overflow. The first job is open. Setup completes with the first job, also without a provider.",
       rationale:
-        "The API keeps no record of a skip, so a skip lasts only for the browser tab. Setup ends with the first job, so the Boat step never holds a finished Setup open.",
-      props: { state: "boat-skipped" },
+        "The API keeps no record of a skip, so a skip lasts only for the browser tab. Setup ends with the first job, so the provider step never holds a finished Setup open.",
+      props: { state: "provider-skipped" },
       useCasePaths: [paths.flowSkipBoat],
     },
     {
       slug: "waits-for-image",
       title: "The first job waits for the job image",
       description:
-        "Cal Moore skipped Boat and pushed the change while hetzner-ax42-1 still gets its first job image. test (rust) waits for a runner, and the notice says why: the job starts on the machine when it is ready. The closed machine step names the image too.",
+        "Cal Moore skipped the provider step and pushed the change while hetzner-ax42-1 still gets its first job image. test (rust) waits for a runner, and the notice says why: the job starts on the machine when it is ready. The closed machine step names the image too.",
       rationale:
-        "The answer E to item 124: the first-job step gives the reason while a first job waits for a new machine. A machine without its image takes no job, so with Boat connected the job would start on Boat at once; the job waits for the machine only without Boat. No text promises a time, because a slow link makes the download long.",
+        "The answer E to item 124: the first-job step gives the reason while a first job waits for a new machine. A machine without its image takes no job, so with a provider connected the job would start on the next place of its label at once; the job waits for the machine only without a provider. No text promises a time, because a slow link makes the download long.",
       relatedDocs: relatedMvp("agent", "jobRouting", "overflow"),
       props: { state: "first-job-preparing" },
     },

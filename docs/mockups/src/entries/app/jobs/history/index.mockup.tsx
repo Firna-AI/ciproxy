@@ -19,7 +19,7 @@ const shown = [
 export const history = defineScreen({
   title: "History",
   description:
-    "Finished jobs, newest first, with the result, where each ran, how long it waited for a runner, and its duration. A job name opens its detail. The filters stay above the list in every state.",
+    "Finished jobs, newest first, with the result, where each ran, how long it waited for a runner, and its duration. A job name opens its detail. The filters stay above the list in every state. The place filter has one choice for each provider that ran jobs in the window; today that is Boat.",
   relatedDocs: related("jobRouting", "billing"),
   address: orgAddress("jobs/history"),
   propSchema: stateSchema(historyStates),
@@ -32,7 +32,7 @@ export const history = defineScreen({
       slug: "empty",
       title: "No finished jobs yet",
       description:
-        "A new organization before its first job finishes. The filters stay, so a person can choose a longer window.",
+        "A new organization before its first job finishes. The filters stay, so a person can choose a longer window. No provider ran a job yet, so the place filter has no provider choice.",
       props: { state: shown[1] },
     },
     {

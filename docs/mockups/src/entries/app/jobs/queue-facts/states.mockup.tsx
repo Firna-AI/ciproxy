@@ -6,15 +6,15 @@ import { JobsLiveScreen } from "../../../../screens/jobs/jobs-live.tsx";
 
 const address = orgAddress("jobs");
 
-export const boatNotConnected = defineScreen({
-  slug: "boat-not-connected",
-  title: "Boat is not connected",
+export const noProvider = defineScreen({
+  slug: "no-provider",
+  title: "No provider is connected",
   description:
-    "The workspace has no Boat account. Every own slot runs a job and six jobs wait for a slot. Connect Boat opens the overflow settings.",
+    "The workspace has no connected provider. Every own slot runs a job and six jobs wait for a slot. The figures show no provider. Connect a provider opens the overflow settings, which ask for a provider first.",
   relatedDocs: related("jobRouting", "overflow"),
   address,
   render: (_props, context) => (
-    <JobsLiveScreen viewport={context.viewport} state="boat-not-connected" />
+    <JobsLiveScreen viewport={context.viewport} state="no-provider" />
   ),
 });
 

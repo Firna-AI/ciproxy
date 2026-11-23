@@ -50,7 +50,7 @@ const steps: readonly { title: string; text: string; visual: ReactNode }[] = [
   },
   {
     title: "Change runs-on",
-    text: "Point a workflow at ciproxy. Its jobs start on your machines, and on Boat when they are full.",
+    text: "Point a workflow at ciproxy. Its jobs start on your machines, and on your overflow provider when they are full.",
     visual: <CodeBlock label={workflowFile} lines={runsOnDiff} />,
   },
 ];

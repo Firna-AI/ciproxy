@@ -13,7 +13,7 @@ export const viewer = defineScreen({
   description:
     "Jonas Weber, a Viewer, sees the three machines, their slots, and the Boat spend, read-only. The page has no Add machine and no link to the overflow settings, and Settings is not in his navigation. A machine opens its page read-only.",
   rationale:
-    "Only an Admin changes the machines and Boat, so the read-only roles see the state without the actions.",
+    "Only an Admin changes the machines and the providers, so the read-only roles see the state without the actions.",
   relatedDocs: related("security", "agent"),
   address,
   render: (_props, context) => (

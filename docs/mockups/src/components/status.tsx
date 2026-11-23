@@ -10,6 +10,7 @@ import { StatusDot } from "@firna/ui/status-dot";
 
 import type { JobState, Where } from "../fixtures/jobs.ts";
 import type { MachineStatus } from "../fixtures/machines.ts";
+import { providerName } from "../fixtures/providers.ts";
 import { statusColors, type StatusTone } from "@ciproxy/tokens";
 import "./status.css";
 
@@ -71,7 +72,10 @@ export function MachineStatusLabel({ status }: { status: MachineStatus }) {
   return <DotLabel tone={tone}>{label}</DotLabel>;
 }
 
-/** Where a job runs or ran: an own machine and, while it runs, its slot. */
+/**
+ * Where a job runs or ran: an own machine and, while it runs, its slot, or
+ * the provider by its brand.
+ */
 export function WhereLabel({
   where,
   slot = false,
@@ -82,11 +86,11 @@ export function WhereLabel({
   if (where.kind === "none") {
     return <span className="muted">Waiting for a runner</span>;
   }
-  if (where.kind === "boat") {
+  if (where.kind === "provider") {
     return (
       <span className="where">
         <Cloud size={14} className="icon-muted" />
-        <span>Boat</span>
+        <span>{providerName(where.provider)}</span>
       </span>
     );
   }

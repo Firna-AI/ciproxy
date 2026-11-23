@@ -1,12 +1,13 @@
 // The reference page of labels and VM sizes,
 // ciproxy.dev/docs/reference/labels: the default labels with their sizes and
-// slots, how slots work, custom labels, and where a job with a label runs.
+// slots, how slots work, custom labels with their order of places, and where
+// a job with a label runs.
 // The disk of a label is the free disk of each job, and its VM disk adds the
 // image, as the answer to item 77 says. A running job holds its VM disk, as
 // design call 34 says, after the VM images and the host reserve, as the
 // answer to item 73 says. A label keeps its name, as design call 33 says,
-// and its platform. A macOS label runs on the Macs only, never on Boat, and a
-// Mac runs at most 2 job VMs at a time.
+// and its platform. A macOS label runs on the Macs only, never on an overflow
+// provider, and a Mac runs at most 2 job VMs at a time.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -23,7 +24,7 @@ import {
   slotsFor,
 } from "../../fixtures/hardware.ts";
 import { macStudio } from "../../fixtures/macs.ts";
-import { boat } from "../../fixtures/machines.ts";
+import { overflow } from "../../fixtures/overflow.ts";
 import { macosVmLimit, platformName } from "../../fixtures/platform.ts";
 import {
   labelNamed,
@@ -103,9 +104,10 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
       />
       <div className="docs-flow">
         <p>
-          Each job starts in a fresh VM of the platform and size of its label:
-          on your machines first, and on Boat when they are full. A job of a
-          macOS label runs on your Macs only.
+          Each job starts in a fresh VM of the platform and size of its label,
+          at the first place of the order of the label that can take it. A new
+          label runs on your machines first, then on each overflow provider that
+          you connected. A job of a macOS label runs on your Macs only.
         </p>
         <DocsH2 id="default-labels">Default labels</DocsH2>
         <p>Every workspace starts with these Linux and macOS labels.</p>
@@ -155,8 +157,8 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
         </p>
         <ul className="docs-list">
           <li>
-            A macOS label runs on your Macs only. Its jobs never run on Boat, so
-            they wait for a free Mac.
+            A macOS label runs on your Macs only. Its jobs never run on an
+            overflow provider, so they wait for a free Mac.
           </li>
           <li>
             A Mac uses the same slots as a Linux machine, but it runs at most{" "}
@@ -176,7 +178,9 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
         <p>
           Add a label with its own platform and size in{" "}
           <strong>Settings</strong>, under <strong>Labels</strong>. Each Linux
-          label runs on your machines, on Boat, or on both.
+          label has an order of places: your machines and each overflow
+          provider, in the order that you choose. A label can put a provider
+          first, or leave your machines out.
         </p>
         <p>
           A label name follows the rules of GitHub for runner labels. The name
@@ -185,21 +189,23 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
           old one.
         </p>
         <Notice tone="info" title="Sizes larger than your machines">
-          A job whose size fits none of your machines runs on Boat only. When no
-          Boat size fits either, the label setting{" "}
-          <strong>When nothing fits</strong> decides: its jobs wait, or run on
-          the largest Boat size.
+          A job whose size fits none of your machines runs on a provider of its
+          order that has a size that fits. When no place of the order fits, the
+          label setting <strong>When nothing fits</strong> decides: its jobs
+          wait, or run on the largest size of the first available provider of
+          the order.
         </Notice>
         <DocsH2 id="where-jobs-run">Where a job runs</DocsH2>
         <p>
-          A job waits up to {boat.waitSeconds} seconds for a free slot on your
-          machines, then starts on Boat. Set the wait in{" "}
-          <strong>Settings</strong>, under <strong>Overflow</strong>:{" "}
-          {waitText()}.
+          A job goes to the next place of its order when a place cannot take it
+          now, with no extra wait between providers. On your machines, a job
+          waits up to {overflow.waitSeconds} seconds for a free slot before it
+          goes on. Set the wait in <strong>Settings</strong>, under{" "}
+          <strong>Overflow</strong>: {waitText()}.
         </p>
         <p>
-          At the Boat spend limit, jobs run on your machines only and wait there
-          for a free slot.
+          Each overflow provider has its own monthly spend limit. At the limit
+          of a provider, jobs skip that provider until the next month.
         </p>
       </div>
     </DocsShell>

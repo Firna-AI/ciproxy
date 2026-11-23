@@ -1,6 +1,8 @@
-// Starts by day, on own machines and on Boat: stacked bars that stretch to
-// their panel, hairline grid lines, and the axis labels in the monospace face.
-// A visually hidden table gives screen readers the values.
+// Starts by day, on own machines and on the providers: stacked bars that
+// stretch to their panel, hairline grid lines, and the axis labels in the
+// monospace face. The providers share one series, named by their brands,
+// because the chart tokens hold one colour for the overflow. A visually
+// hidden table gives screen readers the values.
 
 import { formatCount } from "../fixtures/format.ts";
 import "./starts-chart.css";
@@ -8,7 +10,10 @@ import "./starts-chart.css";
 type StartsChartProps = {
   labels: readonly string[];
   own: readonly number[];
-  boat: readonly number[];
+  /** The starts on every provider together. */
+  overflow: readonly number[];
+  /** The providers of the overflow series, such as "Boat". */
+  overflowName: string;
   caption: string;
 };
 
@@ -24,11 +29,17 @@ function axisOf(value: number): { max: number; ticks: number[] } {
   return { max, ticks };
 }
 
-export function StartsChart({ labels, own, boat, caption }: StartsChartProps) {
-  const totals = own.map((v, i) => v + (boat[i] ?? 0));
+export function StartsChart({
+  labels,
+  own,
+  overflow,
+  overflowName,
+  caption,
+}: StartsChartProps) {
+  const totals = own.map((v, i) => v + (overflow[i] ?? 0));
   const { max, ticks } = axisOf(Math.max(...totals));
   const days = labels.length;
-  const summary = `Starts by day, ${caption}: ${formatCount(own.reduce((a, b) => a + b, 0))} on own machines and ${formatCount(boat.reduce((a, b) => a + b, 0))} on Boat.`;
+  const summary = `Starts by day, ${caption}: ${formatCount(own.reduce((a, b) => a + b, 0))} on own machines and ${formatCount(overflow.reduce((a, b) => a + b, 0))} on ${overflowName}.`;
   return (
     <figure className="sc" aria-label={summary}>
       <div className="sc-y" aria-hidden="true">
@@ -53,7 +64,7 @@ export function StartsChart({ labels, own, boat, caption }: StartsChartProps) {
         >
           {own.map((v, i) => {
             const ownHeight = (v / max) * 100;
-            const boatHeight = ((boat[i] ?? 0) / max) * 100;
+            const overflowHeight = ((overflow[i] ?? 0) / max) * 100;
             return (
               <g key={labels[i] ?? i}>
                 <rect
@@ -64,11 +75,11 @@ export function StartsChart({ labels, own, boat, caption }: StartsChartProps) {
                   height={ownHeight}
                 />
                 <rect
-                  className="sc-boat"
+                  className="sc-overflow"
                   x={i + 0.2}
-                  y={100 - ownHeight - boatHeight}
+                  y={100 - ownHeight - overflowHeight}
                   width={0.6}
-                  height={Math.max(boatHeight - 0.8, 0)}
+                  height={Math.max(overflowHeight - 0.8, 0)}
                 />
               </g>
             );
@@ -83,7 +94,7 @@ export function StartsChart({ labels, own, boat, caption }: StartsChartProps) {
       <figcaption className="sc-foot">
         <span className="sc-legend">
           <span className="sc-key sc-own">Own machines</span>
-          <span className="sc-key sc-boat">Boat</span>
+          <span className="sc-key sc-overflow">{overflowName}</span>
         </span>
         <span className="caption">{caption}</span>
       </figcaption>
@@ -93,7 +104,7 @@ export function StartsChart({ labels, own, boat, caption }: StartsChartProps) {
             <tr>
               <th scope="col">Day</th>
               <th scope="col">Own machines</th>
-              <th scope="col">Boat</th>
+              <th scope="col">{overflowName}</th>
             </tr>
           </thead>
           <tbody>
@@ -101,7 +112,7 @@ export function StartsChart({ labels, own, boat, caption }: StartsChartProps) {
               <tr key={`${label}-${i}`}>
                 <th scope="row">{label}</th>
                 <td>{formatCount(own[i] ?? 0)}</td>
-                <td>{formatCount(boat[i] ?? 0)}</td>
+                <td>{formatCount(overflow[i] ?? 0)}</td>
               </tr>
             ))}
           </tbody>

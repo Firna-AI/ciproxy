@@ -4,22 +4,29 @@ import { paths } from "../../components/paths.ts";
 import { related } from "../../components/related-docs.ts";
 import { formatDay, formatMoney } from "../../fixtures/format.ts";
 import { releaseDay } from "../../fixtures/live-jobs.ts";
-import { boat, countSlots, machineScenes } from "../../fixtures/machines.ts";
-import { savings, savingsPeriod, yourCost } from "../../fixtures/savings.ts";
+import { countSlots, machineScenes } from "../../fixtures/machines.ts";
+import { boat, overflow } from "../../fixtures/overflow.ts";
+import {
+  providerStarts,
+  savings,
+  savingsPeriod,
+  yourCost,
+} from "../../fixtures/savings.ts";
 import { liveScenes } from "../../screens/jobs/live-scenes.ts";
 
 const steady = machineScenes.steady;
 const busySlots = countSlots(steady, "busy");
 const allSlots = steady.reduce((sum, machine) => sum + machine.slots.length, 0);
+const overflowStarts = providerStarts(savings.providers);
 const boatShare = Math.round(
-  (savings.starts.boat / (savings.starts.own + savings.starts.boat)) * 100,
+  (overflowStarts / (savings.own.starts + overflowStarts)) * 100,
 );
 const savedOnBlacksmith = savings.alternatives.blacksmith - yourCost;
 
 export const peakOverflowToBoat = defineUseCase({
   title: "A peak in which jobs overflow to Boat",
-  description: `mokly-ai on Team with three own machines. A release on ${formatDay(releaseDay)} fills every own slot; ciproxy starts runners on Boat for the jobs that wait, and the savings report of the last 30 days, which end that day, shows what the overflow cost.`,
-  relatedDocs: related("jobRouting", "overflow", "metering"),
+  description: `mokly-ai on Team with three own machines and Boat as its one provider. The order of each label is the own machines, then Boat. A release on ${formatDay(releaseDay)} fills every own slot; ciproxy starts runners on Boat for the jobs that wait, and the savings report of the last 30 days, which end that day, shows what the overflow cost.`,
+  relatedDocs: related("jobRouting", "overflow", "labels", "metering"),
   steps: [
     {
       screenPath: paths.jobs,
@@ -30,12 +37,12 @@ export const peakOverflowToBoat = defineUseCase({
     {
       screenPath: paths.machines,
       title: "The machines fill up",
-      description: `${busySlots} of ${allSlots} slots are busy, and only a few warm runners remain.`,
+      description: `${busySlots} of ${allSlots} slots are busy, and only a few warm runners remain. The Overflow panel shows Boat, the one connected provider.`,
     },
     {
       screenPath: paths.jobsPeak,
       title: "The release peak overflows",
-      description: `Every own slot is busy and ${liveScenes.peak.waiting} jobs wait, each with its label. Each job that waits ${boat.waitSeconds} seconds gets a runner on Boat.`,
+      description: `Every own slot is busy and ${liveScenes.peak.waiting} jobs wait, each with its label. Each job that waits ${overflow.waitSeconds} seconds goes to Boat, the next place of its label, and gets a runner there.`,
     },
     {
       screenPath: paths.jobBoat,
@@ -46,13 +53,18 @@ export const peakOverflowToBoat = defineUseCase({
     {
       screenPath: paths.savings,
       title: "What the overflow cost",
-      description: `The last 30 days, ${savingsPeriod}, include the release. Boat took ${boatShare}% of the starts. With the own machines and Team, the report shows ${formatMoney(yourCost)}, ${formatMoney(savedOnBlacksmith)} less than the same jobs on Blacksmith.`,
+      description: `The last 30 days, ${savingsPeriod}, include the release. Boat took ${boatShare}% of the starts, in the Boat row of the cost table. With the own machines and Team, the report shows ${formatMoney(yourCost)}, ${formatMoney(savedOnBlacksmith)} less than the same jobs on Blacksmith.`,
     },
     {
       screenPath: paths.overflow,
       title: "Tune the wait and the limit",
+      description: `The wait for a free slot on the own machines and the spend limit on Boat, ${formatMoney(boat.spendLimit)}, decide how much of a peak goes to Boat.`,
+    },
+    {
+      screenPath: paths.editLabel,
+      title: "The order of a label",
       description:
-        "The wait before Boat and the monthly spend limit decide how much of a peak goes to Boat.",
+        "Each label sets the order of its places. ciproxy-large runs on the own machines, then on Boat; an Admin can move a place, remove it, or add another provider.",
     },
   ],
 });

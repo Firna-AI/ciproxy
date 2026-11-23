@@ -5,6 +5,7 @@
     "history",
     "job",
     "unknown-request",
+    "two-providers",
     "job-states",
     "wait-facts",
     "queue-facts",

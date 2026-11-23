@@ -1,1 +1,1 @@
-{ "order": ["connection", "wallet", "spend"] }
+{ "order": ["connection", "wallet", "spend", "two-providers"] }

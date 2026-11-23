@@ -7,7 +7,7 @@ import type { Viewport } from "@mokly/mokly";
 import { TextLink } from "../../components/actions.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
-import { boat } from "../../fixtures/machines.ts";
+import { overflow } from "../../fixtures/overflow.ts";
 import { freePlanNote } from "../../fixtures/tiers.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
 import { CardGrid, DocsH2, DocsTitle, LinkCard } from "./docs-parts.tsx";
@@ -40,7 +40,7 @@ export function DocsHomeScreen({
     >
       <DocsTitle
         title="Overview"
-        lead="ciproxy runs your GitHub Actions jobs on your own machines first. When they are full, it starts runners in your Boat account."
+        lead="ciproxy runs your GitHub Actions jobs on your own machines first. When they are full, it starts runners in your own account at an overflow provider, such as Boat."
       />
       <div className="docs-flow">
         <DocsH2 id="start-here">Start here</DocsH2>
@@ -77,8 +77,9 @@ export function DocsHomeScreen({
           </li>
           <li>
             When your machines have no room for the job, ciproxy can start a
-            runner for it in your Boat account instead. By default, it waits{" "}
-            {boat.waitSeconds} seconds for room on your machines first.
+            runner for it at the next place of its label, such as your Boat
+            account. By default, it waits {overflow.waitSeconds} seconds for
+            room on your machines first.
           </li>
           <li>
             On your machines, <span className="inline-code">actions/cache</span>{" "}
@@ -102,7 +103,10 @@ export function DocsHomeScreen({
             </TextLink>{" "}
             lists the supported distributions and what a Mac needs.
           </li>
-          <li>A Boat account for overflow. You can connect it later.</li>
+          <li>
+            An account at an overflow provider, such as Boat. You can connect it
+            later.
+          </li>
         </ul>
         <p>
           {freePlanNote} See <TextLink to={paths.pricing}>Pricing</TextLink> for

@@ -1,6 +1,7 @@
 // A picture of the product for the hero: the live queue of mokly-ai at a
 // release peak. Every slot of its three machines is busy, the overflow runs on
-// Boat, and the running jobs show where each one runs.
+// Boat, the one provider of the workspace, and the running jobs show where
+// each one runs. The provider row names its provider from the account.
 
 import { Cloud } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -9,15 +10,18 @@ import { Avatar } from "@firna/ui/avatar";
 import { Meter, SlotStrip } from "../../components/figures.tsx";
 import { DotLabel, JobStateDot, WhereLabel } from "../../components/status.tsx";
 import { formatCount, formatMoney } from "../../fixtures/format.ts";
-import { boat, machineScenes } from "../../fixtures/machines.ts";
+import { machineScenes } from "../../fixtures/machines.ts";
+import { boat, overflow } from "../../fixtures/overflow.ts";
 import { org } from "../../fixtures/org.ts";
-import { liveScenes } from "../jobs/live-scenes.ts";
+import { providerName } from "../../fixtures/providers.ts";
+import { liveScenes, runningOn } from "../jobs/live-scenes.ts";
 import "./hero-panel.css";
 
 const peak = liveScenes.peak;
 
 export function HeroPanel({ viewport }: { viewport: Viewport }) {
   const jobs = peak.runningJobs.slice(0, viewport === "mobile" ? 4 : 7);
+  const name = providerName(boat.provider);
   return (
     <figure className="hero-panel" aria-label="The live queue of mokly-ai">
       <div className="hp-bar">
@@ -52,20 +56,22 @@ export function HeroPanel({ viewport }: { viewport: Viewport }) {
               </li>
             ))}
           </ul>
-          <div className="hp-boat">
-            <span className="hp-boat-name">
+          <div className="hp-provider">
+            <span className="hp-provider-name">
               <Cloud size={15} strokeWidth={1.75} className="icon-muted" />
-              <span className="strong">Boat</span>
+              <span className="strong">{name}</span>
             </span>
-            <span className="num">{formatCount(peak.onBoat)} running</span>
+            <span className="num">
+              {formatCount(runningOn(peak, boat.provider))} running
+            </span>
           </div>
           <p className="caption">
-            {peak.waiting} jobs wait for a slot. Each starts on Boat after{" "}
-            {boat.waitSeconds} seconds.
+            {peak.waiting} jobs wait for a slot. Each starts on {name} after{" "}
+            {overflow.waitSeconds} seconds.
           </p>
           <div className="hp-spend">
             <Meter
-              label="Boat this month"
+              label={`${name} this month`}
               used={boat.spentThisMonth}
               max={boat.spendLimit}
               value={`${formatMoney(boat.spentThisMonth)} of ${formatMoney(boat.spendLimit)}`}

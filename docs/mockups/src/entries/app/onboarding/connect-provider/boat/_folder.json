@@ -1,0 +1,4 @@
+{
+  "title": "Boat branch",
+  "order": ["choose-wallet", "invalid-key", "connect-failed", "rejected"]
+}

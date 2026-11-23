@@ -3,6 +3,8 @@
 // machine cache was not available, so it used the GitHub cache, one of
 // mokly-labs that restored from both caches, and one that restored no entry.
 // Only a job whose restores the machine cache handled shows the cache counts.
+// A job on a provider names the provider and the size that ran it, and the
+// reason names each place of its order that it passed.
 //
 // The size of a job is the request that its label gave it at the start, which
 // ciproxy saves. In a what-if, ciproxy has no saved request for two jobs of
@@ -11,6 +13,7 @@
 // The VM that ran each of them stays known.
 
 import { factDetails } from "./job-details-facts.ts";
+import { providerDetails } from "./job-details-providers.ts";
 import {
   onBoat,
   own,
@@ -18,13 +21,13 @@ import {
   type JobState,
   type Where,
 } from "./jobs.ts";
-import { boat } from "./machines.ts";
+import { overflow } from "./overflow.ts";
 import { labelNamed } from "./settings.ts";
 import {
-  boatSizeFor,
-  boatSizeNamed,
-  type BoatSize,
+  providerSizeFor,
+  providerSizeNamed,
   type JobVm,
+  type ProviderSize,
   type Size,
 } from "./sizes.ts";
 import { vmDiskBytes } from "./vm-disk.ts";
@@ -58,8 +61,8 @@ export type JobDetail = {
   label: string;
   /** The size that the label gave the job at its start, when ciproxy has it. */
   request: Size | "unknown";
-  /** The Boat size that ran a job on Boat. */
-  boatSize?: BoatSize;
+  /** The size of the provider that ran a job on a provider. */
+  providerSize?: ProviderSize;
   /** The VM that ran a job on an own machine, shown for an unknown request. */
   vm?: JobVm;
   /** Why the job ran there, or null when the API gives no reason. */
@@ -68,7 +71,7 @@ export type JobDetail = {
   result?: JobState;
   /** No ciproxy runner took the job, so it is not a start. */
   noRunner?: true;
-  /** A page of the current API, which gives no fit for a Boat size. */
+  /** A page of the current API, which gives no fit for a provider size. */
   currentContract?: true;
   timeline: readonly JobEvent[];
   waited: string;
@@ -91,12 +94,13 @@ export const jobDetailStates = [
   "unknown-facts",
   "current-own",
   "current-boat",
+  "second-provider",
 ] as const;
 export type JobDetailState = (typeof jobDetailStates)[number];
 
 const warmReason = "A warm runner was ready, so the job started at once.";
 
-const boatReason = `Your machines were full, so the job started on Boat after ${boat.waitSeconds} seconds.`;
+const boatReason = `Your machines were full, so the job started on Boat after ${overflow.waitSeconds} seconds.`;
 
 export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
   own: {
@@ -127,7 +131,7 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     where: onBoat,
     label: label.name,
     request: label,
-    boatSize: boatSizeFor(label),
+    providerSize: providerSizeFor("boat", label),
     why: boatReason,
     timeline: [
       { time: "14:23:04", text: "Queued on GitHub" },
@@ -232,7 +236,7 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     where: onBoat,
     label: label.name,
     request: "unknown",
-    boatSize: boatSizeNamed("large"),
+    providerSize: providerSizeNamed("boat", "large"),
     why: boatReason,
     timeline: [
       { time: "14:19:08", text: "Queued on GitHub" },
@@ -246,4 +250,5 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     cache: { source: "github", fallback: false },
   },
   ...factDetails,
+  ...providerDetails,
 };

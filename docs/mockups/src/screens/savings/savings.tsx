@@ -19,7 +19,9 @@ import { StartsChart } from "../../components/starts-chart.tsx";
 import { formatCount, formatMoney, unbroken } from "../../fixtures/format.ts";
 import type { Role } from "../../fixtures/members.ts";
 import { listPrices } from "../../fixtures/price-lists.ts";
+import { providerNames } from "../../fixtures/providers.ts";
 import {
+  jobCount,
   leadOf,
   savingsFigures,
   totalCost,
@@ -109,7 +111,7 @@ function Hero({ figures }: { figures: ReportFigures }) {
   const saved = (alternative: Alternative) =>
     (figures.alternatives[alternative] ?? 0) - total;
   const words = (value: number) => (value < 0 ? "more than" : "less than");
-  const jobs = figures.starts.own + figures.starts.boat;
+  const jobs = jobCount(figures);
   return (
     <div className="hero">
       <p className="hero-figure">{formatMoney(Math.abs(saved(lead)))}</p>
@@ -174,7 +176,7 @@ function SavingsBody({
     );
   }
   if (state === "loading") return <LoadingSavings />;
-  if (figures.starts.own + figures.starts.boat === 0) {
+  if (jobCount(figures) === 0) {
     return (
       <Panel>
         <EmptyReport figures={figures} role={role} />
@@ -200,13 +202,20 @@ function SavingsBody({
           <StartsChart
             labels={figures.daily.labels}
             own={figures.daily.own}
-            boat={figures.daily.boat}
+            overflow={figures.daily.overflow}
+            overflowName={overflowName(figures)}
             caption={figures.period}
           />
         </Panel>
       </div>
     </>
   );
+}
+
+/** "Boat", or "Boat and Second provider": the providers of the chart. */
+function overflowName(figures: ReportFigures): string {
+  const keys = figures.providers.map((entry) => entry.provider);
+  return keys.length === 0 ? "Overflow" : providerNames(keys, "and");
 }
 
 function LoadingSavings() {

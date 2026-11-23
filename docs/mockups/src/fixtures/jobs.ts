@@ -1,15 +1,17 @@
 // The job model of the fixtures and the helpers that build job rows. The
 // jobs come from both organizations of the workspace, and a row names the
-// organization of its repository.
+// organization of its repository. A job runs on an own machine, in one of
+// its slots, or on a provider, which a row names.
 
 import { labsOrg, org } from "./org.ts";
+import type { ProviderKey } from "./providers.ts";
 
 export type JobState =
   "running" | "waiting" | "passed" | "failed" | "cancelled";
 
 export type Where =
   | { kind: "own"; machine: string; slot: number }
-  | { kind: "boat" }
+  | { kind: "provider"; provider: ProviderKey }
   | { kind: "none" };
 
 /** The repositories of the jobs: two of mokly-ai and one of mokly-labs. */
@@ -52,8 +54,14 @@ export const own = (index: number, slot: number): Where => ({
   machine: `hetzner-ax42-${index}`,
   slot,
 });
-export const onBoat: Where = { kind: "boat" };
+export const onBoat: Where = { kind: "provider", provider: "boat" };
+export const onSecond: Where = { kind: "provider", provider: "second" };
 export const none: Where = { kind: "none" };
+
+/** The provider that runs or ran a job, when a provider does. */
+export function providerOf(where: Where): ProviderKey | undefined {
+  return where.kind === "provider" ? where.provider : undefined;
+}
 
 export type Row = [
   string,

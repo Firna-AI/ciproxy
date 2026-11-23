@@ -1,8 +1,9 @@
 {
   "order": [
     "labels",
+    "label-order",
     "label-names",
-    "no-boat",
+    "no-provider",
     "macos",
     "overflow",
     "organizations",

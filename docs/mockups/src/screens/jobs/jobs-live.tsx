@@ -1,7 +1,8 @@
 // The live queue: what waits for a runner and what runs now, on own machines
-// and on Boat. GitHub gives a waiting job to any idle runner, so a waiting job
-// has no machine yet; ciproxy shows how many runners it starts, and where.
-// Every role sees the queue; only an Admin gets the actions of its notices.
+// and on each connected provider, which a figure and each running row name.
+// GitHub gives a waiting job to any idle runner, so a waiting job has no
+// machine yet; ciproxy shows how many runners it starts, and where. Every
+// role sees the queue; only an Admin gets the actions of its notices.
 
 import { Zap } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -14,6 +15,7 @@ import { canPay } from "../../components/role-actions.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
 import type { Role } from "../../fixtures/members.ts";
+import { providerName } from "../../fixtures/providers.ts";
 import { type LiveScene, liveScenes, type LiveState } from "./live-scenes.ts";
 import { liveNotice } from "./live-notices.tsx";
 import { JobList, LoadingJobList } from "./job-tables.tsx";
@@ -72,7 +74,10 @@ export function JobsLiveScreen({
   );
 }
 
-/** The figures of the queue; the waiting count only when ciproxy sees it. */
+/**
+ * The figures of the queue: the waiting count only when ciproxy sees it, and
+ * a figure for each connected provider.
+ */
 function LiveFigures({ scene }: { scene: LiveScene }) {
   return (
     <KpiRow>
@@ -87,7 +92,13 @@ function LiveFigures({ scene }: { scene: LiveScene }) {
           scene.slotsUnknown ? "Unknown" : `${value} of ${scene.ownSlots}`
         }
       />
-      <Kpi label="On Boat" value={scene.onBoat} />
+      {scene.onProviders.map(({ provider, running }) => (
+        <Kpi
+          key={provider}
+          label={`On ${providerName(provider)}`}
+          value={running}
+        />
+      ))}
     </KpiRow>
   );
 }

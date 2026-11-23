@@ -61,7 +61,7 @@ export function PricingScreen({ viewport }: { viewport: Viewport }) {
           center
           eyebrow="Pricing"
           title="Priced by jobs, not by minutes"
-          lead="Every plan runs your jobs on your own machines first, and on Boat when they are full. Limits are soft, so your jobs keep running past them."
+          lead="Every plan runs your jobs on your own machines first, and on your overflow provider when they are full. Limits are soft, so your jobs keep running past them."
         />
         <PriceCards />
         <p className="mk-foot caption pricing-note">
