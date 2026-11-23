@@ -12,6 +12,7 @@ use ciproxy_github::scale_sets::ScaleSetFactory;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use reqwest::redirect::Policy;
 use reqwest::{Client, Method, Url};
+use serde_json::Value;
 
 use super::fake_http::Server;
 use super::support::{Factory, FixedJwt, FixedRuntime, id};
@@ -168,6 +169,16 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
     );
 }
 
+fn group_writes(requests: &[(Method, String, Value)]) -> Vec<(&Method, &str, Option<&str>)> {
+    requests
+        .iter()
+        .filter_map(|(method, path, body)| {
+            let route = path.strip_prefix("/api/v3/orgs/customer/actions/runner-groups")?;
+            (*method != Method::GET).then_some((method, route, body["name"].as_str()))
+        })
+        .collect()
+}
+
 #[tokio::test]
 async fn group_lookup_without_saved_id_leaves_other_environment_untouched() {
     for other in ["ciproxy-17", "ciproxy-9001-17"] {
@@ -180,15 +191,8 @@ async fn group_lookup_without_saved_id_leaves_other_environment_untouched() {
             .await
             .unwrap();
         let requests = server.state.requests.lock().unwrap();
-        let writes: Vec<_> = requests
-            .iter()
-            .filter_map(|(method, path, body)| {
-                let route = path.strip_prefix("/api/v3/orgs/customer/actions/runner-groups")?;
-                (*method != Method::GET).then_some((method, route, body["name"].as_str()))
-            })
-            .collect();
         assert_eq!(
-            (group, writes),
+            (group, group_writes(&requests)),
             (
                 97,
                 vec![
@@ -199,6 +203,39 @@ async fn group_lookup_without_saved_id_leaves_other_environment_untouched() {
             "the group of another environment is named {other}"
         );
     }
+
+    let server = Server::start(None).await;
+    let resource = &server.state.resource;
+    resource.group_exists.store(true, Ordering::SeqCst);
+    *resource.group_name.lock().unwrap() = "ciproxy-3571-17".to_owned();
+    *resource.selected_repository_ids.lock().unwrap() = vec![23];
+    resource
+        .additional_groups
+        .lock()
+        .unwrap()
+        .push((83, "ciproxy-9001-17".to_owned()));
+    let group = rest_client(&server)
+        .restrict_runner_group(19, "customer", "ciproxy-3571-17", &[29], None)
+        .await
+        .unwrap();
+    let requests = server.state.requests.lock().unwrap();
+    assert_eq!(
+        (
+            group,
+            resource.group_creates.load(Ordering::SeqCst),
+            group_writes(&requests),
+            resource.selected_repository_ids.lock().unwrap().as_slice(),
+        ),
+        (
+            47,
+            0,
+            vec![
+                (&Method::PATCH, "/47", Some("ciproxy-3571-17")),
+                (&Method::PUT, "/47/repositories", None),
+            ],
+            &[29][..],
+        )
+    );
 }
 
 #[tokio::test]

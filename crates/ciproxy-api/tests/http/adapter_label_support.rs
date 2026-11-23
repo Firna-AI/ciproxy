@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use ciproxy_github::app::AppService;
+use ciproxy_github::app::{AppId, AppService};
 use ciproxy_github::error::Result;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::scale_sets::{JitRegistration, MessageQueue, ScaleSetApi, ScaleSetFactory};
@@ -27,7 +27,7 @@ pub(super) fn compose(
         fixture.runtime.clone(),
     ));
     fixture.app = Arc::new(AppService {
-        app_id: "3571".to_owned(),
+        app_id: AppId::new("3571".to_owned()),
         leases: persistence.clone(),
         installations: fixture.remote.clone(),
         store: persistence.clone(),

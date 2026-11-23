@@ -120,10 +120,11 @@ describes capture and older records.
 
 ## Workspace ownership
 
-All workspaces of one GitHub organization share its managed runner group,
-so the scale sets of two workspaces can claim the same label name. A scale
-set therefore serves one workspace at most. The selected workspace is the
-workspace that a preparation serves.
+Within one [environment](#runner-groups), all workspaces of one GitHub
+organization share its managed runner group, so the scale sets of two
+workspaces can claim the same label name. A scale set therefore serves one
+workspace at most. The selected workspace is the workspace that a
+preparation serves.
 
 Before preparation, reconcile reads the current and retained registrations
 of the GitHub organization in every workspace. It renames each saved scale

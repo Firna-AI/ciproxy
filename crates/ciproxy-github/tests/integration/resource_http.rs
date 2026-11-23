@@ -11,6 +11,7 @@ use serde_json::{Value, json};
 pub(super) struct ResourceHttp {
     pub(super) group_exists: AtomicBool,
     pub(super) group_name: Mutex<String>,
+    pub(super) additional_groups: Mutex<Vec<(i64, String)>>,
     pub(super) group_creates: AtomicUsize,
     pub(super) selected_repository_ids: Mutex<Vec<i64>>,
     pub(super) set_id: AtomicI64,
@@ -29,6 +30,7 @@ impl ResourceHttp {
         Self {
             group_exists: AtomicBool::new(false),
             group_name: Mutex::new("owner-renamed".to_owned()),
+            additional_groups: Mutex::new(vec![]),
             group_creates: AtomicUsize::new(0),
             selected_repository_ids: Mutex::new(vec![]),
             set_id: AtomicI64::new(53),
@@ -77,11 +79,24 @@ pub(super) fn respond(
             .then_some("2026-11-04T12:00:00Z");
         return Some(Json(json!({"id":19,"account":{"id":state.account_id.load(Ordering::SeqCst),"login":login,"type":"Organization"},"suspended_at":suspended})).into_response());
     }
-    if path.ends_with("/runner-groups")
-        && *method == Method::GET
-        && state.group_exists.load(Ordering::SeqCst)
-    {
-        return Some(Json(json!({"runner_groups":[{"id":47,"name":*state.group_name.lock().unwrap(),"inherited":false}]})).into_response());
+    if path.ends_with("/runner-groups") && *method == Method::GET {
+        let mut groups = vec![json!({"id":1,"name":"Default","inherited":false})];
+        if state.group_exists.load(Ordering::SeqCst) {
+            groups.push(json!({
+                "id": 47,
+                "name": *state.group_name.lock().unwrap(),
+                "inherited": false
+            }));
+        }
+        groups.extend(
+            state
+                .additional_groups
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(id, name)| json!({"id":id,"name":name,"inherited":false})),
+        );
+        return Some(Json(json!({"runner_groups":groups})).into_response());
     }
     if path.ends_with("/runner-groups/47") && *method == Method::GET {
         return Some(if state.group_exists.load(Ordering::SeqCst) {

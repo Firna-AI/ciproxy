@@ -11,7 +11,7 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::app::webhook::{AccountKind, InstallationAction};
 use crate::app::{
-    AppService, GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome,
+    AppId, AppService, GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome,
     LifecycleOutputMock,
 };
 use crate::persistence::installation::InstallationStoreMock;
@@ -123,7 +123,7 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
         delivery(LifecycleEvent::Active(installed())),
     ));
     let service = AppService {
-        app_id: "2718".to_owned(),
+        app_id: AppId::new("2718".to_owned()),
         ..app(mock)
     };
     assert_eq!(

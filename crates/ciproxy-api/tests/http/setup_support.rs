@@ -10,7 +10,7 @@ use ciproxy_api::crypto::{AeadCredentialCipher, CredentialCipher};
 use ciproxy_api::identity::http::{GithubOAuthClient, OAuthConfig};
 use ciproxy_api::installations::GithubInstallationAdmin;
 use ciproxy_api::router::router;
-use ciproxy_github::app::AppService;
+use ciproxy_github::app::{AppId, AppService};
 use ciproxy_github::auth::AppJwt;
 use ciproxy_github::persistence::StoreAdapter;
 use reqwest::{Client, redirect::Policy};
@@ -66,7 +66,7 @@ pub(super) fn configure_with_cipher(
         fixture.runtime.clone(),
     ));
     let app = Arc::new(AppService {
-        app_id: "3571".to_owned(),
+        app_id: AppId::new("3571".to_owned()),
         leases: persistence.clone(),
         installations: fixture.remote.clone(),
         store: persistence.clone(),

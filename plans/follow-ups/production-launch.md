@@ -77,3 +77,7 @@
   `deploy-order-pages-and-api.md` must land before the launch. Without it,
   a production deploy that adds a page that the API sends people to shows
   them a missing page until the new dashboard export is published.
+  `shared-saved-runner-group.md` and
+  `environments-share-organization-jobs.md` hold choices for the first
+  time that production serves an organization that the main preview
+  already serves, such as `Firna-AI`.

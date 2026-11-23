@@ -8,6 +8,7 @@ use base64::Engine;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_github::app::AppId;
 use ciproxy_metering::report::catalog::PriceList;
 use ciproxy_protocol::images::ImageDownload;
 use secrecy::SecretString;
@@ -38,7 +39,7 @@ pub struct Config {
     pub secrets_directory: PathBuf,
     /// Numeric GitHub App ID, used as the App JWT issuer and in each managed
     /// runner-group name.
-    pub github_app_id: String,
+    pub github_app_id: AppId,
     /// Public OAuth client identity of the same GitHub App.
     pub github_oauth_client_id: String,
     /// Registered public App slug used to derive the install URL.
@@ -75,7 +76,7 @@ impl Config {
             cdn_signing_key_name: required("CDN_SIGNING_KEY_NAME")?,
             secrets_directory: env::var_os("SECRETS_DIRECTORY")
                 .map_or_else(|| PathBuf::from("/var/run/secrets/ciproxy"), PathBuf::from),
-            github_app_id: required("GITHUB_APP_ID")?,
+            github_app_id: AppId::new(required("GITHUB_APP_ID")?),
             github_oauth_client_id: required("GITHUB_OAUTH_CLIENT_ID")?,
             github_app_slug: required("GITHUB_APP_SLUG")?,
             download_url: required("DOWNLOAD_URL")?,

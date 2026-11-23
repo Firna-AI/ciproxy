@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_github::app::webhook::{Account, AccountKind};
 use ciproxy_github::app::{
-    AppService, GitHubApp, InstallAuthority, InstallationDecision, LifecycleOutput,
+    AppId, AppService, GitHubApp, InstallAuthority, InstallationDecision, LifecycleOutput,
 };
 use ciproxy_github::error::{Error, Result};
 use ciproxy_github::installation_state::{InstallationApi, InstalledApp};
@@ -255,7 +255,7 @@ impl Fixture {
         *self.authority.store.lock().unwrap() = Some(store.clone());
         let adapter = Arc::new(StoreAdapter::new(store, self.runtime.clone()));
         Arc::new(AppService {
-            app_id: "3571".to_owned(),
+            app_id: AppId::new("3571".to_owned()),
             leases: adapter.clone(),
             installations,
             store: adapter.clone(),
