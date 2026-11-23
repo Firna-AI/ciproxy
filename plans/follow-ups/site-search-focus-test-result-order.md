@@ -5,8 +5,8 @@
 - **Kind:** Outside the scope.
 - **Added:** 2026-11-22, from the branch `docs/legal-pages-firna`, which
   completes the legal pages and found the failure in a site test run.
-- **Location:** `ts/site/_tests_/browser/search.test.ts`, the test "same-page
-  search continues keyboard focus at the opened heading", near line 32.
+- **Location:** `ts/site/_tests_/browser/docs.test.ts`, the test "same-page
+  search continues keyboard focus at the opened heading", near line 40.
 - **Reason:** The failure comes from docs changes that merged before the
   legal pages branch, so its fix belongs in its own branch from `main`.
 

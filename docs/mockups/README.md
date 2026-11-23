@@ -155,6 +155,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   or press. Its cost claim uses no sample of an organization: `cost-claim.ts`
   computes every number from the list prices in `price-lists.ts`, each with
   its source and the day it was checked.
+- The Docs page of the catalogue shows five screens, its limit. So a new docs
+  page gets its own folder with an `index.mockup.tsx`, as `how-ciproxy-works/`
+  does, and keeps a path such as `docs/how-ciproxy-works`.
 - Each tier feature has one record in `tiers.ts`, with its first tier and
   whether it ships at launch. Every page that lists a feature reads the record,
   and a feature that ships later says "Coming later", through
@@ -242,6 +245,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/screens/docs/docs-shell.tsx`: the frame of a docs page, in the structure
   of Starlight, with the sidebar from `docs-nav.ts` and the article parts in
   `docs-parts.tsx`.
+- `src/screens/docs/job-path-figure.tsx`: the picture of How ciproxy works:
+  the parts of ciproxy and the path of one job, as the steps 01 to 04 of "A job
+  on your machines", with the other way to Boat. It is boxes in a CSS grid with
+  an arrow between neighbours, from the tokens, so that the site builds the
+  same picture in plain HTML and CSS. It takes its layout from its own width:
+  one column in a narrow article, and a row from left to right from 560 px.
 - `src/components/shell/app-shell.tsx`: the signed-in frame: a white sidebar
   and a top bar with the workspace switch and the page as breadcrumbs on
   desktop, and a top bar with tabs on mobile, with the banner slot for

@@ -14,7 +14,7 @@ export const docsNav: readonly DocsNavGroup[] = [
     items: [
       { label: "Overview", to: paths.docsHome },
       { label: "Quickstart", to: paths.quickstart },
-      { label: "How ciproxy works" },
+      { label: "How ciproxy works", to: paths.howCiproxyWorks },
     ],
   },
   {

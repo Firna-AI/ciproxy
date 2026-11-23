@@ -1,1 +1,10 @@
-{ "title": "Docs", "order": ["home", "quickstart", "add-a-machine", "labels"] }
+{
+  "title": "Docs",
+  "order": [
+    "home",
+    "quickstart",
+    "how-ciproxy-works",
+    "add-a-machine",
+    "labels"
+  ]
+}
