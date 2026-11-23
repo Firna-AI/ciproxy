@@ -7,16 +7,23 @@
 //! denied", until the agent binary has Full Disk Access.
 //!
 //! The daemon checks its access at each start, and writes the result to
-//! `area-access` in the control folder, which is on the startup disk.
-//! Install reads that result after it loads the daemon. Only the daemon's
+//! `area-access` in the control folder, which is on the startup disk, with
+//! the start time of its process. Install reads that result after it loads
+//! the daemon, and takes only a result of a process that started after
+//! that load. Only the daemon's
 //! own launchd job gives the real answer: the terminal of an install can
 //! have an access that the daemon does not have.
 
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::sync::OnceLock;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::error::{ErrorResultExt, Result};
 use crate::persistence::atomic_private_write;
+
+/// The repair of a command from a terminal. macOS checks the terminal app
+/// or `sshd` then, not the agent.
+pub(crate) const TERMINAL_ACCESS_REPAIR: &str = "macOS blocks this command from the area volume on an external disk. Give Full Disk Access to the terminal app, or to sshd for an SSH session, and to /usr/local/bin/ciproxy-agent in System Settings > Privacy & Security > Full Disk Access. Then run the command again.";
 
 pub(crate) const FULL_DISK_ACCESS_REPAIR: &str = "macOS blocks the agent from the area volume on an external disk. Give /usr/local/bin/ciproxy-agent Full Disk Access in System Settings > Privacy & Security > Full Disk Access. The agent then starts by itself within 5 seconds.";
 
@@ -33,35 +40,73 @@ const RESULT: &str = "area-access";
 const CHECK: &str = ".ciproxy-access-check";
 
 /// List the volume root, then write and remove one file there. A refusal
-/// to root means that macOS blocks the agent. Another failure is an error.
+/// to root means that macOS blocks the agent. A failed listing for another
+/// cause is an error. A failed write for another cause, such as a full or
+/// read-only volume, only gives a warning: the listing already passed, and
+/// later steps of the start can free space.
 pub(crate) fn probe(area: &Path) -> Result<Access> {
-    match probe_files(area) {
+    let listed = std::fs::read_dir(area).and_then(|mut entries| entries.next().transpose());
+    match listed {
+        Ok(_) => {}
+        Err(error) if denied(&error) => return Ok(Access::Blocked),
+        Err(error) => return Err(error).context("check access to the area volume"),
+    }
+    let check = area.join(CHECK);
+    match std::fs::write(&check, b"").and_then(|()| std::fs::remove_file(&check)) {
         Ok(()) => Ok(Access::Open),
-        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
-            tracing::warn!(%error, "the agent cannot use the area volume");
-            Ok(Access::Blocked)
+        Err(error) if denied(&error) => Ok(Access::Blocked),
+        Err(error) => {
+            tracing::warn!(%error, "cannot write a check file on the area volume");
+            Ok(Access::Open)
         }
-        Err(error) => Err(error).context("check access to the area volume"),
     }
 }
 
-fn probe_files(area: &Path) -> std::io::Result<()> {
-    std::fs::read_dir(area)?.next().transpose()?;
-    let check = area.join(CHECK);
-    std::fs::write(&check, b"")?;
-    std::fs::remove_file(&check)
+fn denied(error: &std::io::Error) -> bool {
+    let denied = error.kind() == std::io::ErrorKind::PermissionDenied;
+    if denied {
+        tracing::warn!(%error, "the agent cannot use the area volume");
+    }
+    denied
 }
 
+/// The time when this process started its first access check, or an
+/// earlier time that [`mark_start`] gave.
+fn process_start() -> SystemTime {
+    static START: OnceLock<SystemTime> = OnceLock::new();
+    *START.get_or_init(SystemTime::now)
+}
+
+/// Keep the start time of this process, as early as possible.
+pub(crate) fn mark_start() {
+    process_start();
+}
+
+fn millis(time: SystemTime) -> u128 {
+    time.duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+}
+
+/// Write the result with the start time of this process, so install can
+/// tell it from a result of a daemon process that it restarted.
 pub(crate) fn record_result(control: &Path, access: Access) -> Result<()> {
-    let text: &[u8] = match access {
-        Access::Open => b"open\n",
-        Access::Blocked => b"blocked\n",
+    let word = match access {
+        Access::Open => "open",
+        Access::Blocked => "blocked",
     };
-    atomic_private_write(&control.join(RESULT), text)
+    let text = format!("{word} {}\n", millis(process_start()));
+    atomic_private_write(&control.join(RESULT), text.as_bytes())
 }
 
-pub(crate) fn read_result(control: &Path) -> Option<Access> {
-    match std::fs::read_to_string(control.join(RESULT)).ok()?.trim() {
+/// The result of a process that started at `since` or later.
+pub(crate) fn read_result(control: &Path, since: SystemTime) -> Option<Access> {
+    let text = std::fs::read_to_string(control.join(RESULT)).ok()?;
+    let (word, started) = text.trim().split_once(' ')?;
+    if started.parse::<u128>().ok()? < millis(since) {
+        return None;
+    }
+    match word {
         "open" => Some(Access::Open),
         "blocked" => Some(Access::Blocked),
         _ => None,
@@ -77,11 +122,17 @@ pub(crate) fn clear_result(control: &Path) -> Result<()> {
     }
 }
 
-/// Wait until the daemon writes its result, or until `timeout` ends.
-pub(crate) fn wait_result(control: &Path, timeout: Duration, poll: Duration) -> Option<Access> {
+/// Wait until a daemon that started at `since` or later writes its result,
+/// or until `timeout` ends.
+pub(crate) fn wait_result(
+    control: &Path,
+    since: SystemTime,
+    timeout: Duration,
+    poll: Duration,
+) -> Option<Access> {
     let deadline = Instant::now() + timeout;
     loop {
-        if let Some(access) = read_result(control) {
+        if let Some(access) = read_result(control, since) {
             return Some(access);
         }
         if Instant::now() >= deadline {

@@ -32,6 +32,7 @@ impl Service for LaunchdService {
         if other_disk {
             clear_result(Path::new(CONTROL))?;
         }
+        let since = std::time::SystemTime::now();
         if loaded() {
             launchctl_run(&launchctl::restart_agent())?;
         } else {
@@ -39,7 +40,7 @@ impl Service for LaunchdService {
             launchctl_run(&launchctl::enable_agent())?;
         }
         if other_disk {
-            daemon_access()?;
+            daemon_access(since)?;
         }
         Ok(())
     }
@@ -75,11 +76,13 @@ impl Service for LaunchdService {
     }
 }
 
-/// Wait for the daemon's first access check of an area on another disk.
-/// The daemon writes the result at start, so it comes within seconds. With
-/// no result, install goes on and names the log.
-fn daemon_access() -> Result<()> {
-    match wait_result(Path::new(CONTROL), ACCESS_WAIT, Duration::from_millis(250)) {
+/// Wait for the access check of an area on another disk by a daemon process
+/// that started at `since` or later. The daemon writes the result at start,
+/// so it comes within seconds. With no result, install goes on and names
+/// the log.
+fn daemon_access(since: std::time::SystemTime) -> Result<()> {
+    let poll = Duration::from_millis(250);
+    match wait_result(Path::new(CONTROL), since, ACCESS_WAIT, poll) {
         Some(Access::Open) => Ok(()),
         Some(Access::Blocked) => Err(Error::Preparation {
             component: "area volume",

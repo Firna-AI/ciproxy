@@ -260,13 +260,19 @@ The agent finds a block as follows:
   launchd starts it again every 5 s, so the agent goes on by itself once
   it has the access.
 - The daemon writes the result of the check to
-  `/var/db/ciproxy/area-access`, on the startup disk. After `install`, or
+  `/var/db/ciproxy/area-access`, on the startup disk, with the start time
+  of its process. Only the launchd job writes it. After `install`, or
   `prepare-host --with-service`, loads the daemon, it waits up to 30 s for
-  that result. It fails with the same repair line when the daemon is
+  a result of a daemon process that started after the load. It fails with the same repair line when the daemon is
   blocked. With no result, it goes on and names the log. A failed install
   keeps the registration, and the agent starts once it has the access.
 - `prepare-host` with no service only prints that the daemon needs the
   access, because its own check would test the terminal.
+- A command from a terminal that checks the area, such as an uninstall
+  with recorded VMs, tests the access of the terminal app or `sshd`. Its
+  repair line names them.
+- A failed write of the check file for another cause, such as a full
+  volume, only gives a warning, so a full volume does not stop the start.
 
 TCC keeps the grant for one code identity:
 

@@ -47,9 +47,14 @@ fn a_typed_error_keeps_its_text_through_a_context() {
 
 #[test]
 fn a_json_error_shows_its_position_and_other_causes_stay_hidden() {
-    let json: std::result::Result<u64, serde_json::Error> = serde_json::from_str("{");
+    let json: std::result::Result<u64, serde_json::Error> =
+        serde_json::from_str("\"secret-value\"");
     let text = diagnostic(&failed(json.context("decode")));
-    assert!(text.contains("decode: JSON "), "{text}");
+    assert!(
+        text.contains("decode: JSON Data error at line 1 column 14"),
+        "{text}"
+    );
+    assert!(!text.contains("secret-value"), "{text}");
 
     #[derive(Debug, thiserror::Error)]
     #[error("https://images.example/macos.tar?signature=secret-value")]

@@ -14,11 +14,13 @@ use super::recovery::remove_orphans;
 use crate::boundaries::{Images, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::macos::area_access::{Access, FULL_DISK_ACCESS_REPAIR, probe, record_result};
+use crate::macos::area_access::{
+    Access, FULL_DISK_ACCESS_REPAIR, TERMINAL_ACCESS_REPAIR, probe, record_result,
+};
 use crate::macos::area_disk::AreaDisk;
 use crate::macos::guests::VmFolders;
 use crate::macos::hardware::install_check;
-use crate::macos::paths::{AREA, CONTROL};
+use crate::macos::paths::{AGENT_LABEL, AREA, CONTROL};
 use crate::persistence::private_directory;
 use crate::preparation::{Preparation, Uninstall, UninstallState, stage_error};
 use crate::runtime_ownership::RuntimeOwner;
@@ -103,16 +105,24 @@ impl Preparation for MacPreparation {
 
 /// Check that this process can use an area on another disk, and keep the
 /// result for install. See [`crate::macos::area_access`].
+///
+/// Only the launchd job of the daemon writes the result. A command from a
+/// terminal, such as uninstall, tests the access of the terminal.
 fn check_access() -> Result<()> {
     let access = probe(Path::new(AREA))?;
-    if let Err(error) = record_result(Path::new(CONTROL), access) {
+    let daemon = std::env::var("XPC_SERVICE_NAME").is_ok_and(|name| name == AGENT_LABEL);
+    if daemon && let Err(error) = record_result(Path::new(CONTROL), access) {
         tracing::warn!(%error, "install cannot read the area access result");
     }
     match access {
         Access::Open => Ok(()),
         Access::Blocked => Err(Error::Preparation {
             component: "area volume",
-            repair: FULL_DISK_ACCESS_REPAIR,
+            repair: if daemon {
+                FULL_DISK_ACCESS_REPAIR
+            } else {
+                TERMINAL_ACCESS_REPAIR
+            },
         }),
     }
 }

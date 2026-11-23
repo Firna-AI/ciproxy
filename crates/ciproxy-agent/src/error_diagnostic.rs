@@ -3,8 +3,8 @@
 //! `Error::Internal` displays only "internal error", so a log of that text
 //! hides why a command failed. [`diagnostic`] adds the context frames,
 //! which are fixed texts of the agent, and each cause whose text holds no
-//! data: an operating system error, a JSON position, an agent error, and
-//! the kind of an HTTP failure. An HTTP error displays its URL, and an
+//! data: an operating system error, the kind and position of a JSON error,
+//! an agent error, and the kind of an HTTP failure. An HTTP error displays its URL, and an
 //! image URL is a signed link, so the text never holds a URL. Any other
 //! cause is named only as "another cause".
 
@@ -41,7 +41,14 @@ fn cause(source: &(dyn StdError + 'static)) -> String {
         };
     }
     if let Some(json) = source.downcast_ref::<serde_json::Error>() {
-        return format!("JSON {json}");
+        // The JSON text can repeat a value of the input, so only the kind
+        // and the position go to the log.
+        return format!(
+            "JSON {:?} error at line {} column {}",
+            json.classify(),
+            json.line(),
+            json.column()
+        );
     }
     if let Some(agent) = source.downcast_ref::<Error>() {
         return match agent {

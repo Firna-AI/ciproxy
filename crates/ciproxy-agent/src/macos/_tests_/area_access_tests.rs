@@ -2,7 +2,7 @@
 
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::area_access::{Access, clear_result, probe, read_result, record_result, wait_result};
 
@@ -56,19 +56,39 @@ fn a_missing_area_is_an_error_not_a_block() {
 #[test]
 fn the_result_file_holds_the_last_check() {
     let control = Folder::new();
-    assert_eq!(read_result(control.path()), None);
+    let since = UNIX_EPOCH;
+    assert_eq!(read_result(control.path(), since), None);
     record_result(control.path(), Access::Blocked).unwrap();
-    assert_eq!(read_result(control.path()), Some(Access::Blocked));
+    assert_eq!(read_result(control.path(), since), Some(Access::Blocked));
     record_result(control.path(), Access::Open).unwrap();
     assert_eq!(
-        wait_result(control.path(), Duration::ZERO, Duration::ZERO),
+        wait_result(control.path(), since, Duration::ZERO, Duration::ZERO),
         Some(Access::Open)
     );
     clear_result(control.path()).unwrap();
     clear_result(control.path()).unwrap();
-    assert_eq!(read_result(control.path()), None);
-    std::fs::write(control.path().join("area-access"), b"unknown").unwrap();
-    assert_eq!(read_result(control.path()), None);
+    assert_eq!(read_result(control.path(), since), None);
+    for text in ["open", "unknown 1", "open soon"] {
+        std::fs::write(control.path().join("area-access"), text).unwrap();
+        assert_eq!(read_result(control.path(), since), None, "{text}");
+    }
+}
+
+#[test]
+fn a_result_of_an_older_process_is_not_used() {
+    let control = Folder::new();
+    record_result(control.path(), Access::Open).unwrap();
+    let later = SystemTime::now() + Duration::from_secs(60);
+    assert_eq!(read_result(control.path(), later), None);
+    std::fs::write(control.path().join("area-access"), "blocked 100\n").unwrap();
+    assert_eq!(
+        read_result(control.path(), UNIX_EPOCH + Duration::from_millis(100)),
+        Some(Access::Blocked)
+    );
+    assert_eq!(
+        read_result(control.path(), UNIX_EPOCH + Duration::from_millis(101)),
+        None
+    );
 }
 
 #[test]
@@ -77,6 +97,7 @@ fn the_wait_ends_with_no_result_after_its_timeout() {
     assert_eq!(
         wait_result(
             control.path(),
+            UNIX_EPOCH,
             Duration::from_millis(30),
             Duration::from_millis(10)
         ),
