@@ -9,8 +9,7 @@ import { after, before, test } from "node:test";
 
 import { chromium, type Browser, type Locator } from "playwright-core";
 
-import { jobPath } from "../../src/data/job-path.ts";
-import { placesOfBoxes, type Place } from "./job-path-places.ts";
+import { tableOfBoxes, type Cell } from "./job-path-places.ts";
 import { serveSite } from "./site.ts";
 
 let site: Awaited<ReturnType<typeof serveSite>>;
@@ -96,13 +95,10 @@ test("Escape and Cancel restore focus to the search button", async () => {
 });
 
 /**
- * Opens How ciproxy works in a window of this width, and gives the place of
- * each box with these titles, from the box before it.
+ * Opens How ciproxy works in a window of this width, and gives the table of
+ * the boxes of its picture: the part of each box in its row and column.
  */
-async function jobPathPlaces(
-  width: number,
-  titles: readonly string[],
-): Promise<Place[]> {
+async function jobPathTable(width: number): Promise<Cell[][]> {
   const context = await browser.newContext({
     viewport: { width, height: 900 },
     locale: "en-GB",
@@ -111,33 +107,29 @@ async function jobPathPlaces(
   try {
     const page = await context.newPage();
     await page.goto(`${site.origin}/docs/how-ciproxy-works/`);
-    return await placesOfBoxes(page, titles);
+    return await tableOfBoxes(page);
   } finally {
     await context.close();
   }
 }
 
-/** The titles of the boxes 01 to 04, in the order of their steps. */
-const stepTitles = jobPath.steps.map((box) => box.title);
-
-test("How ciproxy works shows the first three steps in a row in a wide article", async () => {
+test("How ciproxy works shows the path in a row, with Boat under ciproxy and the machine under the runner, in a wide article", async () => {
   // Under 800 px the docs sidebar is behind the menu button, so the picture
   // is 672 px wide in a window of 720 px.
-  const titles = stepTitles.slice(0, 3);
-  deepStrictEqual(
-    await jobPathPlaces(720, titles),
-    ["right", "right"],
-    `${titles.join(", ")} must form a row from left to right`,
-  );
+  deepStrictEqual<Cell[][]>(await jobPathTable(720), [
+    ["github", "ciproxy", "runner"],
+    ["empty", "boat", "machine"],
+  ]);
 });
 
-test("How ciproxy works stacks the job path in one column beside the docs sidebar", async () => {
+test("How ciproxy works stacks the five boxes in one column beside the docs sidebar", async () => {
   // From 800 px the docs sidebar shows, so the picture is 456 px wide in a
   // window of 840 px.
-  const titles = [...stepTitles, jobPath.boat.title];
-  deepStrictEqual(
-    await jobPathPlaces(840, titles),
-    ["below", "below", "below", "below"],
-    `${titles.join(", ")} must stack in one column`,
-  );
+  deepStrictEqual<Cell[][]>(await jobPathTable(840), [
+    ["github"],
+    ["ciproxy"],
+    ["runner"],
+    ["machine"],
+    ["boat"],
+  ]);
 });

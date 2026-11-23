@@ -176,8 +176,14 @@ The browser tests in `_tests_/browser/docs.test.ts` use the same Node test
 runner with `playwright-core`. They need Google Chrome installed. They build
 and serve a fresh production site with its real search index. They check
 focus after same-page result navigation and after Escape and Cancel
-dismissals. They also check the picture of How ciproxy works: a row in a
-window of 720 px, and one column beside the sidebar in a window of 840 px.
+dismissals. They also check the place of each box of the picture of How
+ciproxy works. `_tests_/browser/job-path-places.ts` finds each box of
+`jobPath` by its title, and groups the boxes into rows and columns where
+they overlap. Each test compares that table of parts with a literal table.
+In a window of 720 px, the path is a row, with Boat under ciproxy and the
+machine under the runner. In a window of 840 px, beside the sidebar, the
+five boxes form one column. Two boxes in one cell, or a box that the page
+does not show, also change the table.
 Keep each browser test in that file, so that the suite builds the site once.
 The Node test runner runs each test file in its own process at the same
 time.

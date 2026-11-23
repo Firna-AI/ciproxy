@@ -97,8 +97,9 @@ These are design calls of the agent, made on 23 November 2026.
 - The text in the boxes is real text in reading order, inside a figure with
   a caption. The arrows are hidden from screen readers. They turn through a
   class that the icon component takes as a prop.
-- A browser test in `ts/site/_tests_/browser/docs.test.ts` checks a row at a
-  720 px window and one column at an 840 px window, beside the sidebar.
+- A browser test in `ts/site/_tests_/browser/docs.test.ts` compares the
+  place of each box with a literal table, at a 720 px window and at an
+  840 px window beside the sidebar.
 - The figure carries `data-pagefind-ignore`, so that search shows the text
   of the page and not a copy of it.
 - The mockup showed that one picture is not too dense, so it stays one

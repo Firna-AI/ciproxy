@@ -8,6 +8,7 @@
 
 import type { Viewport } from "@mokly/mokly";
 
+import { TextLink } from "../../components/actions.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
 import { defaultWarmRunners } from "../../fixtures/machines.ts";
@@ -56,9 +57,12 @@ function Parts() {
         source under Apache-2.0.
       </li>
       <li>
-        <strong>Your Boat account</strong> runs the jobs that your machines have
-        no room for, and the jobs of labels that allow only Boat. Boat bills you
-        for them.
+        <strong>Your Boat account</strong> runs a job when your machines cannot
+        take it in time and Boat can take it. Boat bills you for these jobs.{" "}
+        <TextLink to={paths.howCiproxyWorks} fragment="overflow-to-boat">
+          Overflow to Boat
+        </TextLink>{" "}
+        gives the rules.
       </li>
     </ul>
   );

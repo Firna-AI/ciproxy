@@ -51,9 +51,10 @@
     separate image for each, because a job must behave the same wherever it
     runs."
   - Two public pages give the same promise:
-    - `ts/site/src/content/docs/docs/how-ciproxy-works.mdx:113-115` says
-      that every job starts from one image, on your machines and on Boat,
-      so only the `runs-on` line of a workflow changes.
+    - [The job image](../../ts/site/src/content/docs/docs/how-ciproxy-works.mdx#the-job-image)
+      on How ciproxy works says that every Linux job starts from one image,
+      on your machines and on Boat, so only the `runs-on` line of a workflow
+      changes.
     - `ts/site/src/content/docs/docs/security/job-isolation.md:25-26`
       says: "A job behaves the same on your machines and on Boat."
   - The Boat smoke workflow `image/smoke-workflow.yml` checks tool
@@ -128,8 +129,9 @@
   - **D.** Accept the difference.
     - Change the decision in `docs/protocol/agent-images.md`: a Boat job
       runs without the service manager of the image.
-    - Correct the promises at
-      `ts/site/src/content/docs/docs/how-ciproxy-works.mdx:113` and
+    - Correct the promises in
+      [The job image](../../ts/site/src/content/docs/docs/how-ciproxy-works.mdx#the-job-image)
+      and at
       `ts/site/src/content/docs/docs/security/job-isolation.md:25`.
     - Explain the difference in `image/boat.md`.
     - Name the workarounds: a `services:` container, or a label that does

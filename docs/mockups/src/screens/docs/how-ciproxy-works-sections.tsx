@@ -1,7 +1,10 @@
 // The last sections of the docs page How ciproxy works (how-ciproxy-works.tsx):
 // slots and disk, overflow to Boat, the cache, and the job image. A link to a
 // docs page that has no mockup yet, such as Connect Boat, shows as its plain
-// title. The software of ubuntu-latest, the container: key, and the sticky
+// title. A job starts on Boat only when Boat can take it. A macOS job never
+// runs on Boat, and a job that Boat cannot take waits for your machines when
+// its label allows them, or else stays queued in GitHub, as the job routing
+// doc says. The software of ubuntu-latest, the container: key, and the sticky
 // Docker disks are for Linux jobs. A macOS job starts from an image with the
 // software of macos-latest, and a macOS job VM has no Docker, as the agent
 // images doc and the Docker disks doc say.
@@ -52,11 +55,20 @@ export function OverflowSection() {
         <li>
           A job that one of your machines can run waits there for room, up to
           the overflow wait. The wait is {boat.waitSeconds} seconds by default.
-          Then ciproxy starts one Boat runner for the job.
+          Then ciproxy starts one Boat runner for the job, when Boat can take
+          it.
         </li>
         <li>
-          When none of your machines can run the job, for example because its
-          size fits none of them, ciproxy starts the Boat runner at once.
+          When none of your machines can run the job, ciproxy starts the Boat
+          runner at once, when Boat can take it. An example is a job whose size
+          fits none of your machines, or whose label allows only Boat.
+        </li>
+        <li>
+          A job of a macOS label never runs on Boat. It waits for a free Mac, as{" "}
+          <TextLink to={paths.labelsReference} fragment="macos-labels">
+            macOS labels
+          </TextLink>{" "}
+          says.
         </li>
         <li>
           Each job on Boat runs in its own sandbox. ciproxy chooses the cheapest
@@ -68,9 +80,10 @@ export function OverflowSection() {
           sandbox when the job ends.
         </li>
         <li>
-          ciproxy starts a Boat runner only when you connected a Boat account,
-          overflow is on, the label allows Boat, and the spend limit has room.
-          Otherwise the job waits for your machines.
+          Boat can take a job only when you connected a Boat account, overflow
+          is on, the label allows Boat, and the spend limit has room. Otherwise
+          a job waits for your machines when its label allows them. A job whose
+          label allows only Boat stays queued in GitHub.
         </li>
         <li>ciproxy never runs a job again by itself.</li>
       </ul>
