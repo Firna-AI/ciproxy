@@ -53,23 +53,40 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
         .restrict_runner_group(19, "customer", "ciproxy-3571-17", &[23], Some(47))
         .await
         .unwrap();
-    let group_lists = server
-        .state
-        .requests
-        .lock()
-        .unwrap()
-        .iter()
-        .filter(|(method, path, _)| *method == Method::GET && path.contains("runner-groups?"))
-        .count();
+    let group_lists = || {
+        server
+            .state
+            .requests
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(method, path, _)| *method == Method::GET && path.contains("runner-groups?"))
+            .count()
+    };
     assert_eq!(
         (
             group,
             resource.group_creates.load(Ordering::SeqCst),
-            group_lists,
+            group_lists(),
             resource.group_name.lock().unwrap().as_str(),
             resource.selected_repository_ids.lock().unwrap().as_slice(),
         ),
         (47, 0, 0, "ciproxy-3571-17", &[23][..])
+    );
+    *resource.group_name.lock().unwrap() = "owner-renamed".to_owned();
+    let group = rest
+        .restrict_runner_group(19, "customer", "ciproxy-3571-17", &[29], Some(47))
+        .await
+        .unwrap();
+    assert_eq!(
+        (
+            group,
+            resource.group_creates.load(Ordering::SeqCst),
+            group_lists(),
+            resource.group_name.lock().unwrap().as_str(),
+            resource.selected_repository_ids.lock().unwrap().as_slice(),
+        ),
+        (47, 0, 0, "ciproxy-3571-17", &[29][..])
     );
     assert_eq!(
         rest.restrict_runner_group(19, "customer", "ciproxy-3571-17", &[23], None)

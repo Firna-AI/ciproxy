@@ -11,7 +11,8 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::app::webhook::{AccountKind, InstallationAction};
 use crate::app::{
-    GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome, LifecycleOutputMock,
+    AppService, GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome,
+    LifecycleOutputMock,
 };
 use crate::persistence::installation::InstallationStoreMock;
 use crate::persistence::lifecycle::LifecycleStoreMock;
@@ -47,7 +48,7 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .returns(Ok(71)),
     )));
     let _keep_api = api.clone();
-    let service = app(Unimock::new((
+    let mock = Unimock::new((
         (
             coordination(false),
             RuntimeMock::uuid
@@ -100,9 +101,10 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .returns(Ok(repositories())),
         GitHubRestMock::restrict_runner_group
             .some_call(matching!(_, _, _, _, _))
-            .answers(&|_, installation, login, _, ids, _| {
+            .answers(&|_, installation, login, name, ids, _| {
                 assert_eq!(installation, 19);
                 assert_eq!(login, "customer");
+                assert_eq!(name, "ciproxy-2718-17");
                 assert_eq!(ids, [23]);
                 Ok(47)
             }),
@@ -119,7 +121,11 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .some_call(matching!(_))
             .returns(Ok(())),
         delivery(LifecycleEvent::Active(installed())),
-    )));
+    ));
+    let service = AppService {
+        app_id: "2718".to_owned(),
+        ..app(mock)
+    };
     assert_eq!(
         service
             .installation(event(InstallationAction::Created))

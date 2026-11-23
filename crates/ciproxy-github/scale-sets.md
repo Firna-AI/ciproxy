@@ -33,16 +33,23 @@ GitHub documents no length limit for a runner-group name. The
 `ciproxy-probe-` and 32 hexadecimal digits. A managed name has 25
 characters for a 7-digit App ID and a 9-digit organization ID.
 
-Each environment finds, changes, and uses only its own group and the scale
-sets in that group. Reconcile first reads a saved managed group ID,
-including retained registrations. The saved ID finds the group under any
-name. Reconcile then sets the managed name and the repository policy on
-that same group. So the group keeps its ID and its scale sets, also
-after a rename by an organization owner. When no saved ID finds a group,
-reconcile looks up the group by name. That lookup matches the full managed
-name only, so it does not find the group of another environment. After
-local data is purged, the managed name finds the retained GitHub group of
-the same environment again.
+An environment changes only the group of its saved ID or of its managed
+name, and the scale sets in that group. Reconcile first reads a saved
+managed group ID, including retained registrations. The saved ID finds the
+group under any name. Reconcile then sets the managed name and the
+repository policy on that same group. So the group keeps its ID and its
+scale sets after a rename by an organization owner. The saved group ID is
+the only proof that a group belongs to an environment. When two environments
+saved the same group ID, they share that group until an operator splits it.
+
+When no saved ID finds a group, reconcile looks up the group by name. That
+lookup matches the full managed name only, so it does not find the group
+of another environment. After local data is purged, the lookup finds a
+group again only when the group still has the managed name. A group under
+any other name stays on GitHub unchanged, for example a group named
+`ciproxy-<organization id>` or a group that an organization owner renamed.
+Reconcile creates the managed group instead. An organization owner can
+delete the group with the other name when no environment uses it.
 
 Runner group sync creates or updates the managed name and private-access
 policy. It sets selected repositories through the separate repository
@@ -59,10 +66,18 @@ runner.
 The GitHub Apps of two environments can be installed in one organization.
 GitHub keeps scale-set names unique within one runner group, so the groups
 of two environments can hold scale sets with the same label names. The
-groups of two environments can also allow the same repository. When both
-environments have an online scale set for the label of a job, GitHub gives
-the job to either environment. GitHub has no setting that controls this
-choice. GitHub's [runner scale-set guide][arc-scale-sets] gives both rules.
+groups of two environments can also allow the same repository. GitHub
+gives a job to either environment only when the scale sets of both
+environments are eligible for the job. GitHub has no setting that controls
+the choice among eligible scale sets. The
+[high-availability section][arc-scale-sets] of GitHub's scale-set guide
+gives both rules.
+
+A workflow can limit a job to the runners of one group. To do this, it
+sets the `group` key of `runs-on` together with `labels`. GitHub's guide
+[Choosing the runner for a job][runner-group-labels] documents this rule
+for self-hosted runners. GitHub's scale-set pages do not show the `group`
+key. No live probe has checked this rule for ciproxy's scale sets.
 
 ## Scale sets
 
@@ -140,4 +155,5 @@ the workspace rule.
 [free-groups]: https://github.blog/changelog/2024-10-17-actions-runner-groups-now-available-for-organizations-on-free-plan/
 [group-api]: https://docs.github.com/en/rest/actions/self-hosted-runner-groups#create-a-self-hosted-runner-group-for-an-organization
 [rest-openapi]: https://github.com/github/rest-api-description
-[arc-scale-sets]: https://docs.github.com/en/actions/how-tos/manage-runners/use-actions-runner-controller/deploy-runner-scale-sets
+[arc-scale-sets]: https://docs.github.com/en/actions/how-tos/manage-runners/use-actions-runner-controller/deploy-runner-scale-sets#high-availability-and-automatic-failover
+[runner-group-labels]: https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job#example-combining-groups-and-labels
