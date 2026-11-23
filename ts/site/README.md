@@ -18,6 +18,8 @@ The pages follow the marketing and docs mockups under
 - `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
   of the docs sidebar mockup, in its order:
   - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
+    Under its intro, How ciproxy works shows a picture of the parts of
+    ciproxy and the path of one job.
   - Guides under `/docs/guides/`: Add a machine, Connect Boat, Move your
     workflows, Set a spend limit, and Remove a machine.
   - Reference under `/docs/reference/`: Labels and VM sizes, Agent install
@@ -81,13 +83,14 @@ Rules for the docs pages:
   under **Overflow**.
 - The Markdown check of the gate refuses HTML and component tags, such as
   `<Steps>` or `<LinkCard>`, in the source of a docs page. An MDX page shows
-  a Starlight component without a tag, in one of two ways:
+  a component without a tag, in one of two ways:
   - It maps a Markdown element to a component with
     `export const components`. The Quickstart maps its ordered list to
     `StepsList`, which puts the list in Starlight `Steps`.
   - It calls `jsx()` of `astro/jsx-runtime` in an expression, such as
     `{jsx(Badge, { text: "Default" })}`. The Overview and the Quickstart
     draw their link cards with `CardGrid` and `LinkCard` in this way.
+    How ciproxy works shows its picture with `{jsx(JobPathFigure)}`.
 - Keep the data of such a call in an `export const` block, and the call on
   one line. Prettier formats the block as JavaScript, but it formats an
   expression on several lines as Markdown text and drops its indent.
@@ -108,6 +111,12 @@ Rules for the docs pages:
   of a job container is under "Run steps in another image" of Move your
   workflows. The list of supported Linux distributions is under "What the
   machine needs" of Add a machine.
+- The picture of How ciproxy works is a short form of the page. Its text is
+  in `src/data/job-path.ts`. Its numbers are the steps of "A job on your
+  machines", so change the steps and the picture together. The picture is
+  real text in HTML boxes, so it reads on a phone and with a screen reader.
+  It carries `data-pagefind-ignore`, so that search shows the text of the
+  page and not this copy.
 
 Rules for the legal pages:
 
@@ -221,8 +230,8 @@ This keeps it separate from the Markdown lint tool's YAML version.
   [src/components/icon/Icon.astro](src/components/icon/Icon.astro) an icon.
 - [src/data/](src/data/tiers.ts) holds the data of the pages: the tiers, the
   plan choice, the comparison, the price lists, the slot rule, the cost
-  claim, the legal text, the addresses, and the values of the
-  illustration.
+  claim, the legal text, the addresses, the values of the illustration,
+  and the text of the picture of How ciproxy works.
 - [src/components/starlight/](src/components/starlight/Header.astro) holds
   the Starlight overrides: the head, the top bar with the search, the page
   title with its lead, and the light-only theme provider and theme switch.
@@ -239,6 +248,14 @@ This keeps it separate from the Markdown lint tool's YAML version.
   `security` hold the pages of those sidebar groups.
 - [src/components/docs/StepsList.astro](src/components/docs/StepsList.astro)
   shows the ordered list of a docs page as Starlight steps.
+- [src/components/docs/JobPathFigure.astro](src/components/docs/JobPathFigure.astro)
+  is the picture of How ciproxy works: the parts of ciproxy and the path of
+  one job. `JobPathBox.astro` draws a box, and `JobPathArrow.astro` an
+  arrow. The figure takes its layout from its own width: a row from 560 px,
+  and a column below that.
+- [src/components/Brand.astro](src/components/Brand.astro) is the wordmark.
+  [src/components/BrandMark.astro](src/components/BrandMark.astro) is the
+  ciproxy mark, which the wordmark and the picture use.
 - [src/data/docs-links.ts](src/data/docs-links.ts) names the docs pages that
   the marketing pages link to, such as the docs links of the footer.
 - [src/content/i18n/en.json](src/content/i18n/en.json) changes Starlight

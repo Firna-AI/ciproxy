@@ -1,0 +1,35 @@
+---
+// The picture of the docs page How ciproxy works, after the figure of the
+// docs mockup: the parts of ciproxy and the path of one job, from the queue
+// in GitHub to the end of its VM, with the other way of a job to a sandbox
+// in the Boat account. Its text comes from src/data/job-path.ts. The boxes
+// are in a CSS grid, with an arrow between neighbours. The text is in
+// reading order: the path first, then the other way. The figure carries
+// data-pagefind-ignore, so that search finds the text of the page and not
+// this short copy of it. `not-content` keeps the Starlight article styles
+// out of the figure. A page shows it with `jsx()`, without a component tag.
+
+import { jobPath } from "../../data/job-path.ts";
+import JobPathArrow from "./JobPathArrow.astro";
+import JobPathBox from "./JobPathBox.astro";
+import "./job-path-figure.css";
+
+const { steps, boat, boatWhen, caption } = jobPath;
+---
+
+<figure class="job-path not-content" data-pagefind-ignore>
+  <div class="job-path-grid">
+    {steps.map((box, index) => (
+      <>
+        {index > 0 && <JobPathArrow to={box.part} />}
+        <JobPathBox box={box} />
+      </>
+    ))}
+    <div class="job-path-when">
+      <p class="job-path-when-text">{boatWhen}</p>
+      <JobPathArrow to={boat.part} />
+    </div>
+    <JobPathBox box={boat} />
+  </div>
+  <figcaption class="job-path-caption">{caption}</figcaption>
+</figure>

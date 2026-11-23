@@ -3,9 +3,15 @@ title: How ciproxy works
 description: Warm runners, slots, overflow, and the cache.
 ---
 
+import { jsx } from "astro/jsx-runtime";
+
+import JobPathFigure from "../../../components/docs/JobPathFigure.astro";
+
 ciproxy is the runner provider of its labels on GitHub. A job uses ciproxy
 when its `runs-on` line names a ciproxy label. ciproxy then starts a runner
 for the job on one of your machines, or in your Boat account.
+
+{jsx(JobPathFigure)}
 
 ## The parts
 

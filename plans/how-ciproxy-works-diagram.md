@@ -141,20 +141,20 @@ Depends on: 1, 2
 
 Build the picture of the mockup in the site, and show it on the page.
 
-- [ ] Add the data of the picture in `ts/site/src/data/`.
-- [ ] Add the component and its CSS under `ts/site/src/components/docs/`.
+- [x] Add the data of the picture in `ts/site/src/data/`.
+- [x] Add the component and its CSS under `ts/site/src/components/docs/`.
       Follow `docs/mockups/src/screens/docs/job-path-figure.tsx` and its CSS.
       Take every colour, font, and radius from the tokens. Use the icons of
       `src/components/icon/icons.ts`.
-- [ ] Make the ciproxy mark of `src/components/Brand.astro` a component of
+- [x] Make the ciproxy mark of `src/components/Brand.astro` a component of
       its own, so that the picture and the brand use one mark.
-- [ ] Rename the page to `how-ciproxy-works.mdx`. Show the picture with one
+- [x] Rename the page to `how-ciproxy-works.mdx`. Show the picture with one
       `jsx()` call.
-- [ ] Update the two paths in `plans/follow-ups/boat-image-services.md` that
+- [x] Update the two paths in `plans/follow-ups/boat-image-services.md` that
       name the old file.
-- [ ] Update the site README for the component and the page.
-- [ ] Run the site typecheck, lint, format check, and build.
-- [ ] Check the page at 1440, 720, and 390 px wide. Save the screenshots
+- [x] Update the site README for the component and the page.
+- [x] Run the site typecheck, lint, format check, and build.
+- [x] Check the page at 1440, 720, and 390 px wide. Save the screenshots
       under `.context/`.
 
 ## Milestone 4: Verification, commit, review, and pull request

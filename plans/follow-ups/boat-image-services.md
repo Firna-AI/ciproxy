@@ -51,7 +51,7 @@
     separate image for each, because a job must behave the same wherever it
     runs."
   - Two public pages give the same promise:
-    - `ts/site/src/content/docs/docs/how-ciproxy-works.md:106-108` says
+    - `ts/site/src/content/docs/docs/how-ciproxy-works.mdx:113-115` says
       that every job starts from one image, on your machines and on Boat,
       so only the `runs-on` line of a workflow changes.
     - `ts/site/src/content/docs/docs/security/job-isolation.md:25-26`
@@ -129,7 +129,7 @@
     - Change the decision in `docs/protocol/agent-images.md`: a Boat job
       runs without the service manager of the image.
     - Correct the promises at
-      `ts/site/src/content/docs/docs/how-ciproxy-works.md:106` and
+      `ts/site/src/content/docs/docs/how-ciproxy-works.mdx:113` and
       `ts/site/src/content/docs/docs/security/job-isolation.md:25`.
     - Explain the difference in `image/boat.md`.
     - Name the workarounds: a `services:` container, or a label that does
