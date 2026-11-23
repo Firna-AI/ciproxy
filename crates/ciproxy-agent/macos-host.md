@@ -236,6 +236,57 @@ sudo env CIPROXY_AREA_DISK=/Volumes/NAME /usr/local/bin/ciproxy-agent install --
   agent keeps that volume and warns when the setting names another disk.
   To move the area, uninstall first.
 
+#### Full Disk Access for an external disk
+
+macOS privacy control (TCC) blocks a root launchd job from a volume on an
+external or removable disk. The mount point under `/var/db` does not
+change this, because TCC sorts the volume by its disk. A terminal, or
+`sshd`, can have the access that the daemon does not have. So
+`prepare-host` and `import-image` from a terminal work, and the daemon
+fails. The daemon then needs Full Disk Access:
+
+1. Open **System Settings**, then **Privacy & Security**, then **Full Disk
+   Access**.
+2. Select **+**, press Command-Shift-G, enter
+   `/usr/local/bin/ciproxy-agent`, and turn the entry on.
+
+The agent finds a block as follows:
+
+- At each start, with an area on another disk, the daemon lists the
+  volume root and writes and removes one file there. When root gets
+  "Operation not permitted" or "Permission denied", the daemon stops with
+  the repair line "macOS blocks the agent from the area volume on an
+  external disk. Give /usr/local/bin/ciproxy-agent Full Disk Access …".
+  launchd starts it again every 5 s, so the agent goes on by itself once
+  it has the access.
+- The daemon writes the result of the check to
+  `/var/db/ciproxy/area-access`, on the startup disk, with the start time
+  of its process. Only the launchd job writes it. After `install`, or
+  `prepare-host --with-service`, loads the daemon, it waits up to 30 s for
+  a result of a daemon process that started after the load. It fails with the same repair line when the daemon is
+  blocked. With no result, it goes on and names the log. A failed install
+  keeps the registration, and the agent starts once it has the access.
+- `prepare-host` with no service only prints that the daemon needs the
+  access, because its own check would test the terminal.
+- A command from a terminal that checks the area, such as an uninstall
+  with recorded VMs, tests the access of the terminal app or `sshd`. Its
+  repair line names them.
+- A failed write of the check file for another cause, such as a full
+  volume, only gives a warning, so a full volume does not stop the start.
+
+TCC keeps the grant for one code identity:
+
+- A binary with an ad-hoc signature, such as a local build, is known by
+  its hash. Each new build loses the grant, so grant it again after each
+  copy to `/usr/local/bin`.
+- A release binary with a Developer ID signature is known by its team and
+  its identifier, `dev.ciproxy.agent`. The grant then stays across agent
+  updates.
+- A Mac under MDM can get the grant from a Privacy Preferences Policy
+  Control (PPPC) profile: the service `SystemPolicyAllFiles`, the
+  identifier `dev.ciproxy.agent` of type `bundleID`, and the code
+  requirement of the signed release.
+
 The disk must stay connected. The agent then acts as follows:
 
 - **At boot, before the disk is there:** daemon start finds no volume with
