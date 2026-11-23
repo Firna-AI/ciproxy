@@ -28,6 +28,13 @@
   - The standard image
     `macos26-arm64-20261117.0516-runner-2.338.2-xcode-26.6-standard-v1`
     has a `macos.tar` of 47,559,669,760 bytes.
+  - Status, 23 November 2026: the standard v2 image (100 GB disk,
+    `…-xcode-26.6-standard-v2`, `macos.tar` 46,190,479,360 bytes) is
+    published. Both GitHub environments pin it. Both Secret Manager
+    secrets have their read key. Main preview offers it, and the test Mac
+    downloaded it from R2 and ran a job with Xcode (run 45212978247 in
+    `firna-test-org/ciproxy-macos-spike`). Only steps 4 (deploy
+    production) and the production half of "Done when" remain.
   - The two environment read tokens, `ciproxy-main-preview-macos-images-read`
     and `ciproxy-production-macos-images-read`, go into the Secret Manager
     secrets `ciproxy-main-preview-r2-images` and
