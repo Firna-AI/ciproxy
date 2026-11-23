@@ -87,6 +87,11 @@
 - **Related:** `plans/follow-ups/job-usage-overlapping-steps.md`, the same
   code: both change `crates/ciproxy-api/src/handlers/job_usage/series.rs`.
   The two changes do not conflict, so make them one after the other.
+  `plans/follow-ups/job-usage-chart-open-step-start.md`, the same code, for
+  its option C only: C ends its open block at the end of the samples, and D
+  here moves that end to the measured end.
+  `plans/follow-ups/job-usage-report-size-limit.md`, the same format: C here
+  adds times to each point, which raises the size of a full report.
 - **Recommendation:** D. It puts the span rule in the one type that every
   reader decodes, so the control plane check and the API cannot drift
   apart, and the clamp adds no new reason to drop figures.

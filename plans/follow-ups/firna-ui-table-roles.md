@@ -57,6 +57,9 @@
   roles.
 - **Previous examples:** `plans/follow-ups/firna-ui-label-weight-token.md`
   waits on a Firna change for the same reason.
+- **Related:** `plans/follow-ups/job-steps-column-widths.md`, the same
+  table. Its widths must keep fixed and flex columns, so that the steps
+  table can move back to the Firna `Table`.
 - **Recommendation:** A. It fixes every consumer at the source. B is the
   fallback if the library change cannot land.
 - **Action:** fix after merge, apply A, because the fix lives in the

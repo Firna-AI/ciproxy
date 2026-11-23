@@ -123,6 +123,10 @@
     each read then still builds every retained job.
 - **Wider fix:** None. The question is the contract of one route.
 - **Previous examples:** None found.
+- **Related:** `plans/follow-ups/job-page-refresh.md`, the same code. An
+  open job page that reads again repeats the read of every job of the
+  history window for each refresh, so a narrow read of one job makes that
+  refresh cheaper.
 - **Recommendation:** B. The code already shows that the store read, the
   response, and the rendered list grow with the window, and B bounds all
   three without the count of C. The first pass recommended A.

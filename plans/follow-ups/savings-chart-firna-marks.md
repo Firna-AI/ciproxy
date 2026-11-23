@@ -143,6 +143,9 @@
   class, a fixed Firna value that the theme cannot set. Its fix adds a
   label-weight token to the Firna theme, so both changes can share one
   Firna release. Neither item waits for the other.
+  `plans/follow-ups/savings-chart-render-check.md`, the same chart: its
+  smoke check counts the drawn bars, so a fix here that draws the bars
+  with another element updates that count.
 - **Recommendation:** D, changed from B. D needs the same Firna release as
   B. Then the token package sets the key and the bar end once for every
   Firna chart in the dashboard and the mockups. So a new chart or a token

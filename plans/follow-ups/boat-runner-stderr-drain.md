@@ -113,6 +113,10 @@
   order on every Boat run.
 - **Previous examples:** Commit `c9fcf480` holds a request across shutdown,
   to check that the control plane finishes pending work before it exits.
+- **Related:** `plans/follow-ups/boat-runner-scope-lifetime.md`, the same
+  code. Its fix binds the runner scope to the guest unit, so the end of the
+  guest unit stops the stderr helper again, as on `origin/main`, until the
+  fix of this item lands.
 - **Recommendation:** A. It is the one option that makes the end of the
   entry the completion point. So the guest stop, the exit report, the
   restore smoke read, and the local check all come after the last line. It

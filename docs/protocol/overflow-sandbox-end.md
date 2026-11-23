@@ -68,7 +68,9 @@ samples and the steps that the reports of a sandbox carry.
 - **Decision:** each sample report holds all the samples and the steps of
   the job so far. Rejected: only the new points, because the points merge as
   the samples grow. Reason: a report then never depends on an earlier one.
-- So a long job sends up to about 100 KB every 30 seconds.
+- So each sample report holds all the usage so far.
+  [Points](job-usage.md#points) and the step limits in
+  [Checks](job-usage.md#checks) give its size.
 - The control plane accepts a sample report only while it has not recorded
   the end of that sandbox.
 - It accepts at most one sample report for each sandbox in 10 seconds.

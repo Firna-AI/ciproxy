@@ -715,8 +715,10 @@ Design calls, my calls, 22 November 2026:
 - **Points:** the samples hold at most 3,600 points. When they would pass
   that, each two neighbouring points merge, and the length of a point
   doubles. A point keeps the average CPU, the peak memory, and the sum of
-  the out-of-memory kills. Reason: a 6-hour job then stays under about
-  100 KB, inside the 1 MiB line limit of the agent's guest reader.
+  the out-of-memory kills. Reason: the samples of a 6-hour job then stay
+  under about 100 KB. On 23 November 2026, after review round 2: the steps
+  can add far more, so the own-machine guest drops the steps of an exit
+  line that would pass the 1 MiB line limit of the agent's guest reader.
 - **Transport:** the existing runner exit messages get an optional `usage`
   field: guest to agent, agent to control plane, and the end report of a
   Boat sandbox. Reason: no new message and no version change. Older guests
@@ -741,7 +743,11 @@ Design calls, my calls, 22 November 2026:
   field never fails the message that carries it. Usage whose points do not
   decode is dropped, and usage whose steps do not decode keeps its points,
   under the drop rules of the checks. Reason: a strict decode refused a
-  whole Boat exit report for one bad step.
+  whole Boat exit report for one bad step. After review round 2, both
+  message enums decode through one shared decoder that reads `usage` as
+  raw JSON text. Reason: serde buffered every field of the tagged enums
+  first, so usage nested past 128 levels, or a lone surrogate escape, still
+  failed the whole message.
 - **Trust:** nothing bills, routes, or sizes jobs by the figures. Reason:
   the same as for the checks.
 - **Step figures:** a point belongs to the step that holds the middle of
@@ -822,9 +828,12 @@ Design calls, my calls, 23 November 2026, for the answers:
   the sandbox record is live, at most one each 10 seconds for a sandbox.
   It keeps only the newest series. The end report stays one-time. Reason:
   job code can read the token from the memory of the guest.
-- **Report traffic:** a long job sends up to about 100 KB every 30 seconds.
+- **Report traffic:** each sample report holds all the usage so far, so
+  its size follows the point and step limits of `docs/protocol/job-usage.md`.
   Reason: whole-series reports are simpler than deltas, because the
-  points merge as the series grows.
+  points merge as the series grows. Corrected on 23 November 2026, after
+  review round 2: the earlier figure of about 100 KB counted only the
+  points.
 
 Design calls, my calls, 23 November 2026, for the answer to decision 1:
 
@@ -832,7 +841,14 @@ Design calls, my calls, 23 November 2026, for the answer to decision 1:
   `StepsRunner` in the Worker log. "Processing step: DisplayName=" gives
   the name, "Starting the step." the start, and "Step result:" the end.
   "Skipping step due to condition evaluation." marks a skipped step.
-  Reason: the pinned runner writes these lines for each step.
+  Reason: the pinned runner writes these lines for each step that it runs
+  itself. On 23 November 2026, after review round 2, a step starts at its
+  "Processing step" line when its "Starting the step." line confirms that
+  it ran. Reason: GitHub starts the step before its `env` and `if` work.
+  Each boundary is the log line next to `ExecutionContext.Start()` or
+  `Complete()`, as `image/checks.md` says for each runner pin. A
+  background step gets its times from other lines, which
+  `plans/follow-ups/job-usage-overlapping-steps.md` holds.
 - **Set up and complete:** the time before the first step shows as "Set up
   job", and the time after the last step as "Complete job". Reason: the
   job page of GitHub shows the same two steps.
@@ -842,7 +858,12 @@ Design calls, my calls, 23 November 2026, for the answer to decision 1:
   the Worker log.
 - **Name rule place:** the control plane applies the script names design
   call before it stores a name. Reason: the names come from the VM, which
-  job code controls.
+  job code controls. On 23 November 2026, after review round 2, the guest
+  also checks each such name against the remote actions of the job
+  message in the Worker log, and replaces each other name. Reason: the
+  shape of a name cannot tell a command from an action, and the docs
+  promise that no stored name holds job code. The control plane keeps its
+  rule as a second layer.
 - **Log format check:** a unit test reads a Worker log fixture of the
   pinned runner. An image check runs a job and compares the steps that the
   guest reads with the steps of the workflow. Each update of the runner pin
@@ -865,7 +886,10 @@ Design calls, my calls, 23 November 2026, from the mockups of Milestone 1:
 - **macOS memory:** macOS counts app, wired, and compressed memory, so its
   figures do not compare with Linux figures. The new protocol doc says so.
 - **Running state:** the panel keeps its state for a running job, because a
-  direct link can open the page of a running job. No new link leads to it.
+  direct link, or a busy slot on the machine page, can open the page of a
+  running job. No new link leads to it. The open page reads once, so it
+  shows the end only after a reload; `plans/follow-ups/job-page-refresh.md`
+  holds the refresh.
 - **Whole VM note:** the panel says that each figure covers the whole VM,
   also the services and processes that earlier steps started.
 - **App chart:** `@firna/ui/chart` cannot mark steps, and it draws at a
@@ -917,6 +941,12 @@ Design calls, my calls, 23 November 2026, from Milestone 5:
 - **Read gaps:** after a failed read, the guest keeps the longest unbroken
   run of samples. Reason: the wire format holds no gap, and a rare failed
   read then costs only the shorter run.
+- **Skipped tick:** on 23 November 2026, after review round 2, each read
+  takes its slot from the monotonic clock. When the timer skips one tick
+  and the next read comes less than 2 seconds later, the guest fills the
+  skipped second with the CPU average of the interval and the earlier
+  memory. Reason: a skipped tick shifted every later point, and an end of
+  the run there would drop up to half of the figures of a job.
 - **One post in flight:** a Boat guest keeps at most one sample report in
   flight, and it cancels that post when the runner exits. Reason: the exit
   report must never wait for a sample report.
@@ -1050,8 +1080,10 @@ The protocol docs state the requirements of the figures before the code.
       with the script names and rule words design calls. Link the new doc.
 - [x] Say in "Key custody" of `docs/protocol/security.md` that the sandbox
       token also sends the samples of its own job.
-- [x] Write the out-of-memory rule of decision 2 into the new doc: only
-      the stopped process ends, and the job goes on.
+- [x] Write the out-of-memory rule of decision 2 into the new doc: a
+      kill does not stop the whole runner group, and the guest stays. The
+      job can still end when the kernel stops the runner, or when a service
+      stops the whole runner scope (corrected after review round 2).
 - [x] Write the sample reports of decision 4 into "The exit report" of
       `docs/protocol/overflow-sandbox-end.md`. Align the token sentence of
       `docs/protocol/overflow.md`.
@@ -1194,7 +1226,9 @@ Boat sample reports.
 - [x] Save the steps of each report with its samples, after the script
       names design call. Apply the step limits of the design. Test each
       kind of name and each limit. Pin with a test that a one-word command
-      shaped like an action, such as "Run foo/bar@baz", keeps its text.
+      shaped like an action, such as "Run foo/bar@baz", keeps its text in
+      the control plane rule. Since review round 2, the guest replaces it
+      unless the job uses that action.
 - [x] Accept the Boat sample reports with the report limits design call.
       Test the rate limit, a report after the record ends, and a newer
       series that replaces an older one.
@@ -1298,9 +1332,13 @@ The change works end to end, and the review passes.
       Linux machine, a Mac, and Boat. Check that the steps of the Worker log
       match the steps on GitHub, with times within one second. Save the
       evidence under `.context/job-step-cpu-and-memory/`.
-- [ ] Run a step whose name uses a secret. Check that the Worker log masks
-      the secret in the name. If it does not, stop and raise a decision,
-      because decision 3 relies on it.
+- [ ] Run a step whose name uses a secret, and an action with a post step
+      whose name uses a secret. Check that the Worker log masks the secret
+      in each name. If it does not, stop and raise a decision, because
+      decision 3 relies on it. The runner logs the name of a main step
+      before it adds the `secrets` context, so the main step shows the
+      expression; only the post step name can hold a resolved and masked
+      secret (found in review round 2).
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
 - [ ] Review the complete local diff against `origin/main` with the
