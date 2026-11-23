@@ -1,8 +1,9 @@
 # Linux arm64 jobs on own machines
 
-Status: Active. On branch `calummoore/ci-proxy-on-raspberry-pi`, no pull
-request yet. The pull request that completes the work deletes this plan, as
-the `plans` skill says.
+Status: Active. On branch `calummoore/arm-linux-support-ojmg`, no pull
+request yet. The plan started on `calummoore/ci-proxy-on-raspberry-pi`.
+The pull request that completes the work deletes this plan, as the `plans`
+skill says.
 
 ciproxy runs the GitHub Actions jobs of a customer on the customer's own
 machines first, and on Boat sandboxes when those machines are busy. Today an
@@ -352,11 +353,11 @@ Depends on: 3
 - [ ] Apply the Boat rule of decision 3 at each place that tests for
       `linux_x64` today, in the API, the GitHub defaults, the scaler, and
       the two store queries. Test that arm64 labels and runners follow it.
-- [ ] Serve the image release of each platform, so that an arm64 machine
-      gets only an arm64 image, and waits while none exists. Today
-      `crates/ciproxy-control-plane/src/image_release.rs` serves one
-      release for `linux_x64`. The macOS image needs the same change, so
-      agree the shape with the macOS image work.
+- [ ] Serve the arm64 image release, so that an arm64 machine gets only
+      an arm64 image, and waits while none exists. Add a `linux_arm64`
+      arm to the platform match of `SignedReleases::current` in
+      `crates/ciproxy-control-plane/src/image_release.rs`, beside the
+      `linux_x64` and `macos_arm64` arms.
 - [ ] Run the targeted tests, with the store tests, and the early check.
 
 ## Milestone 5: The agent on Linux arm64
