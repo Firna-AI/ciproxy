@@ -89,6 +89,11 @@ phase_provision() {
     # The upstream configure-ssh.sh makes ~/.ssh writable for everyone, and
     # sshd then ignores the build's key. clean-image.sh removes this setting.
     guest_ssh 'echo "StrictModes no" | sudo tee /etc/ssh/sshd_config.d/050-ciproxy-build.conf >/dev/null'
+    # The Setup Assistant phase opened Finder's Utilities window, and Finder
+    # restores it after each restart. The upstream configure-windows.sh fails
+    # on any open window, so Finder starts again without its saved windows.
+    guest_ssh 'rm -rf "$HOME/Library/Saved Application State/com.apple.finder.savedState"
+        killall Finder 2>/dev/null || true'
     local template port=8765 ssh_port=2222 server tunnel guard status=0
     template=$(python3 "$definition/prepare-template.py" "$work_dir/upstream" \
         --template "$RUNNER_IMAGES_TEMPLATE" --xcode-links "$XCODE_LINKS" \
