@@ -13,10 +13,15 @@ The package is private and has no open licence.
 - `@ciproxy/tokens/firna` creates the Firna theme.
   It uses the peer dependency `@firna/ui`.
 - `@ciproxy/tokens/fonts` loads Geist and Geist Mono through CSS imports.
-- `@ciproxy/tokens/font-assets` exposes the same faces for Expo's font loader.
-  Expo does not resolve the local font URLs in the CSS imports.
+- `@ciproxy/tokens/font-assets` exposes the same faces as bundler assets for
+  the dashboard. Expo does not resolve the local font URLs in the CSS imports.
 - `@ciproxy/tokens/css` exposes `tokenDeclarations()` and `tokenCss`.
   These define the `--c-*`, `--r-*`, and `--font-*` custom properties.
+- `fontFaceCss()` in the CSS entry writes the `@font-face` rules for the
+  font asset URLs. Each rule declares the weight range `100 900` of the
+  variable files. Without it, a browser takes each face as weight 400 only,
+  and Safari adds a synthetic bold on top of the real weight. Do not load the
+  faces through Expo's font loader, because it writes no weight range.
   The mark radii take the `--r-mark-*` names, such as `--r-mark-sm`.
   Firna consumers add their focus ring properties at the Firna boundary.
 
