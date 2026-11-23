@@ -55,8 +55,25 @@ Both variants share the base disk of `DISK_BYTES` up to `provision`. The
 `fit` phase then shrinks the disk to the variant's size, as the `shrink`
 phase does, when that size is smaller. The manifest names the variant in
 `variant`, and its `inputs.DISK_BYTES` is the size of the disk that the image
-has. The `provision` phase extracts
-a fresh upstream tree each time, because the variant changes files in it.
+has. The `provision` phase extracts a fresh upstream tree each time,
+because the variant changes files in it.
+
+### Measured images
+
+Built on 23 November 2026 on a Mac mini M4, with an external SSD as the work
+folder. GB means 10^9 bytes. "Build" counts `provision` and the steps after
+it, from a configured guest.
+
+| Image | Disk | Guest data used | Free job space | Disk allocated | `macos.tar` | Build |
+| --- | --- | --- | --- | --- | --- | --- |
+| `full` | 200 GB | 99.34 GB | 73.39 GB | 121.66 GB | 73.91 GB | 55 min provision, 12 min package |
+| `standard` v1 | 200 GB | 56.34 GB | 116.38 GB | 78.85 GB | 47.56 GB | 40 min provision, 9 min package |
+| `standard` v2 | 100 GB | 56.30 GB | 21.80 GB | 77.21 GB | 46.19 GB | v1's provision, then 10 min shrink and package |
+
+Both environments pin the standard image, because it is the only image that
+fits a Mac with 256 GB of storage: the full image takes 122 GB on disk and a
+74 GB download during an update. The full image waits for
+[Offer the full macOS image to Macs that fit](../../plans/follow-ups/macos-image-variant-per-mac.md).
 
 ## The build
 
