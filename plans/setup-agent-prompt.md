@@ -33,6 +33,11 @@ Decisions, 23 November 2026:
   the agent asks the user before it changes such a job, instead of keeping
   it unchanged. Reason: the user may want to move these jobs to ciproxy
   too, and only the user knows.
+- **A suggested label in each question.** The user decided that each
+  question of the agent suggests a ciproxy label for the user to approve.
+  The agent gives the label and why it fits, from what it can find, such as
+  a size in the runner name. Reason: an approval is faster for the user
+  than a choice from nothing.
 
 Design calls, my calls, 23 November 2026:
 
@@ -55,9 +60,9 @@ Design calls, my calls, 23 November 2026:
   kept job with its reason. Reason: ciproxy cannot run such a job, and a
   wrong move makes it fail or wait.
 - **Ask when the size is unknown.** When the agent cannot find the size of
-  the current runner, it asks the user before it changes the job. Reason:
-  the user knows the size, and this matches the user's decision for
-  self-hosted runners below.
+  the current runner, it asks the user before it changes the job, with a
+  suggested label. Reason: the user knows the size, and this matches the
+  user's decision for self-hosted runners above.
 - **Matrix and reusable workflows.** The agent changes `runs-on` values in a
   `matrix` and in reusable workflows of the same repository in the same
   way. Reason: these hold the runner of many jobs.
