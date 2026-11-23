@@ -21,14 +21,14 @@ The user chose this approach on 23 November 2026, in a brainstorm that
 started from the request "create an interface for ciproxy providers (boat,
 etc) that will allow add many different providers". The user's answers are
 under [User decisions](#user-decisions). This change does not cover macOS
-overflow or GPU sizes. Item 3 decides whether a second real provider ships in
-this change. It waits for the user, under [Open decisions](#open-decisions).
+overflow or GPU sizes. A second real provider comes in its own plan and branch
+after this change merges, as item 3 says.
 
 Earlier work: the unmerged plan `plans/overflow-providers-and-instabox.md` on
 branch `calummoore/instaboxsh-ci-provider-plan`, of 22 November 2026. It
 designs the same interface with instabox as the second provider. This plan
 reuses its interface design and its replaced ways. Its instabox milestones
-come back only if item 3 chooses instabox. Notes of this brainstorm:
+move to the follow-up item of item 3. Notes of this brainstorm:
 `.context/providers-interface/notes.md`.
 
 Contract owners:
@@ -252,8 +252,8 @@ My calls, 23 November 2026:
   several providers, and Boat is the first". Reason: the user's answer to
   item 2.
 - Mockups show the states with two providers with a fixture provider named
-  "Second provider". Item 3 replaces it with a real provider, or keeps it as
-  a fixture. Reason: the label order needs a second entry to design.
+  "Second provider". The follow-up of item 3 replaces it with the real
+  provider. Reason: the label order needs a second entry to design.
 
 ### Risks
 
@@ -288,6 +288,14 @@ My calls, 23 November 2026:
 - **Item 6, decided on 23 November 2026:** A. A newly connected provider
   joins the end of the order of each Linux label. Rejected: B, no label.
   Rejected: C, a choice of labels in the connect step.
+- **Item 3, decided on 23 November 2026:** F. This change builds the
+  interface with no stand-in provider. The second real provider, instabox by
+  default, comes in its own plan and branch after this merge, with the
+  two-provider tests outside the scaler. Rejected: A, a fake provider in the
+  tests. Rejected: B, C, and D, a real provider in this change. Rejected: E,
+  no plan for a second provider. Reason: the interface does not wait for a
+  paid instabox account and three more answers. The follow-up item
+  `plans/follow-ups/second-overflow-provider.md` holds that work.
 
 ## Milestone 1: Mockups
 
@@ -596,16 +604,14 @@ Pages that name Boat for a rule of every provider become provider-neutral.
 - [ ] Update `tiers.ts` and `plan-compare.ts`.
 - [ ] Run the site lint, typecheck, and build.
 
-## Milestone 12: Second provider
+## Milestone 12: Second provider follow-up
 
-Depends on: 7. Waits for item 3.
+Depends on: none
 
-Item 3 decides the scope of this milestone: no work, a fake provider for the
-service tests, or a real provider with its adapter, image, connect form, and
-guide.
+Item 3 chose F, so this change ships no second provider.
 
-- [ ] Replace these TODOs with the work of the option that the user chooses
-      for item 3. Add the milestones that it needs.
+- [x] Add the follow-up item `plans/follow-ups/second-overflow-provider.md`
+      for the second real provider and its two-provider tests.
 
 ## Milestone 13: Live checks before the merge
 
@@ -642,86 +648,3 @@ Depends on: every other milestone
       the spend.
 - [ ] Remove the old exit callback path when no delivery saved before the
       deploy is unfinished.
-
-## Open decisions
-
-One item waits for the user: item 3. It uses the layout of the
-`decisions-and-findings` skill.
-
-### 3. Scope of a second provider is unclear
-
-The options check of 23 November 2026 added options E and F, changed the
-root question, and changed the recommendation from A to F. Its summary:
-`.context/providers-interface/options-check.md`.
-
-- **Severity:** Medium. **Effort:** Small.
-- **Source:** Design.
-- **Category:** Process.
-- **Location:** None.
-- **Terms:**
-  - **instabox:** the provider at instabox.sh that the 22 November plan
-    chose. It has no start fee, uses a data disk, and builds its image in
-    each customer account.
-  - **E2B:** a provider whose adapter `sandbox-e2b` already exists in
-    `futex-ai/sandbox`. It lists no sizes, and its lifetime is at most 1
-    hour.
-- **Background:** The interface of this plan has Boat as its only real
-  provider. The instabox plan of 22 November needs a paid instabox workspace
-  and three more answers, because item 2 here answers its item 2. The
-  request of 23 November names no second provider. The scaler tests of
-  Milestone 6 cover an order of two providers through opaque IDs.
-- **Problem:** No second provider is confirmed. An interface shaped by one
-  provider can miss facts that the next one needs. The store, service, API,
-  and app cannot test a workspace with two providers while the enum has one
-  value.
-- **Impact if no action:** Milestone 12 has no scope, and the instabox
-  request stays unanswered.
-- **Root question:** When does ciproxy add a second real provider, and what
-  checks the shared rules for two providers until then?
-- **Options:**
-  - **A.** The interface only. The service tests add a fake second provider
-    built from the recorded instabox facts. The fake needs a second value in
-    the product enum, the store check, and the OpenAPI types. It cannot
-    carry the account image, the data disk, or egress. Effort: Medium.
-  - **B.** The interface plus instabox in this change. It continues the 22
-    November plan. It needs a paid workspace, a terms check, an image build
-    in each customer account, and three answers. Effort: Large.
-  - **C.** The interface plus E2B. Its adapter first needs sizes, capacity,
-    and 6-hour lifetimes. Its templates have an ID for each account, so it
-    can also need an image build in each account. This is not checked
-    against E2B. Effort: Large.
-  - **D.** The interface plus AWS EC2, which
-    `plans/ciproxy-mvp-foundation.md` names as next. It needs a new adapter,
-    a new key custody rule, and a registration path that starts from boot
-    data. Effort: Large.
-  - **E.** The interface only, with no stand-in provider. Milestone 12 goes.
-    The two-provider tests of the store, service, API, and app come with
-    the first real second provider. A defect in that shared code shows up
-    only then. Effort: Small.
-  - **F.** E, and the second real provider comes in its own plan and branch
-    after this merge. By default that is instabox, from the 22 November
-    plan without its interface milestones. The user can name another
-    provider. That plan adds the two-provider tests. A follow-up item here
-    points to it. Effort: Small for this change. The instabox change stays
-    Large.
-- **Left out:**
-  - Blacksmith, because its sandbox API is in preview, so customers cannot
-    rely on it. The source is an agent call in
-    `plans/ciproxy-mvp-foundation.md`, so check the API state again later.
-  - A provider for development only, because it gives customers nothing,
-    and A tests the same shared rules at a lower cost.
-  - GCP Compute Engine or another provider that no request names, because
-    it fills the place of D. The user can name it there.
-- **Wider fix:** None. B fits the shared layers to the facts of one
-  provider, so it is a direct fix. The descriptor and the seams are in
-  every option.
-- **Previous examples:** the unmerged instabox plan, and item 49 of
-  `plans/ciproxy-mvp.md`, where `sandbox-e2b` tested the capability split.
-- **Related:** Item 2. Several providers need a second provider for their
-  tests outside the scaler.
-- **Recommendation:** F. First recommendation: A. F keeps the instabox
-  request open without blocking the interface. It puts the two-provider
-  tests in the change where two providers first meet. B best protects the
-  codebase.
-- **Action:** ask the user, because the user asked for instabox on 22
-  November, and only the user can say if that request still stands.
