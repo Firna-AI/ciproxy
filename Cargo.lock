@@ -456,7 +456,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-agent"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "ciproxy-protocol",
@@ -491,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-api"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "aes-gcm",
  "async-trait",
@@ -538,7 +538,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-billing"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "chrono",
  "ciproxy-store-interface",
@@ -560,7 +560,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-cache-sidecar"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-control-plane"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "axum",
@@ -638,7 +638,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-gateway"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "axum",
@@ -666,7 +666,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-github"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "axum",
@@ -694,7 +694,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-guest"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "ciproxy-protocol",
@@ -716,7 +716,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-image-vm"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "ciproxy-vz",
  "clap",
@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-metering"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "chrono",
  "ciproxy-protocol",
@@ -737,7 +737,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-overflow"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -773,7 +773,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-protocol"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "insta",
  "serde",
@@ -783,7 +783,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-scaler"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "ciproxy-agent",
  "ciproxy-protocol",
@@ -791,7 +791,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-schema"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "diesel",
  "diesel_migrations",
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-store-interface"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "chrono",
  "ciproxy-protocol",
@@ -813,7 +813,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-store-pg"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "chrono",
  "ciproxy-metering",
@@ -832,7 +832,7 @@ dependencies = [
 
 [[package]]
 name = "ciproxy-vz"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "block2",
  "dispatch2",
@@ -4450,7 +4450,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "clap",
  "pulldown-cmark",
