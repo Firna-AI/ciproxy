@@ -1,5 +1,6 @@
 import type {
   InstallCommand,
+  LabelView,
   MachineView,
   OrganizationView,
   SetupJob,
@@ -157,4 +158,29 @@ export function installCommand(
     requirements: "Linux x86-64 · KVM · 4 threads · 8 GB RAM · 40 GB free disk",
     ...overrides,
   } satisfies InstallCommand;
+}
+
+/**
+ * The labels of Setup with the placement that the API gives for these
+ * machines: a ready machine fits each label, and a machine that gets its
+ * first job image leaves the placement unknown. Without a machine, each label
+ * keeps the placement of the fixture.
+ */
+export function labelsFor(
+  labels: readonly LabelView[],
+  machines: readonly MachineView[],
+): LabelView[] {
+  const ready = machines.filter((item) => item.state === "ready").length;
+  const preparing = machines.some((item) => item.state === "preparing");
+  if (ready === 0 && !preparing) return [...labels];
+  return labels.map((view) => ({
+    ...view,
+    fit: {
+      ...view.fit,
+      eligible_machines: machines.length,
+      fitting_machines: ready,
+      no_machine_fits: ready === 0,
+      placement: ready > 0 ? "machines_only" : "unavailable",
+    },
+  }));
 }

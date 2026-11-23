@@ -46,33 +46,50 @@ Design calls, my calls, 23 November 2026:
   workspace with its platform, vCPU, memory, and free disk, from the
   `labels` field of the Setup response. Reason: the Setup API already
   returns them, custom labels can exist, and Setup shows only API facts.
-- **macOS labels only with a Mac.** The prompt lists macOS labels only when
-  a Mac of the workspace can start VMs. Reason: a macOS label runs on the
-  customer's Macs only, so a moved macOS job with no Mac waits forever.
-- **Only labels that can run.** The prompt leaves out a Linux label that
-  allows neither own machines nor Boat. Reason: its jobs never start.
-- **The size rule.** For each job, the agent picks the smallest label of
-  the same platform with at least the vCPU and memory of the current
-  runner. It uses the size that GitHub documents for that runner on a
-  private repository. Reason: a smaller VM can make a job slow or fail, and
-  a much larger one takes slots that other jobs need.
-- **Jobs that stay.** The agent keeps a job unchanged when no label is
-  large enough, or when it runs on Windows or on Arm. The agent lists each
-  kept job with its reason. Reason: ciproxy cannot run such a job, and a
-  wrong move makes it fail or wait.
-- **Ask when the size is unknown.** When the agent cannot find the size of
-  the current runner, it asks the user before it changes the job, with a
-  suggested label. Reason: the user knows the size, and this matches the
-  user's decision for self-hosted runners above.
-- **Matrix and reusable workflows.** The agent changes `runs-on` values in a
-  `matrix` and in reusable workflows of the same repository in the same
-  way. Reason: these hold the runner of many jobs.
+- **Only labels that fit somewhere.** The prompt leaves out each label
+  whose placement in the Setup response is `waits`. That placement means
+  that no allowed destination fits the label: no machine of its platform
+  fits it, and Boat does not. A label whose placement is unknown, such as
+  while a machine gets its first job image, stays in. Reason: the server
+  already decides placement, and a job on a label that fits nowhere waits
+  forever. Changed after review finding 1, which showed that the earlier
+  rule kept `ciproxy-macos-medium` for a Mac too small to run it.
+- **The platform and size rule.** Each label line gives the operating
+  system and the CPU architecture, such as "Linux on x64" or "macOS on
+  Apple silicon (arm64)". For each job, the agent picks the smallest label
+  with the operating system and the architecture of the current runner,
+  and with at least its vCPU and memory. It uses the size and the
+  architecture that GitHub documents for that runner on a private
+  repository. Reason: a smaller VM can make a job slow or fail, and a move
+  to another architecture can break the build. Changed after review
+  finding 3, which showed that an Intel Mac job could move to arm64.
+- **Jobs that stay.** The agent keeps a job unchanged when no label has the
+  operating system and the architecture of its runner, such as a job on
+  Windows or on Linux on Arm, or when no label is large enough. The agent
+  lists each kept job with its reason. Reason: ciproxy cannot run such a
+  job, and a wrong move makes it fail or wait.
+- **Ask when the size or the architecture is unknown.** The agent then asks
+  the user before it changes the job, with a suggested label. Reason: the
+  user knows the runner, and this matches the user's decision for
+  self-hosted runners above.
+- **Only the runner changes.** When a `runs-on` value comes from a matrix,
+  an input, or a variable that other lines also read, the agent keeps the
+  value. It maps the value to the label in the `runs-on` line only, and
+  the prompt gives one example expression. Reason: a changed matrix value
+  makes conditions, exclusions, and check names stop matching. Changed
+  after review finding 2.
+- **One label order.** The prompt sorts the labels with `compareLabels`,
+  the order of the Settings list. Reason: one order for the same labels.
+  Changed after review finding 7.
 - **Private repositories only.** The prompt tells the agent to stop when the
   repository is public. Reason: ciproxy never runs jobs of public
   repositories, as "Move your workflows" in the docs says.
 - **Commit and push.** The prompt tells the agent to commit and push as the
   repository usually does. Reason: Setup waits for a job, and the push
   starts one. The repository's own rules decide the branch.
+- **The button name.** The accessible name of a copy button with its own
+  label is that label, so that a person can say the words on the button.
+  Reason: review finding 5.
 - **A failed copy shows the prompt.** The prompt stays off the page while
   the copy works. When the copy fails, a notice asks the person to select
   the prompt, and the prompt shows below it. Reason: the person cannot

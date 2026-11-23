@@ -279,6 +279,6 @@ export function setupModel(
     suspended,
     job,
     imageWait: imageWait(setup, ready, machines, boat),
-    agentPrompt: agentPrompt(setup.labels, machines),
+    agentPrompt: agentPrompt(setup.labels),
   };
 }

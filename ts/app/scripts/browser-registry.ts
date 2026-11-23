@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 import { storageKeys } from "../src/state/storage.ts";
 import { exerciseCase, copyFailure } from "./browser-actions.ts";
+import { agentPromptCopyFailure } from "./browser-agent-prompt.ts";
 import { createBoatRuns } from "./browser-boat.ts";
 import { createOverflowRuns } from "./browser-boat-overflow.ts";
 import { createBoatAccountRuns } from "./browser-boat-account.ts";
@@ -14,6 +15,10 @@ import { createImageRuns } from "./browser-image.ts";
 import { shellJourney, staticReloads } from "./browser-journeys.ts";
 import { createLateApprovalRuns } from "./browser-late-approval.ts";
 import { installNavigation } from "./browser-install.ts";
+
+/** Arrange a denied clipboard. A user can deny this browser permission. */
+const deniedClipboard =
+  'Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("Denied") } } })';
 
 export type SmokeRun = {
   name: string;
@@ -93,9 +98,13 @@ export function createSmokeRegistry(
     })),
     {
       name: "copy-failure",
-      // Arrange a denied clipboard. A user can deny this browser permission.
-      init: 'Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("Denied") } } })',
+      init: deniedClipboard,
       check: (page) => copyFailure(page, origin),
+    },
+    {
+      name: "agent-prompt-copy-failure",
+      init: deniedClipboard,
+      check: (page) => agentPromptCopyFailure(page, origin),
     },
     { name: "static-reloads", check: (page) => staticReloads(page, origin) },
   ];

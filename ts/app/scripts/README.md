@@ -83,7 +83,8 @@ The shell smoke, `browser-smoke.ts`, covers the sign-in page, the terms
 step with the address of its Continue with GitHub, the Setup pages and their
 states, Settings under Overflow, the shell, and the reload after a build
 change. Its Setup states include a machine that gets its first job image,
-and a first job that waits for that machine after Skip for now.
+and a first job that waits for that machine after Skip for now. With a
+denied clipboard, Copy prompt for your agent shows the prompt to select.
 Its late approval journeys sign in again after an owner approves an install
 request, then open the workspace of that install. In one, Check again on the
 install page opens the terms step, which shows the terms notice, and its

@@ -13,7 +13,13 @@ import {
   workspace,
   workspaceId,
 } from "./fixtures-core.ts";
-import { job, machine, preparingMachine, setup } from "./fixtures-setup.ts";
+import {
+  job,
+  labelsFor,
+  machine,
+  preparingMachine,
+  setup,
+} from "./fixtures-setup.ts";
 import {
   applyBoatScenario,
   boatScenarios,
@@ -272,5 +278,6 @@ export function recordedScenario(name: ScenarioName): Scenario {
   applyLateApprovalScenario(data);
   applyBoatScenario(data);
   applyPageScenario(data);
+  data.setup.labels = labelsFor(data.setup.labels, data.machines);
   return data;
 }
