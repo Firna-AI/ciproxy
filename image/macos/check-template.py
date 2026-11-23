@@ -82,6 +82,15 @@ class Template(unittest.TestCase):
         self.assertIn("max_retries = 2", text[text.rindex('provisioner "shell"', 0, install):install])
         self.assertNotIn("max_retries", text[text.rindex('provisioner "shell"', 0, restart):restart])
 
+    def test_auto_login_is_written_before_each_restart(self):
+        text = prepare.prepare_template(TEMPLATE)
+        restart = text.index("shutdown -r now")
+        before = text[:restart]
+        self.assertIn("autoLoginUser", before[before.rindex('provisioner "shell"', 0,
+                                                            before.rindex('provisioner "shell"')):])
+        self.assertEqual(text.count("test -s /etc/kcpassword"), 1)
+        self.assertEqual(text.count("{"), text.count("}"))
+
     def test_changed_upstream_fails(self):
         with self.assertRaises(SystemExit):
             prepare.prepare_template(TEMPLATE.replace("veertu-anka-vm-clone", "other"))

@@ -56,6 +56,7 @@ CIPROXY_STEPS = '''
     execute_command  = "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}"
     inline           = ["bash /tmp/ciproxy/install-runner.sh /tmp/ciproxy/runner.tar.gz",
                         "cd /tmp/ciproxy/guest && ./install.sh ${var.build_id}",
+                        "defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser -string ${var.vm_username}",
                         "bash /tmp/ciproxy/clean-image.sh"]
   }
 }
@@ -78,6 +79,28 @@ variable "ciproxy_runner_sha256" {
   type = string
 }
 '''
+
+
+AUTOLOGIN_STEP = '''provisioner "shell" {
+    environment_vars = ["USERNAME=${var.vm_username}"]
+    execute_command  = "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}"
+    inline           = ["defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser -string \\"$USERNAME\\"",
+                        "test -s /etc/kcpassword"]
+  }
+
+  '''
+
+
+def keep_autologin(text):
+    """Write the auto-login user again before each upstream restart. The
+    setting of configure-autologin.sh was lost once before the first
+    restart, and the guest then had no desktop session for the UI steps."""
+    marker = 'provisioner "shell" {'
+    parts = text.split(marker)
+    for index in range(1, len(parts)):
+        if "shutdown -r now" in parts[index][:parts[index].find("\n  }")]:
+            parts[index - 1] += AUTOLOGIN_STEP
+    return marker.join(parts)
 
 
 def add_retries(text):
@@ -104,7 +127,7 @@ def prepare_template(source):
     # the password through their environment variables.
     text = replace_once(text, 'ssh_password = "${var.vm_password}"',
                         'ssh_private_key_file = "${var.ciproxy_ssh_key}"', "the SSH password")
-    text = add_retries(text)
+    text = keep_autologin(add_retries(text))
     text = text.rstrip()
     if not text.endswith("}"):
         raise SystemExit("the upstream template changed: the end of the build block")
