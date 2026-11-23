@@ -11,6 +11,7 @@ export const paths = {
   docsHome: "docs/home",
   docsSearch: "docs/home/search",
   quickstart: "docs/quickstart",
+  howCiproxyWorks: "docs/how-ciproxy-works",
   addMachineGuide: "docs/add-a-machine",
   labelsReference: "docs/labels",
 

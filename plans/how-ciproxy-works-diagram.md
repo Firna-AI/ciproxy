@@ -2,7 +2,7 @@
 
 Status: Active. On branch `calummoore/diagram-request-3jpv`, no pull request
 yet. The pull request that completes the work deletes this plan, as the
-`plans` skill says.
+`plans` skill says. Cal approved this plan on 23 November 2026.
 
 The docs page How ciproxy works at `/docs/how-ciproxy-works/` is text only.
 A new reader must read all of it to see how GitHub, ciproxy, the machines of
@@ -60,15 +60,27 @@ These are design calls of the agent, made on 23 November 2026.
 
 - One picture goes under the intro of the page, before "The parts". This is
   the first place that a new reader looks.
-- The picture follows the job, from left to right on a desktop and from top
-  to bottom on a phone:
+- The picture follows the job. On a desktop, the first row holds three boxes
+  from left to right, and the second row holds the Boat box and step 4. On a
+  phone, the boxes stack in one column:
   1. GitHub queues a job of a ciproxy label.
-  2. The ciproxy control plane decides how many runners start, and where.
+  2. ciproxy decides how many runners start, and where.
   3. On your machine, the agent starts a fresh VM with a runner.
-  4. The runner takes a job from GitHub, runs it, and the VM ends.
-- A branch from the control plane goes to your Boat account. Its label says
-  that Boat runs the job when your machines have no room and Boat can take
-  the job. This stays true for macOS jobs, which never go to Boat.
+  4. The runner takes a job from GitHub and runs it. Then the VM ends.
+- Step 4 sits under step 3, with a down arrow. A full-width row under the
+  Boat box read as a step after Boat, but the VM ends only on your machines.
+  This replaces the full-width row of the first sketch. The mockup found it.
+- A branch from ciproxy goes to your Boat account. Its label says "Or, when
+  your machines have no room and Boat can take the job". This stays true for
+  macOS jobs, which never go to Boat. The Boat box has no number. On a phone,
+  the Boat way comes after step 4, below a hairline, because Boat is not a
+  step between 3 and 4.
+- Each box has a small icon: GitHub, the ciproxy mark, a server, a box for
+  the runner, and a cloud for Boat. The icons and arrows use the faint grey
+  token.
+- The figure takes its layout from its own width, not from the window: a row
+  from 560 px, a column below that. The docs column can be narrow beside the
+  sidebar and "On this page".
 - The numbers 1 to 4 match the numbered list under "A job on your machines".
   So the list explains the picture.
 - The arrows follow the job. They do not show which side opens a connection.
@@ -80,8 +92,8 @@ These are design calls of the agent, made on 23 November 2026.
   a caption. The arrows are hidden from screen readers.
 - The figure carries `data-pagefind-ignore`, so that search shows the text
   of the page and not a copy of it.
-- If the mockup shows that one picture is too dense, the picture splits into
-  two: the parts, and the path of a job.
+- The mockup showed that one picture is not too dense, so it stays one
+  picture.
 
 ## Milestone 1: Mockups
 
@@ -92,30 +104,34 @@ Depends on: none
 Add the page How ciproxy works to the docs mockups, with the picture, in a
 desktop and a mobile variant.
 
-- [ ] Add a figure component for the picture under
+- [x] Add a figure component for the picture under
       `docs/mockups/src/screens/docs/`, from the tokens.
-- [ ] Add the screen `how-ciproxy-works.tsx` in the docs shell, with the
+- [x] Add the screen `how-ciproxy-works.tsx` in the docs shell, with the
       intro, the picture, and the text of the page.
-- [ ] Add the entry `docs/mockups/src/entries/docs/how-ciproxy-works.mockup.tsx`
-      with its rationale and `relatedDocs`. Add it to `_folder.json` and to
-      `paths.ts`.
-- [ ] Link How ciproxy works in `docs-nav.ts`.
-- [ ] Update the mockups README for the new screen.
-- [ ] Run `npm --prefix ts run mockups:check`. Smoke-test the desktop and the
+- [x] Add the entry
+      `docs/mockups/src/entries/docs/how-ciproxy-works/index.mockup.tsx`
+      with its rationale and `relatedDocs`. It has its own folder, because
+      the Docs page of the catalogue already shows its limit of five screens.
+      Add it to `_folder.json` and to `paths.ts`.
+- [x] Add the Mac sentence of Decision 2 to "Warm runners" of the screen.
+- [x] Link How ciproxy works in `docs-nav.ts`.
+- [x] Update the mockups README for the new screen.
+- [x] Run `npm --prefix ts run mockups:check`. Smoke-test the desktop and the
       mobile variant, and save screenshots under `.context/`.
-- [ ] Update the design and the TODOs of this plan for each problem that the
+- [x] Update the design and the TODOs of this plan for each problem that the
       mockups show.
+
+The screenshots are in `.context/how-ciproxy-works-diagram/screenshots/`.
 
 ## Milestone 2: Documentation
 
-Depends on: 1
+Depends on: none
 
 No protocol doc changes, because the behaviour of the product stays the
 same. The docs page text gets the Mac rule.
 
-- [ ] Add the Mac sentence to "Warm runners" on the How ciproxy works page:
+- [x] Add the Mac sentence to "Warm runners" on the How ciproxy works page:
       on a Mac, warm runners serve the label `ciproxy-macos`.
-- [ ] Add the same sentence to the mockup screen of the page.
 
 ## Milestone 3: The picture on the site
 
@@ -127,8 +143,11 @@ Build the picture of the mockup in the site, and show it on the page.
 
 - [ ] Add the data of the picture in `ts/site/src/data/`.
 - [ ] Add the component and its CSS under `ts/site/src/components/docs/`.
+      Follow `docs/mockups/src/screens/docs/job-path-figure.tsx` and its CSS.
       Take every colour, font, and radius from the tokens. Use the icons of
       `src/components/icon/icons.ts`.
+- [ ] Make the ciproxy mark of `src/components/Brand.astro` a component of
+      its own, so that the picture and the brand use one mark.
 - [ ] Rename the page to `how-ciproxy-works.mdx`. Show the picture with one
       `jsx()` call.
 - [ ] Update the two paths in `plans/follow-ups/boat-image-services.md` that

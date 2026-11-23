@@ -25,9 +25,9 @@ for the job on one of your machines, or in your Boat account.
 
 1. GitHub queues a job whose `runs-on` names a ciproxy label, and tells
    ciproxy about it.
-2. A ready warm runner takes a job of the label `ciproxy` at once. For a job
-   of another label, ciproxy starts a runner in free slots of one of your
-   machines.
+2. A ready warm runner takes a job of the label `ciproxy` or `ciproxy-macos`
+   at once. For a job of another label, ciproxy starts a runner in free
+   slots of one of your machines.
 3. The runner runs the job in a fresh VM that no other job used.
 4. When the job ends, the agent ends the VM. ciproxy starts a new warm
    runner when the machine has room for it.
@@ -42,13 +42,14 @@ decides how many runners start and where, not which job a runner takes.
   the page of the machine.
 - ciproxy starts warm runners up to that count, only in free slots and disk
   that no waiting job needs.
-- Warm runners serve the label `ciproxy`. A job of another label gets a new
+- On a Linux machine, warm runners serve the label `ciproxy`. On a Mac,
+  they serve the label `ciproxy-macos`. A job of another label gets a new
   runner in a fresh VM.
 - A warm runner never keeps a waiting job from your machines. ciproxy stops
   warm runners to free the slots and the disk that a waiting job needs.
 - A draining machine keeps no warm runners.
 - In a workspace with several organizations, the warm runners of a machine
-  go to each organization by its jobs of the label `ciproxy` in the last
+  go to each organization by its jobs for the warm runner label in the last
   24 hours.
 
 ## Slots and disk

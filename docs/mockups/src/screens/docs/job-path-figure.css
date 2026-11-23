@@ -1,0 +1,210 @@
+/* The picture of How ciproxy works (job-path-figure.tsx). The figure takes
+   its layout from its own width, not from the window, because the docs
+   sidebar and "On this page" take part of a wide window. In a narrow
+   figure, the boxes stack in reading order with arrows down, and the other
+   way to Boat comes after the path. In a wide figure, the path runs from
+   left to right and then down, and the other way leaves ciproxy downwards.
+   White boxes with a hairline border; no colour, because colour marks
+   status only. */
+
+.job-path {
+  /* The column between two boxes, the row of the down arrows, and the width
+     of an arrow, which job-path-figure.tsx draws at 16 px. */
+  --job-path-gap: 32px;
+  --job-path-drop: 56px;
+  --job-path-arrow: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 8px 0;
+  container: job-path / inline-size;
+}
+
+.job-path-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* A box: a part of ciproxy and what it does. In a narrow figure, the number
+   of the step, the name of the part, and the icon share the first line. The
+   Boat box has no number, so its name starts the line. */
+
+.job-path-box {
+  display: grid;
+  grid-template-areas:
+    "number title icon"
+    "text text text";
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-content: start;
+  align-items: center;
+  min-width: 0;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+}
+
+.job-path-number {
+  grid-area: number;
+  margin-right: 10px;
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 20px;
+}
+
+.job-path-icon {
+  display: inline-flex;
+  grid-area: icon;
+  margin-left: 10px;
+  color: var(--c-faint);
+}
+
+/* Two classes, so that the prose rules of the article stay out. */
+
+.job-path .job-path-title {
+  grid-area: title;
+  color: var(--c-ink);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 20px;
+}
+
+.job-path .job-path-text {
+  grid-area: text;
+  margin-top: 4px;
+  color: var(--c-ink2);
+  font-size: 13.5px;
+  line-height: 20px;
+}
+
+/* An arrow between two neighbours. */
+
+.job-path-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  color: var(--c-faint);
+}
+
+/* The other way: in a narrow figure, a line under the path, then the words
+   that say when a job takes it, then the Boat box. */
+
+.job-path-when {
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+  padding: 16px 0 10px;
+  border-top: 1px solid var(--c-border);
+}
+
+.job-path-when .job-path-arrow {
+  display: none;
+}
+
+.job-path .job-path-when-text {
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+  text-wrap: balance;
+}
+
+.job-path-caption {
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+  text-wrap: pretty;
+}
+
+@container job-path (min-width: 560px) {
+  .job-path-grid {
+    grid-template-columns:
+      minmax(0, 1fr) var(--job-path-gap) minmax(0, 1fr) var(--job-path-gap)
+      minmax(0, 1fr);
+    grid-template-areas:
+      "github to-ciproxy ciproxy to-machine machine"
+      "when when when . to-runner"
+      ". . boat . runner";
+  }
+
+  .job-path-github {
+    grid-area: github;
+  }
+
+  .job-path-ciproxy {
+    grid-area: ciproxy;
+  }
+
+  .job-path-machine {
+    grid-area: machine;
+  }
+
+  .job-path-runner {
+    grid-area: runner;
+  }
+
+  .job-path-boat {
+    grid-area: boat;
+  }
+
+  .job-path-to-ciproxy {
+    grid-area: to-ciproxy;
+  }
+
+  .job-path-to-machine {
+    grid-area: to-machine;
+  }
+
+  .job-path-to-runner {
+    grid-area: to-runner;
+  }
+
+  /* The number above the name. The head line keeps its height in the Boat
+     box, so that its name lines up with the name of step 04. */
+  .job-path-box {
+    grid-template-areas:
+      "number . icon"
+      "title title title"
+      "text text text";
+    grid-template-rows: 20px auto auto;
+  }
+
+  .job-path .job-path-title {
+    margin-top: 10px;
+  }
+
+  .job-path-arrow {
+    height: auto;
+    min-height: var(--job-path-drop);
+  }
+
+  /* The first row runs from left to right. */
+  .job-path-to-ciproxy svg,
+  .job-path-to-machine svg {
+    transform: rotate(-90deg);
+  }
+
+  /* The words sit to the left of the arrow under ciproxy. The area holds
+     two boxes and one gap, so the centre of the third column is half a box
+     from its right end. The padding puts the centre of the arrow there. */
+  .job-path-when {
+    grid-area: when;
+    justify-content: flex-end;
+    gap: 10px;
+    min-height: var(--job-path-drop);
+    margin: 0;
+    padding: 0;
+    padding-right: calc(
+      (100% - var(--job-path-gap)) / 4 - var(--job-path-arrow) / 2
+    );
+    border-top: 0;
+    text-align: right;
+  }
+
+  .job-path-when .job-path-arrow {
+    display: flex;
+    min-height: 0;
+  }
+}

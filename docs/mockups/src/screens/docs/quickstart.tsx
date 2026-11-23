@@ -130,6 +130,7 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
           <LinkCard
             title="How ciproxy works"
             text="Warm runners, slots, overflow, and the cache."
+            to={paths.howCiproxyWorks}
           />
         </CardGrid>
       </div>

@@ -53,6 +53,7 @@ export function DocsHomeScreen({
           <LinkCard
             title="How ciproxy works"
             text="Warm runners, slots, overflow, and the cache."
+            to={paths.howCiproxyWorks}
           />
           <LinkCard
             title="Labels and VM sizes"
