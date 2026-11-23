@@ -16,6 +16,8 @@ supplies its image, settings, and secret versions. The release server and
 static exports can deploy independently.
 The optional [Boat snapshot](runtime.md#boat-shared-snapshot) follows the
 release-token delivery path and needs no secret version while Boat is off.
+The optional R2 read key of the [macOS images](runtime.md#macos-images)
+follows the same path and needs no version while macOS images are off.
 
 - [Setup](setup.md) gives the first operator steps.
 - [First deploy](first-deploy.md) gives CI data creation, the expected token
@@ -147,7 +149,7 @@ writes. The operator drains preview before the launch handoff.
 | `scripts/control_plane_image.py`                     | Exact source hashing, credentialless build, registry reuse, and digest-bound archive publication.                     |
 | `scripts/image_promotion.py`                         | Select the image deployed by the exact successful upstream preview rollout.                                           |
 | `scripts/deploy.py`                                  | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation.                                           |
-| `scripts/boat_secret.py`                             | Optional Boat snapshot delivery over standard input and its public rollout revision.                                  |
+| `scripts/optional_secret.py`                         | Optional Boat snapshot and R2 images key delivery over standard input, and their public rollout revisions.            |
 | `scripts/github-ruleset.sh`                          | Idempotent protected `main` ruleset setup.                                                                            |
 | `org-policies/`                                      | The managed sharing rule of project `ciproxy`, applied once by an operator.                                           |
 | `tests/`                                             | Executable CI tests and recorded plan-policy cases.                                                                   |

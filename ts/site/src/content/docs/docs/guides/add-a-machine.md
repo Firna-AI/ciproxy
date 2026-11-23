@@ -39,7 +39,8 @@ measured. -->
 - A Mac with Apple Silicon, M1 or later.
 - macOS 26.7.3 or later. A macOS VM cannot run a newer macOS than its Mac,
   so the Mac needs the macOS of the job image.
-- 16 GB of memory and 512 GB of disk or more.
+- 16 GB of memory and 512 GB of disk or more. The disk can be an external
+  APFS SSD, as [Use an external disk](#use-an-external-disk) says.
 - Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The Mac
   opens no inbound port.
 
@@ -54,6 +55,22 @@ Run the same install command in Terminal on the Mac. The agent runs as a
 launchd service, and it keeps the Mac awake, so the Mac needs no sleep
 setting. In **System Settings**, under **Energy**, turn on **Start up
 automatically after a power failure**.
+
+### Use an external disk
+
+A Mac with a small internal disk can keep the disk area of the agent on an
+external SSD. Format the SSD as APFS in Disk Utility, and connect it. Then
+add `env CIPROXY_AREA_DISK=/Volumes/NAME` after `sudo` in the install
+command, with the name of the SSD:
+
+```sh title="Terminal"
+curl -fsSL https://get.ciproxy.dev | sudo env CIPROXY_AREA_DISK=/Volumes/NAME sh -s -- install --token <install token>
+```
+
+Keep the SSD connected. While it is unplugged, the Mac takes no jobs, and
+its running jobs fail. When you connect it again, the Mac takes jobs again.
+The setting applies to the first install only. To move the disk area,
+uninstall the agent first.
 
 :::caution[FileVault stops jobs after a restart]
 With FileVault on, macOS starts no service after a restart until a person

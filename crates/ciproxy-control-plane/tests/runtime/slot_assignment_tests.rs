@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_control_plane::runtime::{ImageOffer, MachineRuntime};
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -211,7 +211,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        Some(image),
+        Some(ImageOffer::unsigned(image)),
         Arc::new(Unimock::new(())),
     );
     runtime.settled_tick().await.unwrap();
