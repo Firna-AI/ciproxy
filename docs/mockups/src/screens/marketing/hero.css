@@ -1,14 +1,16 @@
 /* The landing hero (hero.tsx): a large title with tight tracking over a faint
    grid that fades out. The product panel has its own stylesheet,
-   hero-panel.css. */
+   hero-panel.css, and the other backdrops have hero-backdrops.css. */
 
 .hero {
+  --hero-top: 120px;
+
   position: relative;
-  padding: 120px var(--site-gutter) 88px;
+  padding: var(--hero-top) var(--site-gutter) 88px;
   overflow: hidden;
 }
 
-.hero::before {
+.hero-bg-grid::before {
   position: absolute;
   inset: 0;
   background-image:
@@ -26,7 +28,9 @@
 }
 
 .mockup-mobile .hero {
-  padding: 64px var(--site-gutter) 48px;
+  --hero-top: 64px;
+
+  padding-bottom: 48px;
 }
 
 .hero-copy {
@@ -35,6 +39,7 @@
   flex-direction: column;
   align-items: center;
   gap: 24px;
+  isolation: isolate;
   text-align: center;
 }
 
@@ -113,7 +118,7 @@
 
 @media (max-width: 960px) {
   .mockup-desktop .hero {
-    padding-top: 88px;
+    --hero-top: 88px;
   }
 
   .mockup-desktop .hero-title {

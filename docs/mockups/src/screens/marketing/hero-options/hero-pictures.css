@@ -1,0 +1,269 @@
+/* The pictures of the hero options (pictures.tsx): a card with hairline
+   borders, like the product panel, in ink and greys. The machine drawing reads
+   its colours from --ho-line and --ho-fill. */
+
+.ho-card {
+  --ho-line: var(--c-ink);
+  --ho-fill: var(--c-bg);
+
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--c-ink) 4%, transparent),
+    0 16px 32px -20px color-mix(in srgb, var(--c-ink) 12%, transparent);
+  text-align: left;
+}
+
+.ho-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg);
+}
+
+.ho-bar-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ho-slash {
+  color: var(--c-border2);
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.ho-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 20px;
+}
+
+.ho-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ho-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ho-machine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--c-border);
+  font-size: 12.5px;
+}
+
+.ho-machine:first-child {
+  border-top: 0;
+}
+
+.ho-boat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
+}
+
+.ho-boat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The machine drawing, over a tinted band under the card bar. */
+
+.ho-drawing {
+  display: flex;
+  justify-content: center;
+  padding: 8px 24px 0;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg);
+}
+
+.ho-rack {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+}
+
+/* The monthly estimate: rows of prices, the total, and the saving. */
+
+.ho-estimate {
+  padding: 22px 24px 20px;
+}
+
+.ho-estimate-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--c-border2);
+  font-size: 12.5px;
+}
+
+.ho-rows {
+  margin: 0;
+}
+
+.ho-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  font-size: 14px;
+}
+
+.ho-row dd {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.ho-row.is-total {
+  border-top: 1px solid var(--c-ink);
+  font-weight: 600;
+}
+
+.ho-row.is-other {
+  border-bottom: 1px dashed var(--c-border2);
+  color: var(--c-muted);
+}
+
+.ho-saving {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 18px 0 6px;
+}
+
+.ho-saving strong {
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.ho-basis {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* The board of the release peak: three counts and the first running jobs. */
+
+.ho-board {
+  max-width: 960px;
+  margin: 64px auto 0;
+}
+
+.ho-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.ho-count {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 20px 18px;
+  border-left: 1px solid var(--c-border);
+}
+
+.ho-count:first-child {
+  border-left: 0;
+}
+
+.ho-count dd {
+  order: -1;
+  margin: 0;
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.ho-count:last-child dd {
+  color: var(--c-muted);
+}
+
+.ho-jobs {
+  padding: 4px 20px 8px;
+}
+
+.ho-job {
+  display: grid;
+  grid-template-columns:
+    10px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.25fr)
+    52px;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  border-top: 1px solid var(--c-border);
+  font-size: 13px;
+}
+
+.ho-job:first-child {
+  border-top: 0;
+}
+
+.ho-job-name,
+.ho-job-ref {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ho-job-time {
+  text-align: right;
+}
+
+.mockup-mobile .ho-board {
+  margin-top: 40px;
+}
+
+.mockup-mobile .ho-count {
+  padding: 14px 12px;
+}
+
+.mockup-mobile .ho-count dd {
+  font-size: 36px;
+}
+
+.mockup-mobile .ho-job {
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+}
+
+.mockup-mobile .ho-job-ref,
+.mockup-mobile .ho-job-time {
+  display: none;
+}

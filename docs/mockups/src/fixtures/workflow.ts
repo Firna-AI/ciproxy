@@ -18,3 +18,39 @@ export const jobSteps: readonly string[] = [
   "        - uses: actions/checkout@v4",
   "        - run: cargo test --workspace",
 ];
+
+/**
+ * A whole workflow file of mokly-ai, as the texture of a hero variation:
+ * three jobs, each on ciproxy.
+ */
+export const heroWorkflow: readonly string[] = [
+  "name: ci",
+  "on:",
+  "  push:",
+  "    branches: [main]",
+  "  pull_request:",
+  "",
+  "jobs:",
+  "  lint:",
+  "    runs-on: ciproxy",
+  "    steps:",
+  "      - uses: actions/checkout@v4",
+  "      - run: npm ci",
+  "      - run: npm run lint",
+  "",
+  "  test:",
+  "    runs-on: ciproxy",
+  "    strategy:",
+  "      matrix:",
+  "        shard: [1, 2, 3, 4]",
+  "    steps:",
+  "      - uses: actions/checkout@v4",
+  "      - run: cargo test --workspace",
+  "",
+  "  build:",
+  "    needs: [lint, test]",
+  "    runs-on: ciproxy",
+  "    steps:",
+  "      - uses: actions/checkout@v4",
+  "      - run: cargo build --release",
+];

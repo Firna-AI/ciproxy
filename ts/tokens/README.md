@@ -10,6 +10,9 @@ The package is private and has no open licence.
 - `radii` shapes controls and boxes, and the Firna theme reads it.
   `markRadii` holds the 1, 2, and 3 px corners of small data marks, such as
   slot segments, chart keys, and the data ends of thin bars.
+- `accentColors` is a proposed brand accent, as `--c-accent-ink` and
+  `--c-accent-soft`. Only the accent hero option of the mockups uses it, until
+  a hero option is chosen.
 - `@ciproxy/tokens/firna` creates the Firna theme.
   It uses the peer dependency `@firna/ui`.
 - `@ciproxy/tokens/fonts` loads Geist and Geist Mono through CSS imports.

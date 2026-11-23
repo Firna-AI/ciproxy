@@ -239,6 +239,17 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the section head and the cells divided by hairlines. `legal-page.tsx` is the
   frame of the terms and the privacy policy, with their sections from
   `src/fixtures/legal.ts`.
+- `src/screens/marketing/hero-backdrops.tsx`: the backgrounds of the landing
+  hero. The landing page keeps the grid. The page
+  `marketing/hero-backgrounds` shows the landing page with each other
+  background, so that one can be chosen: plain white, a black band, the
+  workflow file, the starts of 30 days, and two rules.
+- `src/screens/marketing/hero-options/`: other heroes for the landing page,
+  with the same words and a picture of the product in place of decoration.
+  The page `marketing/hero-options` shows each on the landing page: the text
+  beside the machines, with a drawing, with one accent colour, or beside a
+  monthly estimate, and the centred text over a board of the release peak. The
+  accent option alone reads `accentColors` of `@ciproxy/tokens`.
 - `src/screens/docs/docs-shell.tsx`: the frame of a docs page, in the structure
   of Starlight, with the sidebar from `docs-nav.ts` and the article parts in
   `docs-parts.tsx`.

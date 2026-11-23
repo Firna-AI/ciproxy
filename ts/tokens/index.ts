@@ -87,3 +87,9 @@ export const slotColors = {
 
 /** The sidebar: labels between the ink and the muted grey, lighter icons. */
 export const navColors = { label: "#5E5E5E", icon: "#8F8F8F" } as const;
+
+/**
+ * A proposed brand accent, which only the accent hero option of the mockups
+ * uses. Graphite keeps colour for status until a hero option is chosen.
+ */
+export const accentColors = { ink: "#2445C8", soft: "#EEF2FC" } as const;
