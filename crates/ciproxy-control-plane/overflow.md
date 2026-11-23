@@ -47,7 +47,10 @@ The routing snapshot of a workspace also holds the saved Boat account,
 deliveries, registration identities, and runner states. The common snapshot
 builder turns these records into Boat supply, if a Boat service is
 configured. So the pure scaler sees all accepted Boat supply, also while
-Boat is unavailable, and it starts no second runner for that demand.
+Boat is unavailable. The
+[ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
+and the [scaler rules](../ciproxy-scaler/README.md#what-this-crate-does) say
+when the scaler starts another runner for demand that this supply covers.
 The scaler applies own machines first, the
 [overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait), and
 the Boat size rules. The runtime executes each Boat start through the
@@ -96,8 +99,10 @@ pass applies only Boat actions, with no new refresh.
   Without such a job fact, a saved `Busy` state also marks the runner busy.
   Each runner takes one job, so a busy runner covers no new waiting job.
 - Idle retirement keeps a runner that a running job or waiting demand needs.
-  Otherwise GitHub removes the registration first. A busy answer keeps the
-  sandbox.
+  Waiting demand keeps a launched runner only until its ready deadline. The
+  scaler can then start another runner for that demand by the usual
+  placement. Each retirement removes the GitHub registration first. A busy
+  answer keeps the sandbox.
 - Waiting demand does not keep a saved `Busy` runner without a started job.
   Each cleanup pass asks GitHub to remove it. A busy answer keeps it.
 - Take-out retires idle Boat supply before the API removes GitHub access.
@@ -146,7 +151,11 @@ gives the requirements.
 | 401    | The token is missing, wrong, already used, or for another runner, or its delivery already ended.      |
 | 503    | The request failed before it saved the report.                                                        |
 
-Boat ends a sandbox at its lifetime when no report arrives.
+[The ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
+and
+[After an App removal](../../docs/protocol/overflow-sandbox-end.md#after-an-app-removal)
+say what happens to the sandbox of a launched runner with no report and no
+job. Boat ends each sandbox at its lifetime at the latest.
 
 ## Live smoke checks
 

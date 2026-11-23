@@ -71,6 +71,10 @@
 - **Previous examples:** Agent release preparation omitted PostgreSQL
   when store integration tests joined the workspace. The direct fix
   copied the existing CI setup into a separate read-only gate job.
+- **Related:** `plans/follow-ups/agent-tag-release-gate.md`, the same code.
+  Its option E runs the `gate` job also in tag runs, and option B of this
+  item moves the setup of that job into a shared action. The two changes do
+  not conflict.
 - **Recommendation:** B. Shared setup prevents caller drift while keeping
   the existing release and CI policy.
 - **Action:** fix after merge, apply B. Reuse the existing checks and add

@@ -29,6 +29,8 @@ Unsent deliveries can retry preparation without provider recovery.
 Cancelled unsent deliveries retain no sealed input or callback authority.
 Account observations keep typed catalogs, retry times, and refusal state.
 Runner input stays encrypted until launch or cleanup ends its use.
+`StartRecord::mark_launched` sets the phase `Running` and the launch time
+`launched_at` together.
 Callback lookup derives the workspace from a token digest.
 A transactional claim accepts one report for one live runner.
 It accepts no report after the delivery ends.

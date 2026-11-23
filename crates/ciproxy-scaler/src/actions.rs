@@ -89,6 +89,8 @@ pub enum StopReason {
     DestinationDisabled,
     /// The actual Boat VM size no longer meets the label's current size policy.
     SizeNoLongerAllowed,
+    /// A launched Boat runner took no job within its ready deadline.
+    ReadyDeadlinePassed,
     /// The own machine is draining.
     MachineDraining,
     /// A waiting job needs the slots or disk held by a warm runner.

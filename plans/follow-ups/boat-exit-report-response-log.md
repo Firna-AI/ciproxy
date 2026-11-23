@@ -92,8 +92,10 @@
     they hold secrets, and no log may hold a secret.
   - Follow redirects, because the guest README keeps the token at its
     intended endpoint.
-  - A retry of a failed report, because it is a separate choice: option D
-    of `plans/follow-ups/boat-exit-report-lock-timeout.md`.
+  - A retry of a failed report, because it is a separate choice. It was
+    option D of the [lock-timeout item][lock-timeout-item], and the user did
+    not choose it on 22 November 2026. #116 closed that item with its
+    option B.
 - **Wider fix:** None. The guest makes one HTTP call, the exit report, so
   no other place repeats this log.
 - **Previous examples:** None found of a log that claims more than its
@@ -104,12 +106,11 @@
   - `plans/follow-ups/boat-live-completion-acceptance.md`: its Background
     describes this line and says that no option reads it. No option there
     waits for this item.
-  - `plans/follow-ups/boat-exit-report-lock-timeout.md`: its option D
-    changes the same function, `BoatChannel::send`. Neither item waits for
-    the other.
 - **Recommendation:** A. It makes the line true for each answer and keeps
   every current behaviour. B keeps the behaviour too, but its warnings
   still name no status for a 401 or a 503. C is the strictest, but it adds
   a stricter validation that needs the user.
 - **Action:** fix after merge, apply A, because the guest code is outside
   this docs diff.
+
+[lock-timeout-item]: https://github.com/Firna-AI/ciproxy/blob/2976db158049aefce6cfe96cf6337d12afc9be64/plans/follow-ups/boat-exit-report-lock-timeout.md

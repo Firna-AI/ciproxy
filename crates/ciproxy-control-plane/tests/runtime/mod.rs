@@ -28,6 +28,7 @@ mod overflow_app_removal_tests;
 mod overflow_busy_tests;
 mod overflow_callback_tests;
 mod overflow_ports;
+mod overflow_ready_deadline_tests;
 mod overflow_registration_removal_tests;
 mod overflow_registration_retention_tests;
 mod overflow_reinstall_tests;

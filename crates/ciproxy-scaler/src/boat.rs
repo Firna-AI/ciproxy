@@ -88,4 +88,6 @@ pub struct BoatRunner {
     pub runner: Runner,
     /// Saved StartRecord requirement for the runner's original image release.
     pub required_root_disk_bytes: u64,
+    /// Recorded guest launch time on the snapshot clock, if known.
+    pub launched_at: Option<Duration>,
 }

@@ -69,6 +69,7 @@ impl From<StartRecord> for BoatDeliveryGuard {
             phase,
             sandbox,
             starts_at: _,
+            launched_at: _,
             ends_at,
             billing: _,
             start_fee_bound_usd: _,

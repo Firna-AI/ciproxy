@@ -100,6 +100,9 @@ pub struct StartRecord {
     /// Dispatch replaces it with the actual dispatch time.
     /// Trusted provider creation time replaces it when measured.
     pub starts_at: DateTime<Utc>,
+    /// Time when the overflow service saved the accepted guest launch, absent before launch.
+    #[serde(default)]
+    pub launched_at: Option<DateTime<Utc>>,
     /// Confirmed lifecycle end, independent of measured billing time.
     pub ends_at: Option<DateTime<Utc>>,
     /// Finite measured billing prefix, independent of lifecycle reconciliation.
@@ -121,6 +124,12 @@ pub struct StartRecord {
 }
 
 impl StartRecord {
+    /// Mark the guest launch accepted at the time of the phase change.
+    pub fn mark_launched(&mut self, at: DateTime<Utc>) {
+        self.phase = StartPhase::Running;
+        self.launched_at = Some(at);
+    }
+
     /// Select the start fee counted by spend and savings without confirming a charge.
     pub fn counted_start_fee_usd(&self) -> Option<Decimal> {
         self.start_usd.or(self.start_fee_bound_usd)
