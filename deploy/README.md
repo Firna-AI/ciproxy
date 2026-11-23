@@ -72,7 +72,8 @@ production edge IP. See [DNS setup](dns.md).
 
 Each static origin has separate HTML, mutable, and immutable wrappers. Private
 asset caching requires `FORCE_CACHE_ALL`; object metadata alone does not
-enable it. [Static delivery](static-delivery.md) gives paths and lifetimes.
+enable it. [Static delivery](static-delivery.md) gives paths, lifetimes, and
+the [publication order](static-delivery.md#lifetimes-and-publishing).
 
 The release server uses upstream commit
 `53a1dd3426226a9d25defb4a899d3c9a430a3941`. Its vendored chart has
@@ -148,7 +149,7 @@ writes. The operator drains preview before the launch handoff.
 | `scripts/workload_snapshot.py`                       | Inputs from a ready rollout, bound to its commit and run attempt.                                                     |
 | `scripts/control_plane_image.py`                     | Exact source hashing, credentialless build, registry reuse, and digest-bound archive publication.                     |
 | `scripts/image_promotion.py`                         | Select the image deployed by the exact successful upstream preview rollout.                                           |
-| `scripts/deploy.py`                                  | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation.                                           |
+| `scripts/deploy.py`                                  | Staging of new dashboard objects, own-namespace Helm, full static publishing, NEG readiness, and CDN invalidation.    |
 | `scripts/optional_secret.py`                         | Optional Boat snapshot and R2 images key delivery over standard input, and their public rollout revisions.            |
 | `scripts/github-ruleset.sh`                          | Idempotent protected `main` ruleset setup.                                                                            |
 | `org-policies/`                                      | The managed sharing rule of project `ciproxy`, applied once by an operator.                                           |

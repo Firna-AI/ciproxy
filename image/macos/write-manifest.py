@@ -72,8 +72,11 @@ def main():
         "artifacts": {name: sizes(args.artifacts / name) for name in VM_FILES},
     }
     (args.artifacts / "measurement.json").write_text(json.dumps(measurement, indent=2) + "\n")
+    # The pins name the base disk. The fit or shrink phase can cut the disk,
+    # so the inputs record the disk that the image has.
+    inputs = {**pins, "DISK_BYTES": str(disk.stat().st_size)}
     manifest = {"image_id": os.environ.get("IMAGE_RELEASE_ID", pins["IMAGE_ID"]),
-                "platform": "macos", "inputs": pins,
+                "platform": "macos", "inputs": inputs,
                 "minimum_host_macos": guest["macos_version"],
                 "root_disk_bytes": measurement["root_disk_bytes"],
                 "free_job_bytes": measurement["free_job_bytes"],

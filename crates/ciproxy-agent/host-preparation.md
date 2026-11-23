@@ -7,18 +7,48 @@ It does not require another install token for an existing registration.
 
 ## Distribution and kernel support
 
-Package preparation supports these `/etc/os-release` IDs:
+Install first checks each host tool that the agent needs. It installs only
+the packages of missing tools, so it never replaces a present variant, such
+as `iptables-legacy` or `coreutils-single`. A host with every tool present
+needs no package manager and no known distribution.
 
-| Distribution              | IDs                  | Package manager |
-| ------------------------- | -------------------- | --------------- |
-| Debian and Ubuntu         | `debian`, `ubuntu`   | `apt-get`       |
-| Fedora and RHEL           | `fedora`, `rhel`     | `dnf`           |
-| Rocky Linux and AlmaLinux | `rocky`, `almalinux` | `dnf`           |
+To install missing tools, it selects a package manager by the `ID` of
+`/etc/os-release`, then by each `ID_LIKE` entry:
 
-The adapter selects by ID. It does not assert a distribution version.
-The distribution must provide current host tools and the kernel features
-below. Other distribution IDs get a named repair message.
-Amazon Linux is not included in this adapter.
+| IDs                                                | Package manager |
+| -------------------------------------------------- | --------------- |
+| `debian`, `ubuntu`                                 | `apt-get`       |
+| `fedora`, `rhel`, `centos`, `rocky`, `almalinux`   | `dnf`           |
+| `opensuse-*`, `opensuse`, `suse`, `sles`           | `zypper`        |
+| `arch`                                             | `pacman`        |
+
+Real hosts tested on 23 November 2026: CentOS Stream 9 and 10, openSUSE
+Leap 16.1, and Arch Linux, each with nested KVM on Google Compute Engine.
+Containers also checked the tool installation on Debian 12, Ubuntu 24.04,
+Fedora 43, and openSUSE Tumbleweed.
+The adapter does not assert a distribution version. Another distribution
+works when it has the tools, or when its `ID_LIKE` names a listed ID.
+Missing tools on another distribution get a repair that lists the tools.
+
+The checked commands are `ip`, `nft`, `iptables`, `sysctl`, `modprobe`,
+`mkfs.xfs`, `xfs_info`, `xfs_growfs`, `resize2fs`, `e2fsck`, `losetup`,
+`blkid`, and `findmnt`. Install also checks for a CA bundle.
+The packages are `iproute2` or `iproute`, `nftables`, `iptables`, `procps`
+or `procps-ng`, `kmod`, `xfsprogs`, `e2fsprogs`, `util-linux`, and
+`ca-certificates`. Debian and Ubuntu take `losetup` from `mount`. openSUSE
+takes `findmnt` from `util-linux-systemd`. Coreutils is part of each base
+system, so install does not check it.
+
+APT refreshes package indexes and installs with `--no-upgrade`. DNF
+installs with `-y`. Zypper installs without recommended packages.
+Pacman installs with `--needed` and does not refresh its databases,
+because Arch does not support a refresh without a full upgrade.
+A pacman failure tells the user to run `pacman -Syu`, reboot if the
+kernel changed, and rerun install.
+Package-manager failures name the component and a repair action.
+XFS and loop module failures also give their `modprobe` repair. When the
+running kernel has no `/lib/modules` directory, the repair says to reboot
+into the installed kernel. A kernel upgrade without a reboot causes this.
 
 The host must run x64 Linux as root with systemd and cgroup v2.
 Its kernel must support XFS with reflinks and loop devices.
@@ -26,14 +56,6 @@ VMs also need KVM, network namespaces, nftables, and vsock.
 Missing KVM permits registration and reports zero slots.
 Enable virtualization in firmware or in the outer VM to run job VMs.
 Install does not change firmware or nested-virtualization settings.
-
-The package manager installs `xfsprogs`, `nftables`, `iptables`, `coreutils`,
-`e2fsprogs`, `util-linux`, `kmod`, and `ca-certificates`.
-Debian and Ubuntu also get `iproute2` and `procps`.
-The DNF distributions get `iproute` and `procps-ng` instead.
-APT refreshes package indexes before installation.
-Package-manager failures name the component and a repair action.
-XFS and loop module failures also give their `modprobe` repair.
 
 ## Firecracker and jailer pins
 
