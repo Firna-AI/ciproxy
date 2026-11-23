@@ -5,12 +5,15 @@ resource "google_sql_database_instance" "main" {
   deletion_protection = true
   settings {
     deletion_protection_enabled = true
-    tier                        = var.environment == "production" ? "db-custom-2-7680" : "db-custom-1-3840"
-    availability_type           = var.environment == "production" ? "REGIONAL" : "ZONAL"
-    disk_type                   = "PD_SSD"
-    disk_size                   = 20
-    disk_autoresize             = true
-    edition                     = "ENTERPRISE"
+    # Preview uses the shared-CPU db-g1-small (1.7 GB) to halve its cost. The
+    # Cloud SQL SLA does not cover shared-CPU sizes, so production keeps a
+    # dedicated CPU.
+    tier              = var.environment == "production" ? "db-custom-2-7680" : "db-g1-small"
+    availability_type = var.environment == "production" ? "REGIONAL" : "ZONAL"
+    disk_type         = "PD_SSD"
+    disk_size         = 20
+    disk_autoresize   = true
+    edition           = "ENTERPRISE"
     ip_configuration {
       ipv4_enabled    = false
       private_network = var.shared.network_id
