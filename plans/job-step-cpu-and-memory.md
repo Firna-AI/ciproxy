@@ -879,18 +879,18 @@ Depends on: 2
 A Linux guest keeps running when the kernel stops a step process for lack
 of memory.
 
-- [ ] Start the runner in its own scope, as the runner scope design call
+- [x] Start the runner in its own scope, as the runner scope design call
       says, in `crates/ciproxy-guest/src/platform.rs`.
-- [ ] Give the guest and the runner their out-of-memory scores, as the
+- [x] Give the guest and the runner their out-of-memory scores, as the
       guest protection design call says.
-- [ ] Add a stand-in for `systemd-run` to the chroot check in
+- [x] Add a stand-in for `systemd-run` to the chroot check in
       `image/check-runner-environment.py`.
 - [ ] Prove in a Linux job VM and in a Boat sandbox that a step that runs
       out of memory fails alone, and that the later steps and the exit
       report still run. Check whether Boat runs `systemd-oomd`.
-- [ ] Update `plans/follow-ups/boat-runner-stderr-drain.md`, because its
+- [x] Update `plans/follow-ups/boat-runner-stderr-drain.md`, because its
       stderr helper leaves the control group of the guest.
-- [ ] Update the READMEs of `ciproxy-guest` and `image`.
+- [x] Update the READMEs of `ciproxy-guest` and `image`.
 
 ## Milestone 5: Guest sampler on Linux
 

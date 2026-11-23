@@ -1,6 +1,8 @@
 //! Paths and commands that differ between the Linux and macOS job images.
 
 use std::ffi::{CStr, CString};
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::Path;
 
 use tokio::process::Command;
@@ -72,18 +74,45 @@ impl Platform {
         }
     }
 
+    /// Protect the Linux guest from the kernel's out-of-memory killer.
+    pub(crate) fn protect_guest(self) -> Result<()> {
+        if self == Self::Linux {
+            OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open("/proc/self/oom_score_adj")
+                .and_then(|mut score| score.write_all(b"-1000\n"))
+                .context("protect guest from out-of-memory kills")?;
+        }
+        Ok(())
+    }
+
     /// Command that starts the runner entry as the runner account.
     ///
-    /// Linux uses `runuser`. macOS has no `runuser`. There, `launchctl asuser`
-    /// puts the runner in the account's launchd domain, so per-user services
-    /// such as the simulator and the keychain are reachable. Then `sudo`
-    /// changes the account and keeps only the named runner values.
+    /// Linux uses `runuser` in a scope that survives an out-of-memory kill.
+    /// macOS has no `runuser`. There, `launchctl asuser` puts the runner in
+    /// the account's launchd domain, so per-user services such as the
+    /// simulator and the keychain are reachable. Then `sudo` changes the
+    /// account and keeps only the named runner values.
     pub(crate) fn runner_command(self, account: &Account, entry: &Path) -> Command {
         let mut command;
         match self {
             Self::Linux => {
-                command = Command::new("/usr/sbin/runuser");
-                command.args(["--user", &account.name, "--"]);
+                command = Command::new("/usr/bin/systemd-run");
+                command.args([
+                    "--scope",
+                    "--quiet",
+                    "--property=OOMPolicy=continue",
+                    "--",
+                    "/bin/bash",
+                    "-c",
+                    "printf '0\\n' > /proc/self/oom_score_adj && exec \"$@\"",
+                    "ciproxy-runner",
+                    "/usr/sbin/runuser",
+                    "--user",
+                    &account.name,
+                    "--",
+                ]);
             }
             Self::MacOs => {
                 command = Command::new("/bin/launchctl");

@@ -23,10 +23,19 @@ fn command_line(platform: Platform) -> Vec<String> {
 }
 
 #[test]
-fn linux_runner_starts_through_runuser() {
+fn linux_runner_starts_in_a_scope_that_continues_after_an_oom_kill() {
     assert_eq!(
         command_line(Platform::Linux),
         [
+            "/usr/bin/systemd-run",
+            "--scope",
+            "--quiet",
+            "--property=OOMPolicy=continue",
+            "--",
+            "/bin/bash",
+            "-c",
+            "printf '0\\n' > /proc/self/oom_score_adj && exec \"$@\"",
+            "ciproxy-runner",
             "/usr/sbin/runuser",
             "--user",
             "runner",

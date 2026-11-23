@@ -61,6 +61,7 @@ impl StockRunner {
 #[async_trait]
 impl Runner for StockRunner {
     async fn start(&mut self, registration: Secret) -> Result<()> {
+        self.platform.protect_guest()?;
         let preloaded = if self.handoff {
             self.setup.inspect().await
         } else {

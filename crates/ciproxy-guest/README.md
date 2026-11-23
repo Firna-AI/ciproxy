@@ -42,7 +42,13 @@ starts a Virtualization.framework VM again. The agent sees the VM stop.
 The [macOS start script](../../image/macos/guest/start.sh) also powers off
 after the guest ends for any reason.
 
-The listener runs as the `runner` account through `runuser`.
+On Linux, the guest sets its `oom_score_adj` to `-1000` before it starts
+the runner. If the write fails, the guest does not start the runner.
+It uses `systemd-run --scope` with `OOMPolicy=continue` to start the runner
+in a separate systemd control group. The child sets its `oom_score_adj`
+back to `0` before `runuser` changes to the `runner` account. The guest
+still waits for the runner and gets its exit code.
+See [Out of memory](../../docs/protocol/job-usage.md#out-of-memory).
 `--runner-account` names another account.
 macOS has no `runuser`. There, `launchctl asuser` starts the listener in the
 account's launchd domain, so per-user services such as the simulator and
@@ -170,7 +176,8 @@ It checks the original credentials and the preparation and decision lines.
 The Shutdown test waits for an actual pending runner future.
 It uses a notification, with no sleep or wall-clock assertion.
 The [runner environment check](../../image/checks.md#runner-account-environment)
-starts the built binary with the real `runuser` and entry script.
+starts the built binary with the real `runuser` and entry script. It uses
+a stand-in for `systemd-run` and a fixture file for the score adjustments.
 The [Boat launch check](../../image/checks.md#boat-launch) starts it
 through the Boat launcher without a registration.
 Live vsock, Docker, GitHub, and Boat checks need external infrastructure.

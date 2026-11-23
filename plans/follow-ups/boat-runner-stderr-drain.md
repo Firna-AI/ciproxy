@@ -4,15 +4,14 @@
   **Confidence:** High. **Harder later:** No.
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-21, from `conductor/boat-runner-start`, review round
-  1, finding 2. Its check confirmed it, narrowed its trigger, and added
-  option D.
+  1, finding 2. Its check confirmed the original guest-stop race and
+  added the former option D.
 - **Location:** `image/boat-runner-entry.sh:4-12`, `forward` and `main` in
-  `image/boat-runner-stderr.py`, `crates/ciproxy-guest/src/service.rs:156-158`,
-  and `image/ciproxy-boat-guest.service:12`.
-- **Reason:** Only a guest that ends before the sandbox delete loses a
-  pending helper line. That happens after a failed exit report, or after a
-  saved report that returns 204 before a deferred delete. Otherwise a
-  working callback deletes the sandbox first.
+  `image/boat-runner-stderr.py`, `Platform::runner_command` in
+  `crates/ciproxy-guest/src/platform.rs`, and `Supervisor::report_exit` in
+  `crates/ciproxy-guest/src/service.rs`.
+- **Reason:** The guest service no longer stops the helper when it ends.
+  A sandbox delete can still end the helper before it writes its last line.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
@@ -23,8 +22,8 @@
     of the `runner` account and then starts the GitHub runner's listener.
   - **Journal helper:** `image/boat-runner-stderr.py`, which keeps a
     bounded, redacted copy of the runner's stderr in the sandbox journal.
-  - **Control group:** the set of processes of one systemd unit, which
-    systemd stops together.
+  - **Runner scope:** a systemd unit with a separate control group for
+    the runner and its child processes.
 - **Background:**
   - The orchestrator's call for this work: keep a bounded, redacted copy
     of runner stderr in the sandbox journal, with no protocol change.
@@ -38,16 +37,14 @@
   - In the helper, `forward` starts `systemd-cat` only at the first
     message, and `main` reads stdin to its end. The helper sets no signal
     handler.
-  - The guest starts `runuser` in a new process group, with stderr to
-    `/dev/null`, at `crates/ciproxy-guest/src/process.rs:63-87`. It waits
-    only for that child, at lines 127-131. At
-    `crates/ciproxy-guest/src/service.rs:156-158`, it sends the exit report
-    and returns. The Boat shutdown at
-    `crates/ciproxy-guest/src/power.rs:43-50` does nothing.
-  - `image/ciproxy-boat-guest.service:12` sets `KillMode=control-group`.
-    When the guest ends, systemd sends SIGTERM to each remaining process of
-    the unit. The `runuser` PAM service has no `pam_systemd`, so the helper
-    stays in the control group of the guest unit.
+  - On 23 November 2026, the user chose option B of decision 2 in
+    [CPU and memory of each job step](../job-step-cpu-and-memory.md):
+    start the runner in its own scope with `OOMPolicy=continue`.
+    The helper runs in the runner scope, not the guest service.
+    `KillMode=control-group` on the guest service no longer stops it.
+  - The guest waits for its `runuser` child, then sends the exit report.
+    It does not wait for the helper. Boat mode does not shut down the
+    sandbox when the guest ends.
   - With a working callback, the control plane first saves the report as a
     one-use claim. It then waits up to 5 seconds for the workspace lock and
     deletes the sandbox inside that request, while the guest waits in its
@@ -55,7 +52,6 @@
     `crates/ciproxy-control-plane/src/boat_callback.rs:41`, then
     `crates/ciproxy-overflow/src/service/cleanup.rs:58` and `:77`. On
     2026-11-21, two sandboxes ended 7 and 6 seconds after their reports.
-    The deletion, not the guest stop, then ends the journal.
   - When that lock wait ends first, or the delete fails, the control plane
     still answers 204, because the report is saved. The guest then ends
     before the delete, and a later cleanup pass deletes the sandbox.
@@ -65,19 +61,13 @@
     restore smoke waits up to 15 seconds for a fresh journal record. The
     job smoke copies the journal while the sandbox exists. See
     `image/boat-smoke.md`.
-- **Problem:** The end of the Boat runner entry does not show that its
-  stderr is in the journal. After a runner start failure, an exit report
-  can fail fast, for example on an unreachable control plane or a fast 401
-  or 503. A saved report can also return 204 before its delete, when the
-  workspace lock stays busy for 5 seconds or the delete fails. In each case
-  the guest ends at once, and systemd stops the helper. A line that the
-  helper has not yet written is then lost.
-- **Impact if no action:** After a report that fails before its claim, the
-  sandbox stays until its lifetime ends, 6 hours or 2 hours on a Boat free
-  trial. Its journal is the only record, and it holds no runner error.
-  After a saved report with a deferred delete, a later cleanup deletes the
-  sandbox, and no journal copy holds the last line. In both cases, an
-  operator must reproduce the failure on a new paid sandbox.
+- **Problem:** The runner entry can end before the helper writes its last
+  line. The exit report can cause a sandbox delete while the helper still
+  writes. A failed report or a deferred delete gives the helper more time,
+  but does not make a later delete wait for the write.
+- **Impact if no action:** A journal read can miss the last runner error.
+  If the sandbox ends before the write, the operator can lose the error
+  and must reproduce the failure on a new paid sandbox.
 - **Root question:** How can the end of the Boat runner entry show that its
   stderr is in the journal, within a short limit, so that the steps after
   it do not lose or miss the last line?
@@ -98,31 +88,21 @@
     This needs a new service and local coordination. It also needs a new
     path for the registration value that the helper uses to redact,
     because a separate service does not inherit it. Effort: Large.
-  - **D.** Add a bounded `ExecStop=` wait to
-    `image/ciproxy-boat-guest.service`. systemd runs it after the guest
-    ends on its own, before it sends SIGTERM to the remaining processes.
-    The command waits until the helper has ended, with a short limit. For
-    example, the launcher takes a lock before the common entry starts, and
-    the helper holds it until it ends. The `exec` chain and the
-    signal handling of the runner stay. D covers only a guest that ends
-    before the sandbox delete. That guest ends after a failed exit report,
-    or after a saved report that returns 204 before a deferred delete. It
-    does not order the line before the exit report, the restore smoke read,
-    or the local check. A local test needs systemd, so its proof is a live
-    restore with a forced report failure. Effort: Medium.
 - **Left out:**
   - A fixed delay after the runner exits, because it does not show that
     the line reached the journal.
-  - A new process group for the helper, because the helper stays in the
-    same control group.
+  - A new process group for the helper, because a group does not make the
+    runner wait for the journal write.
   - An eager journal writer with a ready signal at the start, because it
     only makes the window shorter. It does not order the write before the
     end of the entry.
   - A direct journal write from the error hook, because it orders only the
     hook's own records. The Bash missing-registration message and the
     listener's stderr stay unordered.
-  - `KillMode=process` in the guest unit, because it overrides the cleanup
-    of leftover runner processes. D keeps that cleanup with a short wait.
+  - A wait in `ExecStop=` of the guest service (former D), because the
+    helper is in the runner scope and the wait starts after the exit
+    report. Changing `KillMode=` in the guest service also cannot order the
+    write before the report.
   - A direct journal stream as the runner's stderr, because it removes the
     filter and breaks the redaction requirement.
   - A copy outside the sandbox, because it changes a protocol message or
@@ -139,9 +119,6 @@
   stays in the Boat image, with no protocol or guest change. Keep the limit
   to a few seconds: the drain normally takes milliseconds, and a longer
   wait delays the deletion and adds billed time. C gives the same order at
-  a larger cost. D is the narrow fallback when the launcher must keep
-  `exec`.
-- **Action:** fix after merge, apply A, because only a guest that ends
-  before the sandbox delete loses the pending line. After a report that
-  fails before its claim, the lifetime stays the backstop. After a saved
-  report that returns 204 first, a later cleanup deletes the sandbox.
+  a larger cost.
+- **Action:** fix after merge, apply A, because the drain must end before
+  the guest sends an exit report that can cause a sandbox delete.

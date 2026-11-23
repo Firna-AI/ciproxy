@@ -37,7 +37,7 @@ def copy_program(source, root, destination=None):
 
 
 def prepare_root(root, guest):
-    for relative in ["etc/pam.d", "dev", "root", "srv/runner", "observations",
+    for relative in ["etc/pam.d", "dev", "proc/self", "root", "srv/runner", "observations",
                      "opt/actions-runner/bin", "usr/local/libexec"]:
         (root / relative).mkdir(parents=True, exist_ok=True)
     for name in ["bash", "env", "cp"]:
@@ -45,6 +45,16 @@ def prepare_root(root, guest):
     (root / "bin").symlink_to("usr/bin")
     copy_program("/usr/sbin/runuser", root)
     copy_program(guest, root, "/usr/local/bin/ciproxy-guest")
+    (root / "proc/self/oom_score_adj").write_text("0\n")
+    scope = root / "usr/bin/systemd-run"
+    scope.write_text('''#!/bin/bash
+set -e
+[[ $1 == --scope && $2 == --quiet && $3 == --property=OOMPolicy=continue && $4 == -- ]]
+/usr/bin/cp /proc/self/oom_score_adj /observations/guest.oom_score_adj
+shift 4
+exec "$@"
+''')
+    scope.chmod(0o755)
     certificates = pathlib.Path("/etc/ssl/certs/ca-certificates.crt")
     for relative in ["etc/ssl/certs/ca-certificates.crt", "etc/pki/tls/certs/ca-bundle.crt"]:
         (root / relative).parent.mkdir(parents=True, exist_ok=True)
@@ -79,7 +89,8 @@ def prepare_root(root, guest):
 printf '%s\\0' "$HOME" "$USER" "$LOGNAME" "$SHELL" "$PATH" \\
     "$ACTIONS_RUNNER_INPUT_JITCONFIG" "${CIPROXY_ASSIGNMENT_SOCKET+x}" \\
     "${CIPROXY_ASSIGNMENT_SOCKET-}" "${CIPROXY_ROOT_ONLY_FIXTURE-}" \\
-    "$CIPROXY_IMAGE_ENV" "$CIPROXY_ACCOUNT_ENV" > /observations/listener.env
+    "$CIPROXY_IMAGE_ENV" "$CIPROXY_ACCOUNT_ENV" \\
+    "$(< /proc/self/oom_score_adj)" > /observations/listener.env
 printf 'fixture: Listening for Jobs\\n'
 ''')
     listener.chmod(0o755)
@@ -115,7 +126,7 @@ def check_environment(workspace, guest):
     observation = root / "observations/listener.env"
     assert observation.exists(), "The guest must start the listener with its account environment"
     names = ["HOME", "USER", "LOGNAME", "SHELL", "PATH", "JIT", "SOCKET_SET", "SOCKET",
-             "ROOT_ONLY", "IMAGE_ENV", "ACCOUNT_ENV"]
+             "ROOT_ONLY", "IMAGE_ENV", "ACCOUNT_ENV", "OOM_SCORE_ADJ"]
     actual = dict(zip(names, observation.read_text().split("\0")[:-1]))
     (root / "environment.json").write_text(json.dumps(actual, indent=2) + "\n")
     assert actual["HOME"] == "/srv/runner", "The runner needs HOME from its account"
@@ -127,6 +138,10 @@ def check_environment(workspace, guest):
     assert actual["ROOT_ONLY"] == "", "Do not inherit the root service environment"
     assert actual["IMAGE_ENV"] == "image-tools", actual
     assert actual["ACCOUNT_ENV"] == "runner-profile", actual
+    guest_score = root / "observations/guest.oom_score_adj"
+    assert guest_score.exists(), "The guest must start the runner through systemd-run"
+    assert guest_score.read_text() == "-1000\n", "The guest needs the lowest OOM score adjustment"
+    assert actual["OOM_SCORE_ADJ"] == "0", "The runner must not inherit the guest's OOM protection"
 
 
 def main():
@@ -139,7 +154,7 @@ def main():
     started = time.perf_counter()
     case = unittest.FunctionTestCase(
         lambda: check_environment(args.work_dir, args.guest),
-        description="runner account environment survives a root service with no HOME")
+        description="the runner gets its account environment and a normal OOM score")
     result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite([case]))
     print(f"Regression command duration: {time.perf_counter() - started:.3f}s")
     return 0 if result.wasSuccessful() else 1

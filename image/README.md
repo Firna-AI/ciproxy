@@ -193,6 +193,14 @@ initialization failure. With the agent's `reboot=k` argument, this reset
 ends x86 Firecracker. The Boat snapshot has its own guest unit with no
 reboot, as [Boat launch](boat.md#boat-launch) says.
 
+In both Linux images, the guest starts the runner in a separate systemd
+scope with `OOMPolicy=continue`. See the
+[guest crate](../crates/ciproxy-guest/README.md) for the launcher and the
+out-of-memory score adjustments.
+The [runner environment check](checks.md#runner-account-environment) uses
+a stand-in for `systemd-run` and a file in place of the score file in
+`/proc`. It does not prove the response to a kernel out-of-memory kill.
+
 The [checks and growth proofs](checks.md) cover the bootstrap and artifacts.
 Offline checks need no KVM. They grow a release copy with plain `resize2fs`,
 without forcing it.
