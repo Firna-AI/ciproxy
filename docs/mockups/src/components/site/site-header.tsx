@@ -1,11 +1,11 @@
 // The top bar of the public site, shared by the marketing pages and the docs.
-// Marketing: the wordmark, Pricing and Docs, then the Sign in link and the
-// Start free button. The docs: the wordmark with "Docs", the search box, and
-// the same actions. Every button that opens sign-in says Start free; the link
-// serves people who already use ciproxy. On mobile, a menu button holds the
-// links that do not fit.
+// Marketing: the wordmark, then on the right Pricing, Docs, and GitHub, the
+// Sign in link, and the Start free button. The docs: the wordmark with "Docs", the search
+// box, Pricing, GitHub, and the same actions. Every button that opens sign-in
+// says Start free; the link serves people who already use ciproxy. On mobile,
+// a menu button holds the links that do not fit.
 
-import { Command, Github, Menu, Search } from "lucide-react";
+import { Command, Menu, Search } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
 import { Button } from "@firna/ui/button";
 
@@ -84,6 +84,7 @@ function DesktopParts({ section }: { section: SiteSection }) {
           <MockLink to={paths.docsHome} className={navClass(false)}>
             Docs
           </MockLink>
+          <span className={navClass(false)}>GitHub</span>
         </nav>
       )}
       <div className="site-actions">
@@ -92,12 +93,7 @@ function DesktopParts({ section }: { section: SiteSection }) {
             <MockLink to={paths.pricing} className={navClass(false)}>
               Pricing
             </MockLink>
-            <span
-              className="site-icon-link"
-              title="The ciproxy agent on GitHub"
-            >
-              <Github size={18} strokeWidth={1.75} aria-label="GitHub" />
-            </span>
+            <span className={navClass(false)}>GitHub</span>
           </>
         ) : null}
         <MockLink to={paths.signIn} className={navClass(false)}>

@@ -86,9 +86,9 @@ pub(super) async fn read(
             let default_size = default_size(value.snapshot.machine.platform).map(|requested| {
                 machine_views::DefaultSize {
                     requested,
-                    root_bytes: state
+                    root: state
                         .capacity
-                        .required_root_bytes(&value.snapshot, requested.disk_bytes),
+                        .required_root(&value.snapshot, requested.disk_bytes),
                 }
             });
             machine_views::machine(
@@ -239,7 +239,8 @@ pub(crate) async fn issue_token(
         command: install_command::command(&state.config, &token.token)?,
         expires_at: token.expires_at,
         requirements: "x64 Linux with KVM, 4 cores, 16 GB of memory, and 250 GB of disk, \
-            or a Mac with Apple Silicon, macOS 26.7.3 or later, and 16 GB of memory."
+            or a Mac with Apple Silicon, macOS 26.7.3 or later, 16 GB of memory, \
+            and about 176 GB of free disk."
             .to_owned(),
     }))
 }

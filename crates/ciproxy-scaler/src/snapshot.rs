@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_agent::root_sizing::{RootRule, RootSizing};
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
@@ -124,6 +124,10 @@ pub struct Machine {
     pub disk_budget_bytes: u64,
     /// Active Docker reservations, absent while their statistics are unavailable.
     pub docker_leased_bytes: Option<u64>,
+    /// Real free space of the machine's disk in its last report. Only a Mac
+    /// gives it: its VMs are APFS clones that grow as their jobs write, so
+    /// the job disk count alone can promise space that they already took.
+    pub free_bytes: Option<u64>,
     /// One shared warm count for this machine, across all organizations.
     pub warm_count: usize,
     /// Per-machine targets from the documented warm-runner allocation policy.
@@ -137,11 +141,10 @@ pub struct Machine {
 }
 
 impl Machine {
-    /// Prefer selected local release facts to the deployment fallback.
-    pub fn root_sizing(&self, fallback: RootSizing) -> RootSizing {
-        self.selected_image
-            .as_ref()
-            .map_or(fallback, RootSizing::for_image)
+    /// The root rule of this machine's platform and selected image. A Linux
+    /// machine with no selected image uses the deployment fallback.
+    pub fn root_rule(&self, fallback: RootSizing) -> RootRule {
+        RootRule::for_platform(self.platform, self.selected_image.as_ref(), fallback)
     }
 }
 

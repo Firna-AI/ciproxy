@@ -158,22 +158,20 @@ machine and where each job runs.
 
 ### The disk of a macOS label
 
-- These rules are planned, and they are a proposal until the user decides
-  them.
 - The free job disk of a macOS label is at most the measured free bytes of
-  the current [macOS image](agent-images.md#the-macos-image).
-- The dialog shows that limit, and it refuses a larger value.
-- Each macOS job VM gets all the free space of its image, which is at least
-  the free disk of its label.
-- Each macOS job VM holds the free bytes of its image in the job disk, as
-  [Disk](job-routing-capacity.md#disk) says.
-- When a new macOS image has less free space than a label, the jobs of the
-  label still get the free space of the new image. The dialog then shows
-  the label above the limit.
+  the [macOS image](agent-images.md#the-macos-image) that a Mac selected.
+- A label that asks for more does not fit a Mac with that image: its jobs
+  do not start there, and the agent refuses such a start with a warning.
+- The label dialog does not show this limit yet. It is planned to show the
+  limit and to refuse a larger value.
+- Each macOS job VM can write all the free space of its image, which is at
+  least the free disk of its label.
+- Each macOS job VM holds its label's free disk and a margin in the job
+  disk, as [Disk](job-routing-capacity.md#disk) says.
 - **Decision:** the disk of a macOS label is at most the free space of the
-  fixed image disk. Rejected: a disk that the agent grows for each label,
-  as [The macOS image](agent-images.md#the-macos-image) says. This is a
-  proposal until the user decides it.
+  fixed image disk. Rejected for now: a disk that the agent grows for each
+  label, because the guest would need to resize its APFS container at
+  boot, as [The macOS image](agent-images.md#the-macos-image) says.
 
 ## Own machines, Boat, or both
 

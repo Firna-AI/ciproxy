@@ -192,6 +192,9 @@ export const cacheCopy = {
   unreported: "Cache use shows after the machine reports it.",
   noReport: "No report yet",
   unknown: "Unknown",
+  macUnavailable: "Not on macOS yet",
+  macBody:
+    "A Mac has no machine cache yet. Its jobs restore from the GitHub cache.",
   unknownCache:
     "Cache disk and cache hits show after the machine measures them.",
   unknownDocker: "Docker disks show after the machine measures them.",

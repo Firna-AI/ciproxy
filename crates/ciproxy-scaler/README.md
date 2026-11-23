@@ -151,7 +151,9 @@ retry times, billing recovery, key recovery, monthly spend, and launch
 times. It also applies sandbox marks, exit reports, lifetime limits,
 deletion, and key retention.
 
-Convert label free bytes with `ciproxy-agent::root_sizing::RootSizing`.
+Convert label free bytes with `ciproxy-agent::root_sizing`: an own
+machine uses `Machine::root_rule`, which gives `RootRule` for its platform
+and selected image, and Boat uses `RootSizing`.
 Total and free capacity checks use `ciproxy-protocol::resources::Resources`
 and its `fits` method. Starts need free slots and available job disk. Each VM
 holds its original disk until removal, including warm and retiring VMs.

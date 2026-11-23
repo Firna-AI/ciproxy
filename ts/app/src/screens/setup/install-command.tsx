@@ -19,7 +19,7 @@ import { commandExpired } from "../../state/install-command.ts";
 import { formatTime } from "../../view/format.ts";
 
 const supportedHosts =
-  "x64 Linux with systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or AlmaLinux.";
+  "x64 Linux with systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, CentOS Stream, Rocky Linux, AlmaLinux, openSUSE, or Arch Linux.";
 
 export function InstallCommandView({ workspaceId }: { workspaceId: string }) {
   const services = useServices();

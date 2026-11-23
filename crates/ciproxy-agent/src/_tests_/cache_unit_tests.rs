@@ -88,7 +88,10 @@ fn installed_cache_service_uses_a_private_identity_data_mount_and_credential() {
     assert!(unit.lines().any(|line| line == "CapabilityBoundingSet="));
     let loader = contents(&installed, FIREWALL_PATH);
     assert!(loader.contains("done < /etc/resolv.conf >> \"$policy\""));
-    assert!(loader.contains("/usr/sbin/nft -f \"$policy\""));
+    assert!(
+        loader.contains("/usr/sbin/nft -f - < \"$policy\""),
+        "SELinux denies nft a direct read of the /run policy file"
+    );
     assert!(loader.contains("chown -R -h ciproxy-cache:ciproxy-cache \"$data\""));
     assert!(loader.contains("if [ \"${1:-}\" = start ]; then"));
     assert!(loader.contains("install -d -o root -g ciproxy-cache -m 0710 /run/ciproxy-cache-auth"));

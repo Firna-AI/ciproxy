@@ -3500,7 +3500,9 @@ Answers of 5 November 2026:
   dashboard, and the docs state the supported hosts: x64 Linux with
   systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
   AlmaLinux. Wider support is the follow-up item
-  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B.
+  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B. That item
+  closed on 23 November 2026: install checks the host tools and adds
+  CentOS Stream, openSUSE, and Arch Linux.
 - Item 96, A, 8 November 2026: the shared docs grid styles match the
   mockups. Rejected: B and C.
 - Item 97, G, 8 November 2026: render with comrak, as a follow-up item that
@@ -5635,7 +5637,7 @@ mockup.
 ### 93. The installer supports fewer hosts than the docs say
 
 **Answer, 8 November 2026:** C, and D as a follow-up item:
-`follow-ups/installer-more-linux-hosts.md`.
+`follow-ups/installer-more-linux-hosts.md`, which closed on 23 November 2026.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 1.

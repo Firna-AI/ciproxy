@@ -12,18 +12,15 @@ use std::path::{Path, PathBuf};
 use super::area_target::target;
 use super::diskutil::{Plist, area_error, diskutil, info_value, new_device, run_checked};
 use crate::error::{Error, ErrorResultExt, Result};
-pub(crate) use crate::macos::area_disk::AreaRecord;
+pub(crate) use crate::macos::area_access::clear_result;
+use crate::macos::area_disk::AreaRecord;
 use crate::macos::area_disk::{AreaDisk, Deletion, MISSING_REPAIR, area_mounted, deletion};
+use crate::macos::hardware::area_quota;
 use crate::macos::paths::{AREA, CONTROL};
 use crate::persistence::{atomic_private_write, private_directory};
 
 const NAME: &str = "ciproxy";
 const FSTAB: &str = "/etc/fstab";
-/// The smallest default volume: one image, its download, and one job.
-const MINIMUM_BYTES: u64 = 150 * 1024 * 1024 * 1024;
-/// The smallest volume that `CIPROXY_AREA_BYTES` may set, for example for a
-/// host check with no image.
-const MINIMUM_SET_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 
 fn record_path() -> PathBuf {
     Path::new(CONTROL).join("area.json")
@@ -58,15 +55,12 @@ pub(crate) fn prepare(requested_bytes: Option<u64>, disk: &AreaDisk) -> Result<A
             "the area volume is on an external or removable disk. Keep the disk connected: when it is gone, the Mac takes no jobs and its running jobs stop"
         );
     }
-    let free = target.free;
-    let quota = requested_bytes.unwrap_or(free / 4 * 3);
-    let minimum = requested_bytes.map_or(MINIMUM_BYTES, |_| MINIMUM_SET_BYTES);
-    if quota < minimum || quota > free {
+    let Some(quota) = area_quota(target.free, requested_bytes) else {
         return Err(Error::Preparation {
             component: "area volume",
-            repair: "Free at least 200 GB on the disk of the area, set CIPROXY_AREA_DISK to another APFS disk, or set CIPROXY_AREA_BYTES to a size that fits, of at least 20 GB. Then rerun install.",
+            repair: "Free at least 176 GB on the disk of the area, set CIPROXY_AREA_DISK to another APFS disk, or set CIPROXY_AREA_BYTES to a size that fits, of at least 20 GB. Then rerun install.",
         });
-    }
+    };
     private_directory(Path::new(AREA))?;
     let output = diskutil(&[
         "apfs",
@@ -201,6 +195,7 @@ pub(crate) fn remove() -> Result<()> {
     }
     remove_mount_point()?;
     remove_fstab_line(&record.volume_uuid)?;
+    clear_result(Path::new(CONTROL))?;
     // The record goes last, so a failed step above repeats on a retry.
     std::fs::remove_file(record_path()).context("remove the area record")
 }

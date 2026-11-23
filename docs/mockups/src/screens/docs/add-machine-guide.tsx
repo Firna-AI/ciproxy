@@ -49,9 +49,17 @@ function MacNeeds() {
         than its Mac, so the Mac needs the macOS of the job image.
       </li>
       <li>
-        {unbroken("16 GB")} of memory and {unbroken("512 GB")} of disk or more.
+        {unbroken("16 GB")} of memory, and about {unbroken("176 GB")} of free
+        disk for the macOS image and the jobs.
       </li>
-      {network}
+      <li>
+        Outbound HTTPS to ciproxy, to GitHub, to{" "}
+        <span className="inline-code">get.ciproxy.dev</span>, and to{" "}
+        <span className="inline-code">
+          785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com
+        </span>
+        , which serves the macOS image. The Mac opens no inbound port.
+      </li>
     </ul>
   );
 }
@@ -61,8 +69,8 @@ function Needs() {
     <ul className="docs-list">
       <li>x64 Linux with systemd, {unbroken("cgroup v2")}, and KVM.</li>
       <li>
-        A supported distribution: Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-        AlmaLinux.
+        A supported distribution: Debian, Ubuntu, Fedora, RHEL, CentOS Stream,
+        Rocky Linux, AlmaLinux, openSUSE, or Arch Linux.
       </li>
       <li>
         {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}

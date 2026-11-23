@@ -3,9 +3,15 @@ title: How ciproxy works
 description: Warm runners, slots, overflow, and the cache.
 ---
 
+import { jsx } from "astro/jsx-runtime";
+
+import JobPathFigure from "../../../components/docs/JobPathFigure.astro";
+
 ciproxy is the runner provider of its labels on GitHub. A job uses ciproxy
 when its `runs-on` line names a ciproxy label. ciproxy then starts a runner
 for the job on one of your machines, or in your Boat account.
+
+{jsx(JobPathFigure)}
 
 ## The parts
 
@@ -18,19 +24,20 @@ for the job on one of your machines, or in your Boat account.
 - **The agent** runs on each of your machines. It connects out to ciproxy,
   and starts a fresh VM for each runner. The agent is open source under
   Apache-2.0.
-- **Your Boat account** runs the jobs that your machines have no room for.
-  Boat bills you for them.
+- **Your Boat account** runs a job when your machines cannot take it in
+  time and Boat can take it. Boat bills you for these jobs.
+  [Overflow to Boat](/docs/how-ciproxy-works/#overflow-to-boat) gives the
+  rules.
 
 ## A job on your machines
 
 1. GitHub queues a job whose `runs-on` names a ciproxy label, and tells
    ciproxy about it.
-2. A ready warm runner takes a job of the label `ciproxy` at once. For a job
-   of another label, ciproxy starts a runner in free slots of one of your
-   machines.
+2. A ready warm runner takes a job of the label `ciproxy` or `ciproxy-macos`
+   at once. For a job of another label, ciproxy starts a runner in free
+   slots of one of your machines.
 3. The runner runs the job in a fresh VM that no other job used.
-4. When the job ends, the agent ends the VM. ciproxy starts a new warm
-   runner when the machine has room for it.
+4. When the job ends, the agent ends the VM.
 
 GitHub gives each waiting job to any idle runner of its label. ciproxy
 decides how many runners start and where, not which job a runner takes.
@@ -42,13 +49,14 @@ decides how many runners start and where, not which job a runner takes.
   the page of the machine.
 - ciproxy starts warm runners up to that count, only in free slots and disk
   that no waiting job needs.
-- Warm runners serve the label `ciproxy`. A job of another label gets a new
+- On a Linux machine, warm runners serve the label `ciproxy`. On a Mac,
+  they serve the label `ciproxy-macos`. A job of another label gets a new
   runner in a fresh VM.
 - A warm runner never keeps a waiting job from your machines. ciproxy stops
   warm runners to free the slots and the disk that a waiting job needs.
 - A draining machine keeps no warm runners.
 - In a workspace with several organizations, the warm runners of a machine
-  go to each organization by its jobs of the label `ciproxy` in the last
+  go to each organization by its jobs for the warm runner label in the last
   24 hours.
 
 ## Slots and disk
@@ -66,17 +74,21 @@ rest for the host. The machine cache uses the disk that the jobs leave.
 
 - A job that one of your machines can run waits there for room, up to the
   overflow wait. The wait is 30 seconds by default. Then ciproxy starts one
-  Boat runner for the job.
-- When none of your machines can run the job, for example because its size
-  fits none of them, ciproxy starts the Boat runner at once.
+  Boat runner for the job, when Boat can take it.
+- When none of your machines can run the job, ciproxy starts the Boat
+  runner at once, when Boat can take it. An example is a job whose size
+  fits none of your machines, or whose label allows only Boat.
+- A job of a macOS label never runs on Boat. It waits for a free Mac, as
+  [macOS labels](/docs/reference/labels/#macos-labels) says.
 - Each job on Boat runs in its own sandbox. ciproxy chooses the cheapest
   Boat size that covers its label. When none fits, the label's
   [When nothing fits](/docs/reference/labels/#custom-labels) setting can
   allow the largest Boat size instead. ciproxy deletes the sandbox when the
   job ends.
-- ciproxy starts a Boat runner only when you connected a Boat account,
-  overflow is on, the label allows Boat, and the spend limit has room.
-  Otherwise the job waits for your machines.
+- Boat can take a job only when you connected a Boat account, overflow is
+  on, the label allows Boat, and the spend limit has room. Otherwise a job
+  waits for your machines when its label allows them. A job whose label
+  allows only Boat stays queued in GitHub.
 - ciproxy never runs a job again by itself.
 
 [Connect Boat](/docs/guides/connect-boat/) and
@@ -98,17 +110,19 @@ rest for the host. The machine cache uses the disk that the jobs leave.
   machine cache. It never deletes an entry of the GitHub cache.
 
 On Team and Business, sticky Docker disks keep the Docker data of each
-repository on each machine between its jobs.
-[Docker disks](/docs/security/job-isolation/#docker-disks) gives the rules.
+repository on each Linux machine between its jobs. A macOS job VM has no
+Docker. [Docker disks](/docs/security/job-isolation/#docker-disks) gives
+the rules.
 
 ## The job image
 
-Every job starts from one image with the software of the GitHub runner image
-of `ubuntu-latest`, on your machines and on Boat. So a workflow keeps its
-steps, and only its `runs-on` line changes.
+Every Linux job starts from one image with the software of the GitHub
+runner image of `ubuntu-latest`, on your machines and on Boat. A macOS
+job starts from an image with the software of `macos-latest`. So a
+workflow keeps its steps, and only its `runs-on` line changes.
 
-A job can run its steps in any Docker image, with the `container:` key of
-GitHub Actions, on every plan. [Run steps in another image][container] gives
-the full example.
+A Linux job can run its steps in any Docker image, with the
+`container:` key of GitHub Actions, on every plan.
+[Run steps in another image][container] gives the full example.
 
 [container]: /docs/guides/move-your-workflows/#run-steps-in-another-image

@@ -13,7 +13,7 @@ export const macStudio = defineScreen({
   slug: "mac-studio",
   title: "A Mac",
   description:
-    "A what-if of 18 November: mac-studio-1, a Mac Studio with 16 cores and 64 GB, joined as the fourth machine, beside the three AX42 machines. The subtitle names its platform, macOS. Its memory and cores give 6 slots, but a Mac runs at most 2 VMs at once: one job of ciproxy-macos and one warm runner. So its other 4 slots say that the Mac runs its 2 VMs. Health names Virtualization, not KVM. The Cache panel has no Docker disks row, because a macOS VM runs no Docker. Four machines pass the three of Team, so the banner offers the extra-machine add-on.",
+    "A what-if of 18 November: mac-studio-1, a Mac Studio with 16 cores and 64 GB, joined as the fourth machine, beside the three AX42 machines. The subtitle names its platform, macOS. Its memory and cores give 6 slots, but a Mac runs at most 2 VMs at once: one job of ciproxy-macos and one warm runner. So its other 4 slots say that the Mac runs its 2 VMs. Health names Virtualization, not KVM. The Cache panel shows no figures and no Clear cache: a Mac has no machine cache yet, so its jobs restore from the GitHub cache, and a macOS VM runs no Docker. Four machines pass the three of Team, so the banner offers the extra-machine add-on.",
   rationale,
   relatedDocs,
   address: orgAddress("machines/mac-studio-1"),

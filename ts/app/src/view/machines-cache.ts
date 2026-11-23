@@ -7,6 +7,7 @@
 import type { CacheView, MachineView } from "../api/schema.ts";
 import { cacheCopy, listCopy } from "./machines-copy.ts";
 import { gigabytes } from "./machines-format.ts";
+import { isMac } from "./platform.ts";
 
 /** A machine cache that the machine measured for its last report. */
 export type MeasuredCache = Extract<
@@ -72,8 +73,17 @@ export function unknownNote(cache: CacheView, docker = true): string | null {
   return null;
 }
 
+/**
+ * A Mac has no machine cache yet, as the agent doc says, so its cache is
+ * never measured. Its page and its cell say so, in place of Unknown.
+ */
+export function macWithoutCache(machine: MachineView): boolean {
+  return isMac(machine) && machine.cache?.machine_cache.status !== "measured";
+}
+
 /** The cache cell of the machines table: the use, Unknown, or no report. */
 export function cacheText(machine: MachineView): string {
+  if (macWithoutCache(machine)) return cacheCopy.macUnavailable;
   const cache = machine.cache ?? null;
   if (cache === null) return cacheCopy.noReport;
   const figures = cache.machine_cache;

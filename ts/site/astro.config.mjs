@@ -117,6 +117,7 @@ export default defineConfig({
           label: "Reference",
           items: [
             { label: "Labels and VM sizes", slug: "docs/reference/labels" },
+            { label: "The macOS image", slug: "docs/reference/macos-image" },
             {
               label: "Agent install options",
               slug: "docs/reference/agent-install",

@@ -14,7 +14,7 @@ export const docsNav: readonly DocsNavGroup[] = [
     items: [
       { label: "Overview", to: paths.docsHome },
       { label: "Quickstart", to: paths.quickstart },
-      { label: "How ciproxy works" },
+      { label: "How ciproxy works", to: paths.howCiproxyWorks },
     ],
   },
   {
@@ -31,6 +31,7 @@ export const docsNav: readonly DocsNavGroup[] = [
     title: "Reference",
     items: [
       { label: "Labels and VM sizes", to: paths.labelsReference },
+      { label: "The macOS image" },
       { label: "Agent install options" },
       { label: "GitHub App permissions" },
       { label: "Plans and starts" },

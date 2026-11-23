@@ -53,11 +53,12 @@ export function InstallCommand({
         <p className="caption">
           The token adds any number of machines for one hour. A Linux machine
           needs x64 Linux with systemd, {unbroken("cgroup v2")}, and KVM, on
-          Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or AlmaLinux. It also needs{" "}
-          {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
-          {unbroken("250 GB")} of disk or more. A Mac needs Apple Silicon,{" "}
-          {unbroken(minimumMacos)} or later, {unbroken("16 GB")} of memory, and{" "}
-          {unbroken("512 GB")} of disk or more.
+          Debian, Ubuntu, Fedora, RHEL, CentOS Stream, Rocky Linux, AlmaLinux,
+          openSUSE, or Arch Linux. It also needs {unbroken("4 cores")},{" "}
+          {unbroken("16 GB")} of memory, and {unbroken("250 GB")} of disk or
+          more. A Mac needs Apple Silicon, {unbroken(minimumMacos)} or later,{" "}
+          {unbroken("16 GB")} of memory, and about {unbroken("176 GB")} of free
+          disk.
         </p>
         {revokeTo ? (
           <LinkAction to={revokeTo} size="sm" tone="ghost">

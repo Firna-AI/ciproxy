@@ -47,7 +47,8 @@ On a Mac:
   images. The area is on the startup disk, or on the APFS disk that
   `CIPROXY_AREA_DISK` names, as
   [Use an external disk](/docs/guides/add-a-machine/#use-an-external-disk)
-  says.
+  says. An external disk needs Full Disk Access for the agent. Install
+  checks it, and stops with the repair when macOS blocks the agent.
 - It registers the machine once, with the install token, as on Linux.
 - It installs the launchd daemon `dev.ciproxy.agent`. The daemon keeps the
   Mac awake while the agent runs.
@@ -136,6 +137,9 @@ page of the machine for that, as
   `app.ciproxy.dev`. The machine opens no inbound port.
 - The machine needs outbound HTTPS to ciproxy, to GitHub, and to
   `get.ciproxy.dev`.
+- A Mac also needs outbound HTTPS to
+  `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
+  the [macOS image](/docs/reference/macos-image/).
 
 ## Updates
 

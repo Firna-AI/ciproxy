@@ -5,9 +5,38 @@ use std::fmt;
 
 use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_protocol::reports::{DiskReport, HardwareReport};
+use ciproxy_protocol::resources::GIGABYTE;
 
 use super::paths::AREA;
 use crate::error::Error;
+
+/// The default bytes that the area volume keeps for images, in decimal GB.
+/// It holds one standard image (100 GB disk, about 77 GB allocated) with
+/// headroom. During an update the new image and its download need space
+/// beside the old image. The agent's check of the real free space stops new
+/// VMs while that space is short. `CIPROXY_IMAGE_BUDGET_BYTES` sets another
+/// value, as on Linux.
+pub(crate) const IMAGE_BUDGET_BYTES: u64 = 100 * GIGABYTE;
+
+/// The smallest default area quota: the default image budget and the job
+/// disk of one default job. Job disk is (quota - image budget) x 3/4, and a
+/// default label (20 GB) holds 20 GB and the 4 GB margin. So the quota needs
+/// 100 GB + 24 GB x 4/3 = 132 GB. A first image import also fits: its 46 GB
+/// download and 77 GB image take about 123 GB at the peak.
+pub(crate) const MINIMUM_AREA_BYTES: u64 = 132 * GIGABYTE;
+
+/// The smallest volume that `CIPROXY_AREA_BYTES` may set, for example for a
+/// host check with no image.
+const MINIMUM_SET_BYTES: u64 = 20 * 1024 * 1024 * 1024;
+
+/// The area quota that install sets on a container with `free` bytes:
+/// `requested`, from `CIPROXY_AREA_BYTES`, or three quarters of the free
+/// space. `None` when it is below its minimum or above the free space.
+pub(crate) fn area_quota(free: u64, requested: Option<u64>) -> Option<u64> {
+    let quota = requested.unwrap_or(free / 4 * 3);
+    let minimum = requested.map_or(MINIMUM_AREA_BYTES, |_| MINIMUM_SET_BYTES);
+    (minimum..=free).contains(&quota).then_some(quota)
+}
 
 /// A macOS release, such as 26.7.3.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]

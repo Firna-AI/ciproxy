@@ -1,0 +1,35 @@
+---
+// The ciproxy mark, after the brand of the mockups: two bars that meet as a
+// chevron, one flow of jobs, routed to an own machine or to overflow. It takes
+// the text colour, with no tile behind it, and screen readers skip it. The
+// wordmark in Brand.astro and the picture of How ciproxy works show it.
+// The favicon draws the same paths.
+
+import { brandMarkPaths } from "../data/brand.ts";
+
+interface Props {
+  /** The width and the height, in CSS pixels. */
+  size?: number;
+}
+
+const { size = 20 } = Astro.props;
+---
+
+<svg
+  aria-hidden="true"
+  class="brand-mark"
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="currentColor"
+>
+  {brandMarkPaths.map((d) => (
+    <path d={d} />
+  ))}
+</svg>
+
+<style>
+  .brand-mark {
+    flex-shrink: 0;
+  }
+</style>

@@ -44,13 +44,8 @@ const macBase = {
   warm_runners: 1,
   monthly_cost_cents: null,
   cache: {
-    machine_cache: {
-      status: "measured",
-      used_bytes: gb(24),
-      capacity_bytes: gb(364),
-      restores_last_7_days: "200",
-      hits_last_7_days: "182",
-    },
+    // A Mac has no machine cache yet, so the API reports it unavailable.
+    machine_cache: { status: "unavailable" },
     docker_disks: { status: "measured", used_bytes: "0", repositories: "0" },
   },
 } as const satisfies Partial<Schemas["MachineView"]>;

@@ -102,12 +102,28 @@ command, and the wait for the first image.
 - [Worked examples](job-routing-examples.md) shows the default job fit with
   the current image root.
 - An own machine also needs systemd and cgroup v2.
-- Its Linux distribution is Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-  AlmaLinux.
+- The supported Linux distributions are Debian, Ubuntu, Fedora, RHEL,
+  CentOS Stream, Rocky Linux, AlmaLinux, openSUSE, and Arch Linux.
+- `install` checks each host tool that the agent needs. It installs only
+  the missing tools, with the package manager of the distribution.
+- It selects the package manager by the distribution ID, and then by the
+  related IDs in `ID_LIKE`. A host with every tool present needs no known
+  distribution.
 - **Decision:** own machines need systemd, cgroup v2, and one of these
   distributions. Rejected: a promise of any x64 Linux host that meets the
   hardware minimum, because customers must know these limits before they
   set up a machine.
+- **Decision:** `install` checks the tools and installs only the missing
+  ones. The user chose this on 23 November 2026, with CentOS Stream,
+  openSUSE, and Arch Linux added. Rejected: a fixed package list for each
+  distribution name, because it fails when the host has another variant of
+  a package, such as `iptables-legacy` on Arch or `coreutils-single` on
+  CentOS Stream.
+- On Arch, `install` does not refresh the package databases.
+- **Decision:** Arch installs use `pacman -S --needed` without a refresh,
+  and a failure tells the user to run `pacman -Syu`. The user chose this
+  on 23 November 2026. Rejected: `pacman -Syu`, because it upgrades the
+  whole machine, and `pacman -Sy`, because Arch does not support it.
 
 ### Mac
 
@@ -138,11 +154,23 @@ command, and the wait for the first image.
 - When a Mac cannot run the image that it has, its
   [virtualization check](agent.md#the-virtualization-check) reports
   `operating_system_too_old`.
-- A Mac needs 512 GB of disk or more. This value is a placeholder until the
-  size of the macOS image is measured.
+- A Mac needs about 176 GB of free disk. The default area volume takes
+  three quarters of the free space, and it needs at least 132 GB: the
+  100 GB image budget and the job disk of one default job. A Mac with
+  160 GB free sets `CIPROXY_AREA_BYTES` to 132 GB or more, or keeps the
+  area on another disk.
+- With 176 to 200 GB free, a Mac runs one default macOS job at a time. Its
+  16 GB of memory also gives it 1 slot.
 - A Mac must stay awake. The agent prevents system sleep while it runs.
 - Other apps can also run macOS VMs. Each such VM counts against the limit
   of 2 macOS VMs on the Mac, as [Platforms](agent.md#platforms) says.
+- In place of the startup disk, the disk area can be on an external APFS
+  disk. The agent then needs Full Disk Access, as
+  [Area on another disk](../../crates/ciproxy-agent/macos-host.md#area-on-another-disk)
+  says.
+- A Mac also needs outbound HTTPS to
+  `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
+  the macOS image.
 - **Decision:** own machines run x64 Linux or macOS on Apple Silicon. This
   replaces the decision of x64 Linux only. Reason: the user chose macOS
   jobs on the customer's own Macs on 21 November 2026. Rejected: Linux

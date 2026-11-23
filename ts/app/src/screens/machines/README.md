@@ -56,7 +56,9 @@ addresses.
 - A Mac runs at most `vm_limit` job VMs at once, 2 today. Its slots caption
   says so, and while it runs that many VMs, each free slot says that the Mac
   runs its 2 VMs. A Mac with fewer slots than the limit says why. A Mac has
-  no Docker disks, so its page shows no Docker disks row.
+  no Docker disks, so its page shows no Docker disks row. A Mac has no
+  machine cache yet, so its Cache panel and its Cache cell say so, with no
+  figures and no Clear cache.
 - Cache shows the count of repositories with a Docker disk on the machine
   and the space of these disks, from the last report, also while the machine
   is offline. A report of no Docker disks shows 0, and a machine with no

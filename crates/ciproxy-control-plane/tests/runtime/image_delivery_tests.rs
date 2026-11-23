@@ -101,6 +101,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
     fixture.contact.report.images.available = vec![ciproxy_protocol::images::ImageMetadata {
         image_id: image.image_id,
         root_disk_bytes: image.root_disk_bytes,
+        free_job_bytes: None,
     }];
     fixture.contact.at = at() + chrono::Duration::seconds(1);
     fixture

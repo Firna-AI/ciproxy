@@ -1,7 +1,7 @@
 // The ciproxy mark, after the brand of the mockups: two bars that meet as a
-// chevron, one flow of jobs routed to an own machine or to overflow. The
-// brand in the top bar and the footer draws these paths, and so does the
-// favicon.
+// chevron, one flow of jobs routed to an own machine or to overflow.
+// BrandMark.astro draws these paths in the top bar, footer, and picture of
+// How ciproxy works. The favicon draws them too.
 
 import { colors } from "@ciproxy/tokens";
 

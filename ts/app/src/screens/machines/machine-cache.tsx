@@ -6,7 +6,8 @@
 // every entry of the machine cache after a confirmation. It never deletes an
 // entry of the GitHub cache or a Docker disk. Only an Admin clears a cache,
 // and only while the machine is online. A failed clear stays in the dialog
-// with its reason.
+// with its reason. A Mac has no machine cache yet, so its panel says so, with
+// no figures and no Clear cache.
 
 import { StyleSheet, Text, View } from "react-native";
 
@@ -26,6 +27,7 @@ import {
   clearCacheBody,
   dockerUse,
   machineHits,
+  macWithoutCache,
   unknownNote,
 } from "../../view/machines-cache.ts";
 import { cacheCopy, failureCopy } from "../../view/machines-copy.ts";
@@ -92,16 +94,19 @@ export function CachePanel({
   onClear: (() => void) | null;
 }) {
   const cache = machine.cache ?? null;
+  const noCache = macWithoutCache(machine);
   return (
     <Panel
       title={cacheCopy.title}
       action={
-        onClear === null ? undefined : (
+        onClear === null || noCache ? undefined : (
           <ActionButton label={cacheCopy.clear} size="sm" onPress={onClear} />
         )
       }
     >
-      {cache === null ? (
+      {noCache ? (
+        <Text style={text.small}>{cacheCopy.macBody}</Text>
+      ) : cache === null ? (
         <Text style={text.small}>{cacheCopy.unreported}</Text>
       ) : (
         <CacheFigures cache={cache} showDocker={!isMac(machine)} />

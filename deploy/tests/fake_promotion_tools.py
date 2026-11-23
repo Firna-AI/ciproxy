@@ -144,7 +144,10 @@ elif tool == "kubectl" and args[:2] == ["get", "service"]:
         "network_endpoint_groups": {"8080": "ciproxy-main-preview-" + suffix},
         "zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
     })}}}))
-elif tool == "python3" and args[:1] != ["deploy/scripts/publish_static.py"]:
+elif tool == "python3" and args[:1] == ["deploy/scripts/publish_static.py"]:
+    if "--new-only" in args and os.environ.get("FAKE_STAGE_FAIL") == "true":
+        sys.exit(1)
+elif tool == "python3":
     os.execv(os.environ["FAKE_REAL_PYTHON"], [os.environ["FAKE_REAL_PYTHON"], *args])
 '''
 

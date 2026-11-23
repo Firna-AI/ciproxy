@@ -222,6 +222,7 @@ fn image_growth_keeps_correctly_sized_idle_and_running_roots() {
     state.machines[0].selected_image = Some(ImageMetadata {
         image_id: ImageId("newer".into()),
         root_disk_bytes: 63_000_000_000,
+        free_job_bytes: None,
     });
     assert_eq!(decide(&state), vec![]);
 }
