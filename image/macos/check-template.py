@@ -89,6 +89,9 @@ class Template(unittest.TestCase):
         self.assertIn("autoLoginUser", before[before.rindex('provisioner "shell"', 0,
                                                             before.rindex('provisioner "shell"')):])
         self.assertEqual(text.count("test -s /etc/kcpassword"), 1)
+        after = text[text.index("\n  }", restart):]
+        self.assertLess(after.index("close every window"), after.index('provisioner "shell"', 10)
+                        if after.count('provisioner "shell"') > 1 else len(after))
         self.assertEqual(text.count("{"), text.count("}"))
 
     def test_changed_upstream_fails(self):

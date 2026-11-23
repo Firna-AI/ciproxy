@@ -91,6 +91,28 @@ AUTOLOGIN_STEP = '''provisioner "shell" {
   '''
 
 
+CLOSE_WINDOWS_STEP = '''
+
+  provisioner "shell" {
+    inline = ["for i in $(seq 24); do osascript -e 'tell application \\"Finder\\" to close every window' && exit 0; sleep 5; done; exit 1"]
+  }'''
+
+
+def close_finder_windows(text):
+    """Close Finder's windows after each upstream restart. The Setup
+    Assistant phase opened Finder's Utilities window, Finder restores it at
+    each login, and the upstream configure-windows.sh fails on any open
+    window. The upstream TCC step has allowed osascript to reach Finder."""
+    marker = 'provisioner "shell" {'
+    parts = text.split(marker)
+    for index in range(1, len(parts)):
+        end = parts[index].find("\n  }")
+        if "shutdown -r now" in parts[index][:end]:
+            end += len("\n  }")
+            parts[index] = parts[index][:end] + CLOSE_WINDOWS_STEP + parts[index][end:]
+    return marker.join(parts)
+
+
 def keep_autologin(text):
     """Write the auto-login user again before each upstream restart. The
     setting of configure-autologin.sh was lost once before the first
@@ -127,7 +149,7 @@ def prepare_template(source):
     # the password through their environment variables.
     text = replace_once(text, 'ssh_password = "${var.vm_password}"',
                         'ssh_private_key_file = "${var.ciproxy_ssh_key}"', "the SSH password")
-    text = keep_autologin(add_retries(text))
+    text = close_finder_windows(keep_autologin(add_retries(text)))
     text = text.rstrip()
     if not text.endswith("}"):
         raise SystemExit("the upstream template changed: the end of the build block")
