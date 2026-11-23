@@ -9,7 +9,6 @@ use ciproxy_github::runtime::{Runtime, SystemRuntime};
 use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::store::StoreFactory;
 use ciproxy_store_pg::factory::PgStoreFactory;
-use reqwest::{Client, redirect};
 use secrecy::ExposeSecret;
 use tokio::net::TcpListener;
 use tokio::signal::unix::{SignalKind, signal};
@@ -18,7 +17,7 @@ use tokio::time::{MissedTickBehavior, interval, timeout};
 
 use crate::config::Config;
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::image_release::{ImageReleases, SignedReleases};
+use crate::image_release::{ImageReleases, SignedReleases, release_client};
 use crate::image_signing::CdnSigning;
 use crate::macos_release::read_macos_release;
 use crate::startup_api::compose;
@@ -39,7 +38,7 @@ impl ControlPlane for Production {
     async fn serve(&self, mut config: Config) -> Result<()> {
         let mut terminate = signal(SignalKind::terminate()).internal()?;
         let starting = async {
-            let http = release_client(Duration::from_secs(90))?;
+            let http = release_client(Duration::from_secs(90)).build().internal()?;
             let clock: Arc<dyn Runtime> = Arc::new(SystemRuntime);
             let releases: Arc<dyn ImageReleases> = Arc::new(SignedReleases {
                 http,
@@ -51,13 +50,12 @@ impl ControlPlane for Production {
                 )?),
                 clock: clock.clone(),
                 platform: Platform::LinuxX64,
-                artifact: "firecracker",
             });
             let release = releases.current().await?;
             config.images.push(release.download);
             config.image_disk_bytes = release.root_disk_bytes;
             // A short limit keeps a slow macOS store inside the pod's start window.
-            let macos_http = release_client(Duration::from_secs(30))?;
+            let macos_http = release_client(Duration::from_secs(30)).build().internal()?;
             if let Some(macos) = read_macos_release(&config.macos_images, macos_http, clock).await {
                 config.images.push(macos);
             }
@@ -152,15 +150,4 @@ impl ControlPlane for Production {
         .await;
         result
     }
-}
-
-/// A redirect-free HTTP/1 client for signed release reads, with this request limit.
-fn release_client(limit: Duration) -> Result<Client> {
-    Client::builder()
-        .http1_only()
-        .redirect(redirect::Policy::none())
-        .connect_timeout(Duration::from_secs(5))
-        .timeout(limit)
-        .build()
-        .internal()
 }

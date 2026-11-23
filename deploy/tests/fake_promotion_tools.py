@@ -83,7 +83,7 @@ elif tool == "terraform":
             backend.write_text('{"backend":{"type":"gcs"}}')
     if action == "output":
         if args[-1] == "deployment":
-            print(json.dumps({
+            deployment = {
                 "project_id": "ciproxy", "region": "us-central1",
                 "cluster_name": "ciproxy-shared", "prefix": "ciproxy-main-preview",
                 "namespace": "ciproxy-main-preview",
@@ -95,7 +95,11 @@ elif tool == "terraform":
                 "buckets": {"site": "site-bucket", "dashboard": "app-bucket"},
                 "control_plane_account": "runtime@example.invalid", "sql_connection": "test:eu:sql",
                 "sql_user": "runtime", "kms_key": "test-key", "secrets": {},
-            }))
+            }
+            # A data state from before the R2 images parent existed.
+            if os.environ.get("FAKE_NO_R2_OUTPUT") == "true":
+                deployment.pop("r2_images_secret")
+            print(json.dumps(deployment))
         elif args[-1] == "url_map":
             print("ciproxy-production" if prefix.startswith("production/") else "ciproxy-main-preview")
         else:

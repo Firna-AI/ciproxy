@@ -1,6 +1,7 @@
 //! The macOS release comes from presigned R2 reads and is optional at start.
 
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -15,11 +16,12 @@ use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpSocket};
 use unimock::{MockFn, Unimock, matching};
 
 use self::tls_store::TlsStore;
 
+mod loopback;
 mod tls_store;
 
 const RELEASE: &str = "/ciproxy-macos-images/releases/macos26-v1";
@@ -215,7 +217,7 @@ async fn a_failed_release_read_turns_macos_images_off() {
 /// Read one release through the reader that both platforms share.
 async fn read_release(prefix: String) -> String {
     let releases = SignedReleases {
-        http: reqwest::Client::new(),
+        http: loopback::client().build().unwrap(),
         prefix,
         manifest_path: "releases/macos26-v1/manifest.json".to_owned(),
         signing: Arc::new(PresignedSigning::new(
@@ -231,7 +233,6 @@ async fn read_release(prefix: String) -> String {
             ),
         )),
         platform: Platform::MacosArm64,
-        artifact: "macos",
     };
     let error = releases.current().await.err().unwrap();
     format!("{error:?}")
@@ -239,9 +240,7 @@ async fn read_release(prefix: String) -> String {
 
 #[tokio::test]
 async fn failed_release_reads_keep_the_signed_url_out_of_the_error() {
-    let refused = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let closed = refused.local_addr().unwrap();
-    drop(refused);
+    let (_reserved, closed) = refused();
     let unreadable = Router::new().fallback(|| async { (StatusCode::OK, "not json") });
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
@@ -264,13 +263,20 @@ async fn failed_release_reads_keep_the_signed_url_out_of_the_error() {
         assert!(!error.contains("manifest.json"), "{case}: {error}");
     }
 }
-
-/// A client of the production form that trusts only this store in addition.
+/// The production client policy, trusting this store and using no proxy.
 fn client(store: &TlsStore) -> reqwest::Client {
-    reqwest::Client::builder()
-        .http1_only()
-        .redirect(reqwest::redirect::Policy::none())
+    loopback::client()
         .add_root_certificate(reqwest::Certificate::from_pem(store.certificate.as_bytes()).unwrap())
         .build()
         .unwrap()
+}
+
+/// A bound socket that never listens, so its port refuses each connection.
+///
+/// Keep the socket for the whole test, so no other listener takes the port.
+fn refused() -> (TcpSocket, SocketAddr) {
+    let socket = TcpSocket::new_v4().unwrap();
+    socket.bind("127.0.0.1:0".parse().unwrap()).unwrap();
+    let address = socket.local_addr().unwrap();
+    (socket, address)
 }

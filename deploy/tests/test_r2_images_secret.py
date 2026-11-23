@@ -58,3 +58,13 @@ class R2ImagesSecretTests(OptionalSecretCase):
         self.assertEqual([read["sdk_logging"] for read in reads], [{
             "CLOUDSDK_CORE_LOG_HTTP": "false", "CLOUDSDK_CORE_DISABLE_FILE_LOGGING": "true",
         }])
+
+    def test_a_data_state_without_the_parent_applies_an_empty_secret_and_deploys(self):
+        self.env["FAKE_NO_R2_OUTPUT"] = "true"
+        result = self.cli("deploy.py", "main-preview")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([secret["data"] for secret in self.secrets("r2-images")], [{}])
+        self.assertEqual([call for call in self.calls() if call["tool"] == "gcloud"
+                          and "--secret=fake-r2-images" in call["args"]], [])
+        self.assertIn("deploy/helm/ciproxy", json.dumps([call["args"] for call in self.calls()
+                                                         if call["tool"] == "helm"]))

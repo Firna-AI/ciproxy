@@ -17,6 +17,8 @@ use tokio::net::TcpListener;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use unimock::{MockFn, Unimock, matching};
 
+mod loopback;
+
 #[derive(Clone)]
 struct Capture(Arc<Mutex<Vec<u8>>>);
 impl Write for Capture {
@@ -49,11 +51,7 @@ async fn signed_manifest_and_bundle_metadata_reads_keep_credentials_out_of_trace
         axum::serve(listener, routes).await.unwrap();
     });
     let releases = SignedReleases {
-        http: reqwest::Client::builder()
-            .http1_only()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .unwrap(),
+        http: loopback::client().build().unwrap(),
         prefix: format!("http://{address}/images"),
         manifest_path: "full/manifest.json".to_owned(),
         signing: Arc::new(
@@ -67,7 +65,6 @@ async fn signed_manifest_and_bundle_metadata_reads_keep_credentials_out_of_trace
             ),
         )),
         platform: Platform::LinuxX64,
-        artifact: "firecracker",
     };
     let release = releases.current().await.unwrap();
     assert_eq!(release.root_disk_bytes, 62_008_590_336);
@@ -133,7 +130,7 @@ async fn linux_release_metadata_over_one_mebibyte_is_a_start_error() {
     let declared = declared_oversize_origin().await;
     for (case, origin) in [("declared", declared), ("streamed", address)] {
         let releases = SignedReleases {
-            http: reqwest::Client::new(),
+            http: loopback::client().build().unwrap(),
             prefix: format!("http://{origin}/images"),
             manifest_path: format!("{case}/manifest.json"),
             signing: Arc::new(
@@ -147,7 +144,6 @@ async fn linux_release_metadata_over_one_mebibyte_is_a_start_error() {
                 ),
             )),
             platform: Platform::LinuxX64,
-            artifact: "firecracker",
         };
         let error = releases.current().await.err();
         assert!(
@@ -155,4 +151,41 @@ async fn linux_release_metadata_over_one_mebibyte_is_a_start_error() {
             "{case}: {error:?}"
         );
     }
+}
+
+#[tokio::test]
+async fn a_repeated_linux_archive_entry_is_a_start_error() {
+    let routes = Router::new()
+        .route(
+            "/images/full/manifest.json",
+            get(|| async { r#"{"image_id":"full-release","root_disk_bytes":62008590336}"# }),
+        )
+        .route(
+            "/images/full/downloads.json",
+            get(|| async {
+                r#"{"firecracker":{"file":"first.tar.zst","sha256":"first","size_bytes":1},
+                    "firecracker":{"file":"second.tar.zst","sha256":"second","size_bytes":2}}"#
+            }),
+        );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, routes).await.unwrap() });
+    let releases = SignedReleases {
+        http: loopback::client().build().unwrap(),
+        prefix: format!("http://{address}/images"),
+        manifest_path: "full/manifest.json".to_owned(),
+        signing: Arc::new(
+            CdnSigning::new("test-image-key".to_owned(), "AAECAwQFBgcICQoLDA0ODw==").unwrap(),
+        ),
+        clock: Arc::new(Unimock::new(
+            RuntimeMock::now.each_call(matching!()).returns(
+                "2026-11-05T12:00:00Z"
+                    .parse::<chrono::DateTime<chrono::Utc>>()
+                    .unwrap(),
+            ),
+        )),
+        platform: Platform::LinuxX64,
+    };
+    let error = format!("{:?}", releases.current().await.err());
+    assert!(error.contains("duplicate field `firecracker`"), "{error}");
 }

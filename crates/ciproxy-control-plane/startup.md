@@ -15,8 +15,9 @@ A failed Linux read stops the process. Each release file may hold at most
 1 MiB, and a larger one is a failed read.
 When the three macOS settings are set, the process then reads the macOS
 release in the same way, from the private R2 store with presigned URLs.
-When a macOS setting is missing, the key is malformed, or the read fails, it
-logs this and starts with no macOS release.
+When it cannot use the settings or read the release, it logs this and
+starts with no macOS release.
+[macOS image setup](../../deploy/runtime.md#macos-images) gives the cases.
 The process then connects to PostgreSQL and applies the embedded migrations.
 It binds `HTTP_BIND` only after these steps succeed.
 

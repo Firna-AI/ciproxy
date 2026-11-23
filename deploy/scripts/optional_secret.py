@@ -10,17 +10,25 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class OptionalSecret:
-    """One optional value: its deployment output, its Kubernetes Secret, and its key."""
+    """One optional value: its deployment output, its Kubernetes Secret, and its key.
+
+    With `output_optional`, a deployment output without the parent counts as
+    a parent with no version. This lets a commit deploy before the data
+    apply that adds the parent reaches the environment.
+    """
 
     output: str
     name: str
     key: str
     label: str
+    output_optional: bool = False
 
 
+# Boat stays strict: an empty Boat Secret stops Boat cleanup while sandboxes exist.
 BOAT_SHARED_SNAPSHOT = OptionalSecret(
     "boat_shared_snapshot_secret", "boat-shared-snapshot", "BOAT_SHARED_SNAPSHOT", "Boat snapshot")
-R2_IMAGES = OptionalSecret("r2_images_secret", "r2-images", "R2_IMAGES_KEY", "R2 images key")
+R2_IMAGES = OptionalSecret(
+    "r2_images_secret", "r2-images", "R2_IMAGES_KEY", "R2 images key", output_optional=True)
 
 # The Cloud SDK can write request and response bodies to the terminal and to
 # its own log files. Both settings stay off for a read of a secret payload,
@@ -29,6 +37,10 @@ QUIET_GCLOUD = {"CLOUDSDK_CORE_LOG_HTTP": "false", "CLOUDSDK_CORE_DISABLE_FILE_L
 
 
 def sync_optional_secret(config, optional):
+    if optional.output_optional and optional.output not in config:
+        print(f"{optional.label}: the deployment output has no secret parent yet. "
+              "The value stays off.", flush=True)
+        return apply_secret(config, optional, "")
     # Capture both streams. Provider errors can echo a secret-bearing request.
     read = subprocess.run([
         "gcloud", "secrets", "versions", "access", "latest",
@@ -42,6 +54,10 @@ def sync_optional_secret(config, optional):
     if read.returncode and not missing:
         raise RuntimeError(f"{optional.label} secret read failed. Check Secret Manager access and version state.")
     value = read.stdout.strip() if read.returncode == 0 else ""
+    return apply_secret(config, optional, value)
+
+
+def apply_secret(config, optional, value):
     secret = {
         "apiVersion": "v1", "kind": "Secret",
         "metadata": {"name": optional.name, "namespace": config["namespace"]},

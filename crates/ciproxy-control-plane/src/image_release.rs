@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use ciproxy_github::runtime::Runtime;
@@ -9,7 +10,7 @@ use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
-use reqwest::Client;
+use reqwest::{Client, ClientBuilder, redirect};
 use serde::Deserialize;
 
 use crate::error::{Error, ErrorResultExt, Result};
@@ -18,6 +19,18 @@ use crate::image_signing::ImageSigning;
 /// The most bytes that one `manifest.json` or `downloads.json` may hold.
 const METADATA_LIMIT_BYTES: usize = 1024 * 1024;
 const METADATA_LIMIT: u64 = METADATA_LIMIT_BYTES as u64;
+
+/// The client policy of every signed release read, with this request limit.
+///
+/// HTTP/1 only, no redirects, and a 5-second connect limit. Tests build on
+/// it and add only a trust root or a proxy bypass.
+pub fn release_client(limit: Duration) -> ClientBuilder {
+    Client::builder()
+        .http1_only()
+        .redirect(redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(limit)
+}
 
 /// Current published release facts, with no guessed root dimensions.
 pub struct ImageRelease {
@@ -49,16 +62,20 @@ pub struct SignedReleases {
     pub signing: Arc<dyn ImageSigning>,
     /// Trusted receipt time for bounded URL signatures.
     pub clock: Arc<dyn Runtime>,
-    /// The platform of the VMs that start from this release.
+    /// The platform of the VMs that start from this release. It selects the
+    /// archive in `downloads.json`: `firecracker` for Linux, `macos` for macOS.
     pub platform: Platform,
-    /// The key of the downloaded artifact in `downloads.json`.
-    pub artifact: &'static str,
 }
 
 #[derive(Deserialize)]
 struct Manifest {
     image_id: ImageId,
     root_disk_bytes: u64,
+}
+/// The typed Linux form refuses a second `firecracker` entry, as it always did.
+#[derive(Deserialize)]
+struct LinuxDownloads {
+    firecracker: Artifact,
 }
 #[derive(Deserialize)]
 struct Artifact {
@@ -117,15 +134,20 @@ impl ImageReleases for SignedReleases {
             .manifest_path
             .rsplit_once('/')
             .map_or("", |(directory, _)| directory);
-        // Other keys stay unread, so one bad entry cannot hide this artifact.
-        let mut downloads: HashMap<String, serde_json::Value> =
-            self.read(&format!("{directory}/downloads.json")).await?;
-        let artifact: Artifact = serde_json::from_value(
-            downloads
-                .remove(self.artifact)
-                .ok_or(Error::MissingArtifact(self.artifact))?,
-        )
-        .internal()?;
+        let path = format!("{directory}/downloads.json");
+        let artifact = match self.platform {
+            Platform::LinuxX64 => self.read::<LinuxDownloads>(&path).await?.firecracker,
+            Platform::MacosArm64 => {
+                // Other keys stay unread, so one bad entry cannot hide this artifact.
+                let mut downloads: HashMap<String, serde_json::Value> = self.read(&path).await?;
+                serde_json::from_value(
+                    downloads
+                        .remove("macos")
+                        .ok_or(Error::MissingArtifact("macos"))?,
+                )
+                .internal()?
+            }
+        };
         let download = ImageDownload {
             image_id: manifest.image_id,
             platform: self.platform,

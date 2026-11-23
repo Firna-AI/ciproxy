@@ -136,11 +136,11 @@ and `JOB_IMAGE_MANIFEST_PATH`.
 [overflow guide](overflow.md#configuration) gives its rules. Deploy reads it
 from a Secret Manager secret, as
 [Boat setup](../../deploy/runtime.md#boat-shared-snapshot) says.
-Deploy also fills `MACOS_IMAGE_URL_PREFIX` and `MACOS_IMAGE_MANIFEST_PATH`
-from the GitHub variables of the same names. The pod reads the optional
-`R2_IMAGES_KEY` from a Secret Manager secret. With all three set, the
-runtime also offers the macOS image, as
-[macOS image setup](../../deploy/runtime.md#macos-images) says.
+The optional settings `MACOS_IMAGE_URL_PREFIX`, `MACOS_IMAGE_MANIFEST_PATH`,
+and `R2_IMAGES_KEY` turn on the macOS image.
+[macOS image setup](../../deploy/runtime.md#macos-images) gives where each
+one comes from, when a new key takes effect, and when the runtime offers
+the image.
 The runtime uses mounted private key, webhook, OAuth, session, and CDN keys.
 Billing reads `stripe-secret-key` and `stripe-webhook-secret` from the same
 secret directory. Startup constructs the blocking Stripe client on a blocking

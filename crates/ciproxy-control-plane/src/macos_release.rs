@@ -124,7 +124,6 @@ pub async fn read_macos_release(
         )),
         clock,
         platform: Platform::MacosArm64,
-        artifact: "macos",
     };
     match releases.current().await {
         Ok(release) => {
