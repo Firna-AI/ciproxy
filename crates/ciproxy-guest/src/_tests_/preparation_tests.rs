@@ -137,7 +137,8 @@ async fn preparation_ack_follows_local_readiness_and_late_ready_cannot_replace_a
             messages[4],
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner-7".to_owned()),
-                exit: RunnerExit { code: Some(0) }
+                exit: RunnerExit { code: Some(0) },
+                usage: None,
             }
         );
     }

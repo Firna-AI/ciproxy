@@ -101,6 +101,7 @@ async fn removed_startup_drains_saved_jobs_without_identity_or_gateway_access() 
             message: GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner".to_owned()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         })
         .await

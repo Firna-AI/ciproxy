@@ -1,0 +1,37 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+description: Tagged JSON for agent_runner_exited_with_usage; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "runner_exited",
+  "runner_id": "runner-1",
+  "exit": {
+    "code": 0
+  },
+  "usage": {
+    "platform": "macos_arm64",
+    "first_point_at_ms": 1750000000000,
+    "point_seconds": 1,
+    "cpu_milli_vcpu": [
+      750,
+      1250
+    ],
+    "peak_memory_mib": [
+      1024,
+      1536
+    ],
+    "steps": [
+      {
+        "name": "Build",
+        "status": "ran",
+        "started_at_ms": 1750000000000,
+        "ended_at_ms": 1750000002000
+      },
+      {
+        "name": "Publish",
+        "status": "skipped"
+      }
+    ]
+  }
+}

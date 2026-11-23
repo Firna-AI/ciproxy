@@ -83,6 +83,7 @@ async fn fragmented_slots_are_shared_with_reports_and_reused_without_moving_surv
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("existing-a".to_owned()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         )
         .await

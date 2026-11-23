@@ -175,13 +175,22 @@ impl Controller {
                 *state = next;
                 AgentMessage::RunnerReady { runner_id }
             }
-            GuestToAgent::RunnerExited { runner_id, exit } => {
+            GuestToAgent::RunnerExited {
+                runner_id,
+                exit,
+                usage,
+            } => {
                 if runner_id != vm.report.runner_id {
                     return Err(Error::GuestMismatch);
                 }
                 self.retire(&vm).await?;
-                AgentMessage::RunnerExited { runner_id, exit }
+                AgentMessage::RunnerExited {
+                    runner_id,
+                    exit,
+                    usage,
+                }
             }
+            GuestToAgent::UsageSamples { .. } => return Err(Error::GuestMismatch),
         };
         Ok(Some(response))
     }
@@ -198,3 +207,7 @@ mod preparation_replay_tests;
 #[cfg(test)]
 #[path = "_tests_/docker_recovery_tests.rs"]
 mod docker_recovery_tests;
+
+#[cfg(test)]
+#[path = "_tests_/runner_usage_tests.rs"]
+mod runner_usage_tests;

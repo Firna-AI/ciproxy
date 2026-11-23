@@ -54,6 +54,7 @@ async fn job_started_binds_the_worker_once_and_keeps_it_after_runner_exit() {
             AgentMessage::RunnerExited {
                 runner_id: RunnerId(fixture.intent.runner.id.to_string()),
                 exit: runners::RunnerExit { code: Some(0) },
+                usage: None,
             },
         )
         .await

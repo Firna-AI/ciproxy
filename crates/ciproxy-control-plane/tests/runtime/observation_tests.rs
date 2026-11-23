@@ -198,6 +198,7 @@ async fn runner_exit_before_github_completion_stays_stopped_and_releases_slots_a
             AgentMessage::RunnerExited {
                 runner_id: RunnerId(fixture.intent.runner.id.to_string()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         )
         .await

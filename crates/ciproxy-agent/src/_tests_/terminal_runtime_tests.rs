@@ -127,6 +127,7 @@ async fn daemon_sends_exit_and_reports_while_terminal_cleanup_waits_then_finaliz
             message: GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner".to_owned()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         })
         .await
@@ -141,6 +142,7 @@ async fn daemon_sends_exit_and_reports_while_terminal_cleanup_waits_then_finaliz
         vec![AgentMessage::RunnerExited {
             runner_id: RunnerId("runner".to_owned()),
             exit: RunnerExit { code: Some(0) },
+            usage: None,
         }]
     );
     let wait = waits.recv().await.unwrap();

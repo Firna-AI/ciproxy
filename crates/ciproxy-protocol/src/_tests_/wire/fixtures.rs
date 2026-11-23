@@ -18,6 +18,7 @@ use crate::resources::{GIGABYTE, Slots, VmSize};
 use crate::runners::{RunnerReport, RunnerSpec, RunnerState};
 use crate::secret::Secret;
 use crate::statistics::Statistics;
+use crate::usage::{JobStep, JobStepTiming, JobUsage};
 
 pub(crate) const INSTALL_TOKEN: &str = "dummy-install-token";
 pub(crate) const CREDENTIAL: &str = "dummy-machine-credential";
@@ -40,6 +41,29 @@ pub(crate) fn runner_id() -> RunnerId {
 }
 pub(crate) fn job_id() -> JobId {
     JobId("job-1".into())
+}
+pub(crate) fn job_usage() -> JobUsage {
+    JobUsage {
+        platform: Platform::LinuxX64,
+        first_point_at_ms: 1_750_000_000_000,
+        point_seconds: 1,
+        cpu_milli_vcpu: vec![750, 1_250],
+        peak_memory_mib: vec![1_024, 1_536],
+        oom_kills: Some(vec![0, 1]),
+        steps: vec![
+            JobStep {
+                name: "Build".into(),
+                timing: JobStepTiming::Ran {
+                    started_at_ms: Some(1_750_000_000_000),
+                    ended_at_ms: Some(1_750_000_002_000),
+                },
+            },
+            JobStep {
+                name: "Publish".into(),
+                timing: JobStepTiming::Skipped,
+            },
+        ],
+    }
 }
 pub(crate) fn command_id() -> CommandId {
     CommandId("command-1".into())

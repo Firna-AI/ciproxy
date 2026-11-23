@@ -51,6 +51,7 @@ async fn disconnected_removal_exits_after_cleanup_without_another_input_event() 
                 Ok(Some(AgentMessage::RunnerExited {
                     runner_id: RunnerId("runner".to_owned()),
                     exit: RunnerExit { code: Some(0) },
+                    usage: None,
                 }))
             })),
         AgentMock::reconcile
@@ -93,6 +94,7 @@ async fn disconnected_removal_exits_after_cleanup_without_another_input_event() 
             message: GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner".to_owned()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         })
         .await

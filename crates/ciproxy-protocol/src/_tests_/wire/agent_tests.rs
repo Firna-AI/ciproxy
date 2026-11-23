@@ -137,6 +137,23 @@ fn runner_exited_reports_a_process_without_an_exit_code() {
         AgentMessage::RunnerExited {
             runner_id: fixtures::runner_id(),
             exit: RunnerExit { code: None },
+            usage: None,
+        },
+    );
+}
+
+#[test]
+fn agent_runner_exit_round_trips_with_macos_usage() {
+    let mut usage = fixtures::job_usage();
+    usage.platform = Platform::MacosArm64;
+    usage.oom_kills = None;
+    snapshot(
+        "agent_runner_exited_with_usage",
+        "runner_exited",
+        AgentMessage::RunnerExited {
+            runner_id: fixtures::runner_id(),
+            exit: RunnerExit { code: Some(0) },
+            usage: Some(usage),
         },
     );
 }

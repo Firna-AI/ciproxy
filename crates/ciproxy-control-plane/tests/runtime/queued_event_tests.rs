@@ -145,6 +145,7 @@ async fn gateway_queue_ignores_runner_exit_from_replaced_session() {
                 AgentMessage::RunnerExited {
                     runner_id: RunnerId(fixture.intent.runner.id.to_string()),
                     exit: RunnerExit { code: Some(0) },
+                    usage: None,
                 },
             )
             .unwrap();

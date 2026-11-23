@@ -43,6 +43,12 @@ Cache scope and Docker setup arrive together through `PrepareJob`.
 runtime credentials to the agent. The agent reports the start to the
 control plane through its separate `AgentMessage::JobStarted` message.
 
+Both runner exit messages can carry `JobUsage`. It holds whole-VM CPU and
+memory points, out-of-memory kills on Linux, and the steps of the job.
+Messages without `usage` still decode. `UsageSamples` defines the Boat
+callback report for the series collected so far. It does not use vsock.
+See [Job usage](../../docs/protocol/job-usage.md) for the units and limits.
+
 A ciproxy workspace owns each machine, its install token, and its machine
 credential. Register carries the install token without a workspace ID.
 The token's authority determines the workspace. Registered returns that
@@ -179,7 +185,10 @@ Review snapshot changes before accepting them.
 - [src/identifiers.rs](src/identifiers.rs) distinguishes workspace,
   organization, machine, runner, and repository identities.
 - [src/agent.rs](src/agent.rs) defines both agent connection directions.
-- [src/guest.rs](src/guest.rs) defines both guest vsock directions.
+- [src/guest.rs](src/guest.rs) defines guest vsock messages and the Boat
+  sample report.
+- [src/usage.rs](src/usage.rs) defines `JobUsage` and checks the structure
+  of its points and steps separately.
 - [src/reports.rs](src/reports.rs) defines current machine state.
 - [src/statistics.rs](src/statistics.rs) keeps independent measured or
   unavailable statistics and reads older measured reports.

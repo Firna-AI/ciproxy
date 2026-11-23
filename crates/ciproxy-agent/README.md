@@ -63,6 +63,10 @@ Runtime mode actions use one locked owner. Removal remains terminal.
 A late Drain remains applied and cannot undo removal.
 Reconciliation enforces current mode after each wait.
 
+When a guest reports a runner exit, the agent forwards any CPU and memory
+points and job steps with the exit. When the agent detects a stopped or
+missing VM itself, it reports the exit without usage.
+
 State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.
 State contains the machine credential, its endpoint, and VM ownership.
@@ -332,8 +336,11 @@ that only creates its output files. The check does not link.
 - [src/vm_config.rs](src/vm_config.rs) owns the root and dormant Docker drives.
 - [src/vm_drives.rs](src/vm_drives.rs) defines the drive paths for Firecracker,
   VM files, Docker cleanup, and image-budget exclusions.
+- [src/observations.rs](src/observations.rs) binds guest reports to their VM
+  and forwards usage from a runner exit.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
-  memory until the guest confirms receipt.
+  memory until the guest confirms receipt. It reports stopped or missing
+  VMs without usage.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
 - [src/resumable_download.rs](src/resumable_download.rs) continues a large
   image download from its partial file with `Range` requests. The macOS

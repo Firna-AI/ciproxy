@@ -182,6 +182,7 @@ async fn a_late_job_starting_survives_pending_removal_until_runner_exit() {
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner".to_owned()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         )
         .await

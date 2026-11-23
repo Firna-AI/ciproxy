@@ -1,10 +1,11 @@
-//! Both directions of the private agent-to-guest vsock protocol.
+//! Both guest vsock directions and the Boat sample report.
 
 use crate::cache::{DockerDiskAccess, DockerDiskAttachment};
 use crate::guest::HANDOFF_PROTOCOL_VERSION;
 use crate::guest::{AgentToGuest, GuestToAgent, JobDecision};
 use crate::runners::RunnerExit;
 use crate::secret::Secret;
+use crate::usage::JobStepTiming;
 use crate::version::ProtocolVersion;
 
 use super::assertions::snapshot;
@@ -90,6 +91,38 @@ fn guest_runner_exited_reports_the_process_exit_code() {
         GuestToAgent::RunnerExited {
             runner_id: fixtures::runner_id(),
             exit: RunnerExit { code: Some(0) },
+            usage: None,
+        },
+    );
+}
+
+#[test]
+fn guest_runner_exit_round_trips_with_job_usage() {
+    snapshot(
+        "guest_runner_exited_with_usage",
+        "runner_exited",
+        GuestToAgent::RunnerExited {
+            runner_id: fixtures::runner_id(),
+            exit: RunnerExit { code: Some(0) },
+            usage: Some(fixtures::job_usage()),
+        },
+    );
+}
+
+#[test]
+fn boat_usage_samples_round_trip_with_a_step_still_running() {
+    let mut usage = fixtures::job_usage();
+    usage.steps.truncate(1);
+    usage.steps[0].timing = JobStepTiming::Ran {
+        started_at_ms: Some(1_750_000_000_000),
+        ended_at_ms: None,
+    };
+    snapshot(
+        "guest_usage_samples",
+        "usage_samples",
+        GuestToAgent::UsageSamples {
+            runner_id: fixtures::runner_id(),
+            usage,
         },
     );
 }

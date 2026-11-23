@@ -59,6 +59,7 @@ async fn runner_exit_releases_slots_before_cleanup_and_recovers_network_ownershi
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner".to_owned()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         )
         .await
@@ -67,7 +68,8 @@ async fn runner_exit_releases_slots_before_cleanup_and_recovers_network_ownershi
         response,
         Some(AgentMessage::RunnerExited {
             runner_id: RunnerId("runner".to_owned()),
-            exit: RunnerExit { code: Some(0) }
+            exit: RunnerExit { code: Some(0) },
+            usage: None,
         })
     );
     assert_eq!(agent.state.lock().await.pending_networks, [1].into());

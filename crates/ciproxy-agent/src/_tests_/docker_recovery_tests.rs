@@ -140,6 +140,7 @@ async fn job_exit_discards_pending_failure_before_releasing_its_reservation() {
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("job".into()),
                 exit: RunnerExit { code: Some(0) },
+                usage: None,
             },
         )
         .await

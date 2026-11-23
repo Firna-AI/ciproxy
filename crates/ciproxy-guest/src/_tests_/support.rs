@@ -57,6 +57,7 @@ pub(super) fn exited(code: Option<i32>) -> Observation {
     Observation::Message(GuestToAgent::RunnerExited {
         runner_id: RunnerId("runner-7".into()),
         exit: RunnerExit { code },
+        usage: None,
     })
 }
 

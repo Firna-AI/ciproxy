@@ -1,4 +1,4 @@
-//! Tagged messages between the agent and its own job guests over vsock.
+//! Tagged guest messages for the agent over vsock or the Boat callback.
 
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +8,7 @@ use crate::jobs::JobFacts;
 use crate::runners::RunnerExit;
 use crate::runtime::RuntimeCredentials;
 use crate::secret::Secret;
+use crate::usage::JobUsage;
 use crate::version::ProtocolVersion;
 
 /// The own-machine source-hook format that waits for a host decision.
@@ -66,7 +67,7 @@ pub enum AgentToGuest {
     Shutdown,
 }
 
-/// Guest observations sent to its agent over vsock.
+/// Guest observations sent over vsock or to the Boat callback.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GuestToAgent {
@@ -115,5 +116,15 @@ pub enum GuestToAgent {
         runner_id: RunnerId,
         /// Process outcome, also available when no job started.
         exit: RunnerExit,
+        /// Usage for the finished job, when the guest measured it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        usage: Option<JobUsage>,
+    },
+    /// Report usage so far to the Boat callback. Never sent over vsock.
+    UsageSamples {
+        /// Runner whose job is still running.
+        runner_id: RunnerId,
+        /// The entire series collected so far.
+        usage: JobUsage,
     },
 }

@@ -93,6 +93,7 @@ impl Supervisor {
         self.report(GuestToAgent::RunnerExited {
             runner_id: runner_id.clone(),
             exit,
+            usage: None,
         })
         .await;
     }

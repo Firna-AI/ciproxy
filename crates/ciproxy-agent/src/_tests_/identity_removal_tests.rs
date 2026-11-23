@@ -72,14 +72,16 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
                 "job",
                 GuestToAgent::RunnerExited {
                     runner_id: RunnerId("job".to_owned()),
-                    exit: RunnerExit { code: Some(0) }
+                    exit: RunnerExit { code: Some(0) },
+                    usage: None,
                 }
             )
             .await
             .unwrap(),
         Some(AgentMessage::RunnerExited {
             runner_id: RunnerId("job".to_owned()),
-            exit: RunnerExit { code: Some(0) }
+            exit: RunnerExit { code: Some(0) },
+            usage: None,
         })
     );
     assert_eq!(agent.state.lock().await.pending_networks, [1].into());

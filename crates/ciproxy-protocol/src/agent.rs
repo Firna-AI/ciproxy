@@ -9,6 +9,7 @@ use crate::jobs::JobFacts;
 use crate::reports::MachineReport;
 use crate::runners::{RunnerExit, RunnerSpec};
 use crate::secret::Secret;
+use crate::usage::JobUsage;
 use crate::version::ProtocolVersion;
 
 /// Messages sent by an agent to the control plane.
@@ -60,6 +61,9 @@ pub enum AgentMessage {
         runner_id: RunnerId,
         /// Process outcome, distinct from the GitHub job result.
         exit: RunnerExit,
+        /// Usage from the guest, when it reported any.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        usage: Option<JobUsage>,
     },
     /// Correlate a command with its outcome.
     CommandResult {

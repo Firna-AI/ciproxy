@@ -19,6 +19,7 @@ fn exited(fixture: &Fixture) -> AgentMessage {
     AgentMessage::RunnerExited {
         runner_id: RunnerId(fixture.intent.runner.id.to_string()),
         exit: RunnerExit { code: Some(1) },
+        usage: None,
     }
 }
 

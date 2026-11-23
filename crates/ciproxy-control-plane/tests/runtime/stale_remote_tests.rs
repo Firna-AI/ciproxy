@@ -52,6 +52,7 @@ async fn late_retirement_results_preserve_newer_busy_and_terminal_agent_observat
                     AgentMessage::RunnerExited {
                         runner_id: RunnerId(fixture.intent.runner.id.to_string()),
                         exit: ciproxy_protocol::runners::RunnerExit { code: Some(0) },
+                        usage: None,
                     },
                 )
                 .await

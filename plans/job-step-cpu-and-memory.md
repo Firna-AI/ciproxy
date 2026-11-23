@@ -860,17 +860,17 @@ Depends on: 2
 The protocol carries the samples, and the agent forwards them. The control
 plane accepts the field and ignores it until Milestone 8.
 
-- [ ] Add `JobUsage` to `ciproxy-protocol`, with the limits of the design.
+- [x] Add `JobUsage` to `ciproxy-protocol`, with the limits of the design.
       Test each limit.
-- [ ] Add the optional `usage` field to `GuestToAgent::RunnerExited` and
+- [x] Add the optional `usage` field to `GuestToAgent::RunnerExited` and
       `AgentMessage::RunnerExited`. Test that a message without the field
       parses, and that the field round-trips.
-- [ ] Add `GuestToAgent::UsageSamples`, as the contract sketch says. Test
+- [x] Add `GuestToAgent::UsageSamples`, as the contract sketch says. Test
       that it round-trips.
-- [ ] Forward the usage of a guest exit report in
+- [x] Forward the usage of a guest exit report in
       `crates/ciproxy-agent/src/observations.rs`. An exit report that the
       agent makes itself carries no usage. Test both cases.
-- [ ] Update the READMEs of `ciproxy-protocol` and `ciproxy-agent`.
+- [x] Update the READMEs of `ciproxy-protocol` and `ciproxy-agent`.
 
 ## Milestone 4: Jobs that run out of memory
 

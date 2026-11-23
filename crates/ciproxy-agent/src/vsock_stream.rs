@@ -41,6 +41,7 @@ impl GuestBridge {
                             GuestToAgent::RunnerExited {
                                 runner_id: self.vm.report.runner_id.clone(),
                                 exit: RunnerExit { code: Some(code) },
+                                usage: None,
                             },
                             GuestProvenance::Recovery,
                         )
@@ -54,6 +55,7 @@ impl GuestBridge {
                             GuestToAgent::RunnerExited {
                                 runner_id: self.vm.report.runner_id.clone(),
                                 exit: RunnerExit { code: None },
+                                usage: None,
                             },
                             GuestProvenance::Recovery,
                         )
