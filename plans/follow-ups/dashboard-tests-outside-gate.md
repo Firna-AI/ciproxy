@@ -120,6 +120,9 @@
   each push, and a local gate run stays fast and needs no browser. C
   protects more, because a local gate run then also finds a broken smoke
   before the push.
-- **Action:** ask the user, because the recommended option adds checks to
-  the gate and a new CI job, and the always-on rules reserve a new gate for
-  the user.
+- **Action:** ask the user, because each option except A adds a gate phase
+  or a CI job, and a new gate needs the explicit approval of the user. On
+  23 November 2026, the orchestrator agent applied option A for now, under
+  the user's delegation of the legal follow-up items: nothing changes until
+  the user approves a new gate. The item stays open, and D stays the
+  recommendation.
