@@ -62,7 +62,7 @@ impl OverflowService {
         if !snapshot.enabled {
             return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
         }
-        let image = &self.dependencies.providers.get(provider)?.image;
+        let image = self.dependencies.providers.start_image(provider)?;
         let Some(required_root_disk_bytes) = image
             .root_sizing
             .root_bytes(request.action.requested_size.disk_bytes)

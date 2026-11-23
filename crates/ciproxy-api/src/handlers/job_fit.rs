@@ -69,10 +69,6 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
                     Some(true)
                 }
             });
-            let providers = current
-                .as_ref()
-                .map(|current| current.fit.providers.clone())
-                .unwrap_or_default();
             WaitingLabelFit {
                 label_id: id.to_string(),
                 label_name: name,
@@ -80,7 +76,6 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
                 can_edit: admin && current.is_some(),
                 ask_admin: !admin && nothing_fits == Some(true),
                 current,
-                providers,
                 nothing_fits,
             }
         })

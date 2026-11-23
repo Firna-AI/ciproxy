@@ -130,7 +130,7 @@ impl MachineRuntime {
                 .take_while(|place| **place != LabelPlace::Machine)
                 .any(|place| match *place {
                     LabelPlace::Provider(provider) => {
-                        self.providers.get(provider).is_ok()
+                        self.providers.start_image(provider).is_ok()
                             && input.overflow.active_account(provider).is_some()
                     }
                     LabelPlace::Machine => false,

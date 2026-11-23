@@ -17,6 +17,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "image"))
 
 from boat_delete import confirmed_delete
 
+MACHINE_PLACE = {"kind": "machine"}
+BOAT_PLACE = {"kind": "overflow", "provider": "boat"}
+
+
+def boat_settings(settings):
+    return next(row for row in settings["providers"] if row["provider"] == "boat")
+
+
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, message, headers, new_url):
         return None
@@ -32,14 +40,13 @@ class Live:
         self.opener = build_opener(NoRedirect())
         self.runs = []
         self.markers = []
+        self.original = None
+        self.baseline = set()
+        self.intent_baseline = set()
         self.policy_attempted = False
         self.cleanup_deadline = None
         self.state_file = Path(".context/ciproxy-mvp-m15/live") / (uuid4().hex + ".json")
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
-        self.save()
-        self.baseline = {row["delivery"] for row in self.records()}
-        self.intent_baseline = {row["runner"] for row in self.intents()}
-        self.original = self.api("GET", "/overflow")
         self.save()
 
     def request(self, method, url, headers, body=None, missing=False):
@@ -126,6 +133,7 @@ class Live:
         return rows
 
     def dispatch(self, label, seconds):
+        self.snapshot_policy()
         marker = uuid4().hex
         self.markers.append(marker)
         self.save()
@@ -149,20 +157,39 @@ class Live:
         return self.github("GET", "/actions/runs/" + str(run) + "/jobs")["jobs"]
 
     def policy(self, limit, wait_seconds=30):
+        self.snapshot_policy()
+        boat = boat_settings(self.original)
+        if not boat["available"] or boat["account"] is None:
+            raise ValueError("connect Boat and configure its shared image first")
         self.policy_attempted = True
-        self.api("PUT", "/overflow", {"enabled": True, "wait_seconds": wait_seconds,
-                                      "spend_limit_cents": limit})
+        self.spend_limit(limit)
+        self.api("PUT", "/overflow", {"enabled": True, "wait_seconds": wait_seconds})
+
+    def spend_limit(self, limit):
+        self.api("PUT", "/overflow/providers/boat/spend-limit", {"spend_limit_cents": limit})
+
+    def snapshot_policy(self):
+        if self.original is None:
+            original = self.api("GET", "/overflow")
+            self.baseline = {row["delivery"] for row in self.records()}
+            self.intent_baseline = {row["runner"] for row in self.intents()}
+            self.original = original
+            self.save()
+
+    def original_policy(self):
+        if self.original is None:
+            return None
+        return {
+            "enabled": self.original["enabled"],
+            "wait_seconds": self.original["wait_seconds"],
+            "spend_limit_cents": boat_settings(self.original)["spend_limit_cents"],
+        }
 
     def save(self):
-        original = getattr(self, "original", None)
-        policy = None if original is None else {
-            key: original[key]
-            for key in ("enabled", "wait_seconds", "spend_limit_cents")
-        }
         self.state_file.write_text(json.dumps({
-            "markers": self.markers, "runs": self.runs, "original_policy": policy,
-            "delivery_baseline": sorted(getattr(self, "baseline", set())),
-            "intent_baseline": sorted(getattr(self, "intent_baseline", set())),
+            "markers": self.markers, "runs": self.runs, "original_policy": self.original_policy(),
+            "delivery_baseline": sorted(self.baseline),
+            "intent_baseline": sorted(self.intent_baseline),
         }))
         self.state_file.chmod(0o600)
 

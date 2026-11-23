@@ -70,10 +70,10 @@ async fn m18_live_exposes_saved_provider_refusals_without_keys_or_starting_sandb
             providers: Arc::new(ProviderRegistry::default().with_provider(
                 OverflowProvider::Boat,
                 Arc::new(Unimock::new(())),
-                ImageSource {
+                Some(ImageSource {
                     reference: "test-image".into(),
                     root_sizing: Default::default(),
-                },
+                }),
             )),
             runners: Arc::new(Unimock::new(())),
             tokens: Arc::new(Unimock::new(())),

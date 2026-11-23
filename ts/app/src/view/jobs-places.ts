@@ -190,24 +190,23 @@ function orderedProviders(
   fit: WaitingLabelFit,
   holds: (provider: OverflowProvider) => ProviderHoldState,
 ): ProviderPlace[] {
-  const order = fit.current?.label.order ?? null;
-  const machineIndex =
-    order?.findIndex((place) => place.kind === "machine") ?? -1;
-  return fit.providers.flatMap((item) => {
+  const current = fit.current ?? null;
+  if (current === null) return [];
+  const order = current.label.order;
+  const machineIndex = order.findIndex((place) => place.kind === "machine");
+  return current.fit.providers.flatMap((item) => {
     if (item.fit.state === "disabled") return [];
-    const index =
-      order?.findIndex(
-        (place) =>
-          place.kind === "overflow" && place.provider === item.provider,
-      ) ?? -1;
-    if (order !== null && index < 0) return [];
+    const index = order.findIndex(
+      (place) => place.kind === "overflow" && place.provider === item.provider,
+    );
+    if (index < 0) return [];
     const physical = providerFit(item.fit);
     return [
       {
         provider: item.provider,
         fit: physical,
         start: providerStart(physical, holds(item.provider)),
-        beforeOwn: machineIndex >= 0 && index >= 0 && index < machineIndex,
+        beforeOwn: machineIndex >= 0 && index < machineIndex,
       },
     ];
   });

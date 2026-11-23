@@ -51,18 +51,25 @@ pub(crate) fn place_in_order(
                 };
                 let fitting = provider.fitting_size(required);
                 has_fit |= fitting.is_some();
-                if starts_held(provider, snapshot.now) {
+                if !provider.refreshed || starts_held(provider, snapshot.now) {
                     continue;
                 }
-                if let Some(size) = fitting {
-                    start_provider(plan, job, label, id, size, reason);
+                if let Some(size) = fitting
+                    && start_provider(plan, job, label, id, size, reason.clone())
+                {
                     return true;
                 }
                 if !has_fit
                     && fallback.is_none()
                     && label.nothing_fits == NothingFits::LargestProviderSize
                 {
-                    fallback = provider.largest_for_start().map(|size| (id, size));
+                    fallback = provider
+                        .largest_for_start()
+                        .filter(|size| {
+                            size.start_bound
+                                .is_some_and(|bound| plan.can_reserve(id, bound))
+                        })
+                        .map(|size| (id, size));
                 }
             }
             Place::Provider(_) => {}
@@ -70,7 +77,7 @@ pub(crate) fn place_in_order(
     }
 
     if let Some((provider, size)) = fallback.filter(|_| !has_fit) {
-        start_provider(
+        return start_provider(
             plan,
             job,
             label,
@@ -78,7 +85,6 @@ pub(crate) fn place_in_order(
             size,
             StartReason::LargestProviderSize,
         );
-        return true;
     }
     false
 }
@@ -90,7 +96,13 @@ fn start_provider(
     provider: ProviderId,
     size: &ProviderSize,
     reason: StartReason,
-) {
+) -> bool {
+    if !size
+        .start_bound
+        .is_some_and(|bound| plan.reserve_provider(provider, bound))
+    {
+        return false;
+    }
     plan.start(
         job,
         label,
@@ -101,13 +113,13 @@ fn start_provider(
         },
         reason,
     );
+    true
 }
 
-fn starts_held(provider: &ProviderAccount, now: Duration) -> bool {
-    provider.facts.spend.spent >= provider.facts.spend.limit
-        || provider.facts.refusals.iter().any(|refusal| match refusal {
-            Refusal::RetryAfter { not_before } => now < *not_before,
-            Refusal::RejectedKey | Refusal::BillingRequired => true,
-            Refusal::SizeNotOnPlan(_) => false,
-        })
+pub(crate) fn starts_held(provider: &ProviderAccount, now: Duration) -> bool {
+    provider.facts.refusals.iter().any(|refusal| match refusal {
+        Refusal::RetryAfter { not_before } => now < *not_before,
+        Refusal::RejectedKey | Refusal::BillingRequired => true,
+        Refusal::SizeNotOnPlan(_) => false,
+    })
 }

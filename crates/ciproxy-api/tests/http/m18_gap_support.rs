@@ -1,4 +1,4 @@
-//! A retained complete runtime with the defined unknown start-fee accounting gap.
+//! A retained finished sandbox with measured runtime and a configurable fee bound.
 
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::m18_support::{Pages, at};
 
-pub(super) fn seed(pages: &Pages) -> Uuid {
+pub(super) fn seed(pages: &Pages, start_fee_bound_usd: Option<Decimal>) -> Uuid {
     let store = &pages.fixture.database.store;
     let workspace = pages.fixture.workspace;
     let mut settings = store.settings(workspace).unwrap();
@@ -55,7 +55,7 @@ pub(super) fn seed(pages: &Pages) -> Uuid {
         launched_at: None,
         ends_at: None,
         billing: None,
-        start_fee_bound_usd: None,
+        start_fee_bound_usd,
         start_usd: None,
         reported_at: None,
         runtime: Vec::new(),

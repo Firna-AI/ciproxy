@@ -186,7 +186,8 @@ async fn boat_limit_counts_costs_from_the_retired_key() {
         boat.scaler_account(at()).unwrap().spend,
         MonthlySpend {
             spent: 1_000_000,
-            limit: 1_000_000
+            limit: 1_000_000,
+            next_month_spent: Some(0),
         }
     );
 

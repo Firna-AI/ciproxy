@@ -16,8 +16,8 @@
   `docs/mockups/src/entries/app/jobs/current-contract/states.mockup.tsx:10`,
   `docs/mockups/README.md:102`, `crates/ciproxy-api/src/wire/jobs.rs:235`,
   `crates/ciproxy-api/src/wire/job_overflow.rs:11`,
-  `crates/ciproxy-api/src/wire/job_fit.rs:23`,
-  `crates/ciproxy-api/src/handlers/job_fit.rs:78`,
+  `crates/ciproxy-api/src/wire/job_fit.rs`, `WaitingLabelFit` and `LabelFit`,
+  `crates/ciproxy-api/src/handlers/job_fit.rs`, `labels`,
   `crates/ciproxy-protocol/src/resources.rs:34`,
   `crates/ciproxy-agent/src/root_sizing.rs:47`,
   `crates/ciproxy-overflow/src/service/start.rs:173`,
@@ -103,19 +103,16 @@
     can disagree with the size that ran. The start record keeps the chosen
     size, and the job view query already joins that record, at
     `crates/ciproxy-store-pg/src/job_views.rs:112-115` and `:128`.
-  - Short resource: `WaitingLabelFit` at
-    `crates/ciproxy-api/src/wire/job_fit.rs:11-28` gives `nothing_fits`,
-    the Boat fit of the label, and the label with counts of its own
-    machines. The Boat fit is `disabled`, `no_size_fits`, `fitting` with a
-    size, `largest_fallback` with a size, or `unavailable`. The counts are
-    `eligible_machines`, `unavailable_machines`, and `fitting_machines`, at
-    `crates/ciproxy-api/src/wire/settings.rs:151-164`. No field names a
-    short vCPU, memory, or disk.
-  - `crates/ciproxy-api/src/handlers/job_fit.rs:78-90` sets `nothing_fits`
-    when no own machine fits, the own fit is known, and the Boat fit is
-    `no_size_fits` or `disabled`. So the flag is also true for a label that
-    forbids own machines, Boat, or both, and while no own machine takes
-    jobs. The own fit and the Boat fit both count free disk, at
+  - `WaitingLabelFit` gives `nothing_fits` and the current label view.
+    `current.fit` carries `providers`, `eligible_machines`,
+    `unavailable_machines`, and `fitting_machines`. Each provider fit is
+    `disabled`, `no_size_fits`, `fitting`, `largest_fallback`, or
+    `unavailable`. No field names a short vCPU, memory, or disk.
+  - `job_fit::labels` sets `nothing_fits` to false when an own machine,
+    a provider size, or a fallback fits. It leaves the flag unset when
+    an allowed fit is unknown or the label is retired. It sets the flag
+    to true when every permitted place is known to have no fit. Machine
+    fit and provider fit both account for free job disk, at
     `crates/ciproxy-protocol/src/resources.rs:108-119` and
     `crates/ciproxy-scaler/src/size_policy.rs:120-124`.
   - Own machines have no separate vCPU and memory. A slot is 2 vCPU and

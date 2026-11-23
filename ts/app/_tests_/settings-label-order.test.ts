@@ -9,6 +9,7 @@ import {
   createRequest,
   editDraft,
   newDraft,
+  updateRequest,
   withOrder,
 } from "../src/view/settings-label-form.ts";
 import { placeCaption, placeFacts } from "../src/view/settings-label-order.ts";
@@ -67,6 +68,23 @@ test("Add a place offers own machines and each offered provider that the order d
   assert.deepEqual(addablePlaces([boatPlace], ["boat"]), [machinePlace]);
   assert.deepEqual(addablePlaces([], ["boat"]), [machinePlace, boatPlace]);
   assert.deepEqual(addablePlaces([machinePlace], []), []);
+});
+
+test("a size-only edit leaves a provider offered after opening the form in the saved order", () => {
+  const opened = labelInput({ order: [machinePlace] });
+  const draft = { ...editDraft(opened), vcpus: "4" };
+  const currentOrder = [machinePlace, boatPlace];
+  const checked = checkDraft(draft);
+  assert.ok(checked.ok);
+
+  const request = updateRequest(checked.input, opened.order);
+  assert.equal(request.order, undefined);
+  assert.equal(request.vcpus, 4);
+  assert.deepEqual(request.order ?? currentOrder, [machinePlace, boatPlace]);
+
+  const changed = checkDraft(withOrder(draft, []));
+  assert.ok(changed.ok);
+  assert.deepEqual(updateRequest(changed.input, opened.order).order, []);
 });
 
 test("an order row of own machines gives the overflow wait only when a place follows them", () => {

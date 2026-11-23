@@ -1,4 +1,4 @@
-# Label responses lack current Boat start holds
+# Share provider start holds across dashboard views
 
 - **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
   **Confidence:** High. **Harder later:** No.
@@ -8,24 +8,22 @@
   check of `plans/follow-ups/jobs-notice-facts.md` found.
 - **Source:** Review.
 - **Category:** Product bug.
-- **Location:** `crates/ciproxy-api/src/wire/settings.rs`, `LabelFit`,
-  `crates/ciproxy-api/src/handlers/label_boat.rs`, `enrich`,
+- **Location:** `crates/ciproxy-api/src/wire/job_fit.rs`, `LabelFit`,
+  `crates/ciproxy-api/src/handlers/label_routing.rs`, `enrich`,
+  `crates/ciproxy-api/src/handlers/label_provider.rs`, `fit`,
   `crates/ciproxy-api/src/wire/job_overflow.rs`, `JobOverflow`,
   `docs/protocol/labels.md`, "A size that nothing can run", and
   `docs/protocol/labels-order.md`, "Changes to the order".
-- **Reason:** Saved and draft labels have physical Boat fit. Their current
-  start holds still need the shared server status that
+- **Reason:** Label responses and provider-wide responses report holds.
+  They still need the shared server status that
   `plans/follow-ups/machines-boat-start-status.md` records.
 
 - **Terms:**
   - **Placement:** where the jobs of a label run now: the places of its
     order that can run them, the largest size of a provider, or a wait.
-    Today the code gives own machines, Boat, or wait.
-  - **`LabelFit`:** physical machine and Boat fit, with account presence,
-    required root disk, the largest Boat size, and placement.
-  - **`BoatLabelFit`:** physical Boat fit shared by Settings and Jobs:
-    `unavailable`, `disabled`, `no_size_fits`, `fitting`, or
-    `largest_fallback`. A selected size also has a `refused` flag.
+  - **`LabelFit`:** machine fit, provider fits, and the label's routing.
+  - **`ProviderLabelFit`:** one provider's physical size fit, eligible
+    size, and current hold. A selected physical size has a `refused` flag.
   - **Draft label:** a label in the label dialog before the save, which
     the preview reads.
   - **Offer:** the largest job that one place takes. On 8 November 2026,
@@ -60,30 +58,26 @@
     - `SettingsView` and `SetupView`, at
       `crates/ciproxy-api/src/wire/settings.rs`.
   - `LabelView` holds the label and `fit: LabelFit` in `settings.rs`.
-    `crates/ciproxy-api/src/handlers/label_facts.rs` adds the Boat fit to
-    saved labels and draft previews through `label_boat::enrich`.
+    `label_views::label` calls `label_routing::enrich` for saved labels,
+    draft previews, and waiting jobs.
   - The preview `POST /api/workspaces/<id>/labels/preview` returns the
     draft's full `LabelFit`. It uses the machines, trusted image sizing,
     and existing overflow observation.
   - `WaitingLabelFit` in `crates/ciproxy-api/src/wire/job_fit.rs` gives
-    `current.fit`, `boat: BoatLabelFit`, and `nothing_fits`.
-    `crates/ciproxy-api/src/handlers/job_fit.rs` enriches `current.fit`
-    through the same `label_boat::enrich` call when root sizing is known.
-    Its outer Boat choice and `nothing_fits` use `current.fit.boat`.
-  - `label_boat::enrich` reads `ProviderView::resource_catalog` of the
-    Boat provider directly.
-    It uses the scaler size policy and the trusted root sizing.
+    `current.fit.providers` and `nothing_fits`. It has no current view
+    or provider fit after the label is retired.
+  - `label_provider::fit` reads `ProviderView::resource_catalog` for
+    each provider. It uses the scaler size policy and trusted root sizing.
     Temporary refusals and missing spend bounds do not change physical
     fit. A selected size keeps its refusal flag. Unknown own-machine
     capacity prevents a largest-size fallback.
-  - The live page also sends the current Boat facts as `JobOverflow`:
-    `connected`,
+  - The live page also sends current facts for each provider as
+    `JobOverflow`: `connected`,
     `key_rejected`, `billing_required`, `retry_at`, the spend limit, and
     `refused_sizes`, at `crates/ciproxy-api/src/wire/job_overflow.rs`.
-    The app words a current Boat hold from them.
+    The app uses them for provider-wide notices.
   - Saved labels and drafts now give physical placement even without
-    waiting jobs. They still give no current start status for a rejected
-    key, billing, a retry time, or an accounting hold.
+    waiting jobs. Each provider fit also gives its current hold.
   - The current clients:
     - Settings calls the preview, create, and update routes through
       `ts/app/src/api/settings-endpoints.ts`.
@@ -91,26 +85,25 @@
       `ts/app/src/view/settings-label-fit.ts` shows the full physical fit
       in the label dialog.
     - Setup and Settings read the shared fit through
-      `ts/app/src/api/parse-setup.ts`. The live queue reads `current.fit`
-      and the outer Boat fit through `ts/app/src/api/jobs-live-parse.ts`.
+      `ts/app/src/api/parse-setup.ts`. The live queue reads the same
+      `current.fit.providers` through `ts/app/src/api/jobs-live-parse.ts`.
     - `npm --prefix ts run api:generate` regenerates the types in
       `ts/api/generated/`.
   - `crates/ciproxy-api/tests/http/m20_label_tests.rs` covers saved and
     draft Boat fit, refusals, fallback, and unknown facts.
-    `crates/ciproxy-api/tests/http/m18_fit_tests.rs` covers the matching
-    nested and outer Boat choices for waiting labels.
+    `crates/ciproxy-api/tests/http/m18_fit_tests.rs` covers provider fits
+    on the current view of waiting labels.
   - On 17 November 2026, the user chose one physical Boat fit calculation
     for Settings and Jobs. That work does not add current start status.
-- **Problem:** Physical Boat fit does not tell a client whether Boat can
-  start a new job now. Saved and draft label responses lack the current
-  key, billing, retry, spend limit, and accounting holds.
-- **Impact if no action:** Settings can name Boat as the physical placement
-  while new starts wait. The label list and dialog cannot explain that hold.
-- **Root question:** How do saved and draft labels learn whether Boat can
-  start their jobs now?
+- **Problem:** Label fit and the provider-wide views use separate hold
+  facts. The app also derives holds from the provider-wide facts.
+- **Impact if no action:** The label dialog, Machines, and Jobs can give
+  different reasons when the same provider cannot take a job.
+- **Root question:** How can the dashboard explain current provider holds
+  from one server rule?
 - **Options:**
-  - **A.** Add current Boat start status to the existing saved and draft
-    label responses:
+  - **A.** Use the shared current start status in the existing saved and
+    draft label responses:
     - Keep the shared physical `LabelFit` computation.
     - Give these responses the current Boat status once. Reuse the server
       status of `plans/follow-ups/machines-boat-start-status.md` so that
@@ -144,8 +137,8 @@
     lines 226-229 of `docs/protocol/labels.md` rejects it.
 - **Wider fix:** A. One server start status serves the live queue, the
   label list, and the dialog. Clients then need no hold rule of their own.
-- **Previous examples:** Settings and Jobs now use `label_boat::enrich`
-  for physical fit. The separate current-start gap also affects Machines,
+- **Previous examples:** Settings and Jobs use `label_routing::enrich`
+  for label fit. The separate current-start gap also affects Machines,
   as `plans/follow-ups/machines-boat-start-status.md` records.
 - **Related:**
   - On 8 November 2026, the user kept the label dialog on its fit counts

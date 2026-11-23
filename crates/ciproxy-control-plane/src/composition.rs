@@ -157,15 +157,13 @@ impl Hosted {
             offers,
             installations.clone(),
         );
-        if let Some(overflow) = &overflow {
-            machine_runtime.overflow = Some(overflow.service.clone());
-            machine_runtime.overflow_retirement = Some(overflow.retirement.clone());
-            machine_runtime.providers = overflow.providers.clone();
-        }
+        machine_runtime.overflow = Some(overflow.service.clone());
+        machine_runtime.overflow_retirement = Some(overflow.retirement);
+        machine_runtime.providers = overflow.providers;
         let provider_roots = OverflowProvider::all()
             .filter_map(|provider| {
-                let configured = machine_runtime.providers.get(provider).ok()?;
-                Some((provider, configured.image.root_sizing))
+                let image = machine_runtime.providers.start_image(provider).ok()?;
+                Some((provider, image.root_sizing))
             })
             .collect();
         let metering: Arc<dyn Metering> = Arc::new(StoredMetering::new(store.clone()));
@@ -206,7 +204,7 @@ impl Hosted {
         });
         Ok(Self {
             provider_roots,
-            overflow: overflow.map(|overflow| overflow.service),
+            overflow: Some(overflow.service),
             metering,
             accounting,
             repositories,

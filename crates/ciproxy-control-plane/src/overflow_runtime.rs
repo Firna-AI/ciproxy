@@ -107,8 +107,13 @@ impl MachineRuntime {
                     .reconcile_workspace_saved(workspace, &refreshed, &deferred)
                     .await?;
             }
-            view.internal()?;
-            if refreshed.is_empty() {
+            let view = view.internal()?;
+            if refreshed.is_empty()
+                && view
+                    .providers
+                    .iter()
+                    .any(|view| view.refresh == RefreshStatus::Failed)
+            {
                 return Err(Error::ProviderUnavailable).internal();
             }
             Ok(())

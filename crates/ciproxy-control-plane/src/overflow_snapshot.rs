@@ -1,16 +1,20 @@
 //! Project provider accounts and accepted deliveries into the scaler snapshot.
 
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
+use ciproxy_overflow::admission::start_bound;
 use ciproxy_overflow::error::Result;
 use ciproxy_overflow::registry::ProviderRegistry;
 use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::identifiers::{JobId, LabelName, OrganizationId, RunnerId};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
-use ciproxy_scaler::provider::{ProviderAccount, ProviderRunner, Sandbox, SandboxId};
+use ciproxy_scaler::provider::{
+    ProviderAccount, ProviderDispatch, ProviderRunner, Sandbox, SandboxId, StartBound,
+};
 use ciproxy_scaler::snapshot::{Runner, RunnerState};
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners;
 
@@ -23,31 +27,33 @@ pub(crate) fn accounts<'a>(
 ) -> impl Iterator<Item = (OverflowProvider, Result<ProviderAccount>)> + 'a {
     view.providers.iter().map(|view| {
         let provider = view.provider;
-        let configured = registry.get(provider).ok();
-        let available = configured.is_some();
-        let facts = if available && refreshed.contains(&provider) {
+        let image = registry.start_image(provider).ok();
+        let available = image.is_some();
+        let refreshed = available && refreshed.contains(&provider);
+        let facts = if refreshed {
             view.scaler_account(DateTime::UNIX_EPOCH)
         } else {
-            view.retained_scaler_account()
+            view.retained_scaler_account(DateTime::UNIX_EPOCH)
         };
         (
             provider,
             facts.map(|facts| ProviderAccount {
                 id: provider_id(provider),
                 available,
-                root_sizing: configured
-                    .map(|entry| entry.image.root_sizing)
-                    .unwrap_or_default(),
+                refreshed,
+                root_sizing: image.map(|image| image.root_sizing).unwrap_or_default(),
                 facts,
             }),
         )
     })
 }
 
-pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<Sandbox> {
+pub(crate) fn project(input: &RoutingSnapshot, now: DateTime<Utc>) -> Vec<Sandbox> {
     let mut sandboxes = Vec::new();
     for intent in &input.overflow_intents {
-        let record = records
+        let record = input
+            .overflow
+            .starts
             .iter()
             .find(|record| record.delivery_id == intent.delivery_id);
         if record.is_some_and(|record| record.ends_at.is_some()) {
@@ -120,6 +126,12 @@ pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<S
             ),
             marked: true,
             runner: Some(ProviderRunner {
+                dispatch: match record {
+                    Some(record) if record.phase == StartPhase::Unsent => {
+                        ProviderDispatch::Unsent(unsent_bound(&input.overflow, record, size, now))
+                    }
+                    _ => ProviderDispatch::Accepted,
+                },
                 launched_at: record.and_then(|record| record.launched_at).map(instant),
                 required_root_disk_bytes: record
                     .map_or(intent.required_root_disk_bytes, |record| {
@@ -160,4 +172,37 @@ pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<S
         });
     }
     sandboxes
+}
+
+fn unsent_bound(
+    snapshot: &OverflowSnapshot,
+    record: &StartRecord,
+    size: VmSize,
+    now: DateTime<Utc>,
+) -> Option<StartBound> {
+    let account = snapshot
+        .active_account(record.provider)
+        .filter(|account| account.owns_start(record))?;
+    let offer = account
+        .state
+        .sizes
+        .iter()
+        .filter(|offer| {
+            offer.vcpus == size.vcpu
+                && offer.memory_bytes == size.memory_bytes
+                && offer.disk_bytes == size.disk_bytes
+                && !account.state.refused_sizes.contains(&offer.name)
+        })
+        .min_by_key(|offer| offer.hourly_usd)?;
+    start_bound(
+        now,
+        offer,
+        record
+            .provider
+            .descriptor()
+            .lifetime
+            .seconds(account.state.trial),
+        record.counted_start_fee_usd(),
+    )
+    .ok()
 }

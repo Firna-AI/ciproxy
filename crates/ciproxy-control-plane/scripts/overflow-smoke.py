@@ -9,19 +9,17 @@ import time
 
 sys.dont_write_bytecode = True
 
-from overflow_smoke.support import Live, sandbox_id, wait
+from overflow_smoke.support import BOAT_PLACE, MACHINE_PLACE, Live, sandbox_id, wait
 
 
 def run(live, scenario):
-    if not live.original["available"] or live.original["account"] is None:
-        raise ValueError("connect Boat and configure its shared image first")
     labels = live.api("GET", "/labels")
     hold_label = next(item for item in labels if item["label"]["name"] == live.config["hold_label"])
     overflow_label = next(item for item in labels if item["label"]["name"] == live.config["overflow_label"])
-    if not hold_label["label"]["allow_machines"] or hold_label["label"]["allow_boat"]:
+    if hold_label["label"]["order"] != [MACHINE_PLACE]:
         raise ValueError("the hold label must allow only own machines")
-    if not overflow_label["label"]["allow_machines"] or not overflow_label["label"]["allow_boat"]:
-        raise ValueError("the overflow label must allow both destinations")
+    if overflow_label["label"]["order"] != [MACHINE_PLACE, BOAT_PLACE]:
+        raise ValueError("the overflow label must try own machines, then Boat")
     fit = overflow_label["fit"]
     if fit["eligible_machines"] != 1 or fit["fitting_machines"] != 1 or fit["maximum_jobs"] != "1":
         raise ValueError("the fixture needs one connected machine that fits one job")

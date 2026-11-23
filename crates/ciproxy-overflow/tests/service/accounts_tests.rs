@@ -158,6 +158,7 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
         providers: vec![ProviderAccount {
             id: provider,
             available: true,
+            refreshed: true,
             root_sizing,
             facts: boat.scaler_account(at()).unwrap(),
         }],

@@ -40,6 +40,7 @@ def observe(live, deliveries):
 
 
 def poll(live, deadline):
+    original = live.original_policy()
     disabled = False
     workflows = not live.markers
     read = not live.markers
@@ -51,8 +52,7 @@ def poll(live, deadline):
         if not disabled:
             try:
                 live.api("PUT", "/overflow", {"enabled": False,
-                    "wait_seconds": live.original["wait_seconds"],
-                    "spend_limit_cents": live.original["spend_limit_cents"]})
+                    "wait_seconds": original["wait_seconds"]})
                 disabled = True
             except ERRORS:
                 pass
@@ -88,8 +88,10 @@ def poll(live, deadline):
         pending = unfinished(deliveries, verified)
         if disabled and workflows and read and not intents and not pending:
             try:
-                live.api("PUT", "/overflow", {key: live.original[key] for key in
-                    ("enabled", "wait_seconds", "spend_limit_cents")})
+                if original["spend_limit_cents"] is not None:
+                    live.spend_limit(original["spend_limit_cents"])
+                live.api("PUT", "/overflow", {"enabled": original["enabled"],
+                    "wait_seconds": original["wait_seconds"]})
                 return []
             except ERRORS:
                 return ["settings restoration"]

@@ -132,7 +132,17 @@ pub struct LabelCreate {
     pub order: Option<Vec<LabelPlace>>,
 }
 
-/// A label with its complete stored order, also used for edits and previews.
+/// Update a label with an optional replacement order.
+#[derive(Deserialize, ToSchema)]
+pub struct LabelUpdate {
+    /// Definition of the label.
+    #[serde(flatten)]
+    pub spec: LabelSpec,
+    /// Omit to keep the current order. An empty order leaves all jobs waiting.
+    pub order: Option<Vec<LabelPlace>>,
+}
+
+/// A label with its complete order, used in responses and previews.
 #[derive(Clone, Deserialize, Serialize, ToSchema)]
 pub struct LabelInput {
     /// Definition of the label.

@@ -27,6 +27,27 @@ fn label(name: &str, platform: Platform, order: Vec<LabelPlace>) -> Label {
 }
 
 #[test]
+fn size_only_update_preserves_the_order_changed_by_the_first_offer() {
+    let database = Database::new();
+    let workspace = database.workspace().id;
+    let store = &database.store;
+    let machine = LabelPlace::Machine;
+    let mut opened = label("linux", Platform::LinuxX64, vec![machine]);
+    store.create_label(workspace, &opened).unwrap();
+    store
+        .offer_overflow_provider(workspace, OverflowProvider::Boat)
+        .unwrap();
+
+    opened.size.vcpus = 4;
+    store
+        .update_label_size(workspace, opened.id, opened.size, opened.when_nothing_fits)
+        .unwrap();
+
+    opened.order = vec![machine, BOAT];
+    assert_eq!(store.labels(workspace).unwrap(), [opened]);
+}
+
+#[test]
 fn replaces_label_order_and_rolls_back_duplicate_places() {
     let database = Database::new();
     let workspace = database.workspace().id;

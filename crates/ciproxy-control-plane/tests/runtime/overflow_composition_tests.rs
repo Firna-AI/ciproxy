@@ -6,6 +6,8 @@ use axum::http::StatusCode;
 use chrono::Duration;
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_control_plane::overflow_callback;
+use ciproxy_overflow::view::RefreshStatus;
+use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::labels::LabelPlace;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
@@ -27,7 +29,7 @@ async fn provider_first_label_uses_the_configured_executor_and_image() {
         &mut harness.runtime,
         &harness.fixture,
         &harness.ports,
-        root_sizing,
+        Some(root_sizing),
     );
     let store = &harness.fixture.store;
     let workspace = harness.fixture.workspace;
@@ -76,6 +78,104 @@ async fn provider_first_label_uses_own_machine_when_refresh_fails() {
 
     assert_eq!(harness.own_starts.load(Ordering::SeqCst), 1);
     assert_eq!(harness.ports.creates.lock().unwrap().len(), 0);
+}
+
+#[tokio::test]
+async fn provider_first_label_uses_own_machine_when_the_next_start_exceeds_the_limit() {
+    let harness = Harness::new(true, false).await;
+    let store = &harness.fixture.store;
+    let workspace = harness.fixture.workspace;
+    let mut label = store.labels(workspace).unwrap().remove(0);
+    label.order.swap(0, 1);
+    store.update_label(workspace, &label).unwrap();
+    store
+        .save_overflow_provider_spend_limit(workspace, OverflowProvider::Boat, Some(50_000))
+        .unwrap();
+    harness.queued();
+
+    harness.runtime.settled_tick().await.unwrap();
+
+    assert_eq!(harness.own_starts.load(Ordering::SeqCst), 1);
+    assert_eq!(store.overflow_runner_intents(workspace).unwrap(), []);
+    assert_eq!(harness.ports.creates.lock().unwrap().len(), 0);
+}
+
+#[tokio::test]
+async fn unsent_delivery_whose_size_left_the_catalog_releases_the_job() {
+    let harness = Harness::new(true, false).await;
+    let store = &harness.fixture.store;
+    let workspace = harness.fixture.workspace;
+    let mut label = store.labels(workspace).unwrap().remove(0);
+    label.order.swap(0, 1);
+    store.update_label(workspace, &label).unwrap();
+    harness
+        .ports
+        .maintenance_unavailable
+        .store(true, Ordering::SeqCst);
+    harness.queued();
+    harness.runtime.settled_tick().await.unwrap();
+    assert_eq!(
+        store.overflow_runtime_snapshot(workspace).unwrap().starts[0].phase,
+        StartPhase::Unsent
+    );
+
+    {
+        let mut session = store.try_lock_overflow(workspace).unwrap().unwrap();
+        let mut account = session.snapshot().unwrap().accounts.remove(0);
+        account.state.sizes.clear();
+        session.save_account(&account).unwrap();
+    }
+    harness
+        .ports
+        .maintenance_unavailable
+        .store(false, Ordering::SeqCst);
+    harness.runtime.settled_tick().await.unwrap();
+
+    assert_eq!(harness.own_starts.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        store.overflow_runtime_snapshot(workspace).unwrap().starts[0].phase,
+        StartPhase::CancelledUnsent
+    );
+    assert_eq!(harness.ports.creates.lock().unwrap().len(), 0);
+}
+
+#[tokio::test]
+async fn disconnect_without_a_start_image_cleans_up_the_sandbox_and_erases_the_key() {
+    let mut harness = Harness::new(false, false).await;
+    let mut job = harness.queued();
+    harness.runtime.settled_tick().await.unwrap();
+    let store = &harness.fixture.store;
+    let workspace = harness.fixture.workspace;
+    let snapshot = store.overflow_runtime_snapshot(workspace).unwrap();
+    let delivery = &snapshot.starts[0];
+    assert_eq!(delivery.phase, StartPhase::Running);
+    assert_eq!(
+        delivery.sandbox.as_ref().map(|sandbox| sandbox.id()),
+        Some(delivery.runner_id.to_string().as_str())
+    );
+
+    let service = attach(&mut harness.runtime, &harness.fixture, &harness.ports, None);
+    let view = service.view(workspace).await.unwrap();
+    assert_eq!(
+        view.provider(OverflowProvider::Boat).unwrap().refresh,
+        RefreshStatus::Unavailable
+    );
+    service
+        .disconnect(workspace, OverflowProvider::Boat)
+        .await
+        .unwrap();
+    let retired = store.overflow_runtime_snapshot(workspace).unwrap();
+    assert_eq!(retired.accounts[0].account.retired_at, Some(at()));
+
+    job.phase = DemandPhase::Completed;
+    job.completed_at = Some(at());
+    store.save_github_job(workspace, &job, at()).unwrap();
+    harness.runtime.settled_tick().await.unwrap();
+
+    let closed = store.overflow_runtime_snapshot(workspace).unwrap();
+    assert_eq!(closed.starts[0].phase, StartPhase::Ended);
+    assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 1);
+    assert_eq!(closed.accounts, []);
 }
 
 #[tokio::test]

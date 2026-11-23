@@ -11,6 +11,7 @@ import { parseSuccess } from "./parse-session.ts";
 import type {
   LabelCreate,
   LabelInput,
+  LabelUpdate,
   RepositorySelection,
   WorkspaceRole,
 } from "./schema.ts";
@@ -94,7 +95,7 @@ export function createSettingsEndpoints(client: ApiClient) {
         parseLabel,
         input,
       ),
-    updateLabel: (workspaceId: string, labelId: string, input: LabelInput) =>
+    updateLabel: (workspaceId: string, labelId: string, input: LabelUpdate) =>
       client.change(
         "PUT",
         routePath(

@@ -10,8 +10,8 @@ use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner};
 use crate::provider::{
-    AccountFacts, MonthlySpend, ProviderAccount, ProviderId, ProviderRunner, ProviderSize,
-    ProviderSizeId, Sandbox, SandboxId,
+    AccountFacts, MonthlySpend, ProviderAccount, ProviderDispatch, ProviderId, ProviderRunner,
+    ProviderSize, ProviderSizeId, Sandbox, SandboxId, StartBound,
 };
 use crate::registration::RegistrationTarget;
 use crate::snapshot::{
@@ -64,12 +64,14 @@ pub(super) fn snapshot() -> Snapshot {
         providers: vec![ProviderAccount {
             id: BOAT,
             available: true,
+            refreshed: true,
             root_sizing: RootSizing::default(),
             facts: AccountFacts {
                 connected: true,
                 spend: MonthlySpend {
                     spent: 20,
                     limit: 100,
+                    next_month_spent: Some(0),
                 },
                 sizes: vec![
                     boat_size("small", small(), 2),
@@ -156,6 +158,7 @@ pub(super) fn sandbox(id: &str, runner: Option<Runner>) -> Sandbox {
             required_root_disk_bytes: allocated(runner.requested_size).disk_bytes,
             runner,
             launched_at: None,
+            dispatch: ProviderDispatch::Accepted,
         }),
     }
 }
@@ -165,6 +168,7 @@ pub(super) fn boat_size(id: &str, size: VmSize, price: u64) -> ProviderSize {
         id: ProviderSizeId(id.into()),
         size: allocated(size),
         price,
+        start_bound: Some(StartBound::default()),
     }
 }
 

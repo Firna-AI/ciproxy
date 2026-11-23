@@ -19,7 +19,9 @@ async function readLive(response: BrowserResponse) {
   assert.deepEqual(observation(queue, "boat")?.refused_sizes, []);
   const waiting = queue.waiting_labels[0];
   assert.ok(waiting !== undefined);
-  const fit = waiting.providers.find((item) => item.provider === "boat")?.fit;
+  const fit = waiting.current?.fit.providers.find(
+    (item) => item.provider === "boat",
+  )?.fit;
   assert.ok(fit?.state === "fitting");
   assert.equal(fit.refused, false);
   return queue;

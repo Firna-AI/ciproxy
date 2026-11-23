@@ -178,6 +178,7 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
         id: ProviderSizeId("largest".into()),
         size: actual,
         price: 2,
+        start_bound: Some(Default::default()),
     }];
     state.providers[0].facts.largest_size = Some(ProviderSizeId("largest".into()));
     let mut retained = runner("older", "a", "ciproxy", RunnerState::Ready);
@@ -191,6 +192,7 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
             runner: retained,
             required_root_disk_bytes: 109_470_908_416,
             launched_at: None,
+            dispatch: crate::provider::ProviderDispatch::Accepted,
         }),
     }];
     assert_eq!(decide(&state), vec![]);
@@ -202,6 +204,7 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
         id: ProviderSizeId("fitting".into()),
         size: fitting,
         price: 3,
+        start_bound: Some(Default::default()),
     });
     state.providers[0].facts.largest_size = Some(ProviderSizeId("fitting".into()));
     assert_eq!(

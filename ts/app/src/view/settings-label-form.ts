@@ -15,6 +15,7 @@ import type {
   LabelCreate,
   LabelInput,
   LabelPlace,
+  LabelUpdate,
   LabelView,
   NothingFits,
   OverflowProvider,
@@ -22,7 +23,11 @@ import type {
 } from "../api/schema.ts";
 import type { FailureCopy } from "./claim.ts";
 import { labelPlatform } from "./platform.ts";
-import { defaultOrder, machinePlace } from "./settings-label-places.ts";
+import {
+  defaultOrder,
+  machinePlace,
+  samePlace,
+} from "./settings-label-places.ts";
 import { protectedLabelName } from "./settings-labels.ts";
 
 export type LabelDraft = {
@@ -133,6 +138,20 @@ export function createRequest(
     return { ...input, order: undefined };
   }
   return input;
+}
+
+/** The request of Edit label, with the order only if it changed. */
+export function updateRequest(
+  input: LabelInput,
+  openedOrder: readonly LabelPlace[],
+): LabelUpdate {
+  const unchanged =
+    input.order.length === openedOrder.length &&
+    openedOrder.every((place, index) => {
+      const edited = input.order[index];
+      return edited !== undefined && samePlace(place, edited);
+    });
+  return unchanged ? { ...input, order: undefined } : input;
 }
 
 /** The label of the draft, or the size fields that need a fix. */

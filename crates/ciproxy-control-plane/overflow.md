@@ -19,12 +19,12 @@ Use the snapshot of the same image release as `JOB_IMAGE_MANIFEST_PATH`.
 The root bytes of that manifest size each new Boat root. The process does
 not compare the two settings. Change them together.
 
-An absent or empty value leaves Boat out of the provider registry. Own
-machines still run jobs. The dashboard API reports `available: false`, and
-Boat connection changes return HTTP 503. The runtime serves the callback
-when the registry has a configured provider.
+An absent or empty value disables new Boat starts. Own machines still run
+jobs. The dashboard API reports `available: false`. A Boat connection or
+key change returns HTTP 503. Disconnect remains available. The runtime
+serves the callback and maintains saved deliveries.
 
-When a provider is configured, startup builds the Cloud KMS client.
+Startup builds the Cloud KMS client.
 `OVERFLOW_KMS_KEY` must have the form
 `projects/P/locations/L/keyRings/R/cryptoKeys/K`. The chart points it at
 the existing `boat-account-keys` key. The process gets KMS access tokens
@@ -34,10 +34,9 @@ The runtime derives the sandbox mark and the callback URL from `PUBLIC_URL`.
 It removes trailing slashes first. New deliveries get
 `PUBLIC_URL/hooks/overflow/runner-exit` as their HTTPS callback URL.
 
-Keep the value set while a Boat sandbox can exist. Without it, the runtime
-cannot clean up Boat sandboxes. Boat then ends each sandbox at its
-lifetime. That is six hours, or two hours on a free trial. The deployment
-reads the optional value from its Kubernetes Secret.
+Boat ends each sandbox at its lifetime. That is six hours, or two hours on
+a free trial. The deployment reads the optional value from its Kubernetes
+Secret.
 [Boat setup](../../deploy/runtime.md#boat-shared-snapshot) gives the steps.
 [Runtime setup](../../deploy/runtime.md#turn-on-the-runtime) gives the other
 settings.

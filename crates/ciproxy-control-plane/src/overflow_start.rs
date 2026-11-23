@@ -28,7 +28,7 @@ impl MachineRuntime {
             return Err(Error::StateChanged);
         };
         let provider = overflow_provider(*id).ok_or(Error::StateChanged)?;
-        let image = &self.providers.get(provider).internal()?.image;
+        let image = self.providers.start_image(provider).internal()?;
         let organization: Uuid = action.target.organization_id.0.parse().internal()?;
         let github_organization = input
             .organizations

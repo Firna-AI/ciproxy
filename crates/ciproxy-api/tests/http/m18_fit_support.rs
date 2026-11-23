@@ -77,10 +77,10 @@ pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn ProviderAc
                             .each_call(matching!())
                             .answers_arc(Arc::new(move |_, _, _| Ok(capabilities.clone()))),
                     )),
-                    ImageSource {
+                    Some(ImageSource {
                         reference: "test-image".into(),
                         root_sizing: sizing,
-                    },
+                    }),
                 ),
             ),
             runners: Arc::new(Unimock::new(())),
@@ -112,6 +112,7 @@ pub(super) fn catalog(pages: &Pages, fits: bool, refused: bool) {
         .unwrap();
     let mut account = session.snapshot().unwrap().accounts.remove(0);
     account.state.checked_at = Some(at("2026-11-06T12:00:00Z"));
+    account.state.start_fee_bound_usd = Some(Decimal::ZERO);
     account.state.sizes = vec![SizeOffer {
         name: "observed-size".into(),
         vcpus: if fits { 128 } else { 2 },

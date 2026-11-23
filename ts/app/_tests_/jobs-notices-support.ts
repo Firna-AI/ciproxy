@@ -105,7 +105,6 @@ export function waitingLabel(
         routing,
       },
     },
-    providers,
   };
 }
 

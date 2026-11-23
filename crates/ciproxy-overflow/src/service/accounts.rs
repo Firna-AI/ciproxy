@@ -24,6 +24,7 @@ use super::OverflowService;
 #[async_trait]
 impl Overflow for OverflowService {
     async fn check_key(&self, provider: OverflowProvider, key: Secret) -> Result<KeyAccounts> {
+        self.dependencies.providers.start_image(provider)?;
         self.dependencies
             .providers
             .get(provider)?
@@ -45,6 +46,7 @@ impl Overflow for OverflowService {
         if limit <= 0 {
             return Err(Error::InvalidSpendLimit);
         }
+        self.dependencies.providers.start_image(provider)?;
         let session =
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
         let grant = session
@@ -89,6 +91,7 @@ impl Overflow for OverflowService {
                 checked_at: Some(now),
                 sizes,
                 trial: facts.trial,
+                start_fee_bound_usd: facts.start_fee_bound_usd,
                 billing_required: false,
                 retry_at: None,
                 refused_sizes: Vec::new(),

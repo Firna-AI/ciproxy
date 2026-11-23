@@ -7,7 +7,7 @@ use ciproxy_protocol::resources::VmSize;
 
 use crate::actions::{Action, Destination, StartReason, StartRunner, StopReason};
 use crate::capacity::Usage;
-use crate::provider::{ProviderId, Sandbox, SandboxId};
+use crate::provider::{MonthlySpend, ProviderId, Sandbox, SandboxId, StartBound};
 use crate::snapshot::{Label, Runner, RunnerState, Snapshot, WaitingJob, warm_label};
 
 pub(crate) struct Plan {
@@ -17,6 +17,7 @@ pub(crate) struct Plan {
     deleted: Vec<(ProviderId, SandboxId)>,
     pub(crate) usage: Vec<Usage>,
     pub(crate) reserved: Vec<Usage>,
+    provider_spend: Vec<(ProviderId, MonthlySpend)>,
 }
 
 impl Plan {
@@ -28,7 +29,25 @@ impl Plan {
             deleted: Vec::new(),
             usage: snapshot.machines.iter().map(Usage::for_machine).collect(),
             reserved: vec![Usage::default(); snapshot.machines.len()],
+            provider_spend: snapshot
+                .providers
+                .iter()
+                .map(|provider| (provider.id, provider.facts.spend))
+                .collect(),
         }
+    }
+
+    pub(crate) fn can_reserve(&self, provider: ProviderId, bound: StartBound) -> bool {
+        self.provider_spend
+            .iter()
+            .any(|(id, spend)| *id == provider && spend.can_cover(bound) == Some(true))
+    }
+
+    pub(crate) fn reserve_provider(&mut self, provider: ProviderId, bound: StartBound) -> bool {
+        self.provider_spend
+            .iter_mut()
+            .find(|(id, _)| *id == provider)
+            .is_some_and(|(_, spend)| spend.reserve(bound))
     }
 
     pub(crate) fn stop(&mut self, runner: &Runner, reason: StopReason) {

@@ -1,16 +1,14 @@
 //! Retryable unsent preparation and one durable dispatch boundary.
 
-use ciproxy_store_interface::overflow::admission::{
-    PreparedDispatch, ReservationBudget, ReservationOutcome,
-};
+use ciproxy_store_interface::overflow::admission::{PreparedDispatch, ReservationOutcome};
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{ProviderParameters, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use sandbox_interface::BackendSandbox;
 use uuid::Uuid;
 
+use crate::admission::required_budget;
 use crate::api::{Retirement, StartOutcome, WaitReason};
-use crate::budget;
 use crate::error::Result;
 use crate::session::Session;
 use crate::spend;
@@ -21,27 +19,6 @@ use super::provider_preparation::Preparation;
 pub(super) enum DispatchOutcome {
     Submitted(sandbox_interface::Result<Option<BackendSandbox>>),
     Stopped(Box<StartOutcome>),
-}
-
-/// Count the proposed dispatch once alongside the same provider's saved starts.
-pub(super) fn required_budget(
-    starts: &[StartRecord],
-    record: &StartRecord,
-) -> Result<ReservationBudget> {
-    let starts = starts
-        .iter()
-        .filter(|start| start.delivery_id != record.delivery_id)
-        .chain(std::iter::once(record));
-    let next_month = spend::next_month(record.starts_at)?;
-    Ok(ReservationBudget {
-        current_month_usd: spend::current(record.provider, starts.clone(), record.starts_at)?
-            .counted_usd()?,
-        next_month_usd: if next_month < budget::expires_at(record)? {
-            Some(spend::current(record.provider, starts, next_month)?.counted_usd()?)
-        } else {
-            None
-        },
-    })
 }
 
 impl OverflowService {
@@ -57,6 +34,7 @@ impl OverflowService {
                 self.cancel_unsent(session, record).await?,
             )));
         };
+        self.dependencies.providers.start_image(record.provider)?;
         let lifetime_seconds = match self
             .resume_preparation(session, account, authority.capabilities())
             .await?

@@ -2,6 +2,7 @@
 
 #![warn(unreachable_pub)]
 
+pub mod admission;
 pub mod api;
 pub mod boat;
 mod budget;

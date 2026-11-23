@@ -47,12 +47,12 @@ fn attach(fixture: &mut Fixture, ports: Arc<Ports>, factory: Arc<dyn ProviderFac
             providers: Arc::new(ProviderRegistry::default().with_provider(
                 OverflowProvider::Boat,
                 factory,
-                ImageSource {
+                Some(ImageSource {
                     reference: "shared-image".to_owned(),
                     root_sizing: RootSizing {
                         image_root_bytes: fixture.state.config.image_disk_bytes,
                     },
-                },
+                }),
             )),
             runners: Arc::new(Unimock::new(())),
             clock: ports.clone(),

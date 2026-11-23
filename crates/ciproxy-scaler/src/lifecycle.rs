@@ -3,6 +3,8 @@
 use std::time::Duration;
 
 use crate::actions::StopReason;
+use crate::overflow::starts_held;
+use crate::provider::ProviderDispatch;
 use crate::size_policy::allows_provider_runner;
 use crate::snapshot::{Place, Runner, RunnerState, Snapshot, WaitingJob};
 use crate::state::{Plan, idle, label_for, warm_candidate};
@@ -76,8 +78,9 @@ pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &Waiting
             for runner in &machine.runners {
                 if runner.state == phase
                     && (machine.connected || phase == RunnerState::Ready)
-                    && claim(plan, runner, job)
+                    && can_claim(plan, runner, job)
                 {
+                    plan.claimed.insert(runner.id.clone());
                     return true;
                 }
             }
@@ -85,8 +88,21 @@ pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &Waiting
         for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
             if let Some(retained) = &sandbox.runner
                 && retained.runner.state == phase
-                && claim(plan, &retained.runner, job)
+                && can_claim(plan, &retained.runner, job)
+                && match retained.dispatch {
+                    ProviderDispatch::Accepted => true,
+                    ProviderDispatch::Unsent(bound) => {
+                        snapshot.overflow_enabled
+                            && snapshot.provider(sandbox.provider).is_some_and(|provider| {
+                                provider.connected_and_available()
+                                    && !starts_held(provider, snapshot.now)
+                            })
+                            && bound
+                                .is_some_and(|bound| plan.reserve_provider(sandbox.provider, bound))
+                    }
+                }
             {
+                plan.claimed.insert(retained.runner.id.clone());
                 return true;
             }
         }
@@ -94,11 +110,11 @@ pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &Waiting
     false
 }
 
-fn claim(plan: &mut Plan, runner: &Runner, job: &WaitingJob) -> bool {
+fn can_claim(plan: &Plan, runner: &Runner, job: &WaitingJob) -> bool {
     idle(runner)
         && runner.target.as_ref() == Some(&job.target)
         && !plan.retiring.contains(&runner.id)
-        && plan.claimed.insert(runner.id.clone())
+        && !plan.claimed.contains(&runner.id)
 }
 
 pub(crate) fn retire_unneeded(snapshot: &Snapshot, plan: &mut Plan) {

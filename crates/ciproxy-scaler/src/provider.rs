@@ -35,15 +35,53 @@ pub struct ProviderSize {
     pub size: VmSize,
     /// Comparable catalog price in the caller's common price units.
     pub price: u64,
+    /// Cost bound for the next start, absent when a required cost is unknown.
+    pub start_bound: Option<StartBound>,
 }
 
-/// Spend and limit for the current UTC calendar month in common money units.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Full-lifetime spend bound for a prospective start.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct StartBound {
+    /// Amount in the current UTC month.
+    pub current_month: u64,
+    /// Amount in the next UTC month, if the lifetime crosses the boundary.
+    pub next_month: Option<u64>,
+}
+
+/// Counted costs and the monthly limit in common money units.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct MonthlySpend {
     /// Cost of ciproxy sandboxes only, excluding other account use.
     pub spent: u64,
     /// Saved monthly limit, expressed in the same units as `spent`.
     pub limit: u64,
+    /// Counted costs for the next UTC month, absent when unbounded.
+    pub next_month_spent: Option<u64>,
+}
+
+impl MonthlySpend {
+    /// Check the limit in each month the bound affects, with unknown costs preserved.
+    pub fn can_cover(self, bound: StartBound) -> Option<bool> {
+        if self.spent >= self.limit || bound.current_month > self.limit - self.spent {
+            return Some(false);
+        }
+        let Some(next) = bound.next_month else {
+            return Some(true);
+        };
+        let spent = self.next_month_spent?;
+        Some(spent <= self.limit && next <= self.limit - spent)
+    }
+
+    pub(crate) fn reserve(&mut self, bound: StartBound) -> bool {
+        if self.can_cover(bound) != Some(true) {
+            return false;
+        }
+        self.spent += bound.current_month;
+        if let Some(next) = bound.next_month {
+            self.next_month_spent = self.next_month_spent.map(|spent| spent + next);
+        }
+        true
+    }
 }
 
 /// Provider refusal facts retained until the caller observes recovery.
@@ -69,6 +107,8 @@ pub struct ProviderAccount {
     pub id: ProviderId,
     /// Whether the deployment has the settings to start on this provider.
     pub available: bool,
+    /// Whether this decision may plan new starts from a completed refresh.
+    pub refreshed: bool,
     /// Root sizing for new starts from this provider's current image.
     pub root_sizing: RootSizing,
     /// Current account, including any saved catalog or refusals.
@@ -121,4 +161,15 @@ pub struct ProviderRunner {
     pub required_root_disk_bytes: u64,
     /// Recorded guest launch time on the snapshot clock, if known.
     pub launched_at: Option<Duration>,
+    /// Whether the delivery still needs budget to dispatch.
+    pub dispatch: ProviderDispatch,
+}
+
+/// Admission state of a saved provider delivery.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProviderDispatch {
+    /// The provider request may already have gone out, or is still being prepared in memory.
+    Accepted,
+    /// The saved request has not gone out and needs a currently eligible size and budget.
+    Unsent(Option<StartBound>),
 }

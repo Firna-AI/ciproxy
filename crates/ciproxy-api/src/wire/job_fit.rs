@@ -19,8 +19,6 @@ pub struct WaitingLabelFit {
     pub waiting_jobs: String,
     /// Current label policy and fit, absent after retirement.
     pub current: Option<LabelView>,
-    /// Physical provider fits, with the same observations as the label view.
-    pub providers: Vec<ProviderLabelFit>,
     /// No permitted resource choice exists, absent while required facts are unknown.
     pub nothing_fits: Option<bool>,
     /// The current caller may edit this active label.
@@ -165,7 +163,7 @@ pub enum ProviderHold {
     Unavailable,
     /// The provider rejected its active key.
     KeyRejected,
-    /// Counted costs reached the current UTC month limit.
+    /// The provider limit cannot cover a start for this label.
     SpendLimit,
     /// No safe bound exists for one or more starts.
     CostsUnknown,

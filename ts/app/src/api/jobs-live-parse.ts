@@ -24,7 +24,6 @@ import {
   string,
   time,
 } from "./parse-core.ts";
-import { readProviderFit } from "./parse-label-facts.ts";
 import { readProvider } from "./parse-overflow.ts";
 import { readLabel } from "./parse-setup.ts";
 
@@ -34,7 +33,6 @@ function waitingLabel(value: unknown): WaitingLabelFit {
     label_id: string(fields.label_id),
     label_name: string(fields.label_name),
     waiting_jobs: decimal(fields.waiting_jobs),
-    providers: array(fields.providers, readProviderFit),
     can_edit: boolean(fields.can_edit),
     ask_admin: boolean(fields.ask_admin),
     current: optional(fields.current, readLabel),

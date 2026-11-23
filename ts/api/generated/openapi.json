@@ -6893,7 +6893,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LabelInput"
+                "$ref": "#/components/schemas/LabelUpdate"
               }
             }
           },
@@ -14732,7 +14732,7 @@
               "boolean",
               "null"
             ],
-            "description": "Current spend has reached the monthly limit, absent with incomplete bounds."
+            "description": "The limit cannot cover the cheapest eligible start, absent with incomplete bounds."
           },
           "measured_complete": {
             "type": "boolean",
@@ -15273,7 +15273,7 @@
             }
           }
         ],
-        "description": "A label with its complete stored order, also used for edits and previews."
+        "description": "A label with its complete order, used in responses and previews."
       },
       "LabelMachineFit": {
         "type": "object",
@@ -15476,6 +15476,30 @@
             "description": "What happens when no place fits. Always `wait` for a macOS label."
           }
         }
+      },
+      "LabelUpdate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/LabelSpec",
+            "description": "Definition of the label."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "order": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/LabelPlace"
+                },
+                "description": "Omit to keep the current order. An empty order leaves all jobs waiting."
+              }
+            }
+          }
+        ],
+        "description": "Update a label with an optional replacement order."
       },
       "LabelView": {
         "type": "object",
@@ -17287,7 +17311,7 @@
               "boolean",
               "null"
             ],
-            "description": "Whether exact counted costs have reached the saved monthly limit."
+            "description": "Whether the saved limit cannot cover the cheapest eligible start."
           },
           "settled_bound_cents": {
             "$ref": "#/components/schemas/Cents",
@@ -18481,7 +18505,6 @@
           "label_id",
           "label_name",
           "waiting_jobs",
-          "providers",
           "can_edit",
           "ask_admin"
         ],
@@ -18519,13 +18542,6 @@
               "null"
             ],
             "description": "No permitted resource choice exists, absent while required facts are unknown."
-          },
-          "providers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProviderLabelFit"
-            },
-            "description": "Physical provider fits, with the same observations as the label view."
           },
           "waiting_jobs": {
             "type": "string",

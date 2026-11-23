@@ -3,7 +3,7 @@
 use ciproxy_protocol::platform::Platform;
 use ciproxy_schema::labels::labels;
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
-use ciproxy_store_interface::labels::{Label, LabelPlace, LabelStore};
+use ciproxy_store_interface::labels::{Label, LabelPlace, LabelStore, WhenNothingFits};
 use ciproxy_store_interface::vm_size::VmSize;
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -61,28 +61,59 @@ impl LabelStore for PgStore {
     }
 
     fn update_label(&self, workspace_id: Uuid, label: &Label) -> Result<()> {
-        let fallback: &str = label.when_nothing_fits.into();
-        transaction(&mut *self.connection()?, |connection| {
-            lock_workspace(connection, workspace_id).store()?;
-            let count = diesel::update(
-                labels::table
-                    .filter(labels::workspace_id.eq(workspace_id))
-                    .filter(labels::deleted_at.is_null())
-                    .find(label.id),
-            )
-            .set((
-                labels::vcpus.eq(label.size.vcpus),
-                labels::memory_gb.eq(label.size.memory_gb),
-                labels::disk_gb.eq(label.size.disk_gb),
-                labels::when_nothing_fits.eq(fallback),
-            ))
-            .execute(connection)
-            .store()?;
-            require_record(count)?;
-            label_places::clear(connection, label.id).store()?;
-            label_places::insert(connection, label.id, &label.order).store()
-        })
+        update(
+            self,
+            workspace_id,
+            label.id,
+            label.size,
+            label.when_nothing_fits,
+            Some(&label.order),
+        )
     }
+
+    fn update_label_size(
+        &self,
+        workspace_id: Uuid,
+        label_id: Uuid,
+        size: VmSize,
+        when_nothing_fits: WhenNothingFits,
+    ) -> Result<()> {
+        update(self, workspace_id, label_id, size, when_nothing_fits, None)
+    }
+}
+
+fn update(
+    store: &PgStore,
+    workspace_id: Uuid,
+    label_id: Uuid,
+    size: VmSize,
+    when_nothing_fits: WhenNothingFits,
+    order: Option<&[LabelPlace]>,
+) -> Result<()> {
+    let fallback: &str = when_nothing_fits.into();
+    transaction(&mut *store.connection()?, |connection| {
+        lock_workspace(connection, workspace_id).store()?;
+        let count = diesel::update(
+            labels::table
+                .filter(labels::workspace_id.eq(workspace_id))
+                .filter(labels::deleted_at.is_null())
+                .find(label_id),
+        )
+        .set((
+            labels::vcpus.eq(size.vcpus),
+            labels::memory_gb.eq(size.memory_gb),
+            labels::disk_gb.eq(size.disk_gb),
+            labels::when_nothing_fits.eq(fallback),
+        ))
+        .execute(connection)
+        .store()?;
+        require_record(count)?;
+        if let Some(order) = order {
+            label_places::clear(connection, label_id).store()?;
+            label_places::insert(connection, label_id, order).store()?;
+        }
+        Ok(())
+    })
 }
 
 fn create(

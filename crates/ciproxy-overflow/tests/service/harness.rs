@@ -114,12 +114,12 @@ impl Harness {
                     backend,
                     capture: state.clone(),
                 }),
-                ImageSource {
+                Some(ImageSource {
                     reference: "shared-image-v7".to_owned(),
                     root_sizing: RootSizing {
                         image_root_bytes: 47_000_000_000,
                     },
-                },
+                }),
             ),
             None => providers,
         };

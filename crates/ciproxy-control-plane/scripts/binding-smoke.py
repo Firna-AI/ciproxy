@@ -11,7 +11,7 @@ from uuid import UUID
 
 sys.dont_write_bytecode = True
 
-from overflow_smoke.support import Live, wait
+from overflow_smoke.support import BOAT_PLACE, MACHINE_PLACE, Live, wait
 from overflow_smoke.binding_lifecycle import installation, reinstall, replace_inactive, restart
 
 
@@ -103,7 +103,7 @@ def replace(live, destination, restart_runtime):
     label = next(row for row in live.api("GET", "/labels") if row["label"]["name"] == name)
     settings = label["label"]
     own = destination == "own"
-    if settings["allow_machines"] != own or settings["allow_boat"] == own:
+    if settings["order"] != [MACHINE_PLACE if own else BOAT_PLACE]:
         raise ValueError("the fixture label must allow only the selected destination")
     if not own:
         live.policy(live.config["smoke_limit_cents"], wait_seconds=0)

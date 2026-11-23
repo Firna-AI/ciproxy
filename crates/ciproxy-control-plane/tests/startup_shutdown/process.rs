@@ -54,7 +54,10 @@ pub(super) fn spawn(
                 "JOB_IMAGE_MANIFEST_PATH",
                 "release/manifest.json".to_owned(),
             ),
-            ("OVERFLOW_KMS_KEY", "unused-startup-key".to_owned()),
+            (
+                "OVERFLOW_KMS_KEY",
+                "projects/startup-test/locations/global/keyRings/test/cryptoKeys/test".to_owned(),
+            ),
             ("CDN_SIGNING_KEY_NAME", "startup-test".to_owned()),
             ("GITHUB_APP_ID", "1".to_owned()),
             ("GITHUB_OAUTH_CLIENT_ID", "unused-client".to_owned()),

@@ -9,6 +9,46 @@ use super::fixture::Fixture;
 use super::fixture_io::json;
 
 #[tokio::test]
+async fn size_only_update_keeps_a_provider_offered_after_opening_the_label() {
+    let fixture = Fixture::new();
+    let admin = fixture.login(7, Some(Role::Admin)).await;
+    let created = fixture
+        .request(
+            Some(&admin),
+            "POST",
+            &fixture.path("/labels"),
+            Some(json!({
+                "name": "ordered", "vcpus": 2, "memory_gb": 8, "disk_gb": 20,
+                "when_nothing_fits": "wait"
+            })),
+        )
+        .await;
+    assert_eq!(created.status(), StatusCode::OK);
+    let created = json(created).await;
+    assert_eq!(created["label"]["order"], json!([{"kind": "machine"}]));
+    fixture
+        .database
+        .store
+        .offer_overflow_provider(fixture.workspace, OverflowProvider::Boat)
+        .unwrap();
+
+    let mut body = created["label"].clone();
+    body.as_object_mut().unwrap().remove("order");
+    body["vcpus"] = json!(4);
+    let path = fixture.path(&format!("/labels/{}", created["id"].as_str().unwrap()));
+    let edited = fixture
+        .request(Some(&admin), "PUT", &path, Some(body))
+        .await;
+    assert_eq!(edited.status(), StatusCode::OK);
+    let edited = json(edited).await;
+    assert_eq!(edited["label"]["vcpus"], 4);
+    assert_eq!(
+        edited["label"]["order"],
+        json!([{"kind": "machine"}, {"kind": "overflow", "provider": "boat"}])
+    );
+}
+
+#[tokio::test]
 async fn label_routes_default_the_order_and_preserve_each_explicit_position() {
     let fixture = Fixture::new();
     fixture

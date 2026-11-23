@@ -1029,7 +1029,7 @@ export interface components {
             /** @description The provider rejected the active key. */
             key_rejected: boolean;
             limit_cents?: components["schemas"]["Cents"] | null;
-            /** @description Current spend has reached the monthly limit, absent with incomplete bounds. */
+            /** @description The limit cannot cover the cheapest eligible start, absent with incomplete bounds. */
             limit_reached?: boolean | null;
             /** @description True when all provider start and runtime measurements are complete. */
             measured_complete: boolean;
@@ -1223,7 +1223,7 @@ export interface components {
              */
             unavailable_machines: number;
         };
-        /** @description A label with its complete stored order, also used for edits and previews. */
+        /** @description A label with its complete order, used in responses and previews. */
         LabelInput: components["schemas"]["LabelSpec"] & {
             /** @description Places in the order in which the label tries them. */
             order: components["schemas"]["LabelPlace"][];
@@ -1300,6 +1300,11 @@ export interface components {
             vcpus: number;
             /** @description What happens when no place fits. Always `wait` for a macOS label. */
             when_nothing_fits: components["schemas"]["NothingFits"];
+        };
+        /** @description Update a label with an optional replacement order. */
+        LabelUpdate: components["schemas"]["LabelSpec"] & {
+            /** @description Omit to keep the current order. An empty order leaves all jobs waiting. */
+            order?: components["schemas"]["LabelPlace"][] | null;
         };
         /** @description A stored label with its current machine fit. */
         LabelView: {
@@ -1979,7 +1984,7 @@ export interface components {
             bounded: boolean;
             /** @description Provider-confirmed costs, rounded once after aggregation to integer US cents. */
             confirmed_cents: components["schemas"]["Cents"];
-            /** @description Whether exact counted costs have reached the saved monthly limit. */
+            /** @description Whether the saved limit cannot cover the cheapest eligible start. */
             limit_reached?: boolean | null;
             /** @description The settled-bound portion of unconfirmed costs, rounded after aggregation. */
             settled_bound_cents: components["schemas"]["Cents"];
@@ -2405,8 +2410,6 @@ export interface components {
             label_name: string;
             /** @description No permitted resource choice exists, absent while required facts are unknown. */
             nothing_fits?: boolean | null;
-            /** @description Physical provider fits, with the same observations as the label view. */
-            providers: components["schemas"]["ProviderLabelFit"][];
             /** @description Visible waiting jobs with this exact label as a decimal string. */
             waiting_jobs: string;
         };
@@ -6353,7 +6356,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LabelInput"];
+                "application/json": components["schemas"]["LabelUpdate"];
             };
         };
         responses: {

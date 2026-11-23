@@ -32,25 +32,23 @@ pub(crate) fn compose(
     config: &Config,
     store: Arc<dyn Store>,
     registrations: Arc<dyn RunnerRegistrations>,
-) -> Result<Option<OverflowRuntime>> {
+) -> Result<OverflowRuntime> {
     let root_sizing = RootSizing {
         image_root_bytes: config.image_disk_bytes,
     };
-    let mut providers = ProviderRegistry::default();
-    if let Some(snapshot) = &config.boat_shared_snapshot {
-        providers = providers.with_provider(
+    let providers = Arc::new(
+        ProviderRegistry::default().with_provider(
             OverflowProvider::Boat,
             Arc::new(BoatFactory::new()),
-            ImageSource {
-                reference: snapshot.clone(),
-                root_sizing,
-            },
-        );
-    }
-    if providers.is_empty() {
-        return Ok(None);
-    }
-    let providers = Arc::new(providers);
+            config
+                .boat_shared_snapshot
+                .as_ref()
+                .map(|snapshot| ImageSource {
+                    reference: snapshot.clone(),
+                    root_sizing,
+                }),
+        ),
+    );
     let transport = Arc::new(
         CloudKmsRest::new(
             config.overflow_kms_key.clone(),
@@ -80,9 +78,9 @@ pub(crate) fn compose(
             tokens: Arc::new(RandomTokens),
         },
     ));
-    Ok(Some(OverflowRuntime {
+    Ok(OverflowRuntime {
         service,
         retirement,
         providers,
-    }))
+    })
 }

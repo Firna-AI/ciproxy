@@ -258,6 +258,16 @@ async fn full_lifetime_pending_bound_blocks_the_next_dispatch_until_limit_is_rai
         .unwrap();
     harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.ports.creates.lock().unwrap().len(), 1);
+    assert_eq!(
+        harness
+            .fixture
+            .store
+            .overflow_runner_intents(harness.fixture.workspace)
+            .unwrap()
+            .len(),
+        1,
+        "the scaler reserves only the starts that fit before registration"
+    );
     harness
         .fixture
         .store

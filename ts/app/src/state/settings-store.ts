@@ -11,6 +11,7 @@ import type {
   LabelCreate,
   LabelFit,
   LabelInput,
+  LabelUpdate,
   LabelView,
   RepositorySelection,
   Success,
@@ -52,7 +53,8 @@ export type SettingsStore = {
   /** Add a label, or save its size and order by ID. */
   saveLabel(
     ...args:
-      [labelId: null, input: LabelCreate] | [labelId: string, input: LabelInput]
+      | [labelId: null, input: LabelCreate]
+      | [labelId: string, input: LabelUpdate]
   ): Promise<ApiResult<LabelView>>;
   deleteLabel(labelId: string): Promise<ApiResult<Success>>;
   previewLabel(input: LabelInput): Promise<ApiResult<LabelFit>>;

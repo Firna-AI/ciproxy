@@ -31,6 +31,7 @@ pub(super) fn fit(
     provider: OverflowProvider,
     requested: VmSize,
     allowed: bool,
+    allows_fallback: bool,
     observation: &Observation<'_>,
 ) -> ProviderFit {
     let observed = observation.view.and_then(|view| view.provider(provider));
@@ -87,6 +88,28 @@ pub(super) fn fit(
         }
         _ => ProviderSizeFit::Unavailable,
     };
+    let largest_holds_image = allowed
+        && required.is_some()
+        && largest
+            .zip(sizing)
+            .is_some_and(|(size, root)| size.size.disk_bytes >= root.image_root_bytes);
+    let largest_refused = largest.is_some_and(|size| refused(&size.id.0));
+    let candidate = eligible_size
+        .as_ref()
+        .map(|size| size.name.as_str())
+        .or_else(|| {
+            largest
+                .filter(|_| {
+                    allows_fallback
+                        && largest_holds_image
+                        && !largest_refused
+                        && matches!(fit, ProviderSizeFit::NoSizeFits)
+                })
+                .map(|size| size.id.0.as_str())
+        });
+    let hold = allowed
+        .then(|| hold(observation, observed, candidate))
+        .flatten();
     ProviderFit {
         view: ProviderLabelFit {
             provider: provider.into(),
@@ -98,18 +121,18 @@ pub(super) fn fit(
                 size: size_view(size.size),
             }),
             required_root_disk_bytes: required.map(|size| size.disk_bytes.to_string()),
-            hold: allowed.then(|| hold(observation, observed)).flatten(),
+            hold,
         },
-        largest_holds_image: allowed
-            && required.is_some()
-            && largest
-                .zip(sizing)
-                .is_some_and(|(size, root)| size.size.disk_bytes >= root.image_root_bytes),
-        largest_refused: largest.is_some_and(|size| refused(&size.id.0)),
+        largest_holds_image,
+        largest_refused,
     }
 }
 
-fn hold(observation: &Observation<'_>, provider: Option<&ProviderView>) -> Option<ProviderHold> {
+fn hold(
+    observation: &Observation<'_>,
+    provider: Option<&ProviderView>,
+    size: Option<&str>,
+) -> Option<ProviderHold> {
     if !observation.enabled {
         return Some(ProviderHold::Off);
     }
@@ -125,11 +148,10 @@ fn hold(observation: &Observation<'_>, provider: Option<&ProviderView>) -> Optio
     if account.rejected_at.is_some() {
         return Some(ProviderHold::KeyRejected);
     }
-    let (Ok(counted), Some(limit)) = (provider.spend.counted_usd(), provider.limit_usd) else {
-        return Some(ProviderHold::CostsUnknown);
-    };
-    if counted >= limit {
-        return Some(ProviderHold::SpendLimit);
+    match provider.size_limit_reached(size) {
+        Some(true) => return Some(ProviderHold::SpendLimit),
+        None => return Some(ProviderHold::CostsUnknown),
+        Some(false) => {}
     }
     if provider
         .state

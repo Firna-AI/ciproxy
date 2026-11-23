@@ -206,6 +206,7 @@ fn provider_observations(
         .filter(|view| view.refresh == RefreshStatus::Current)
         .map(|view| {
             let counted = view.spend.counted_usd().ok();
+            let limit_reached = view.limit_reached();
             JobOverflow {
                 provider: view.provider.into(),
                 connected: view.account.is_some(),
@@ -216,9 +217,7 @@ fn provider_observations(
                 retry_at: view.state.retry_at,
                 limit_cents: view.limit_usd.map(billing_views::cents),
                 counted_cents: counted.map(billing_views::cents),
-                limit_reached: counted
-                    .zip(view.limit_usd)
-                    .map(|(counted, limit)| counted >= limit),
+                limit_reached,
                 measured_complete: view.spend.complete(),
                 next_month: next,
                 refused_sizes: view.state.refused_sizes,

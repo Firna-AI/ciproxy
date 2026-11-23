@@ -33,6 +33,7 @@ impl OverflowService {
             Err(error) => return Err(error),
         };
         account.state.trial = facts.trial;
+        account.state.start_fee_bound_usd = facts.start_fee_bound_usd;
         if facts.billing_ready {
             account.state.billing_required = false;
         }
@@ -74,6 +75,7 @@ impl OverflowService {
                 catalog::offers(capabilities.capacity.account_capacity().await.internal()?)?;
             account.state.checked_at = Some(now);
             account.state.trial = facts.trial;
+            account.state.start_fee_bound_usd = facts.start_fee_bound_usd;
             account.state.refused_sizes.clear();
             if facts.billing_ready {
                 account.state.billing_required = false;
@@ -92,7 +94,7 @@ impl OverflowService {
         let mut snapshot = session.call(|session| session.snapshot()).await?;
         let mut refreshes = Vec::new();
         for provider in OverflowProvider::all() {
-            let status = if self.dependencies.providers.get(provider).is_err() {
+            let status = if self.dependencies.providers.start_image(provider).is_err() {
                 RefreshStatus::Unavailable
             } else {
                 match self

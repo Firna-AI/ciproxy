@@ -59,6 +59,7 @@ pub(super) fn snapshot() -> OverflowSnapshot {
                 wallet: "personal".to_owned(),
                 checked_at: Some(at()),
                 sizes: vec![offer()],
+                start_fee_bound_usd: Some(Decimal::new(3, 2)),
                 ..AccountState::default()
             },
         }],

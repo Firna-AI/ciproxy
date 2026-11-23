@@ -78,8 +78,9 @@ control admission after that flag.
 
 ### Overflow providers
 
-The optional `BOAT_SHARED_SNAPSHOT` setting adds Boat to the registry.
-Without it, own machines still run jobs, and Boat stays off.
+The optional `BOAT_SHARED_SNAPSHOT` setting enables new Boat starts.
+The runtime maintains saved Boat deliveries and serves their exit callback
+with or without this setting.
 The runtime, the dashboard API, and the exit callback share one overflow
 service. The [overflow guide](overflow.md) gives the configuration, the
 runtime guarantees, and the exit callback. The

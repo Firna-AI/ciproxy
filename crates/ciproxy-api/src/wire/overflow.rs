@@ -177,6 +177,6 @@ pub struct ProviderSpendView {
     pub settled_bound_cents: Cents,
     /// Whether all current-month costs have either a known value or a safe bound.
     pub bounded: bool,
-    /// Whether exact counted costs have reached the saved monthly limit.
+    /// Whether the saved limit cannot cover the cheapest eligible start.
     pub limit_reached: Option<bool>,
 }

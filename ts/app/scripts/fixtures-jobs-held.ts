@@ -49,7 +49,6 @@ function heldLabel(
     ...base,
     label_name: name,
     nothing_fits: false,
-    providers: [provider],
     current: {
       id: base.label_id,
       label: {

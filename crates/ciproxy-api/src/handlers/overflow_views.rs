@@ -102,10 +102,7 @@ fn spend_view(view: &ProviderView) -> Result<ProviderSpendView> {
         unconfirmed_cents: display_cents(view.spend.pending_usd + view.spend.settled_bound_usd)?,
         settled_bound_cents: display_cents(view.spend.settled_bound_usd)?,
         bounded: counted.is_ok(),
-        limit_reached: counted
-            .ok()
-            .zip(view.limit_usd)
-            .map(|(counted, limit)| counted >= limit),
+        limit_reached: view.limit_reached(),
     })
 }
 

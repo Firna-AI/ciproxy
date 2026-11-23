@@ -30,12 +30,14 @@ pub(crate) fn resources(state: &AccountState) -> Result<ResourceCatalog> {
 
 /// Map eligible catalog facts without reading or requiring any cost facts.
 pub(crate) fn scaler_sizes(state: &AccountState) -> Result<Vec<ProviderSize>> {
+    eligible_offers(state).map(resource_size).collect()
+}
+
+pub(crate) fn eligible_offers(state: &AccountState) -> impl Iterator<Item = &SizeOffer> {
     state
         .sizes
         .iter()
         .filter(|size| !state.refused_sizes.contains(&size.name))
-        .map(resource_size)
-        .collect()
 }
 
 fn resource_size(size: &SizeOffer) -> Result<ProviderSize> {
@@ -47,6 +49,7 @@ fn resource_size(size: &SizeOffer) -> Result<ProviderSize> {
             disk_bytes: size.disk_bytes,
         },
         price: micros(size.hourly_usd)?,
+        start_bound: None,
     })
 }
 

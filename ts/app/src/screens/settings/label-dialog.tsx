@@ -27,6 +27,7 @@ import {
   labelFailure,
   newDraft,
   noLimits,
+  updateRequest,
   type LabelDraft,
   type SizeField,
 } from "../../view/settings-label-form.ts";
@@ -65,7 +66,9 @@ export function LabelDialog({
     overflowState.status === "ready" ? overflowState.settings : null;
   const offered =
     settings === null ? null : offeredProviders(settings.providers);
-  const saved = target.kind === "edit" ? target.label : null;
+  const [saved] = useState(() =>
+    target.kind === "edit" ? target.label : null,
+  );
   const [typed, setDraft] = useState<LabelDraft>(() =>
     saved === null ? newDraft(labels, []) : editDraft(saved.label),
   );
@@ -125,7 +128,10 @@ export function LabelDialog({
     setFailure(null);
     const result = await (saved === null
       ? store.saveLabel(null, createRequest(check.input, draft))
-      : store.saveLabel(saved.id, check.input));
+      : store.saveLabel(
+          saved.id,
+          updateRequest(check.input, saved.label.order),
+        ));
     setBusy(null);
     if (result.ok) return onClose();
     const refused = labelFailure(result.failure, "save");

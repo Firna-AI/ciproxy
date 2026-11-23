@@ -35,6 +35,9 @@ pub struct AccountState {
     pub sizes: Vec<SizeOffer>,
     /// The account currently has a free trial.
     pub trial: bool,
+    /// Latest published or quoted start fee bound in USD.
+    #[serde(default)]
+    pub start_fee_bound_usd: Option<Decimal>,
     /// A definitive billing refusal remains until a successful recovery check.
     pub billing_required: bool,
     /// Earliest next attempt from a supplied relative or absolute retry time.

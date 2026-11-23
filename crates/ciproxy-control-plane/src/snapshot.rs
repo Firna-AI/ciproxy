@@ -127,7 +127,7 @@ pub(crate) fn build(
             .collect(),
         overflow_enabled: input.settings.overflow_enabled,
         providers: Vec::new(),
-        sandboxes: overflow_snapshot::project(input, &input.overflow.starts),
+        sandboxes: overflow_snapshot::project(input, now),
         overflow_wait: Duration::from_secs(match input.settings.overflow_wait {
             OverflowWait::AtOnce => 0,
             OverflowWait::Seconds15 => 15,

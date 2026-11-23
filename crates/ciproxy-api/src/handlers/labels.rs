@@ -13,7 +13,7 @@ use crate::pages::PageServices;
 use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::job_fit::LabelFit;
-use crate::wire::settings::{LabelCreate, LabelInput, LabelPath, LabelView};
+use crate::wire::settings::{LabelCreate, LabelInput, LabelPath, LabelUpdate, LabelView};
 
 use super::{label_facts::Facts, label_views};
 
@@ -145,13 +145,13 @@ pub(crate) async fn create(
     ))
 }
 
-#[utoipa::path(operation_id = "labels_update", put, path = "/workspaces/{workspace_id}/labels/{label_id}", params(LabelPath), request_body = LabelInput, responses((status = 200, body = LabelView)), security(("session" = [])))]
+#[utoipa::path(operation_id = "labels_update", put, path = "/workspaces/{workspace_id}/labels/{label_id}", params(LabelPath), request_body = LabelUpdate, responses((status = 200, body = LabelView)), security(("session" = [])))]
 pub(crate) async fn update(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<LabelPath>,
     pages: Option<Extension<Arc<PageServices>>>,
-    Json(input): Json<LabelInput>,
+    Json(input): Json<LabelUpdate>,
 ) -> Result<Json<LabelView>> {
     let workspace_id = state
         .access
@@ -165,9 +165,14 @@ pub(crate) async fn update(
     if previous.name != input.spec.name || previous.platform != input.spec.platform {
         return Err(Error::Conflict);
     }
-    let label = label_views::stored(path.label_id, input.spec, input.order)?;
+    let replace_order = input.order.is_some();
+    let label = label_views::stored(path.label_id, input.spec, input.order.unwrap_or_default())?;
     query(state.store.clone(), move |store| {
-        store.update_label(workspace_id, &label)
+        if replace_order {
+            store.update_label(workspace_id, &label)
+        } else {
+            store.update_label_size(workspace_id, label.id, label.size, label.when_nothing_fits)
+        }
     })
     .await?;
     Ok(Json(

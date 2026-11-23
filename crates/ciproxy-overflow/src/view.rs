@@ -12,7 +12,8 @@ use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-use crate::catalog::{ResourceCatalog, micros, resources, scaler_sizes};
+use crate::admission::catalog_bound;
+use crate::catalog::{ResourceCatalog, eligible_offers, micros, resources, scaler_sizes};
 use crate::error::{Error, Result};
 use crate::spend;
 
@@ -123,6 +124,8 @@ pub struct ProviderView {
     pub offered: bool,
     /// Availability and freshness of provider observations.
     pub refresh: RefreshStatus,
+    at: DateTime<Utc>,
+    next_month_spent: Option<u64>,
 }
 
 impl ProviderView {
@@ -134,7 +137,7 @@ impl ProviderView {
         resources(&self.state).map(Some)
     }
 
-    fn from_snapshot(
+    pub(crate) fn from_snapshot(
         provider: OverflowProvider,
         snapshot: &OverflowSnapshot,
         now: DateTime<Utc>,
@@ -158,19 +161,39 @@ impl ProviderView {
                 .map(|limit| Decimal::new(limit, 6)),
             offered: settings.is_some_and(|settings| settings.offered),
             refresh,
+            at: now,
+            next_month_spent: spend::next_month(now)
+                .and_then(|next| spend::current(provider, &snapshot.starts, next))
+                .and_then(|spend| micros(spend.counted_usd()?))
+                .ok(),
         })
     }
 
-    /// Preserve catalog policy for retained runners while permitting no new start.
-    pub fn retained_scaler_account(&self) -> Result<AccountFacts> {
-        let sizes = scaler_sizes(&self.state)?;
-        Ok(AccountFacts {
-            connected: self.account.is_some(),
-            spend: MonthlySpend { spent: 0, limit: 0 },
-            largest_size: sizes.last().map(|size| size.id.clone()),
-            sizes,
-            refusals: Vec::new(),
-        })
+    /// Whether the limit holds even the least expensive eligible size.
+    pub fn limit_reached(&self) -> Option<bool> {
+        let size = eligible_offers(&self.state).min_by_key(|size| size.hourly_usd);
+        self.size_limit_reached(size.map(|size| size.name.as_str()))
+    }
+
+    /// Whether the limit holds the selected size, or is exhausted without a size choice.
+    /// An absent result means the budget cannot be evaluated.
+    pub fn size_limit_reached(&self, size: Option<&str>) -> Option<bool> {
+        self.limit_usd?;
+        let spend = self.scaler_spend().ok()?;
+        if spend.spent >= spend.limit {
+            return Some(true);
+        }
+        let Some(size) = size else {
+            return Some(false);
+        };
+        let offer = self.state.sizes.iter().find(|offer| offer.name == size)?;
+        let bound = catalog_bound(&self.state, offer, self.at).ok()?;
+        spend.can_cover(bound).map(|covers| !covers)
+    }
+
+    /// Project durable admission facts for a delivery that has yet to dispatch.
+    pub fn retained_scaler_account(&self, clock_origin: DateTime<Utc>) -> Result<AccountFacts> {
+        self.scaler_facts(clock_origin, self.scaler_spend().unwrap_or_default())
     }
     /// Map known facts to the scaler, using the same UTC origin as its snapshot.
     ///
@@ -182,8 +205,26 @@ impl ProviderView {
         ) {
             return Err(Error::ProviderUnavailable);
         }
-        let counted = self.spend.counted_usd()?;
-        let sizes = scaler_sizes(&self.state)?;
+        self.scaler_facts(clock_origin, self.scaler_spend()?)
+    }
+
+    fn scaler_spend(&self) -> Result<MonthlySpend> {
+        Ok(MonthlySpend {
+            spent: micros(self.spend.counted_usd()?)?,
+            limit: micros(self.limit_usd.unwrap_or(Decimal::ZERO))?,
+            next_month_spent: self.next_month_spent,
+        })
+    }
+
+    fn scaler_facts(
+        &self,
+        clock_origin: DateTime<Utc>,
+        spend: MonthlySpend,
+    ) -> Result<AccountFacts> {
+        let mut sizes = scaler_sizes(&self.state)?;
+        for (size, offer) in sizes.iter_mut().zip(eligible_offers(&self.state)) {
+            size.start_bound = catalog_bound(&self.state, offer, self.at).ok();
+        }
         let mut refusals = Vec::new();
         if self
             .account
@@ -201,10 +242,7 @@ impl ProviderView {
         }
         Ok(AccountFacts {
             connected: self.account.is_some(),
-            spend: MonthlySpend {
-                spent: micros(counted)?,
-                limit: micros(self.limit_usd.unwrap_or(Decimal::ZERO))?,
-            },
+            spend,
             largest_size: sizes.last().map(|size| size.id.clone()),
             sizes,
             refusals,

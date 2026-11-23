@@ -211,7 +211,6 @@ function baseJobs(
                         },
                 },
               },
-              providers: [provider],
             },
           ],
     overflow:

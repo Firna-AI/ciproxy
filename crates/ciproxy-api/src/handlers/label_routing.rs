@@ -28,8 +28,11 @@ pub(super) fn enrich(
             .filter(|provider| !ordered.clone().any(|listed| listed == *provider))
             .map(|provider| (provider, false)),
     );
+    let allows_fallback = matches!(label.spec.when_nothing_fits, NothingFits::LargestOverflow);
     let mut providers: Vec<_> = all
-        .map(|(provider, allowed)| label_provider::fit(provider, requested, allowed, observation))
+        .map(|(provider, allowed)| {
+            label_provider::fit(provider, requested, allowed, allows_fallback, observation)
+        })
         .collect();
     fit.routing = routing(label, &providers, own_fits, own_unknown);
     record_physical_fallback(label, &mut providers, own_fits, own_unknown);

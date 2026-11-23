@@ -31,6 +31,7 @@ export type LabelPlace = Schemas["LabelPlace"];
 export type LabelRouting = Schemas["LabelRouting"];
 export type LabelWaitReason = Schemas["LabelWaitReason"];
 export type LabelInput = Schemas["LabelInput"];
+export type LabelUpdate = Schemas["LabelUpdate"];
 export type LabelMachineFit = Schemas["LabelMachineFit"];
 export type LabelView = Schemas["LabelView"];
 export type LinkState = Schemas["LinkState"];

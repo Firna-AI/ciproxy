@@ -33,6 +33,7 @@ pub(super) struct Ports {
     pub(super) reject: AtomicBool,
     pub(super) trial: AtomicBool,
     pub(super) pending: AtomicBool,
+    pub(super) maintenance_unavailable: AtomicBool,
     pub(super) recovered: Mutex<Option<BackendSandbox>>,
     pub(super) delete_fail: AtomicBool,
     pub(super) creates: Mutex<Vec<BackendCreateSandboxRequest>>,
@@ -53,6 +54,7 @@ impl Ports {
             reject: AtomicBool::new(false),
             trial: AtomicBool::new(false),
             pending: AtomicBool::new(false),
+            maintenance_unavailable: AtomicBool::new(false),
             recovered: Mutex::new(None),
             delete_fail: AtomicBool::new(false),
             creates: Mutex::new(Vec::new()),
@@ -194,6 +196,9 @@ impl ProviderFactory for Factory {
         Ok(self.0.backend())
     }
     fn maintenance(&self, _: &Secret, _: &str) -> Result<MaintenanceCapabilities> {
+        if self.0.maintenance_unavailable.load(Ordering::SeqCst) {
+            return Err(Error::ProviderUnavailable);
+        }
         Ok(self.0.backend().maintenance())
     }
     fn create_request(&self, start: SandboxStart<'_>) -> BackendCreateSandboxRequest {

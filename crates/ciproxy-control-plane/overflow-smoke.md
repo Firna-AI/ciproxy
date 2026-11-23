@@ -50,9 +50,9 @@ overflow wait.
 9. Get read access to the control-plane database for `psql`, for example
    through a Cloud SQL Auth Proxy.
 
-The script stops before it dispatches a job when Boat is not connected or
-not available. It also stops when the labels or the machine do not match
-these steps.
+The script reads Boat's `account` and `available` fields in `providers`.
+It stops before dispatch when Boat is disconnected or unavailable. It
+checks each label's `order` and the machine fit before dispatch.
 
 ## Credential file
 
@@ -110,9 +110,9 @@ response body.
 
 ## Local tests
 
-These tests check that each delete request of the cleanup confirms its
-target sandbox. They replace Boat and the clock with stand-ins. They need
-no credential file, Boat key, or network. They start no sandbox:
+The local tests check the policy reads and writes and the cleanup of each
+target sandbox. They use response fixtures and start no sandbox. Run them
+without live credentials or network access.
 
 ```sh
 python3 -B -m unittest discover -s crates/ciproxy-control-plane/scripts/tests -v
@@ -124,7 +124,7 @@ They do not count as a live check. The repository gate does not run them.
 
 The script cleans up after each check, also after a failure or Ctrl-C:
 
-1. It turns off new Boat starts. It keeps the saved wait and limit.
+1. It turns off overflow with `enabled` and the saved `wait_seconds`.
 2. It finds the run of each saved marker. It cancels each unfinished run
    and waits until the run completes.
 3. It reads the durable start state again after cancellation completes.
@@ -135,7 +135,8 @@ The script cleans up after each check, also after a failure or Ctrl-C:
    the shared [Boat delete helper](../../image/boat_delete.py). The helper
    takes the encoded route and the `X-Ascii-Confirm-Delete` header from
    the target sandbox ID.
-5. It restores the original overflow switch, wait, and limit.
+5. It restores the Boat limit on `/overflow/providers/boat/spend-limit`.
+   When that succeeds, it restores the original switch and wait.
 
 One 90-second deadline covers the whole cleanup. An unresolved start keeps
 overflow off and prevents restoration. The script reports unresolved
@@ -145,8 +146,9 @@ the current settings before another check. Do not press Ctrl-C again during
 cleanup.
 
 Each check records a new file under `.context/ciproxy-mvp-m15/live/`. It
-saves `original_policy` there before it changes a setting. That policy holds
-only `enabled`, `wait_seconds`, and `spend_limit_cents`. The file also lists
+saves `original_policy` before the first policy write or workflow dispatch.
+That policy holds `enabled`, `wait_seconds`, and the Boat
+`spend_limit_cents` from `providers`. The file also lists
 the `markers` and `runs` of the check. `delivery_baseline` and
 `intent_baseline` identify records that existed before the check. The file
 holds no credential. Git ignores it when the current directory is the
@@ -161,13 +163,13 @@ When the script stopped before its cleanup ended, or printed a cleanup
 3. Find each run of the test repository with an ID from `runs`, or with the
    name `ciproxy-smoke-<marker>`. Cancel each unfinished run. Wait until each
    run completes.
-4. Keep the control plane running with `BOAT_SHARED_SNAPSHOT` set. Its
-   cleanup deletes each idle Boat sandbox that no job needs.
+4. Keep the control plane running. Its cleanup deletes each idle Boat
+   sandbox that no job needs.
 5. Check the Boat account for remaining ciproxy sandboxes of the test
    workspace. Boat ends each one at its lifetime at the latest.
-6. In Settings under Overflow, restore the exact values of
-   `original_policy`. A null `original_policy` means that the check changed
-   no setting.
+6. In Settings under Overflow, restore the Boat limit from
+   `original_policy` first. Then restore the switch and wait. A null
+   `original_policy` means that the command took no overflow snapshot.
 
 The GitHub CLI can list and cancel the runs:
 

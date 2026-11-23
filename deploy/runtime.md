@@ -175,8 +175,8 @@ Without a version, deploy applies an empty Secret and continues. It removes
 any previous `BOAT_SHARED_SNAPSHOT` key that it owns. The chart's optional
 key reference then leaves the variable unset. Access denials, disabled
 versions, and apply failures stop the deploy with no payload in the log.
-Keep a usable version while Boat sandboxes can exist. Without the value,
-the runtime stops Boat cleanup and removes the exit callback.
+Without this value, the runtime skips new Boat starts. Cleanup and the
+exit callback continue for saved Boat deliveries.
 
 The chart passes the full resource path to `OVERFLOW_KMS_KEY`. The key
 keeps its existing name.

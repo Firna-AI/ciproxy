@@ -65,7 +65,7 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
         &mut restarted,
         &harness.fixture,
         &harness.ports,
-        Default::default(),
+        Some(Default::default()),
     );
     harness.runtime = restarted;
 

@@ -33,7 +33,7 @@ pub struct JobOverflow {
     pub limit_cents: Option<Cents>,
     /// Conservatively counted spend, absent when safe bounds are unavailable.
     pub counted_cents: Option<Cents>,
-    /// Current spend has reached the monthly limit, absent with incomplete bounds.
+    /// The limit cannot cover the cheapest eligible start, absent with incomplete bounds.
     pub limit_reached: Option<bool>,
     /// True when all provider start and runtime measurements are complete.
     pub measured_complete: bool,

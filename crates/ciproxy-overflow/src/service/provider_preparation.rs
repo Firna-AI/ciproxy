@@ -15,7 +15,7 @@ use crate::catalog;
 use crate::error::{Error, Result, ResultExt};
 use crate::provider::Capabilities;
 use crate::session::Session;
-use crate::spend;
+use crate::view::{ProviderView, RefreshStatus};
 
 use super::OverflowService;
 
@@ -71,13 +71,13 @@ impl OverflowService {
                 if !allows_fallback || has_fit {
                     continue;
                 }
-                let (Ok(configured), Some(candidate)) = (
-                    self.dependencies.providers.get(provider),
+                let (Ok(image), Some(candidate)) = (
+                    self.dependencies.providers.start_image(provider),
                     snapshot.active_account(provider),
                 ) else {
                     continue;
                 };
-                let sizing = configured.image.root_sizing;
+                let sizing = image.root_sizing;
                 let Some(required) = sizing.vm_size(requested) else {
                     continue;
                 };
@@ -109,7 +109,8 @@ impl OverflowService {
                 Some(ProviderChoice::Largest(size))
                     if allows_fallback
                         && fallback.is_none()
-                        && (saved_provider || peer_can_start(snapshot, candidate, now)) =>
+                        && (saved_provider
+                            || peer_can_start(snapshot, candidate, &size.id.0, now)) =>
                 {
                     fallback = Some((provider, size.id.0.clone()));
                 }
@@ -177,19 +178,12 @@ impl OverflowService {
 fn peer_can_start(
     snapshot: &OverflowSnapshot,
     account: &AccountRecord,
+    size: &str,
     now: DateTime<Utc>,
 ) -> bool {
     let provider = account.account.provider;
     account.account.rejected_at.is_none()
         && preparation_wait(&account.state, now).is_none()
-        && snapshot
-            .provider_settings
-            .get(&provider)
-            .and_then(|settings| settings.spend_limit_usd_micros)
-            .and_then(|limit| u64::try_from(limit).ok())
-            .is_some_and(|limit| {
-                spend::current(provider, &snapshot.starts, now)
-                    .and_then(|spend| catalog::micros(spend.counted_usd()?))
-                    .is_ok_and(|counted| counted < limit)
-            })
+        && ProviderView::from_snapshot(provider, snapshot, now, RefreshStatus::Stored)
+            .is_ok_and(|view| view.size_limit_reached(Some(size)) == Some(false))
 }

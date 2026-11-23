@@ -148,7 +148,7 @@ impl Harness {
             None,
             Arc::new(Unimock::new(())),
         );
-        let service = attach(&mut runtime, &fixture, &ports, Default::default());
+        let service = attach(&mut runtime, &fixture, &ports, Some(Default::default()));
         service
             .connect(
                 fixture.workspace,
@@ -177,7 +177,7 @@ impl Harness {
             &mut self.runtime,
             &self.fixture,
             &self.ports,
-            Default::default(),
+            Some(Default::default()),
         );
     }
 

@@ -23,15 +23,15 @@ pub(super) fn attach(
     runtime: &mut MachineRuntime,
     fixture: &Fixture,
     ports: &Arc<Ports>,
-    root_sizing: RootSizing,
+    root_sizing: Option<RootSizing>,
 ) -> Arc<dyn Overflow> {
     let providers = Arc::new(ProviderRegistry::default().with_provider(
         OverflowProvider::Boat,
         Arc::new(Factory(ports.clone())),
-        ImageSource {
+        root_sizing.map(|root_sizing| ImageSource {
             reference: "shared-image".to_owned(),
             root_sizing,
-        },
+        }),
     ));
     let authority = Arc::new(OverflowRunnerAuthority {
         store: fixture.store.clone(),

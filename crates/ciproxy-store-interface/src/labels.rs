@@ -64,4 +64,12 @@ pub trait LabelStore: Send + Sync {
     /// Replace the size, order, and fallback of a label together.
     /// Keep its name and platform.
     fn update_label(&self, workspace_id: Uuid, label: &Label) -> Result<()>;
+    /// Replace the size and fallback of a label while keeping its stored order.
+    fn update_label_size(
+        &self,
+        workspace_id: Uuid,
+        label_id: Uuid,
+        size: VmSize,
+        when_nothing_fits: WhenNothingFits,
+    ) -> Result<()>;
 }

@@ -4,9 +4,10 @@ use std::time::Duration;
 
 use crate::actions::StartReason;
 use crate::decision::decide;
-use crate::provider::{ProviderSizeId, Refusal};
+use crate::provider::{ProviderSizeId, Refusal, StartBound};
+use crate::snapshot::Place;
 
-use super::fixtures::{boat, boat_with_request, large, own, queued, small, snapshot};
+use super::fixtures::{BOAT, boat, boat_with_request, large, own, queued, small, snapshot};
 
 #[test]
 fn boat_availability_blocks_new_starts_at_the_spend_limit() {
@@ -55,6 +56,31 @@ fn raised_or_reset_spend_limit_allows_new_overflow() {
             )]
         );
     }
+}
+
+#[test]
+fn starts_in_the_same_decision_reserve_the_next_months_budget() {
+    let mut state = snapshot();
+    state.labels[0].order = vec![Place::Provider(BOAT), Place::OwnMachines];
+    state.providers[0].facts.spend.next_month_spent = Some(35);
+    state.providers[0].facts.sizes[0].start_bound = Some(StartBound {
+        current_month: 5,
+        next_month: Some(50),
+    });
+    state.queue = vec![queued("a", "ciproxy", 0), queued("b", "ciproxy", 0)];
+    assert_eq!(
+        decide(&state),
+        [
+            boat(
+                "a",
+                "ciproxy",
+                small(),
+                "small",
+                StartReason::ProviderBeforeOwnMachines
+            ),
+            own("b", "ciproxy", small()),
+        ]
+    );
 }
 
 #[test]
