@@ -29,10 +29,13 @@ The pages follow the marketing and docs mockups under
 
 The look is Graphite:
 
-- One top bar serves both parts. The marketing pages show the wordmark,
-  Pricing, Docs, Sign in, and Start free. On a phone, a menu holds the links.
-  The docs show the wordmark with "Docs", the Starlight search, and the same
-  actions.
+- One top bar serves both parts. The marketing pages show the wordmark on
+  the left, and Pricing, Docs, GitHub, Sign in, and Start free on the right.
+  On a phone, a menu holds the links. The docs show the wordmark with "Docs",
+  the Starlight search, Pricing, GitHub, and the same actions. A narrow docs
+  window hides Pricing, GitHub, and Sign in.
+- The GitHub link is text, with no icon. It opens the public repository of
+  ciproxy, `https://github.com/Firna-AI/ciproxy`.
 - Every marketing page ends with the footer.
 - The docs use a Graphite theme of Starlight. Black is the one accent, and
   Geist and Geist Mono are the faces. Code is in the ink, because colour
@@ -67,8 +70,7 @@ Rules for work on the site:
   link open the dashboard at `https://app.ciproxy.dev/sign-in`.
 - Add a link only when its page exists. A marketing page links to a docs
   page through `docsLinks`, which shows the link only once the page exists.
-  The GitHub link of the mockups waits for the public repository of the
-  agent.
+  The GitHub mark of the footer mockup is not on the site yet.
 - The picture of the product in the hero is a static illustration with
   fixed values, and its caption says so. The site shows no customer logos,
   quotes, or press.
@@ -236,6 +238,12 @@ This keeps it separate from the Markdown lint tool's YAML version.
 - [src/components/site-header/SiteHeader.astro](src/components/site-header/SiteHeader.astro)
   is the top bar. Its `section` prop selects the page that it marks, and the
   docs form.
+- [src/components/Brand.astro](src/components/Brand.astro) draws the wordmark.
+  [src/components/BrandMark.astro](src/components/BrandMark.astro) draws the
+  mark for the wordmark and the picture of How ciproxy works.
+- [src/data/brand.ts](src/data/brand.ts) holds the SVG paths used by the mark
+  component and [src/pages/favicon.svg.ts](src/pages/favicon.svg.ts).
+  That endpoint serves `/favicon.svg` with the mark in the ink colour.
 - [src/components/LinkButton.astro](src/components/LinkButton.astro) is a
   link with the look of a button, and
   [src/components/icon/Icon.astro](src/components/icon/Icon.astro) an icon.
@@ -264,9 +272,6 @@ This keeps it separate from the Markdown lint tool's YAML version.
   one job. `JobPathBox.astro` draws a box, and `JobPathArrow.astro` an
   arrow. The figure takes its layout from its own width: a row from 560 px,
   and a column below that.
-- [src/components/Brand.astro](src/components/Brand.astro) is the wordmark.
-  [src/components/BrandMark.astro](src/components/BrandMark.astro) is the
-  ciproxy mark, which the wordmark and the picture use.
 - [src/data/docs-links.ts](src/data/docs-links.ts) names the docs pages that
   the marketing pages link to, such as the docs links of the footer.
 - [src/content/i18n/en.json](src/content/i18n/en.json) changes Starlight

@@ -35,6 +35,8 @@ use crate::state::Mode;
 use crate::workload_space::{MachineWorkloadSpace, WorkloadSpace};
 
 pub(crate) async fn main() -> Result<()> {
+    #[cfg(target_os = "macos")]
+    crate::macos::area_access::mark_start();
     let cli = Cli::parse();
     let directives = std::env::var("RUST_LOG").unwrap_or_default();
     let action = cli.action();

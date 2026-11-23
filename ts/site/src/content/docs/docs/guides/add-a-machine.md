@@ -12,8 +12,8 @@ open-source agent, which starts a fresh VM for each job.
 A Linux machine needs:
 
 - x64 Linux with systemd, cgroup v2, and KVM.
-- A supported distribution: Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-  AlmaLinux.
+- A supported distribution: Debian, Ubuntu, Fedora, RHEL, CentOS Stream,
+  Rocky Linux, AlmaLinux, openSUSE, or Arch Linux.
 - 4 cores, 16 GB of memory, and 250 GB of disk or more.
 - Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The
   machine opens no inbound port.
@@ -66,6 +66,15 @@ command, with the name of the SSD:
 ```sh title="Terminal"
 curl -fsSL https://get.ciproxy.dev | sudo env CIPROXY_AREA_DISK=/Volumes/NAME sh -s -- install --token <install token>
 ```
+
+macOS lets the agent use an external disk only with Full Disk Access.
+After the install command, open **System Settings**, then **Privacy &
+Security**, then **Full Disk Access**. Select **+**, press Command-Shift-G,
+enter `/usr/local/bin/ciproxy-agent`, and turn the entry on. Until then,
+the install command stops with a line that says so, and the agent waits.
+It starts by itself within 5 seconds of the grant. The grant stays across
+agent updates. A Mac under MDM can get it from a privacy profile for the
+identifier `dev.ciproxy.agent`.
 
 Keep the SSD connected. While it is unplugged, the Mac takes no jobs, and
 its running jobs fail. When you connect it again, the Mac takes jobs again.

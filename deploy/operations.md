@@ -241,7 +241,12 @@ preview zone before preview prepared its NEG.
   at CDN and browsers, even after a failed deploy. HTML uses `USE_ORIGIN_HEADERS`
   and preserve `no-store`. API and signed-image paths keep their own
   backends. [Static delivery](static-delivery.md) gives the exact routes.
-- The publisher uploads assets before HTML and never deletes old assets.
+- Before the Helm upgrades, the publisher stages the dashboard export. It
+  creates only the objects that the dashboard bucket lacks. After the
+  upgrades, it uploads the site and dashboard exports in full. Both steps
+  upload assets before HTML. The publisher never deletes an object.
+  [Static delivery](static-delivery.md#lifetimes-and-publishing) gives the
+  order and the reasons.
 - Each deploy invalidates the whole CDN cache after the edge apply.
 - Terraform cannot delete the GKE cluster, the Cloud SQL instance, the state
   bucket, or the Boat KMS key. Their protection must change first.

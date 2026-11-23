@@ -2,7 +2,8 @@
    page carries .site-frame, which sets the content width and the gutter that
    the top bar and the page sections share. The docs form fills the fixed bar
    of Starlight, which frame.css gives the same height, fill, and hairline.
-   On a phone, narrower than 40rem, the bar is 56 px high. */
+   On a phone, narrower than 40rem, the bar is 56 px high. One gap,
+   --site-link-gap, spaces the links, the button, and the groups. */
 
 .site-frame {
   --site-width: 1120px;
@@ -10,6 +11,7 @@
 }
 
 .site-header {
+  --site-link-gap: 24px;
   font-size: 14px;
   line-height: 20px;
 }
@@ -26,7 +28,7 @@ header.site-header {
 .site-header-inner {
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: var(--site-link-gap);
   width: min(var(--site-width), 100%);
   height: 64px;
   margin: 0 auto;
@@ -57,11 +59,14 @@ header.site-header {
   letter-spacing: -0.01em;
 }
 
+/* The main links sit on the right, before the actions. */
+
 .site-nav {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 28px;
+  justify-content: flex-end;
+  gap: var(--site-link-gap);
 }
 
 .site-nav-link {
@@ -78,7 +83,7 @@ header.site-header {
 .site-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--site-link-gap);
   margin-left: auto;
 }
 
@@ -151,12 +156,7 @@ header.site-header {
 
 .is-docs .site-actions {
   justify-self: end;
-  gap: 12px;
   margin-left: 0;
-}
-
-.site-docs-pricing {
-  margin-right: 6px;
 }
 
 .site-header-search {
@@ -167,7 +167,7 @@ header.site-header {
    first. Under 50rem, Starlight's menu button holds the docs sidebar. */
 
 @media (width <= 1000px) {
-  .site-docs-pricing,
+  .site-docs-link,
   .is-docs .site-sign-in {
     display: none;
   }
@@ -178,12 +178,8 @@ header.site-header {
 }
 
 @media (width <= 760px) {
-  .site-header-inner {
-    gap: 20px;
-  }
-
-  .site-nav {
-    gap: 18px;
+  .site-header {
+    --site-link-gap: 18px;
   }
 
   .site-header-search {
@@ -205,6 +201,10 @@ header.site-header {
 @media (width < 40rem) {
   .site-frame {
     --site-gutter: 20px;
+  }
+
+  .site-header {
+    --site-link-gap: 10px;
   }
 
   .site-header-inner {

@@ -102,12 +102,28 @@ command, and the wait for the first image.
 - [Worked examples](job-routing-examples.md) shows the default job fit with
   the current image root.
 - An own machine also needs systemd and cgroup v2.
-- Its Linux distribution is Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-  AlmaLinux.
+- The supported Linux distributions are Debian, Ubuntu, Fedora, RHEL,
+  CentOS Stream, Rocky Linux, AlmaLinux, openSUSE, and Arch Linux.
+- `install` checks each host tool that the agent needs. It installs only
+  the missing tools, with the package manager of the distribution.
+- It selects the package manager by the distribution ID, and then by the
+  related IDs in `ID_LIKE`. A host with every tool present needs no known
+  distribution.
 - **Decision:** own machines need systemd, cgroup v2, and one of these
   distributions. Rejected: a promise of any x64 Linux host that meets the
   hardware minimum, because customers must know these limits before they
   set up a machine.
+- **Decision:** `install` checks the tools and installs only the missing
+  ones. The user chose this on 23 November 2026, with CentOS Stream,
+  openSUSE, and Arch Linux added. Rejected: a fixed package list for each
+  distribution name, because it fails when the host has another variant of
+  a package, such as `iptables-legacy` on Arch or `coreutils-single` on
+  CentOS Stream.
+- On Arch, `install` does not refresh the package databases.
+- **Decision:** Arch installs use `pacman -S --needed` without a refresh,
+  and a failure tells the user to run `pacman -Syu`. The user chose this
+  on 23 November 2026. Rejected: `pacman -Syu`, because it upgrades the
+  whole machine, and `pacman -Sy`, because Arch does not support it.
 
 ### Mac
 

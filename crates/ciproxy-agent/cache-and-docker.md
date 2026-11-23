@@ -118,6 +118,8 @@ The unit runs the loader as root before each listener start.
 This includes boot and each automatic restart.
 The loader reads the current resolvers and applies the rules in one nftables
 transaction. A failed load keeps the listener stopped.
+The loader passes the rules to `nft` on standard input. SELinux denies
+`nft` a direct read of the temporary file in `/run`.
 Install and hourly repair create the system user and restore these files.
 They apply the policy before they download a release.
 Install and repair check the actual cache process before they move data.

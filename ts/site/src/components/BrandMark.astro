@@ -3,6 +3,9 @@
 // chevron, one flow of jobs, routed to an own machine or to overflow. It takes
 // the text colour, with no tile behind it, and screen readers skip it. The
 // wordmark in Brand.astro and the picture of How ciproxy works show it.
+// The favicon draws the same paths.
+
+import { brandMarkPaths } from "../data/brand.ts";
 
 interface Props {
   /** The width and the height, in CSS pixels. */
@@ -20,8 +23,9 @@ const { size = 20 } = Astro.props;
   viewBox="0 0 24 24"
   fill="currentColor"
 >
-  <path d="M2 3h8.6l8.4 8.1h-8.6z"></path>
-  <path d="M10.4 12.9H19L10.6 21H2z"></path>
+  {brandMarkPaths.map((d) => (
+    <path d={d} />
+  ))}
 </svg>
 
 <style>

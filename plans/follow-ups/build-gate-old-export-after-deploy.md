@@ -9,8 +9,9 @@
 - **Location:** `ts/app/src/state/build-gate.ts:30`, `createBuildGate`,
   and `:39`, where the first build becomes the baseline.
   `ts/app/src/api/client.ts:111`, where each response gives its build to
-  the gate. `deploy/scripts/deploy.py:73`, the build of the API, and `:79`
-  to `:88`, the order of the Helm upgrades and the static publication.
+  the gate. `deploy/scripts/deploy.py:77`, the build of the API, and `:85`
+  to `:96`, the order of the stage step, the Helm upgrades, and the full
+  static publication.
   `crates/ciproxy-api/src/router.rs:168`, the `x-ciproxy-build` header.
   `ts/app/src/api/README.md`, the rule under "A new API build".
 - **Reason:** The deploy order and the build gate are older than the branch
@@ -26,19 +27,29 @@
     built into `ts/app/dist`. A deploy uploads it to the dashboard bucket
     of its environment.
   - **Window:** the time in a deploy after the new API serves and before
-    the new dashboard export is in the bucket.
+    the full publication of the new dashboard export.
 - **Background:**
-  - The function `main` in `deploy/scripts/deploy.py` runs
-    `helm upgrade --install --wait` for the release server at line 79, and
-    for the chart `deploy/helm/ciproxy`, which serves the API, at line 82.
-    Then it publishes the site export and the dashboard export, at lines 86
-    to 88. So every deploy has the window. This order is older than pull
-    request #125.
+  - The function `main` in `deploy/scripts/deploy.py` first stages the
+    dashboard export, at line 85. The stage step creates only the files
+    that the dashboard bucket lacks, and it replaces no file. So a new page
+    is live before the new API, but each existing page keeps its old
+    version. Option B of the deploy-order decision of 23 November 2026
+    added this step.
+  - Then `main` runs `helm upgrade --install --wait` for the release server
+    at line 87, and for the chart `deploy/helm/ciproxy`, which serves the
+    API, at line 90.
+  - Then the full publication uploads the site export and the dashboard
+    export, at lines 94 to 96. It replaces each existing page. So every
+    deploy still has the window for the existing pages. The full
+    publication after the Helm upgrades is older than pull request #125.
+    [Static delivery](../../deploy/static-delivery.md#lifetimes-and-publishing)
+    gives the order and its reasons.
   - `deploy/scripts/publish_static.py` uploads every asset before any HTML,
     and it deletes no old file. HTML has `Cache-Control: no-store`. So a
-    page load in the window gets the old HTML and its old chunks.
+    load of an existing page in the window gets the old HTML and its old
+    chunks.
   - `deploy.py` sets the build to the source commit, from
-    `CIPROXY_SOURCE_SHA` at line 73. So each deploy of a new commit changes
+    `CIPROXY_SOURCE_SHA` at line 77. So each deploy of a new commit changes
     the build.
   - The API client gives the build of each response to the build gate, at
     `client.ts:111`. The gate takes the first build that it sees as its
@@ -98,14 +109,10 @@
   itself, so each difference between the export and the API latches it,
   whatever the deploy order, also after a failed publication.
 - **Previous examples:** None found.
-- **Related:** `plans/follow-ups/deploy-order-pages-and-api.md`, the same
-  cause: the deploy order of `deploy.py`. That item holds the missing page
-  of the window. Its recommended option does not fix this case, and its
-  options C and E would. The options of the two items do not conflict.
 - **Recommendation:** A. It fixes the baseline where it goes wrong, for
   every deploy order and also after a failed publication, with no change
-  to the deployment. C protects more, because it also removes the missing
-  page, but it is Large.
+  to the deployment. C protects more, because it removes the whole window,
+  but it is Large.
 - **Action:** fix after merge, apply A, because the deploy order and the
   build gate are older than pull request #125, the case is Rare, and the
   fix costs the same after the merge.

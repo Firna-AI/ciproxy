@@ -211,7 +211,8 @@ pub(crate) async fn prepare_host(with_service: bool) -> Result<()> {
     let (preparation, image_budget) = platform.prepare()?;
     preparation.prepare().await?;
     println!("host prepared: control folder, area volume, fstab line, and pf rules");
-    if let Some(record) = area::record()? {
+    let record = area::record()?;
+    if let Some(record) = &record {
         println!(
             "area volume: UUID {}, quota {} bytes, disk {}{}",
             record.volume_uuid,
@@ -222,6 +223,11 @@ pub(crate) async fn prepare_host(with_service: bool) -> Result<()> {
             } else {
                 ""
             }
+        );
+    }
+    if record.as_ref().is_some_and(|record| record.disk.is_some()) && !with_service {
+        println!(
+            "the area is on another disk: the launchd daemon needs Full Disk Access for /usr/local/bin/ciproxy-agent, and install checks it"
         );
     }
     let report = serde_json::to_string(&host.hardware()?).map_err(|_| Error::MacHostUnsupported)?;
