@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::github::{Repository, RepositoryIdentity, RunFacts};
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetState};
 use ciproxy_store_interface::vm_size::VmSize;
@@ -58,8 +58,7 @@ pub(super) fn labels() -> Vec<Label> {
                 memory_gb,
                 disk_gb,
             },
-            allow_machines: true,
-            allow_boat: platform == Platform::LinuxX64,
+            order: vec![LabelPlace::Machine],
             when_nothing_fits: WhenNothingFits::Wait,
         },
     )

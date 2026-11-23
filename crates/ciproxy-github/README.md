@@ -105,9 +105,12 @@ is reused or purged. Only consumer acceptance permits deletion. A crash
 after acceptance can deliver the same snapshot again, so the consumer must
 be idempotent. Accepted snapshots leave the outbox at once.
 
-A first install atomically saves the workspace, its settings, its three
+A first install atomically saves the workspace, its settings, its five
 default labels, its organization, prepared bindings, its lifecycle event,
 and a pending first-Admin assignment.
+The store sets the default label orders in that transaction. New Linux
+labels get own machines followed by any offered providers in first-offer
+order. New macOS labels get own machines only.
 The Admin callback is idempotent. The store confirms it after delivery.
 Remote scale-set preparation succeeds before an activation transaction
 commits. Preparation failure commits no new activation or event. A replay

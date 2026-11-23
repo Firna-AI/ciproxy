@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use ciproxy_protocol::platform::Platform;
 use uuid::Uuid;
 
 use crate::access::Principal;
@@ -100,6 +101,8 @@ pub(crate) async fn create(
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
+    let use_default_order =
+        input.allow_machines && (input.allow_boat || input.platform == Platform::MacosArm64);
     let label = label_views::stored(state.runtime.identifier(), input)?;
     if let Err(error) = state
         .github
@@ -110,7 +113,11 @@ pub(crate) async fn create(
     }
     let saved = label.clone();
     query(state.store.clone(), move |store| {
-        store.create_label(workspace_id, &saved)
+        if use_default_order {
+            store.create_label_with_default_order(workspace_id, &saved)
+        } else {
+            store.create_label(workspace_id, &saved)
+        }
     })
     .await?;
     state.github.reconcile_labels(workspace_id).await.api()?;

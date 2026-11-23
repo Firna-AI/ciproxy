@@ -12,6 +12,7 @@ use ciproxy_protocol::images::ImageDownload;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -246,24 +247,25 @@ async fn full_lifetime_pending_bound_blocks_the_next_dispatch_until_limit_is_rai
     let harness = Harness::new(false, false).await;
     harness.queued();
     harness.queued();
-    let mut settings = harness
-        .fixture
-        .store
-        .settings(harness.fixture.workspace)
-        .unwrap();
-    settings.boat_spend_limit_usd_micros = Some(600_000);
     harness
         .fixture
         .store
-        .save_settings(harness.fixture.workspace, &settings)
+        .save_overflow_provider_spend_limit(
+            harness.fixture.workspace,
+            OverflowProvider::Boat,
+            Some(600_000),
+        )
         .unwrap();
     harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.ports.creates.lock().unwrap().len(), 1);
-    settings.boat_spend_limit_usd_micros = Some(1_100_000);
     harness
         .fixture
         .store
-        .save_settings(harness.fixture.workspace, &settings)
+        .save_overflow_provider_spend_limit(
+            harness.fixture.workspace,
+            OverflowProvider::Boat,
+            Some(1_100_000),
+        )
         .unwrap();
     harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.ports.creates.lock().unwrap().len(), 2);

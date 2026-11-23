@@ -3,6 +3,7 @@
 use std::sync::atomic::Ordering;
 
 use ciproxy_protocol::resources::Slots;
+use ciproxy_store_interface::labels::LabelPlace;
 use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use uuid::Uuid;
@@ -24,7 +25,7 @@ async fn replacement(state: RunnerState) {
     let mut label = store.labels(fixture.workspace).unwrap().remove(0);
     label.id = Uuid::new_v4();
     label.name = "own-replacement".to_owned();
-    label.allow_boat = false;
+    label.order.retain(|place| *place == LabelPlace::Machine);
     store.create_label(fixture.workspace, &label).unwrap();
     let mut binding = ScaleSet {
         id: Uuid::new_v4(),

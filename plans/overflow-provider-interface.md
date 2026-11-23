@@ -495,31 +495,33 @@ The store keeps one active key for each workspace and provider, one spend
 limit for each provider, and the label order. Boat stays the only provider,
 so behaviour does not change.
 
-- [ ] Add a migration that changes the active-key index to the workspace and
+- [x] Add a migration that changes the active-key index to the workspace and
       the provider.
-- [ ] In the same migration, add `overflow_provider_settings` and move
+- [x] In the same migration, add `overflow_provider_settings` and move
       `settings.boat_spend_limit_usd_micros` to its Boat rows. Drop the old
       column.
-- [ ] In the same migration, add `label_places`. Fill it from
+- [x] In the same migration, add `label_places`. Fill it from
       `allow_machines` and `allow_boat`, as "Data shape" says. Drop both
       columns.
-- [ ] Change the stored value `largest_boat` of `labels.when_nothing_fits`
+- [x] Change the stored value `largest_boat` of `labels.when_nothing_fits`
       to `largest_overflow`.
-- [ ] In the same migration, mark Boat as offered for every workspace, as
+- [x] In the same migration, mark Boat as offered for every workspace, as
       "Data shape" says.
-- [ ] Add the store reads and writes of the label order and the provider
+- [x] Add the store reads and writes of the label order and the provider
       settings. Add a write that appends a newly offered provider to each
       Linux label, for item 6.
-- [ ] Give each new Linux label the order of "Several providers and the
+- [x] Give each new Linux label the order of "Several providers and the
       label order", also the labels of the GitHub installation in
       `crates/ciproxy-github/src/app/installation.rs`. Move the
       registration queries of `crates/ciproxy-store-pg/src/github/` to the
       order.
-- [ ] Add store tests for the migration of each switch pair, the offered
+- [x] Add store tests for the migration of each switch pair, the offered
       mark, the order writes, the append, the new-label order, and the
       per-provider limit.
-- [ ] Update the READMEs of `ciproxy-schema`, `ciproxy-store-interface`, and
+- [x] Update the READMEs of `ciproxy-schema`, `ciproxy-store-interface`, and
       `ciproxy-store-pg`.
+
+Evidence: `.context/providers-interface/m4/`.
 
 ## Milestone 5: Overflow service: the provider interface
 
@@ -574,6 +576,9 @@ label, as item 4 says.
       reason, a provider before own machines, own machines left out, the
       overflow wait only after own machines, and the largest-size rule.
 - [ ] Update the scaler README.
+- [ ] Delete the Milestone 4 adapter in
+      `crates/ciproxy-control-plane/src/snapshot.rs` and `docker_budget.rs`
+      that derives the old label switches from the order.
 
 ## Milestone 7: Overflow service: several providers for a workspace
 
@@ -595,6 +600,10 @@ The service keeps one account for each provider of a workspace.
 - [ ] Add service tests through `PgStoreFactory` for connect, Disconnect,
       the spend limit, and the offered mark, with Boat.
 - [ ] Update the README of the overflow crate.
+- [ ] Delete the Milestone 4 adapters in
+      `src/service/provider_preparation.rs`, `ciproxy-store-pg`
+      `overflow/rows.rs`, and `overflow/accounts.rs` that map the order and
+      the Boat limit to the old single-provider shape.
 
 ## Milestone 8: Control plane, guest, and metering
 
@@ -657,6 +666,9 @@ milestone, so that the gate stays green. Its screens move in Milestone 10.
 - [ ] Regenerate the OpenAPI and `ts/api/generated`. Move `ts/app/src/api`
       to the new types with no visible change.
 - [ ] Update the README and the docs files of `ciproxy-api`.
+- [ ] Delete the Milestone 4 adapters in `src/handlers/label_views.rs`,
+      `labels.rs`, and `overflow.rs` that map the old switches,
+      `largest_boat`, and the single Boat limit.
 
 ## Milestone 10: Dashboard UI: providers and the label order
 

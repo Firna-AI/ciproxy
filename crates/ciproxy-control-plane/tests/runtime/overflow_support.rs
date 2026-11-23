@@ -18,6 +18,8 @@ use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::runners::RunnerState;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
+use ciproxy_store_interface::labels::LabelPlace;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
@@ -51,7 +53,9 @@ impl Harness {
             .unwrap();
         let mut label = fixture.store.labels(fixture.workspace).unwrap().remove(0);
         label.size.disk_gb = 20;
-        label.allow_boat = true;
+        label
+            .order
+            .push(LabelPlace::Provider(OverflowProvider::Boat));
         fixture
             .store
             .update_label(fixture.workspace, &label)

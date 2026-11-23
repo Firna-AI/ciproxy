@@ -32,6 +32,13 @@ provider field.
 Token metadata excludes hashes.
 KMS encryption and token hashing belong to callers.
 
+Each workspace has at most one active key for each provider. The provider
+settings keep the monthly spend limit and the offered mark across key
+changes and Disconnect. The first offer appends the provider to active
+Linux labels. New Linux labels with the default order get own machines,
+then offered providers in order of their first offer. A new macOS label
+with the default order gets own machines only.
+
 The store preserves runner placements, retained requests, and actual VM sizes
 for job history. Dashboard jobs use current requests only while queued.
 Executed jobs keep an optional whole-GB request separate from actual allocation.
@@ -264,6 +271,9 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   identities.
 - [src/overflow_provider_accounts.rs](src/overflow_provider_accounts.rs)
   defines account metadata and key retention queries.
+- [src/overflow_provider_settings.rs](src/overflow_provider_settings.rs)
+  defines saved limit reads, limit updates, and first offers.
+- [src/labels.rs](src/labels.rs) defines label reads and writes with orders.
 - [src/overflow/provider.rs](src/overflow/provider.rs) defines the supported
   provider identifiers.
 

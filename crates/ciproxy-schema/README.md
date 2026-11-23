@@ -105,6 +105,13 @@ as their provider. Account observations, deliveries, and runner intents
 carry the provider in JSON. Metering job cursor JSON names the provider
 for jobs that ran on overflow.
 
+The `202611231601_overflow_provider_settings_and_label_order` migration
+allows one active key for each workspace and provider. It moves each saved
+Boat limit to `overflow_provider_settings` and marks Boat as offered in
+every existing workspace. `label_places` stores the order of each label.
+The migration keeps all four switch combinations and renames the fallback
+to `largest_overflow`. Rollback restores the switches from order membership.
+
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
 A separate token-free continuation stores exact claim IDs under the existing
@@ -197,6 +204,9 @@ Each migration has an up.sql and a down.sql.
 
 - [src/overflow_provider_accounts.rs](src/overflow_provider_accounts.rs)
   defines provider identity, account metadata, and encrypted key versions.
+- [src/overflow_provider_settings.rs](src/overflow_provider_settings.rs)
+  defines saved limits and first-offer positions.
+- [src/labels.rs](src/labels.rs) defines labels and their ordered places.
 - [src/overflow_runner_intents.rs](src/overflow_runner_intents.rs) defines
   the overflow registration identity table.
 - [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.

@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::cache::DockerBudget;
 use ciproxy_protocol::resources::{Slots, VmSize};
+use ciproxy_store_interface::labels::LabelPlace;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
@@ -24,7 +25,7 @@ pub(crate) fn policy(input: &RoutingSnapshot, machine_id: Uuid) -> Option<Docker
     let roots: Vec<_> = input
         .labels
         .iter()
-        .filter(|label| label.allow_machines)
+        .filter(|label| label.order.contains(&LabelPlace::Machine))
         .filter_map(|label| sizing.vm_size(size(label.size)))
         .map(|size| (Slots::for_vm(size).0, size.disk_bytes))
         .collect();

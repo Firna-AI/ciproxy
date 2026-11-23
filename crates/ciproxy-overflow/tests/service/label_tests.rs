@@ -230,7 +230,7 @@ async fn largest_fallback_checks_requested_dimensions_and_preserves_unknown_crea
     label.size.vcpus = 32;
     label.size.memory_gb = 64;
     label.size.disk_gb = 500;
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     harness.database.store.update_label(id(1), &label).unwrap();
     let mut action = request();
     action.action.requested_size.vcpu = 32;

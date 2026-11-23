@@ -3,6 +3,7 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::store::StoreFactory;
@@ -60,7 +61,7 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
         .unwrap();
     database
         .store
-        .disconnect_overflow_provider(workspace.id, at())
+        .disconnect_overflow_provider(workspace.id, OverflowProvider::Boat, at())
         .unwrap();
     assert_eq!(
         database

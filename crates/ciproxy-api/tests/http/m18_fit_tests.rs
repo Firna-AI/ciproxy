@@ -7,7 +7,8 @@ use ciproxy_protocol::identifiers::{JobId, RunnerId};
 use ciproxy_protocol::reports::{SlotOccupancy, SlotReport};
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::github::DemandPhase;
-use ciproxy_store_interface::labels::WhenNothingFits;
+use ciproxy_store_interface::labels::{LabelPlace, WhenNothingFits};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use serde_json::Value;
 
 use super::capacity_fixture;
@@ -115,7 +116,7 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
     );
     assert_eq!(body["overflow"]["refused_sizes"][0], "observed-size");
     catalog(&pages, false, false);
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     pages
         .fixture
         .database
@@ -153,8 +154,7 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
         body["waiting_labels"][0]["current"]["fit"]["boat"],
         body["waiting_labels"][0]["boat"]
     );
-    label.allow_machines = false;
-    label.allow_boat = false;
+    label.order.clear();
     pages
         .fixture
         .database
@@ -173,8 +173,10 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
         body["waiting_labels"][0]["current"]["fit"]["unavailable_machines"],
         1
     );
-    label.allow_machines = true;
-    label.allow_boat = true;
+    label.order = vec![
+        LabelPlace::Machine,
+        LabelPlace::Provider(OverflowProvider::Boat),
+    ];
     pages.fixture.state.capacity = capacity_fixture::standard();
     label.size.vcpus = 2;
     label.size.memory_gb = 8;

@@ -11,6 +11,7 @@ use ciproxy_overflow::provider::{BackendFactory, Capabilities};
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
 use uuid::Uuid;
@@ -166,9 +167,10 @@ impl Harness {
     }
 
     pub(super) fn set_limit(&self, limit: i64) {
-        let mut settings = self.database.store.settings(id(1)).unwrap();
-        settings.boat_spend_limit_usd_micros = Some(limit);
-        self.database.store.save_settings(id(1), &settings).unwrap();
+        self.database
+            .store
+            .save_overflow_provider_spend_limit(id(1), OverflowProvider::Boat, Some(limit))
+            .unwrap();
     }
 
     pub(super) fn connect_account(&self, account: &AccountRecord) {

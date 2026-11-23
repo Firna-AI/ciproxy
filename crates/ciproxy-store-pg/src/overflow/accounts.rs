@@ -3,18 +3,17 @@
 use chrono::{DateTime, Utc};
 use ciproxy_schema::overflow::{overflow_accounts, overflow_connection_grants};
 use ciproxy_schema::overflow_provider_accounts::overflow_provider_accounts;
-use ciproxy_schema::settings::settings;
-use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::{Result, ResultExt};
 use ciproxy_store_interface::overflow::connection::ConnectionGrant;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::error::{QueryResultExt, require_record};
 use crate::gateway_transaction::transaction;
-use crate::overflow_provider::DbOverflowProvider;
-use crate::overflow_provider_accounts::retire_keys;
+use crate::overflow_provider_accounts::{replace_key, retire_keys};
+use crate::workspaces::lock_workspace;
 
 pub(super) fn connect(
     connection: &mut PgConnection,
@@ -25,11 +24,7 @@ pub(super) fn connect(
 ) -> Result<bool> {
     let json = serde_json::to_string(&account.state).internal()?;
     transaction(connection, |connection| {
-        let workspace = workspaces::table
-            .find(workspace_id)
-            .select(workspaces::id)
-            .for_update()
-            .first::<Uuid>(connection)
+        let workspace = lock_workspace(connection, workspace_id)
             .optional()
             .store()?;
         if workspace.is_none() {
@@ -46,23 +41,14 @@ pub(super) fn connect(
         if consumed != 1 {
             return Ok(false);
         }
-        retire_keys(connection, workspace_id, account.account.connected_at).store()?;
-        diesel::update(settings::table.find(workspace_id))
-            .set(settings::boat_spend_limit_usd_micros.eq(limit))
-            .execute(connection)
-            .store()?;
-        diesel::insert_into(overflow_provider_accounts::table)
-            .values((
-                overflow_provider_accounts::id.eq(account.account.id),
-                overflow_provider_accounts::workspace_id.eq(workspace_id),
-                overflow_provider_accounts::provider
-                    .eq(DbOverflowProvider(account.account.provider)),
-                overflow_provider_accounts::account_name.eq(&account.account.account_name),
-                overflow_provider_accounts::key_ciphertext.eq(account.key.as_bytes()),
-                overflow_provider_accounts::connected_at.eq(account.account.connected_at),
-            ))
-            .execute(connection)
-            .store()?;
+        replace_key(
+            connection,
+            workspace_id,
+            &account.account,
+            &account.key,
+            limit,
+        )
+        .store()?;
         diesel::insert_into(overflow_accounts::table)
             .values((
                 overflow_accounts::key_id.eq(account.account.id),
@@ -110,12 +96,7 @@ pub(super) fn retire(
     at: DateTime<Utc>,
 ) -> Result<()> {
     transaction(connection, |connection| {
-        workspaces::table
-            .find(workspace_id)
-            .select(workspaces::id)
-            .for_update()
-            .first::<Uuid>(connection)
-            .store()?;
-        retire_keys(connection, workspace_id, at).store()
+        lock_workspace(connection, workspace_id).store()?;
+        retire_keys(connection, workspace_id, Some(OverflowProvider::Boat), at).store()
     })
 }

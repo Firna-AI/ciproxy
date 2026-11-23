@@ -28,7 +28,7 @@ pub(crate) fn revoke_workspace_access(
     .set(tokens::revoked_at.eq(at))
     .execute(connection)?;
     mark_removed(connection, workspace_id, None, at)?;
-    retire_keys(connection, workspace_id, at)?;
+    retire_keys(connection, workspace_id, None, at)?;
     erase_unused_keys(connection, workspace_id)?;
     Ok(())
 }

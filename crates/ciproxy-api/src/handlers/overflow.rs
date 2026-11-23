@@ -5,6 +5,7 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use ciproxy_overflow::api::Overflow;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::settings::{OverflowWait, Settings};
 
 use crate::access::Principal;
@@ -120,10 +121,10 @@ pub(crate) async fn save(
     let settings = Settings {
         overflow_enabled: body.enabled,
         overflow_wait,
-        boat_spend_limit_usd_micros: Some(overflow_views::limit(body.spend_limit_cents)?),
     };
+    let limit = overflow_views::limit(body.spend_limit_cents)?;
     query(state.store, move |store| {
-        store.save_settings(workspace, &settings)
+        store.save_settings_with_provider_limit(workspace, &settings, OverflowProvider::Boat, limit)
     })
     .await?;
     Ok(Json(Success { ok: true }))

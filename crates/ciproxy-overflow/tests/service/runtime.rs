@@ -10,6 +10,7 @@ use ciproxy_overflow::error::Error;
 use ciproxy_overflow::secrets::{SecretBytes, TokenSourceMock};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use unimock::{MockFn, Unimock, matching};
 
 use super::authority_support::disable;
@@ -58,9 +59,9 @@ pub(super) fn build(
                 }
             };
             if let Some((limit, store)) = limit_change {
-                let mut settings = store.settings(id(1)).unwrap();
-                settings.boat_spend_limit_usd_micros = Some(limit);
-                store.save_settings(id(1), &settings).unwrap();
+                store
+                    .save_overflow_provider_spend_limit(id(1), OverflowProvider::Boat, Some(limit))
+                    .unwrap();
             }
             Ok([context.id.as_bytes().as_slice(), &[purpose]].concat())
         }));

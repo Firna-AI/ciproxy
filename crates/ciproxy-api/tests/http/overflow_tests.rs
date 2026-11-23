@@ -4,6 +4,7 @@ use std::sync::atomic::Ordering;
 
 use axum::http::StatusCode;
 use ciproxy_store_interface::dashboard::records::Role;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use serde_json::json;
 
 use super::fixture::Fixture;
@@ -134,7 +135,13 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
     );
     let stored = fixture.database.store.settings(fixture.workspace).unwrap();
     assert!(!stored.overflow_enabled);
-    assert_eq!(stored.boat_spend_limit_usd_micros, Some(50_000_000));
+    let boat = fixture
+        .database
+        .store
+        .overflow_provider_settings(fixture.workspace, OverflowProvider::Boat)
+        .unwrap()
+        .unwrap();
+    assert_eq!(boat.spend_limit_usd_micros, Some(50_000_000));
 }
 
 #[tokio::test]

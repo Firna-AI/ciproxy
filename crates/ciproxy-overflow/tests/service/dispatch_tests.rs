@@ -22,7 +22,7 @@ async fn resumed_fallback_selects_fitting_size_and_reserves_its_current_price() 
     label.size.vcpus = 16;
     label.size.memory_gb = 32;
     label.size.disk_gb = 180;
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     harness.database.store.update_label(id(1), &label).unwrap();
     let mut action = request();
     action.action.requested_size.vcpu = 16;

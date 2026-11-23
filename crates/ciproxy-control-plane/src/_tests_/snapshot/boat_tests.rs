@@ -8,6 +8,7 @@ use ciproxy_scaler::boat::SandboxId;
 use ciproxy_scaler::decision::decide;
 use ciproxy_scaler::snapshot::RunnerState;
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::labels::LabelPlace;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
@@ -141,7 +142,9 @@ fn boat_ready_deadline_starts_at_launch_not_dispatch() {
 
 fn accepted() -> RoutingSnapshot {
     let mut input = input();
-    input.labels[0].allow_boat = true;
+    input.labels[0]
+        .order
+        .push(LabelPlace::Provider(OverflowProvider::Boat));
     input.machines[0].machine.warm_runners = 0;
     let mut waiting = job(10, 2, 0);
     waiting.scale_set_id = input.scale_sets[0].id;

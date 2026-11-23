@@ -17,8 +17,9 @@ use ciproxy_scaler::snapshot::{
 };
 use ciproxy_store_interface::gateway::{MachineSnapshot, MachineState};
 use ciproxy_store_interface::github::DemandPhase;
-use ciproxy_store_interface::labels::WhenNothingFits;
+use ciproxy_store_interface::labels::{LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners::{self, RunnerPlace};
 use ciproxy_store_interface::settings::OverflowWait;
@@ -91,12 +92,14 @@ pub(crate) fn build(
                 platform: label.platform,
                 size: size(label.size),
                 destinations: Destinations {
-                    own_machines: label.allow_machines,
-                    boat: label.allow_boat,
+                    own_machines: label.order.contains(&LabelPlace::Machine),
+                    boat: label
+                        .order
+                        .contains(&LabelPlace::Provider(OverflowProvider::Boat)),
                 },
                 nothing_fits: match label.when_nothing_fits {
                     WhenNothingFits::Wait => NothingFits::Wait,
-                    WhenNothingFits::LargestBoat => NothingFits::LargestBoatSize,
+                    WhenNothingFits::LargestOverflow => NothingFits::LargestBoatSize,
                 },
             })
             .collect(),

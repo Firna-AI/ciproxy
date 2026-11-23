@@ -35,6 +35,16 @@ impl From<WorkspaceRow> for Workspace {
     }
 }
 
+/// Serialize writes to workspace-wide execution authority.
+pub(crate) fn lock_workspace(connection: &mut PgConnection, workspace: Uuid) -> QueryResult<()> {
+    workspaces::table
+        .find(workspace)
+        .select(workspaces::id)
+        .for_update()
+        .first::<Uuid>(connection)?;
+    Ok(())
+}
+
 /// Insert the tenant, initial Free billing/settings, and trusted metering facts.
 pub(crate) fn create_workspace_on(
     connection: &mut PgConnection,

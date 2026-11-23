@@ -1,7 +1,7 @@
 //! Shared workspace resources and organization-specific relationships.
 
 use ciproxy_store_interface::error::Error;
-use ciproxy_store_interface::labels::WhenNothingFits;
+use ciproxy_store_interface::labels::{LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::organizations::RepositoryAccess;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
@@ -42,8 +42,8 @@ fn workspace_queries_share_machines_and_keep_organization_relationships() {
         vec![foreign_label.clone()]
     );
     assert_eq!(store.labels(owner.id).unwrap(), vec![label.clone()]);
-    label.allow_machines = false;
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.order.retain(|place| *place != LabelPlace::Machine);
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     assert!(matches!(
         store.update_label(stranger.id, &label),
         Err(Error::NotFound)

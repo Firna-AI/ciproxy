@@ -277,7 +277,10 @@ GitHub, and database access, so they stay operator work.
   credential, the workspace, and the saved Worker job binding, then lists
   the job's GitHub cache entries.
 - [src/snapshot.rs](src/snapshot.rs) builds the pure scaler's inputs,
-  including the shared machine state and saved Boat supply.
+  including shared machine state and saved Boat supply. It derives the
+  scaler's machine and Boat switches from the stored label order.
+- [src/docker_budget.rs](src/docker_budget.rs) budgets for labels that list
+  own machines and for runner disk allocations.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.
 - [src/slots.rs](src/slots.rs) selects exact logical slot sets.
 - [src/http.rs](src/http.rs) mounts shared HTTP routes and health checks.

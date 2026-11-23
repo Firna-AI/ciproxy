@@ -1,11 +1,17 @@
 //! Atomic defaults and repository snapshots preserve tenant boundaries.
 
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::github::Repository;
+use ciproxy_store_interface::labels::{Label, LabelPlace};
 use ciproxy_store_interface::metering::history::PlanCost;
 use ciproxy_store_interface::organizations::Organization;
+use ciproxy_store_interface::overflow::account::AccountState;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_store_interface::overflow::store::AccountRecord;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::workspaces::Workspace;
 use diesel::RunQueryDsl;
 use rust_decimal::Decimal;
@@ -14,7 +20,7 @@ use uuid::Uuid;
 use super::fixtures::registration;
 use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubPreparedResources};
 
-use super::super::support::{Database, at};
+use super::super::support::{Database, account, at};
 
 #[test]
 fn failed_registration_rolls_back_new_workspace_and_initial_admin() {
@@ -67,6 +73,13 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
     let (mut label, _) = database.label_and_scale_set(&source_organization);
     label.id = Uuid::new_v4();
     label.name = "ciproxy".to_owned();
+    let macos = Label {
+        id: Uuid::new_v4(),
+        name: "ciproxy-macos".to_owned(),
+        platform: Platform::MacosArm64,
+        order: vec![LabelPlace::Machine],
+        ..label.clone()
+    };
     let workspace = Workspace {
         id: Uuid::new_v4(),
         name: "customer".to_owned(),
@@ -82,13 +95,42 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
         .register_github_installation(&registration(
             Some(&workspace),
             &organization,
-            &[label.clone()],
+            &[label.clone(), macos.clone()],
             41,
         ))
         .unwrap();
     assert_eq!(
         store.workspace(workspace.id).unwrap(),
         Some(workspace.clone())
+    );
+    label.order = vec![LabelPlace::Machine];
+    assert_eq!(
+        store.labels(workspace.id).unwrap(),
+        [label.clone(), macos.clone()]
+    );
+    let account = AccountRecord {
+        account: account(),
+        key: EncryptedOverflowKey::new(vec![1]),
+        state: AccountState::default(),
+    };
+    {
+        let mut session = store.lock_overflow(workspace.id).unwrap();
+        let grant = session
+            .begin_connection(account.account.id)
+            .unwrap()
+            .unwrap();
+        assert!(
+            session
+                .complete_connection(grant, &account, 50_000_000)
+                .unwrap()
+        );
+    }
+    label
+        .order
+        .push(LabelPlace::Provider(OverflowProvider::Boat));
+    assert_eq!(
+        store.labels(workspace.id).unwrap(),
+        [label.clone(), macos.clone()]
     );
     let billing = store.billing(workspace.id);
     assert!(
@@ -159,7 +201,7 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
     store
         .register_github_installation(&registration(None, &organization, &[], 99))
         .unwrap();
-    assert_eq!(store.labels(workspace.id).unwrap(), vec![label]);
+    assert_eq!(store.labels(workspace.id).unwrap(), vec![label, macos]);
     let replay_costs = store
         .savings_snapshot(
             workspace.id,

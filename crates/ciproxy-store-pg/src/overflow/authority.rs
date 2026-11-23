@@ -29,14 +29,15 @@ const ACCOUNT: &str = "
             WHERE activation.organization_id=o.id
             AND activation.workspace_id=o.workspace_id AND activation.admitted)
         AND a.retired_at IS NULL AND a.rejected_at IS NULL
-        AND l.allow_boat AND l.platform = 'linux_x64' AND l.deleted_at IS NULL AND ss.remote_removed_at IS NULL
+        AND l.platform = 'linux_x64' AND l.deleted_at IS NULL AND ss.remote_removed_at IS NULL
+        AND EXISTS (SELECT 1 FROM label_places p WHERE p.label_id = l.id AND p.place = a.provider)
         AND l.vcpus = (d.record_json::jsonb ->> 'requested_vcpus')::bigint
         AND l.memory_gb = (d.record_json::jsonb ->> 'requested_memory_gb')::bigint
         AND l.disk_gb = (d.record_json::jsonb ->> 'requested_disk_gb')::bigint
         AND (d.record_json::jsonb ->> 'phase' = 'unsent' OR (
             (d.record_json::jsonb -> 'size' ->> 'disk_bytes')::numeric
                 >= (d.record_json::jsonb ->> 'image_root_bytes')::numeric
-            AND (l.when_nothing_fits = 'largest_boat' OR (
+            AND (l.when_nothing_fits = 'largest_overflow' OR (
             (d.record_json::jsonb -> 'size' ->> 'vcpus')::bigint >= l.vcpus
             AND (d.record_json::jsonb -> 'size' ->> 'memory_bytes')::numeric
                 >= l.memory_gb::numeric * 1000000000

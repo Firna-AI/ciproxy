@@ -16,6 +16,7 @@ use crate::metering::store::MeteringStore;
 use crate::organizations::OrganizationStore;
 use crate::overflow::store::OverflowStore;
 use crate::overflow_provider_accounts::OverflowProviderAccountStore;
+use crate::overflow_provider_settings::OverflowProviderSettingsStore;
 use crate::overflow_runtime::OverflowRuntimeStore;
 use crate::own_runners::OwnRunnerStore;
 use crate::runners::RunnerStore;
@@ -38,6 +39,7 @@ pub trait Store:
     + JobStore
     + SettingsStore
     + OverflowProviderAccountStore
+    + OverflowProviderSettingsStore
     + OverflowRuntimeStore
     + OverflowStore
     + MeteringStore

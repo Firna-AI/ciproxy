@@ -26,7 +26,7 @@ pub struct OverflowProviderAccount {
 
 /// Queries that retain retired keys while their sandboxes stay live.
 pub trait OverflowProviderAccountStore: Send + Sync {
-    /// Save ciphertext and a positive spend limit, retiring the previous key.
+    /// Save ciphertext and a positive limit, retiring this provider's previous key.
     fn connect_overflow_provider(
         &self,
         workspace_id: Uuid,
@@ -47,8 +47,13 @@ pub trait OverflowProviderAccountStore: Send + Sync {
     ) -> Result<Option<EncryptedOverflowKey>>;
     /// Mark the active key as rejected without deleting live sandbox access.
     fn reject_overflow_key(&self, workspace_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()>;
-    /// Stop new runners from using every currently active key.
-    fn disconnect_overflow_provider(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<()>;
+    /// Stop new runners from using this provider's active key.
+    fn disconnect_overflow_provider(
+        &self,
+        workspace_id: Uuid,
+        provider: OverflowProvider,
+        at: DateTime<Utc>,
+    ) -> Result<()>;
     /// Erase retired keys after their last live sandbox runner ends.
     fn delete_unused_overflow_keys(&self, workspace_id: Uuid) -> Result<usize>;
 }

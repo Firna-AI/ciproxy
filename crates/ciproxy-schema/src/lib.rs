@@ -15,6 +15,7 @@ pub mod migrations;
 pub mod organizations;
 pub mod overflow;
 pub mod overflow_provider_accounts;
+pub mod overflow_provider_settings;
 pub mod overflow_runner_intents;
 pub mod own_runners;
 pub mod runners;

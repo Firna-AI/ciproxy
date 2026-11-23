@@ -4,7 +4,8 @@ use std::env;
 use std::sync::Arc;
 
 use ciproxy_protocol::platform::Platform;
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::store::{Store, StoreFactory};
 use ciproxy_store_interface::vm_size::VmSize;
 use ciproxy_store_pg::factory::PgStoreFactory;
@@ -58,8 +59,10 @@ pub(super) fn default_label() -> Label {
             memory_gb: 8,
             disk_gb: 20,
         },
-        allow_machines: true,
-        allow_boat: true,
+        order: vec![
+            LabelPlace::Machine,
+            LabelPlace::Provider(OverflowProvider::Boat),
+        ],
         when_nothing_fits: WhenNothingFits::Wait,
     }
 }

@@ -32,7 +32,7 @@ pub struct OverflowSnapshot {
     pub starts: Vec<StartRecord>,
     /// Whether workspace settings permit new starts.
     pub enabled: bool,
-    /// Positive monthly USD limit in millionths of a dollar.
+    /// Boat's positive monthly USD limit in millionths of a dollar.
     pub spend_limit_usd_micros: Option<i64>,
 }
 

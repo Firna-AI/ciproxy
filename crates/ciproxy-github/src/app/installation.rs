@@ -3,7 +3,7 @@
 use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubRegistration};
 use ciproxy_store_interface::installation_association::SignedInstallation;
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::vm_size::VmSize;
 use ciproxy_store_interface::workspaces::Workspace;
@@ -207,9 +207,7 @@ impl AppService {
                 memory_gb,
                 disk_gb,
             },
-            allow_machines: true,
-            // A macOS label never uses Boat, as labels.md says.
-            allow_boat: platform == Platform::LinuxX64,
+            order: vec![LabelPlace::Machine],
             when_nothing_fits: WhenNothingFits::Wait,
         })
         .collect()

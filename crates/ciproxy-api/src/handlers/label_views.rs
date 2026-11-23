@@ -3,7 +3,8 @@
 use ciproxy_gateway::types::{MachineView, Presence};
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use uuid::Uuid;
 
 use crate::capacity::{MachineCapacity, platform_vms};
@@ -22,6 +23,13 @@ pub(super) fn stored(id: Uuid, input: LabelInput) -> Result<Label> {
     {
         return Err(Error::InvalidInput);
     }
+    let mut order = Vec::new();
+    if input.allow_machines {
+        order.push(LabelPlace::Machine);
+    }
+    if input.allow_boat {
+        order.push(LabelPlace::Provider(OverflowProvider::Boat));
+    }
     Ok(Label {
         id,
         name: input.name,
@@ -31,11 +39,10 @@ pub(super) fn stored(id: Uuid, input: LabelInput) -> Result<Label> {
             memory_gb: input.memory_gb,
             disk_gb: input.disk_gb,
         },
-        allow_machines: input.allow_machines,
-        allow_boat: input.allow_boat,
+        order,
         when_nothing_fits: match input.when_nothing_fits {
             NothingFits::Wait => WhenNothingFits::Wait,
-            NothingFits::LargestBoat => WhenNothingFits::LargestBoat,
+            NothingFits::LargestBoat => WhenNothingFits::LargestOverflow,
         },
     })
 }
@@ -51,11 +58,13 @@ pub(super) fn label(
         vcpus: label.size.vcpus,
         memory_gb: label.size.memory_gb,
         disk_gb: label.size.disk_gb,
-        allow_machines: label.allow_machines,
-        allow_boat: label.allow_boat,
+        allow_machines: label.order.contains(&LabelPlace::Machine),
+        allow_boat: label
+            .order
+            .contains(&LabelPlace::Provider(OverflowProvider::Boat)),
         when_nothing_fits: match label.when_nothing_fits {
             WhenNothingFits::Wait => NothingFits::Wait,
-            WhenNothingFits::LargestBoat => NothingFits::LargestBoat,
+            WhenNothingFits::LargestOverflow => NothingFits::LargestBoat,
         },
     };
     let fit = fit(&input, machines, capacity);

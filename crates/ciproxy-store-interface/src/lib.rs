@@ -22,6 +22,7 @@ pub mod organizations;
 pub mod overflow;
 pub mod overflow_delivery;
 pub mod overflow_provider_accounts;
+pub mod overflow_provider_settings;
 pub mod overflow_runtime;
 pub mod own_runners;
 pub mod runners;

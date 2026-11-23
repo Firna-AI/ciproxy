@@ -2,6 +2,8 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_store_interface::overflow_provider_settings::OverflowProviderSettings;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 
@@ -23,9 +25,8 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
     assert_eq!(store.overflow_provider_accounts(owner.id).unwrap(), vec![]);
     assert_eq!(
         store
-            .settings(owner.id)
-            .unwrap()
-            .boat_spend_limit_usd_micros,
+            .overflow_provider_settings(owner.id, OverflowProvider::Boat)
+            .unwrap(),
         None
     );
     store
@@ -77,7 +78,9 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
     store.reject_overflow_key(owner.id, new.id, at()).unwrap();
     new.rejected_at = Some(at());
     assert_eq!(store.overflow_provider_accounts(owner.id).unwrap()[1], new);
-    store.disconnect_overflow_provider(owner.id, at()).unwrap();
+    store
+        .disconnect_overflow_provider(owner.id, OverflowProvider::Boat, at())
+        .unwrap();
     assert_eq!(store.delete_unused_overflow_keys(owner.id).unwrap(), 1);
     assert_eq!(
         store.encrypted_overflow_key(owner.id, old.id).unwrap(),
@@ -89,15 +92,15 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
     );
     assert_eq!(
         store
-            .settings(owner.id)
-            .unwrap()
-            .boat_spend_limit_usd_micros,
-        Some(300_000_000)
+            .overflow_provider_settings(owner.id, OverflowProvider::Boat)
+            .unwrap(),
+        Some(OverflowProviderSettings {
+            spend_limit_usd_micros: Some(300_000_000),
+            offered: true,
+        })
     );
-    let mut no_limit = store.settings(owner.id).unwrap();
-    no_limit.boat_spend_limit_usd_micros = None;
     assert!(matches!(
-        store.save_settings(owner.id, &no_limit),
+        store.save_overflow_provider_spend_limit(owner.id, OverflowProvider::Boat, None),
         Err(Error::InvalidValue)
     ));
     store

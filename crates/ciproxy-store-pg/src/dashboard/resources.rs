@@ -12,6 +12,9 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
+use crate::gateway_transaction::transaction;
+use crate::label_places;
+use crate::workspaces::lock_workspace;
 
 pub(super) fn rename(store: &PgStore, workspace: Uuid, name: &str) -> Result<()> {
     require_record(
@@ -28,29 +31,25 @@ pub(super) fn retire(
     label: Uuid,
     at: DateTime<Utc>,
 ) -> Result<()> {
-    let name = labels::table
-        .find(label)
-        .filter(labels::workspace_id.eq(workspace))
-        .select(labels::name)
-        .first::<String>(&mut *store.connection()?)
-        .store()?;
-    if name == "ciproxy" {
-        return Err(Error::InvalidValue);
-    }
-    require_record(
-        diesel::update(
-            labels::table
-                .find(label)
-                .filter(labels::workspace_id.eq(workspace)),
-        )
-        .set((
-            labels::deleted_at.eq(at),
-            labels::allow_machines.eq(false),
-            labels::allow_boat.eq(false),
-        ))
-        .execute(&mut *store.connection()?)
-        .store()?,
-    )
+    transaction(&mut *store.connection()?, |connection| {
+        lock_workspace(connection, workspace).store()?;
+        let owned_label = labels::table
+            .find(label)
+            .filter(labels::workspace_id.eq(workspace));
+        let name = owned_label
+            .select(labels::name)
+            .first::<String>(connection)
+            .store()?;
+        if name == "ciproxy" {
+            return Err(Error::InvalidValue);
+        }
+        let count = diesel::update(owned_label)
+            .set(labels::deleted_at.eq(at))
+            .execute(connection)
+            .store()?;
+        require_record(count)?;
+        label_places::clear(connection, label).store()
+    })
 }
 
 pub(super) fn sets(store: &PgStore, workspace: Uuid, organization: Uuid) -> Result<Vec<ScaleSet>> {

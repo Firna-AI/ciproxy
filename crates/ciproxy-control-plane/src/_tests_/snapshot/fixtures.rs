@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::machines::Machine;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
@@ -45,8 +45,7 @@ pub(crate) fn input() -> RoutingSnapshot {
                 memory_gb: 8,
                 disk_gb: 80,
             },
-            allow_machines: true,
-            allow_boat: false,
+            order: vec![LabelPlace::Machine],
             when_nothing_fits: WhenNothingFits::Wait,
         }],
         machines: vec![MachineSnapshot {
@@ -76,7 +75,6 @@ pub(crate) fn input() -> RoutingSnapshot {
         settings: Settings {
             overflow_enabled: false,
             overflow_wait: OverflowWait::Seconds30,
-            boat_spend_limit_usd_micros: None,
         },
     }
 }

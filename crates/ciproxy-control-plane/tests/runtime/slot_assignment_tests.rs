@@ -13,7 +13,7 @@ use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::reports::{DrainState, SlotOccupancy, SlotReport};
 use ciproxy_protocol::runners;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::vm_size::VmSize;
@@ -116,8 +116,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
             memory_gb: 16,
             disk_gb: 80,
         },
-        allow_machines: true,
-        allow_boat: false,
+        order: vec![LabelPlace::Machine],
         when_nothing_fits: WhenNothingFits::Wait,
     };
     fixture

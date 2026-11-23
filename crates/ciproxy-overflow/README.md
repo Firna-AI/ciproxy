@@ -205,6 +205,8 @@ Call the public boundary in this order:
 
 1. Call `wallets` to check a key and offer its named wallets. Call `connect`
    with the key, its new version ID, the chosen wallet, and a positive limit.
+   The store saves the Boat limit and records the first offer with the key.
+   A first offer appends Boat to active Linux labels.
 2. Call `view` for the current catalog and spend.
 3. Call `OverflowView::scaler_account` with the snapshot's UTC clock origin.
 4. Build a consistent scaler snapshot and run its placement decision.

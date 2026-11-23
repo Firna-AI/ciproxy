@@ -3,7 +3,7 @@
 use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::gateway::Contact;
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::vm_size::VmSize;
 use uuid::Uuid;
 
@@ -23,8 +23,7 @@ fn keeps_the_platform_of_a_label_after_an_update() {
             memory_gb: 8,
             disk_gb: 20,
         },
-        allow_machines: true,
-        allow_boat: false,
+        order: vec![LabelPlace::Machine],
         when_nothing_fits: WhenNothingFits::Wait,
     };
     database.store.create_label(workspace.id, &label).unwrap();

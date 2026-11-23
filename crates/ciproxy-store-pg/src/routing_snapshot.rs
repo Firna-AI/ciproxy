@@ -1,7 +1,6 @@
 //! One repeatable-read view of every persisted routing input.
 
 use ciproxy_schema::github::github_jobs;
-use ciproxy_schema::labels::labels;
 use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::runners::runners;
 use ciproxy_schema::scale_sets::scale_sets;
@@ -13,7 +12,7 @@ use uuid::Uuid;
 
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::read_snapshot;
-use crate::labels::LabelRow;
+use crate::labels;
 use crate::machine_reads::load_snapshots;
 use crate::organization_rows::OrganizationRow;
 use crate::own_runners::load;
@@ -35,16 +34,7 @@ pub(crate) fn snapshot(
             .into_iter()
             .map(OrganizationRow::into_record)
             .collect::<Result<Vec<_>>>()?;
-        let labels = labels::table
-            .filter(labels::workspace_id.eq(workspace_id))
-            .filter(labels::deleted_at.is_null())
-            .order(labels::name)
-            .select(LabelRow::as_select())
-            .load::<LabelRow>(connection)
-            .store()?
-            .into_iter()
-            .map(LabelRow::into_record)
-            .collect::<Result<Vec<_>>>()?;
+        let labels = labels::load(connection, workspace_id)?;
         let jobs = github_jobs::table
             .filter(github_jobs::workspace_id.eq(workspace_id))
             .order((github_jobs::assigned_at, github_jobs::job_id))

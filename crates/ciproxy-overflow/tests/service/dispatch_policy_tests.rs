@@ -21,7 +21,7 @@ async fn unsent_selection_obeys_current_wait_and_largest_choice() {
     label.size.vcpus = 32;
     label.size.memory_gb = 64;
     label.size.disk_gb = 500;
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     harness.database.store.update_label(id(1), &label).unwrap();
     let mut action = request();
     action.action.requested_size.vcpu = 32;
@@ -40,7 +40,7 @@ async fn unsent_selection_obeys_current_wait_and_largest_choice() {
         StartOutcome::Waiting(WaitReason::SizeUnavailable)
     );
     assert_eq!(harness.start(id(11)), pending);
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     harness.database.store.update_label(id(1), &label).unwrap();
     let store = harness.database.store.clone();
     let mut current = label.clone();
@@ -70,7 +70,7 @@ async fn catalog_downgrade_preserves_scaler_own_machine_fit_context() {
     label.size.vcpus = 16;
     label.size.memory_gb = 32;
     label.size.disk_gb = 180;
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     harness.database.store.update_label(id(1), &label).unwrap();
     let mut account = harness.snapshot().accounts.remove(0);
     account.state.sizes.push(SizeOffer {

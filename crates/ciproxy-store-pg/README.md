@@ -18,8 +18,12 @@ Keeps GitHub installations and repository access per organization.
 Keeps each scale set, runner, and job attached to its organization.
 Shared machines can serve every organization of their own workspace.
 Stores caller-supplied token hashes and overflow provider key ciphertext.
-Each account row identifies its provider. Each workspace has one active key
-at most. Retired keys stay while their sandbox runners are live.
+Each account row identifies its provider. Each workspace has at most one
+active key for each provider. Retired keys stay while their sandbox runners
+are live. The provider's limit and offered mark survive key rotation and
+Disconnect. A first offer appends the provider to active Linux labels in
+the same transaction. Label writes use the same workspace lock, so each
+new label sees the first offer in its default order or receives the append.
 Key erasure waits for concurrent runner inserts before it checks references.
 Removing one organization preserves live sandbox-end tokens.
 It preserves shared execution resources while another organization remains.
@@ -267,6 +271,11 @@ CI starts the database for the existing workspace test phase.
   context, listener discovery, and exact remote cleanup confirmation.
 - [src/overflow_provider_accounts.rs](src/overflow_provider_accounts.rs)
   rotates and erases encrypted overflow provider keys.
+- [src/overflow_provider_settings.rs](src/overflow_provider_settings.rs)
+  stores per-provider limits and records the order of first offers.
+- [src/labels.rs](src/labels.rs) saves label sizes and orders together.
+- [src/label_places.rs](src/label_places.rs) reads, replaces, and appends
+  ordered label places.
 - [src/overflow_runtime.rs](src/overflow_runtime.rs) stores overflow
   registration identities.
 - [src/overflow](src/overflow) owns durable overflow execution transactions.

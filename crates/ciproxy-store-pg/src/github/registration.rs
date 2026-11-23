@@ -2,7 +2,6 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::github::github_initial_admin;
-use ciproxy_schema::labels::labels;
 use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
@@ -16,9 +15,9 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
+use crate::labels;
 use crate::organization_rows::repository_columns;
-use crate::platform_text::platform_text;
-use crate::workspaces::create_workspace_on;
+use crate::workspaces::{create_workspace_on, lock_workspace};
 
 pub(super) fn register(
     connection: &mut PgConnection,
@@ -38,28 +37,10 @@ pub(super) fn register(
             ))
             .execute(connection)?;
         for label in defaults {
-            let fallback: &str = label.when_nothing_fits.into();
-            diesel::insert_into(labels::table)
-                .values((
-                    labels::id.eq(label.id),
-                    labels::workspace_id.eq(workspace.id),
-                    labels::name.eq(&label.name),
-                    labels::platform.eq(platform_text(label.platform)),
-                    labels::vcpus.eq(label.size.vcpus),
-                    labels::memory_gb.eq(label.size.memory_gb),
-                    labels::disk_gb.eq(label.size.disk_gb),
-                    labels::allow_machines.eq(label.allow_machines),
-                    labels::allow_boat.eq(label.allow_boat),
-                    labels::when_nothing_fits.eq(fallback),
-                ))
-                .execute(connection)?;
+            labels::insert(connection, workspace.id, label, None)?;
         }
     }
-    workspaces::table
-        .find(organization.workspace_id)
-        .select(workspaces::id)
-        .for_update()
-        .first::<Uuid>(connection)?;
+    lock_workspace(connection, organization.workspace_id)?;
     let count = methods::FilterDsl::filter(
         diesel::insert_into(organizations::table)
             .values((

@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::read_snapshot;
+use crate::label_places;
 use crate::labels::LabelRow;
 
 use super::authority;
@@ -34,13 +35,14 @@ pub(super) fn facts(
         if record.phase != StartPhase::Unsent {
             return Ok(None);
         }
+        let order = label_places::load(connection, record.label_id).store()?;
         let label = labels::table
             .filter(labels::workspace_id.eq(workspace_id))
             .find(record.label_id)
             .select(LabelRow::as_select())
             .first::<LabelRow>(connection)
             .store()?
-            .into_record()?;
+            .into_record(order)?;
         Ok(Some(DispatchFacts { label }))
     })
 }

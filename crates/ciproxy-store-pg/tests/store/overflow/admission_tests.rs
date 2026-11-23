@@ -17,11 +17,9 @@ fn reservation_compares_exact_current_and_next_month_amounts_with_the_saved_limi
     let (workspace_id, _, mut pending) = setup(&database);
     let parameters = pending.dispatch.take().unwrap();
     pending.phase = StartPhase::Unsent;
-    let mut settings = database.store.settings(workspace_id).unwrap();
-    settings.boat_spend_limit_usd_micros = Some(100_000);
     database
         .store
-        .save_settings(workspace_id, &settings)
+        .save_overflow_provider_spend_limit(workspace_id, pending.provider, Some(100_000))
         .unwrap();
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     assert!(
@@ -111,7 +109,7 @@ fn reservation_and_dispatch_follow_current_largest_fallback_permission() {
             ReservationOutcome::NotPermitted
         );
         assert_eq!(session.snapshot().unwrap().starts, [pending.clone()]);
-        label.when_nothing_fits = WhenNothingFits::LargestBoat;
+        label.when_nothing_fits = WhenNothingFits::LargestOverflow;
         database.store.update_label(workspace_id, &label).unwrap();
         let mut changed_fee = pending.clone();
         changed_fee.start_fee_bound_usd = Some(Decimal::ZERO);
@@ -138,7 +136,7 @@ fn largest_fallback_cannot_dispatch_a_disk_below_the_saved_image_length() {
     parameters.size.disk_bytes = 46_999_999_999;
     pending.phase = StartPhase::Unsent;
     let mut label = database.store.labels(workspace_id).unwrap().remove(0);
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     database.store.update_label(workspace_id, &label).unwrap();
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     assert!(

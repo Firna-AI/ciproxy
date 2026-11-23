@@ -14,8 +14,9 @@ use ciproxy_github::scale_sets::sdk::SdkScaleSetApi;
 use ciproxy_github::scale_sets::{ScaleSetApi, ScaleSetFactory};
 use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::github::GithubJob;
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::store::Store;
 use ciproxy_store_interface::vm_size::VmSize;
@@ -114,8 +115,10 @@ pub(super) fn setup_with_label(store: &dyn Store, name: &str) -> ListenerTarget 
             memory_gb: 8,
             disk_gb: 80,
         },
-        allow_machines: true,
-        allow_boat: true,
+        order: vec![
+            LabelPlace::Machine,
+            LabelPlace::Provider(OverflowProvider::Boat),
+        ],
         when_nothing_fits: WhenNothingFits::Wait,
     };
     store.create_label(workspace.id, &label).unwrap();

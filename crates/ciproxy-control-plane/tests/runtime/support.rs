@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::gateway::Contact;
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::machines::Machine;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::own_runners::OwnRunner;
@@ -81,8 +81,7 @@ impl Fixture {
                 memory_gb: 8,
                 disk_gb: 80,
             },
-            allow_machines: true,
-            allow_boat: false,
+            order: vec![LabelPlace::Machine],
             when_nothing_fits: WhenNothingFits::Wait,
         };
         store.create_label(workspace, &label).unwrap();

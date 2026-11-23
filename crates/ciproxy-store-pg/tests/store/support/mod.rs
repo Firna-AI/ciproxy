@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::jobs::{Job, JobState};
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::{Label, LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::machines::{Machine, MachineDisk};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
@@ -119,8 +119,10 @@ impl Database {
                 memory_gb: 8,
                 disk_gb: 60,
             },
-            allow_machines: true,
-            allow_boat: true,
+            order: vec![
+                LabelPlace::Machine,
+                LabelPlace::Provider(OverflowProvider::Boat),
+            ],
             when_nothing_fits: WhenNothingFits::Wait,
         };
         self.store

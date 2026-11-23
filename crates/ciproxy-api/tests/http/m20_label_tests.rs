@@ -8,6 +8,7 @@ use ciproxy_overflow::provider::BoatAccountApiMock;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::Runner;
 use serde_json::{Value, json};
 use unimock::{MockFn, Unimock, matching};
@@ -112,7 +113,7 @@ async fn m20_labels_supply_current_placement_allocations_and_retained_thirty_day
         body[0]["fit"]["largest_boat"]["size"]["disk_bytes"],
         "60000000000"
     );
-    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    label.when_nothing_fits = WhenNothingFits::LargestOverflow;
     pages
         .fixture
         .database
@@ -185,7 +186,11 @@ async fn m20_labels_supply_current_placement_allocations_and_retained_thirty_day
         .fixture
         .database
         .store
-        .disconnect_overflow_provider(pages.fixture.workspace, at("2026-11-06T12:00:00Z"))
+        .disconnect_overflow_provider(
+            pages.fixture.workspace,
+            OverflowProvider::Boat,
+            at("2026-11-06T12:00:00Z"),
+        )
         .unwrap();
     label.size.vcpus = 2;
     label.size.memory_gb = 8;

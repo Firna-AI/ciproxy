@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_scaler::size_policy::{BoatChoice, select_boat_size};
 use ciproxy_scaler::snapshot::NothingFits;
-use ciproxy_store_interface::labels::WhenNothingFits;
+use ciproxy_store_interface::labels::{LabelPlace, WhenNothingFits};
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use ciproxy_store_interface::overflow::admission::DispatchFacts;
 use ciproxy_store_interface::overflow::record::StartRecord;
@@ -43,14 +43,14 @@ pub(super) fn selected_size(
     };
     let nothing_fits = match facts.label.when_nothing_fits {
         WhenNothingFits::Wait => NothingFits::Wait,
-        WhenNothingFits::LargestBoat => NothingFits::LargestBoatSize,
+        WhenNothingFits::LargestOverflow => NothingFits::LargestBoatSize,
     };
     let choice = select_boat_size(
         sizes.iter(),
         largest,
         requested,
         record.image_root_bytes,
-        record.own_machine_fits && facts.label.allow_machines,
+        record.own_machine_fits && facts.label.order.contains(&LabelPlace::Machine),
         nothing_fits,
     );
     let Some(BoatChoice::Fitting(size) | BoatChoice::Largest(size)) = choice else {

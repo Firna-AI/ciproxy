@@ -2,6 +2,8 @@
 
 use std::sync::{Arc, Mutex};
 
+use ciproxy_store_interface::labels::LabelPlace;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::store::Store;
 
 use super::fixtures::id;
@@ -74,7 +76,9 @@ impl LabelHook {
 pub(super) fn change_label(store: &Arc<dyn Store>, change: Change) {
     let mut label = store.labels(id(1)).unwrap().remove(0);
     match change {
-        Change::BoatOff => label.allow_boat = false,
+        Change::BoatOff => label
+            .order
+            .retain(|place| *place != LabelPlace::Provider(OverflowProvider::Boat)),
         Change::Cpu => label.size.vcpus += 2,
         Change::Memory => label.size.memory_gb += 4,
         Change::Disk => label.size.disk_gb += 20,

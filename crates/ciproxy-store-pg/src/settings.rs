@@ -1,20 +1,23 @@
-//! Shared workspace routing settings and spend-limit queries.
+//! Shared workspace routing settings queries.
 
 use ciproxy_schema::settings::settings;
-use ciproxy_store_interface::error::{Error, Result, ResultExt};
+use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::settings::{Settings, SettingsStore};
 use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
-use crate::error::QueryResultExt;
+use crate::error::{QueryResultExt, require_record};
+use crate::gateway_transaction::transaction;
+use crate::overflow_provider_settings::save_limit;
+use crate::workspaces::lock_workspace;
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = settings)]
 pub(crate) struct SettingsRow {
     overflow_enabled: bool,
     overflow_wait: String,
-    boat_spend_limit_usd_micros: Option<i64>,
 }
 
 impl SettingsRow {
@@ -22,7 +25,6 @@ impl SettingsRow {
         Ok(Settings {
             overflow_enabled: self.overflow_enabled,
             overflow_wait: self.overflow_wait.parse().internal()?,
-            boat_spend_limit_usd_micros: self.boat_spend_limit_usd_micros,
         })
     }
 }
@@ -38,32 +40,32 @@ impl SettingsStore for PgStore {
     }
 
     fn save_settings(&self, workspace_id: Uuid, record: &Settings) -> Result<()> {
-        let wait: &str = record.overflow_wait.into();
-        let saved = self
-            .connection()?
-            .transaction(|connection| {
-                let old_limit = settings::table
-                    .find(workspace_id)
-                    .select(settings::boat_spend_limit_usd_micros)
-                    .for_update()
-                    .first::<Option<i64>>(connection)?;
-                if old_limit.is_some() && record.boat_spend_limit_usd_micros.is_none() {
-                    return QueryResult::Ok(false);
-                }
-                diesel::update(settings::table.find(workspace_id))
-                    .set((
-                        settings::overflow_enabled.eq(record.overflow_enabled),
-                        settings::overflow_wait.eq(wait),
-                        settings::boat_spend_limit_usd_micros
-                            .eq(record.boat_spend_limit_usd_micros),
-                    ))
-                    .execute(connection)?;
-                Ok(true)
-            })
-            .store()?;
-        if !saved {
-            return Err(Error::InvalidValue);
-        }
-        Ok(())
+        save(&mut *self.connection()?, workspace_id, record)
     }
+
+    fn save_settings_with_provider_limit(
+        &self,
+        workspace_id: Uuid,
+        record: &Settings,
+        provider: OverflowProvider,
+        spend_limit_usd_micros: i64,
+    ) -> Result<()> {
+        transaction(&mut *self.connection()?, |connection| {
+            lock_workspace(connection, workspace_id).store()?;
+            save(connection, workspace_id, record)?;
+            save_limit(connection, workspace_id, provider, spend_limit_usd_micros).store()
+        })
+    }
+}
+
+fn save(connection: &mut PgConnection, workspace_id: Uuid, record: &Settings) -> Result<()> {
+    let wait: &str = record.overflow_wait.into();
+    let count = diesel::update(settings::table.find(workspace_id))
+        .set((
+            settings::overflow_enabled.eq(record.overflow_enabled),
+            settings::overflow_wait.eq(wait),
+        ))
+        .execute(connection)
+        .store()?;
+    require_record(count)
 }

@@ -99,11 +99,13 @@ impl OverflowRuntimeStore for PgStore {
              JOIN labels l ON l.workspace_id=w.id AND l.id=$5
              JOIN scale_sets b ON b.workspace_id=w.id AND b.organization_id=o.id AND b.label_id=l.id AND b.id=$6
              WHERE w.id=$2 AND o.app_state='active' AND a.admitted
-             AND s.overflow_enabled AND l.deleted_at IS NULL AND l.allow_boat AND l.platform='linux_x64' AND b.remote_removed_at IS NULL
+             AND s.overflow_enabled AND l.deleted_at IS NULL AND l.platform='linux_x64' AND b.remote_removed_at IS NULL
+             AND EXISTS (SELECT 1 FROM label_places p WHERE p.label_id=l.id AND p.place=($7::jsonb->>'provider'))
              AND l.vcpus=($7::jsonb->'requested_size'->>'vcpu')::bigint
              AND l.memory_gb::numeric*1000000000=($7::jsonb->'requested_size'->>'memory_bytes')::numeric
              AND l.disk_gb::numeric*1000000000=($7::jsonb->'requested_size'->>'disk_bytes')::numeric
-             AND EXISTS (SELECT 1 FROM overflow_provider_accounts k WHERE k.workspace_id=w.id AND k.retired_at IS NULL AND k.rejected_at IS NULL)",
+             AND EXISTS (SELECT 1 FROM overflow_provider_accounts k WHERE k.workspace_id=w.id
+                 AND k.provider=($7::jsonb->>'provider') AND k.retired_at IS NULL AND k.rejected_at IS NULL)",
         )
         .bind::<sql_types::Uuid,_>(intent.runner_id).bind::<sql_types::Uuid,_>(workspace_id)
         .bind::<sql_types::Uuid,_>(intent.delivery_id).bind::<sql_types::Uuid,_>(intent.organization_id)

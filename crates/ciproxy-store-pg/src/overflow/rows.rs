@@ -5,6 +5,7 @@ use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_schema::settings::settings;
 use ciproxy_store_interface::error::{Result, ResultExt};
 use ciproxy_store_interface::overflow::account::AccountState;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
 use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
@@ -15,6 +16,7 @@ use uuid::Uuid;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::read_snapshot;
 use crate::overflow_provider::DbOverflowProvider;
+use crate::overflow_provider_settings;
 
 #[derive(QueryableByName)]
 /// Private stored fields shared by account snapshots and startup authority reads.
@@ -70,14 +72,15 @@ pub(crate) fn snapshot(
 
 /// Read account and delivery rows inside the caller's existing transaction.
 pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<OverflowSnapshot> {
-    let (enabled, spend_limit_usd_micros) = settings::table
+    let enabled = settings::table
         .find(workspace_id)
-        .select((
-            settings::overflow_enabled,
-            settings::boat_spend_limit_usd_micros,
-        ))
-        .first::<(bool, Option<i64>)>(connection)
+        .select(settings::overflow_enabled)
+        .first::<bool>(connection)
         .store()?;
+    let spend_limit_usd_micros =
+        overflow_provider_settings::load(connection, workspace_id, OverflowProvider::Boat)
+            .store()?
+            .and_then(|settings| settings.spend_limit_usd_micros);
     let accounts = diesel::sql_query(
         "SELECT a.id, a.provider, a.account_name, a.key_ciphertext, a.connected_at,
                     a.retired_at, a.rejected_at, s.state_json

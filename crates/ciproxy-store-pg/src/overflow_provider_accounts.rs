@@ -2,20 +2,22 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::overflow_provider_accounts::overflow_provider_accounts;
-use ciproxy_schema::settings::settings;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow_provider_accounts::{
     OverflowProviderAccount, OverflowProviderAccountStore,
 };
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use diesel::prelude::*;
-use diesel::sql_types;
+use diesel::sql_types::{self, Nullable, Text, Timestamptz};
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 use crate::overflow_provider::DbOverflowProvider;
+use crate::overflow_provider_settings::{offer, save_limit};
+use crate::workspaces::lock_workspace;
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = overflow_provider_accounts)]
@@ -51,36 +53,14 @@ impl OverflowProviderAccountStore for PgStore {
     ) -> Result<()> {
         self.connection()?
             .transaction(|connection| {
-                workspaces::table
-                    .find(workspace_id)
-                    .select(workspaces::id)
-                    .for_update()
-                    .first::<Uuid>(connection)?;
-                let count = diesel::update(settings::table.find(workspace_id))
-                    .set(settings::boat_spend_limit_usd_micros.eq(spend_limit_usd_micros))
-                    .execute(connection)?;
-                if count == 0 {
-                    return Err(diesel::result::Error::NotFound);
-                }
-                diesel::update(
-                    overflow_provider_accounts::table
-                        .filter(overflow_provider_accounts::workspace_id.eq(workspace_id))
-                        .filter(overflow_provider_accounts::retired_at.is_null()),
+                lock_workspace(connection, workspace_id)?;
+                replace_key(
+                    connection,
+                    workspace_id,
+                    account,
+                    key,
+                    spend_limit_usd_micros,
                 )
-                .set(overflow_provider_accounts::retired_at.eq(account.connected_at))
-                .execute(connection)?;
-                diesel::insert_into(overflow_provider_accounts::table)
-                    .values((
-                        overflow_provider_accounts::id.eq(account.id),
-                        overflow_provider_accounts::workspace_id.eq(workspace_id),
-                        overflow_provider_accounts::provider
-                            .eq(DbOverflowProvider(account.provider)),
-                        overflow_provider_accounts::account_name.eq(&account.account_name),
-                        overflow_provider_accounts::key_ciphertext.eq(key.as_bytes()),
-                        overflow_provider_accounts::connected_at.eq(account.connected_at),
-                    ))
-                    .execute(connection)?;
-                QueryResult::Ok(())
             })
             .store()
     }
@@ -127,8 +107,23 @@ impl OverflowProviderAccountStore for PgStore {
         require_record(count)
     }
 
-    fn disconnect_overflow_provider(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<()> {
-        retire_keys(&mut *self.connection()?, workspace_id, at).store()
+    fn disconnect_overflow_provider(
+        &self,
+        workspace_id: Uuid,
+        provider: OverflowProvider,
+        at: DateTime<Utc>,
+    ) -> Result<()> {
+        self.connection()?
+            .transaction(|connection| {
+                if lock_workspace(connection, workspace_id)
+                    .optional()?
+                    .is_none()
+                {
+                    return Ok(());
+                }
+                retire_keys(connection, workspace_id, Some(provider), at)
+            })
+            .store()
     }
 
     fn delete_unused_overflow_keys(&self, workspace_id: Uuid) -> Result<usize> {
@@ -136,18 +131,49 @@ impl OverflowProviderAccountStore for PgStore {
     }
 }
 
+/// Replace a provider key and record its first offer under the workspace lock.
+pub(crate) fn replace_key(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+    account: &OverflowProviderAccount,
+    key: &EncryptedOverflowKey,
+    limit: i64,
+) -> QueryResult<()> {
+    save_limit(connection, workspace_id, account.provider, limit)?;
+    offer(connection, workspace_id, account.provider)?;
+    retire_keys(
+        connection,
+        workspace_id,
+        Some(account.provider),
+        account.connected_at,
+    )?;
+    diesel::insert_into(overflow_provider_accounts::table)
+        .values((
+            overflow_provider_accounts::id.eq(account.id),
+            overflow_provider_accounts::workspace_id.eq(workspace_id),
+            overflow_provider_accounts::provider.eq(DbOverflowProvider(account.provider)),
+            overflow_provider_accounts::account_name.eq(&account.account_name),
+            overflow_provider_accounts::key_ciphertext.eq(key.as_bytes()),
+            overflow_provider_accounts::connected_at.eq(account.connected_at),
+        ))
+        .execute(connection)?;
+    Ok(())
+}
+
 /// Retire active keys while preserving ciphertext needed by live sandboxes.
 pub(crate) fn retire_keys(
     connection: &mut PgConnection,
     workspace_id: Uuid,
+    provider: Option<OverflowProvider>,
     at: DateTime<Utc>,
 ) -> QueryResult<()> {
-    diesel::update(
-        overflow_provider_accounts::table
-            .filter(overflow_provider_accounts::workspace_id.eq(workspace_id))
-            .filter(overflow_provider_accounts::retired_at.is_null()),
+    diesel::sql_query(
+        "UPDATE overflow_provider_accounts SET retired_at = $2
+         WHERE workspace_id = $1 AND retired_at IS NULL AND ($3 IS NULL OR provider = $3)",
     )
-    .set(overflow_provider_accounts::retired_at.eq(at))
+    .bind::<sql_types::Uuid, _>(workspace_id)
+    .bind::<Timestamptz, _>(at)
+    .bind::<Nullable<Text>, _>(provider.map(DbOverflowProvider))
     .execute(connection)?;
     Ok(())
 }

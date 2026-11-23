@@ -266,10 +266,12 @@ It never prints a cookie, token, install command, or response body.
 - [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and
   enable, and creates attempts only through explicit installation starts.
 - [src/handlers/overflow.rs](src/handlers/overflow.rs) serves the Boat Setup
-  and Settings routes.
+  and Settings routes. It saves the Boat limit with the workspace policy.
 - [src/handlers/overflow_views.rs](src/handlers/overflow_views.rs) builds the
   safe Boat view and converts limits and display amounts.
 - [src/wire/overflow.rs](src/wire/overflow.rs) defines the Boat wire types.
+- [src/handlers/label_views.rs](src/handlers/label_views.rs) maps the
+  dashboard's machine and Boat switches to the stored label order.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
 - [src/wire/machines.rs](src/wire/machines.rs) defines the machine view and

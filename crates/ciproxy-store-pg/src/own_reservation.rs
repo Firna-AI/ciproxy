@@ -6,12 +6,14 @@ use ciproxy_schema::machines::machines;
 use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::{Error, Result};
+use ciproxy_store_interface::labels::LabelPlace;
 use ciproxy_store_interface::own_runners::OwnRunner;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::error::QueryResultExt;
+use crate::label_places;
 use crate::labels::LabelRow;
 use crate::platform_text::parse_platform;
 
@@ -76,9 +78,10 @@ pub(crate) fn require_authority(
         .select(LabelRow::as_select())
         .for_update()
         .first::<LabelRow>(connection)
-        .store()?
-        .into_record()?;
-    if !label.allow_machines
+        .store()?;
+    let order = label_places::load(connection, intent.runner.label_id).store()?;
+    let label = label.into_record(order)?;
+    if !label.order.contains(&LabelPlace::Machine)
         || label.size != intent.requested_size
         || label.platform != parse_platform(&machine_platform)?
     {
