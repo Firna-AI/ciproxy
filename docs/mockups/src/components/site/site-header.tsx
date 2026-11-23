@@ -1,6 +1,6 @@
 // The top bar of the public site, shared by the marketing pages and the docs.
-// Marketing: the wordmark, Pricing, Docs, and GitHub, then the Sign in link
-// and the Start free button. The docs: the wordmark with "Docs", the search
+// Marketing: the wordmark, then on the right Pricing, Docs, and GitHub, the
+// Sign in link, and the Start free button. The docs: the wordmark with "Docs", the search
 // box, Pricing, GitHub, and the same actions. Every button that opens sign-in
 // says Start free; the link serves people who already use ciproxy. On mobile,
 // a menu button holds the links that do not fit.

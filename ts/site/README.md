@@ -27,11 +27,11 @@ The pages follow the marketing and docs mockups under
 
 The look is Graphite:
 
-- One top bar serves both parts. The marketing pages show the wordmark,
-  Pricing, Docs, GitHub, Sign in, and Start free. On a phone, a menu
-  holds the links. The docs show the wordmark with "Docs", the Starlight
-  search, Pricing, GitHub, and the same actions. A narrow docs window hides
-  Pricing, GitHub, and Sign in.
+- One top bar serves both parts. The marketing pages show the wordmark on
+  the left, and Pricing, Docs, GitHub, Sign in, and Start free on the right.
+  On a phone, a menu holds the links. The docs show the wordmark with "Docs",
+  the Starlight search, Pricing, GitHub, and the same actions. A narrow docs
+  window hides Pricing, GitHub, and Sign in.
 - The GitHub link is text, with no icon. It opens the public repository of
   ciproxy, `https://github.com/Firna-AI/ciproxy`.
 - Every marketing page ends with the footer.

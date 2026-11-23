@@ -70,10 +70,13 @@
   letter-spacing: -0.01em;
 }
 
+/* The main links sit on the right, before the actions. */
+
 .site-nav {
   display: flex;
   flex: 1;
   align-items: center;
+  justify-content: flex-end;
   gap: 28px;
 }
 
