@@ -551,86 +551,144 @@ and the
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation. The orchestrator found it on 23 November
-  2026, during Milestones 4, 9, and 13.
+  2026. The options check of the same day added D, E, and F, and it moved
+  the recommendation from B to F.
 - **Category:** Test.
 - **Location:** Milestones 4 and 13 of this plan, and
   `image/check-worker-steps.py`.
-- **Background:** Four required TODOs need real infrastructure: the
-  out-of-memory proof in a Linux job VM and a Boat sandbox, the image check
-  of the Worker log steps, the end-to-end smoke test on a Linux machine, a
-  Mac, and Boat, and the check that the Worker log masks a secret in a step
-  name. The workspace sandbox has no KVM, systemd is not its init, and it
-  has no runner registration, no Mac, and no Boat key.
+- **Background:**
+  - Four required TODOs need real infrastructure: the out-of-memory proof
+    in a Linux job VM and a Boat sandbox, the live check of the Worker log
+    steps, the end-to-end smoke test on a Linux machine, a Mac, and Boat,
+    and the check that the Worker log masks a secret in a step name.
+  - The workspace sandbox has no KVM, systemd is not its init, and it has
+    no runner registration, no Mac, and no Boat key.
+  - A job gets the new guest only when an environment pins a new image
+    release, through `JOB_IMAGE_MANIFEST_PATH`, `MACOS_IMAGE_MANIFEST_PATH`,
+    and the Boat snapshot. ciproxy is not in production.
+  - The end-to-end runs need a control plane that runs this change, and
+    only `main` deploys to the preview.
 - **Problem:** The unit tests and the chroot check pass, but nothing has run
-  the out-of-memory scope, the samplers, or the step reader in a real VM.
+  the runner scope, the samplers, or the step reader in a real VM.
 - **Impact if no action:** The plan cannot complete, because required TODOs
-  stay open. If they move out, a mistake in the runner scope can reach every
-  Linux job.
-- **Root question:** How does the change get its real-machine proof before
-  it reaches customers?
+  stay open. A mistake in the runner scope would reach every Linux job of
+  an environment that pins the new image.
+- **Root question:** How does the new guest get its real-VM proof before any
+  job runs it, with each check at the earliest point where it can run?
 - **Options:**
-  - **A.** Move the four checks to the post-merge section. They become
-    follow-up items when the plan is deleted. Cost: the runner scope and the
-    samplers reach `main` unproven on real VMs. Effort: Small.
+  - **A.** Move the four checks to the post-merge section. Cost: the runner
+    scope and the samplers reach `main` unproven on real VMs. Effort: Small.
   - **B.** The user gives a test workspace with a Linux machine with KVM, a
-    Mac, and a Boat key, and the orchestrator runs the checks before the
-    pull request. Cost: the setup time and a few Boat sandboxes. Effort:
-    Medium.
+    Mac, and a Boat key, and the orchestrator runs every check before the
+    pull request. Cost: three image builds from the branch, and a control
+    plane that runs the branch, which no environment gives before the
+    merge. Effort: Large.
   - **C.** Run the Linux and Boat checks before the pull request, and move
-    the Mac check to the post-merge section. Cost: the macOS sampler
-    reaches `main` unproven on a real Mac. Effort: Medium.
+    the Mac check after it. Cost: the same as B, without the Mac. Effort:
+    Large.
+  - **D.** Gate the image release, not the merge. The release steps in
+    `image/README.md` and `image/checks.md` require the live checks before
+    an environment pins a release whose guest changed. The checks move to
+    the post-merge section. Cost: a written step holds the gate, and the
+    user waives the rule that keeps a smoke test that can run before the
+    merge as a required TODO. Effort: Medium.
+  - **E.** Do D, and also run the riskiest part once before the pull
+    request on GitHub-hosted runners, with no user infrastructure: the real
+    `systemd-run` scope and an out-of-memory child on `ubuntu-24.04`, and
+    the real Mach reads on `macos-15`, from a scratch workflow that is then
+    deleted. Cost: no Firecracker kernel, no Boat services, a public run
+    log, and a scratch push. Effort: Medium.
+  - **F.** Split the checks by what they need. Before the pull request, run
+    the out-of-memory proof in a Linux job VM and a Boat sandbox, the live
+    Worker steps check, and the masking run, with the branch's guest in
+    copies of the published image and Boat snapshot. After the merge, run
+    the end-to-end jobs on the main preview, as the release steps of D.
+    Cost: before the pull request, a KVM host, a Boat key, and the staging
+    App key. Effort: Medium.
 - **Left out:** Faking a job VM in the sandbox, because the proof is about
   systemd, the kernel, and the runner in a real VM.
-- **Wider fix:** None.
-- **Previous examples:** None found.
-- **Recommendation:** B. The runner scope changes how every Linux job
-  starts, so it needs a real proof before customers get it.
-- **Action:** ask the user, because each option except A needs credentials
-  or infrastructure that only the user can give.
+- **Wider fix:** D, because its release rule gives each later guest change
+  a live run before an environment pins it.
+- **Previous examples:** `crates/ciproxy-agent/smoke-checks.md:207` and
+  `:241` record live checks that could not run without KVM.
+  `plans/follow-ups/production-smoke-test.md` and
+  `plans/follow-ups/image-checks-in-gate.md` cover similar checks.
+- **Recommendation:** F. The first recommendation was B. F proves the runner
+  scope on a real job VM and a Boat sandbox before `main` holds it, and it
+  runs the end-to-end jobs where a control plane with the change exists.
+  Add E if the KVM host or the Boat key cannot come first.
+- **Action:** ask the user, because each option except A and D needs
+  credentials or infrastructure that only the user can give, and D needs a
+  waiver of a plan rule.
 
-## Decision 9. The privacy policy is already approved
+## Decision 9. The legal texts claim no receipt of job code
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation. The orchestrator found it on 23 November
-  2026, while it checked Milestone 12.
+  2026, while it checked Milestone 12. The options check of the same day
+  widened it to the terms, added D, E, F, and G, and moved the
+  recommendation from A to D.
 - **Category:** Docs or spec.
 - **Location:** `ts/site/src/data/legal-privacy.ts:34`,
-  `ts/site/src/pages/privacy.astro`, and `ts/site/README.md:15`.
-- **Background:** The site README on `main` says that `/privacy/` is the
-  approved privacy policy of Firna Ltd, effective on 23 November 2026, and
-  that each change is a new version that needs the owner's approval. The
-  policy says that the control plane never receives job code, and its list
-  of job data has no samples and no steps. This plan wrongly treated the
-  policy as a draft.
-- **Problem:** The feature stores new job data, so the approved policy
-  becomes incomplete when the feature ships. Only the owner can approve a
-  new version.
-- **Impact if no action:** The public privacy policy does not name the CPU
-  and memory samples and the steps that ciproxy stores.
-- **Root question:** How does the privacy policy cover the new job data when
-  the feature ships?
+  `ts/site/src/data/legal-terms.ts:95`, and `ts/site/README.md:15`.
+- **Background:**
+  - The site README on `main` says that `/terms/` and `/privacy/` are the
+    approved texts of Firna Ltd, and that each change is a new version that
+    needs the owner's approval.
+  - Both texts say that the hosted control plane does not receive job code.
+    The timing read already receives step names from GitHub, so that word
+    is untrue on `main` today.
+  - The privacy policy lists the job data, and the list has no samples and
+    no steps. This plan wrongly treated the policy as a draft.
+  - The privacy revision of Milestone 12 is in
+    `.context/job-step-cpu-and-memory/privacy-revision.patch`. That patch
+    shows the page as a draft, with no effective date. It also moves the
+    stored Boat key text, adds sentences to "How ciproxy uses data", and
+    changes a retention row.
+- **Problem:** The approved texts make a claim that is already untrue, and
+  the privacy policy will miss the new job data.
+- **Impact if no action:** The public legal texts stay untrue about what the
+  control plane receives and stores.
+- **Root question:** How do the approved legal texts stay true about the job
+  data that the control plane receives and stores, now and when jobs send
+  samples and steps?
 - **Options:**
-  - **A.** The user approves the revised text now, and the page gets a new
-    effective date for the release. The revision is in
-    `.context/job-step-cpu-and-memory/privacy-revision.patch`. Effort:
-    Small.
-  - **B.** The page shows the revision as a draft, with no effective date,
-    until the user approves it. Cost: the public site shows a draft privacy
-    policy. Effort: Small.
-  - **C.** Keep the approved text, and ship the feature only after the user
+  - **A.** The user approves a revised privacy policy and the terms sentence
+    in this pull request, and each page gets a new effective date for the
+    release. The patch must lose its draft parts. Effort: Small.
+  - **B.** The privacy page shows the revision as a draft, with no effective
+    date, until the user approves it. Cost: the site then has no approved
+    privacy policy, which the launch needs. Effort: Small.
+  - **C.** Keep the approved texts, and ship the feature only after the user
     approves a revision. Cost: the feature waits for the legal work.
     Effort: Small.
-- **Left out:** Shipping with the old text, because the policy would then
-  miss data that ciproxy stores.
-- **Wider fix:** None.
+  - **D.** Ship one legal revision now, in its own pull request to `main`,
+    when the owner approves it: the privacy revision without its draft
+    parts, and the terms sentence in the rule words. The feature pull
+    request then changes no legal text. Effort: Small.
+  - **E.** Tie the legal texts to the data contract: a Decision line in
+    "Secrets and job data" says that each kind of stored job data has its
+    sentence in the privacy policy, and a change of one changes both. It
+    combines with the other options. Effort: Small.
+  - **F.** The policy names the job data by kind and points to the job
+    isolation page for the list. Cost: later job fields change without the
+    owner's approval. Effort: Small.
+  - **G.** Merge the feature with the texts unchanged, and gate the first
+    image release with the new guest on the owner's approval. Cost: the
+    untrue "receive" words stay live until then. Effort: Small.
+- **Left out:** Shipping with the old texts, because they would miss data
+  that ciproxy stores, and they keep an untrue claim.
+- **Wider fix:** E.
 - **Previous examples:** `plans/follow-ups/legal-pages-approval.md` still
   describes both texts as drafts, but the site README calls them approved.
 - **Related:** Milestone 2a already changed the privacy mockup title, in
-  commit `8ffca01`. That change follows the answer.
-- **Recommendation:** A. It keeps one approved policy that names all data,
-  and the revision only adds the new data and the stores-or-logs words.
+  commit `8ffca01`. That change follows the answer. Decision 3 changed the
+  rule words of the protocol doc.
+- **Recommendation:** D. The first recommendation was A. D corrects the
+  claim that is already untrue on `main`, covers the terms too, and lets
+  the legal texts and the feature move apart.
 - **Action:** ask the user, because only the owner can approve a new version
-  of the privacy policy.
+  of a legal text.
 
 ## Design
 
