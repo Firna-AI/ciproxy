@@ -239,6 +239,11 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the section head and the cells divided by hairlines. `legal-page.tsx` is the
   frame of the terms and the privacy policy, with their sections from
   `src/fixtures/legal.ts`.
+- `src/screens/marketing/hero-backdrops.tsx`: the backgrounds of the landing
+  hero. The landing page keeps the grid. The page
+  `marketing/hero-backgrounds` shows the landing page with each other
+  background, so that one can be chosen: plain white, a black band, the
+  workflow file, the starts of 30 days, and two rules.
 - `src/screens/docs/docs-shell.tsx`: the frame of a docs page, in the structure
   of Starlight, with the sidebar from `docs-nav.ts` and the article parts in
   `docs-parts.tsx`.

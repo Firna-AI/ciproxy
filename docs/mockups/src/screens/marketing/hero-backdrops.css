@@ -1,0 +1,192 @@
+/* The backdrops of the landing hero (hero-backdrops.tsx), apart from the grid
+   in hero.css. A picture layer fills the hero above the end of its copy, from
+   rail to rail, and sits behind the copy. */
+
+.hb-layer {
+  position: absolute;
+  z-index: -1;
+  inset: calc(-1 * var(--hero-top)) calc(-1 * var(--site-gutter)) -24px;
+  pointer-events: none;
+}
+
+/* Ink: the hero copy on a black band, which ends 120px into the product
+   panel. The panel starts 72px under the copy, 48px on a phone. */
+
+.hb-ink {
+  bottom: calc(-72px - 120px);
+  background: var(--c-ink);
+}
+
+.mockup-mobile .hb-ink {
+  bottom: calc(-48px - 120px);
+}
+
+.hero-bg-ink .hero-title {
+  color: var(--c-on-solid);
+}
+
+.hero-bg-ink .hero-soft {
+  color: var(--c-faint);
+}
+
+.hero-bg-ink .hero-lead {
+  color: var(--c-border2);
+}
+
+.hero-bg-ink .hero-note {
+  color: var(--c-faint);
+}
+
+.hero-bg-ink .hero-chip {
+  border-color: color-mix(in srgb, var(--c-on-solid) 18%, transparent);
+  background: transparent;
+}
+
+.hero-bg-ink .hero-chip-label {
+  color: var(--c-faint);
+}
+
+.hero-bg-ink .hero-chip-code {
+  background: var(--c-on-solid);
+  color: var(--c-ink);
+}
+
+/* Workflow: the workflow file of mokly-ai in two columns at the sides, with
+   each runs-on line darker. Desktop only: a phone has no room at the sides. */
+
+.hb-workflow {
+  display: flex;
+  justify-content: space-between;
+  padding: 40px 0 0 28px;
+  overflow: hidden;
+}
+
+.hb-code {
+  width: 196px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--c-border2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 22px;
+  list-style: none;
+  text-align: left;
+  white-space: pre;
+}
+
+.hb-code li {
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.hb-code li::before {
+  display: inline-block;
+  width: 28px;
+  color: var(--c-border);
+  content: counter(list-item);
+}
+
+.hb-code .is-change {
+  color: var(--c-muted);
+}
+
+@media (max-width: 1040px) {
+  .hb-workflow {
+    display: none;
+  }
+}
+
+/* Starts: the starts of each of the last 30 days as bars that rise from the
+   end of the copy, own machines solid and Boat hatched above them. The
+   tallest day is the release peak. */
+
+.hb-starts {
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--site-gutter);
+}
+
+.hb-bars {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  height: 36%;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.mockup-mobile .hb-bars {
+  gap: 3px;
+  height: 30%;
+}
+
+.hb-day {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.hb-own {
+  background: var(--c-soft);
+}
+
+.hb-boat {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--c-border) 0 1px,
+    transparent 1px 5px
+  );
+}
+
+/* Rule: two hairlines from rail to rail, one through the chip and one under
+   the note. Each ends in a dark tick on the rail, as on a drawing. */
+
+.hb-rule {
+  --hb-top: calc(var(--hero-top) + 16px);
+}
+
+.hb-line {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.hb-line.is-top {
+  top: var(--hb-top);
+}
+
+.hb-line.is-bottom {
+  bottom: 0;
+}
+
+.hb-cross {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  background:
+    linear-gradient(var(--c-ink2), var(--c-ink2)) center / 1px 100% no-repeat,
+    linear-gradient(var(--c-ink2), var(--c-ink2)) center / 100% 1px no-repeat;
+}
+
+.hb-cross.is-top {
+  top: calc(var(--hb-top) - 6px);
+}
+
+.hb-cross.is-bottom {
+  bottom: -6px;
+}
+
+.hb-cross.is-left {
+  left: -6px;
+}
+
+.hb-cross.is-right {
+  right: -6px;
+}
+
+.mockup-mobile .hb-cross {
+  display: none;
+}
