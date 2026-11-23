@@ -4,7 +4,7 @@ use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
-use ciproxy_scaler::size_policy::{BoatChoice, select_boat_size};
+use ciproxy_scaler::size_policy::{ProviderChoice, select_provider_size};
 use ciproxy_scaler::snapshot;
 
 use crate::wire::facts::{LabelBoatSize, LabelPlacement};
@@ -51,9 +51,9 @@ pub(super) fn enrich(
         (true, Some(required), Some(catalog), Some(view)) => {
             let policy = match label.when_nothing_fits {
                 NothingFits::Wait => snapshot::NothingFits::Wait,
-                NothingFits::LargestBoat => snapshot::NothingFits::LargestBoatSize,
+                NothingFits::LargestBoat => snapshot::NothingFits::LargestProviderSize,
             };
-            match select_boat_size(
+            match select_provider_size(
                 catalog.sizes.iter(),
                 catalog.largest_size.as_ref(),
                 required,
@@ -61,13 +61,13 @@ pub(super) fn enrich(
                 own_fits,
                 policy,
             ) {
-                Some(BoatChoice::Fitting(size)) => BoatLabelFit::Fitting {
+                Some(ProviderChoice::Fitting(size)) => BoatLabelFit::Fitting {
                     size_name: size.id.0.clone(),
                     size: size_view(size.size),
                     refused: view.state.refused_sizes.contains(&size.id.0),
                 },
-                Some(BoatChoice::Largest(_)) if own_unknown => BoatLabelFit::Unavailable,
-                Some(BoatChoice::Largest(size)) => BoatLabelFit::LargestFallback {
+                Some(ProviderChoice::Largest(_)) if own_unknown => BoatLabelFit::Unavailable,
+                Some(ProviderChoice::Largest(size)) => BoatLabelFit::LargestFallback {
                     size_name: size.id.0.clone(),
                     size: size_view(size.size),
                     refused: view.state.refused_sizes.contains(&size.id.0),

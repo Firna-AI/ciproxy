@@ -6,6 +6,7 @@ use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use uuid::Uuid;
 
+use crate::boat_snapshot;
 use crate::error::{ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
@@ -28,7 +29,9 @@ impl MachineRuntime {
             } else {
                 view.scaler_account(chrono::DateTime::UNIX_EPOCH)
             } {
-                Ok(account) => snapshot.boat = account,
+                Ok(facts) => snapshot
+                    .providers
+                    .push(boat_snapshot::account(snapshot.root_sizing, facts)),
                 Err(error) => tracing::warn!(%error,"Boat accounting prevents new starts"),
             }
         }

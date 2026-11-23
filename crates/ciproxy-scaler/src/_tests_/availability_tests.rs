@@ -3,8 +3,8 @@
 use std::time::Duration;
 
 use crate::actions::StartReason;
-use crate::boat::{BoatSizeId, Refusal};
 use crate::decision::decide;
+use crate::provider::{ProviderSizeId, Refusal};
 
 use super::fixtures::{boat, boat_with_request, large, own, queued, small, snapshot};
 
@@ -22,12 +22,12 @@ fn boat_availability_blocks_new_starts_at_the_spend_limit() {
         state.machines.clear();
         state.queue = vec![queued("a", "ciproxy", 100)];
         match case {
-            "off" => state.boat.enabled = false,
-            "disconnected" => state.boat.connected = false,
-            "at-limit" => state.boat.spend.spent = 100,
-            "above-limit" => state.boat.spend.spent = 101,
-            "key" => state.boat.refusals = vec![Refusal::RejectedKey],
-            "billing" => state.boat.refusals = vec![Refusal::BillingRequired],
+            "off" => state.overflow_enabled = false,
+            "disconnected" => state.providers[0].facts.connected = false,
+            "at-limit" => state.providers[0].facts.spend.spent = 100,
+            "above-limit" => state.providers[0].facts.spend.spent = 101,
+            "key" => state.providers[0].facts.refusals = vec![Refusal::RejectedKey],
+            "billing" => state.providers[0].facts.refusals = vec![Refusal::BillingRequired],
             _ => unreachable!(),
         }
         assert_eq!(decide(&state), vec![], "{case}");
@@ -42,8 +42,8 @@ fn raised_or_reset_spend_limit_allows_new_overflow() {
     state.machines.clear();
     state.queue = vec![queued("a", "ciproxy", 0)];
     for (spent, limit) in [(100, 101), (0, 100), (99, 100)] {
-        state.boat.spend.spent = spent;
-        state.boat.spend.limit = limit;
+        state.providers[0].facts.spend.spent = spent;
+        state.providers[0].facts.spend.limit = limit;
         assert_eq!(
             decide(&state),
             vec![boat(
@@ -62,7 +62,7 @@ fn retries_at_the_backend_time_and_excludes_sizes_refused_by_the_plan() {
     let mut state = snapshot();
     state.machines.clear();
     state.queue = vec![queued("a", "ciproxy", 100)];
-    state.boat.refusals = vec![Refusal::RetryAfter {
+    state.providers[0].facts.refusals = vec![Refusal::RetryAfter {
         not_before: Duration::from_secs(101),
     }];
     assert_eq!(decide(&state), vec![]);
@@ -77,10 +77,10 @@ fn retries_at_the_backend_time_and_excludes_sizes_refused_by_the_plan() {
             StartReason::NoEligibleMachine
         )]
     );
-    state
-        .boat
+    state.providers[0]
+        .facts
         .refusals
-        .push(Refusal::SizeNotOnPlan(BoatSizeId("small".into())));
+        .push(Refusal::SizeNotOnPlan(ProviderSizeId("small".into())));
     assert_eq!(
         decide(&state),
         vec![boat_with_request(

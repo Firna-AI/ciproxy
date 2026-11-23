@@ -15,7 +15,7 @@ pub(crate) fn reconcile(snapshot: &Snapshot, plan: &mut Plan) {
     {
         let mut vacancies = targets(snapshot, machine);
         for runner in &machine.runners {
-            if !warm_candidate(runner) || plan.retiring.contains(&runner.id) {
+            if !warm_candidate(snapshot, runner) || plan.retiring.contains(&runner.id) {
                 continue;
             }
             if !take_target(&mut vacancies, &runner.organization_id)
@@ -34,7 +34,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
         }) else {
             continue;
         };
-        if !eligible(machine, label, snapshot.root_sizing) {
+        if !label.own_machines_first() || !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }
         let Some(size) = machine
@@ -54,7 +54,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             {
                 occupied += 1;
             }
-            if warm_candidate(runner) && !plan.retiring.contains(&runner.id) {
+            if warm_candidate(snapshot, runner) && !plan.retiring.contains(&runner.id) {
                 take_target(&mut vacancies, &runner.organization_id);
             }
         }

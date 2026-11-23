@@ -6,7 +6,7 @@ use ciproxy_protocol::identifiers::{LabelName, MachineId, OrganizationId, Runner
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::VmSize;
 
-use crate::boat::{BoatSizeId, SandboxId};
+use crate::provider::{ProviderId, ProviderSizeId, SandboxId};
 use crate::registration::RegistrationTarget;
 
 /// One requested change, with no external work performed by the scaler.
@@ -23,6 +23,8 @@ pub enum Action {
     },
     /// Delete a marked sandbox after confirming it has no running job.
     DeleteSandbox {
+        /// Provider that owns this sandbox.
+        provider: ProviderId,
         /// Sandbox that ciproxy created.
         sandbox_id: SandboxId,
         /// Why the sandbox is no longer needed.
@@ -41,7 +43,7 @@ pub struct StartRunner {
     pub label: LabelName,
     /// Platform of the label, which the destination machine must have.
     pub platform: Platform,
-    /// Label dimensions at registration, retained separately from Boat size.
+    /// Label dimensions at registration, retained separately from provider size.
     pub requested_size: VmSize,
     /// Actual VM dimensions, including the image and ext4 root allowance.
     pub size: VmSize,
@@ -56,8 +58,13 @@ pub struct StartRunner {
 pub enum Destination {
     /// A connected own machine with enough free capacity.
     Machine(MachineId),
-    /// An available size in the customer's Boat account.
-    Boat(BoatSizeId),
+    /// An available size in one provider account.
+    Provider {
+        /// Provider that will start the runner.
+        provider: ProviderId,
+        /// Size to start in that provider's catalog.
+        size_id: ProviderSizeId,
+    },
 }
 
 /// The observable cause of a runner start.
@@ -74,8 +81,10 @@ pub enum StartReason {
     },
     /// No connected, non-draining, allowed own machine fits the size.
     NoEligibleMachine,
-    /// Neither destination fits and the label allows a smaller Boat VM.
-    LargestBoatSize,
+    /// The provider comes before a fitting own machine in the label order.
+    ProviderBeforeOwnMachines,
+    /// No place fits and the label allows the largest provider size.
+    LargestProviderSize,
 }
 
 /// Why an idle runner or sandbox must retire.
@@ -87,9 +96,9 @@ pub enum StopReason {
     LabelChanged,
     /// The label no longer allows this destination.
     DestinationDisabled,
-    /// The actual Boat VM size no longer meets the label's current size policy.
+    /// The actual provider VM size no longer meets the label's current size policy.
     SizeNoLongerAllowed,
-    /// A launched Boat runner took no job within its ready deadline.
+    /// A launched provider runner took no job within its ready deadline.
     ReadyDeadlinePassed,
     /// The own machine is draining.
     MachineDraining,

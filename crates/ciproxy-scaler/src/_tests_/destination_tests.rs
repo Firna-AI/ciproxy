@@ -3,14 +3,14 @@
 use ciproxy_protocol::identifiers::RunnerId;
 
 use crate::actions::{Action, StartReason, StopReason};
-use crate::boat::SandboxId;
 use crate::decision::decide;
-use crate::snapshot::{Destinations, RunnerState};
+use crate::provider::SandboxId;
+use crate::snapshot::{Place, RunnerState};
 
-use super::fixtures::{boat, own, queued, runner, running, sandbox, small, snapshot};
+use super::fixtures::{BOAT, boat, own, queued, runner, running, sandbox, small, snapshot};
 
 #[test]
-fn obeys_independent_label_destination_switches() {
+fn obeys_orders_with_one_or_no_place() {
     for (own_enabled, boat_enabled, expected) in [
         (true, false, vec![own("a", "ciproxy", small())]),
         (
@@ -28,10 +28,13 @@ fn obeys_independent_label_destination_switches() {
     ] {
         let mut state = snapshot();
         state.queue = vec![queued("a", "ciproxy", 100)];
-        state.labels[0].destinations = Destinations {
-            own_machines: own_enabled,
-            boat: boat_enabled,
-        };
+        state.labels[0].order = [
+            own_enabled.then_some(Place::OwnMachines),
+            boat_enabled.then_some(Place::Provider(BOAT)),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
         assert_eq!(
             decide(&state),
             expected,
@@ -41,7 +44,9 @@ fn obeys_independent_label_destination_switches() {
 
     let mut boat_only = snapshot();
     boat_only.queue = vec![queued("a", "ciproxy", 0)];
-    boat_only.labels[0].destinations.own_machines = false;
+    boat_only.labels[0]
+        .order
+        .retain(|place| *place != Place::OwnMachines);
     boat_only.machines[0].runners = vec![
         runner("idle-own", "a", "ciproxy", RunnerState::Ready),
         running("busy-own"),
@@ -65,7 +70,9 @@ fn obeys_independent_label_destination_switches() {
 
     let mut own_only = snapshot();
     own_only.queue = vec![queued("a", "ciproxy", 0)];
-    own_only.labels[0].destinations.boat = false;
+    own_only.labels[0]
+        .order
+        .retain(|place| *place != Place::Provider(BOAT));
     own_only.sandboxes = vec![
         sandbox(
             "idle-boat",
@@ -82,6 +89,7 @@ fn obeys_independent_label_destination_switches() {
         decide(&own_only),
         vec![
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("idle-boat".into()),
                 reason: StopReason::DestinationDisabled,
             },

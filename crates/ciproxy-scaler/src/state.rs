@@ -3,19 +3,18 @@
 use std::collections::HashSet;
 
 use ciproxy_protocol::identifiers::RunnerId;
-use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::VmSize;
 
 use crate::actions::{Action, Destination, StartReason, StartRunner, StopReason};
-use crate::boat::{Sandbox, SandboxId};
 use crate::capacity::Usage;
+use crate::provider::{ProviderId, Sandbox, SandboxId};
 use crate::snapshot::{Label, Runner, RunnerState, Snapshot, WaitingJob, warm_label};
 
 pub(crate) struct Plan {
     pub(crate) actions: Vec<Action>,
     pub(crate) retiring: HashSet<RunnerId>,
     pub(crate) claimed: HashSet<RunnerId>,
-    pub(crate) deleted: Vec<SandboxId>,
+    deleted: Vec<(ProviderId, SandboxId)>,
     pub(crate) usage: Vec<Usage>,
     pub(crate) reserved: Vec<Usage>,
 }
@@ -42,12 +41,14 @@ impl Plan {
     }
 
     pub(crate) fn delete(&mut self, sandbox: &Sandbox, reason: StopReason) {
-        if !self.deleted.contains(&sandbox.id) {
-            self.deleted.push(sandbox.id.clone());
+        let key = (sandbox.provider, sandbox.id.clone());
+        if !self.deleted.contains(&key) {
+            self.deleted.push(key);
             if let Some(retained) = &sandbox.runner {
                 self.retiring.insert(retained.runner.id.clone());
             }
             self.actions.push(Action::DeleteSandbox {
+                provider: sandbox.provider,
                 sandbox_id: sandbox.id.clone(),
                 reason,
             });
@@ -79,10 +80,11 @@ pub(crate) fn idle(runner: &Runner) -> bool {
     matches!(runner.state, RunnerState::Starting | RunnerState::Ready)
 }
 
-pub(crate) fn warm_candidate(runner: &Runner) -> bool {
-    (runner.label.0 == warm_label(Platform::LinuxX64)
-        || runner.label.0 == warm_label(Platform::MacosArm64))
-        && idle(runner)
+pub(crate) fn warm_candidate(snapshot: &Snapshot, runner: &Runner) -> bool {
+    idle(runner)
+        && label_for(snapshot, runner).is_some_and(|label| {
+            runner.label.0 == warm_label(label.platform) && label.own_machines_first()
+        })
 }
 
 pub(crate) fn label_for<'a>(snapshot: &'a Snapshot, runner: &Runner) -> Option<&'a Label> {

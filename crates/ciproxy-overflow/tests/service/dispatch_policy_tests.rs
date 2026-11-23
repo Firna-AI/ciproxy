@@ -4,9 +4,10 @@ use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
 use ciproxy_overflow::error::Error;
 use ciproxy_scaler::actions::{Destination, StartReason};
-use ciproxy_scaler::boat::BoatSizeId;
+use ciproxy_scaler::provider::{ProviderId, ProviderSizeId};
 use ciproxy_store_interface::labels::WhenNothingFits;
 use ciproxy_store_interface::overflow::account::SizeOffer;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use rust_decimal::Decimal;
 
 use super::dispatch_support::Provider;
@@ -88,7 +89,10 @@ async fn catalog_downgrade_preserves_scaler_own_machine_fit_context() {
     action.action.size.vcpu = 16;
     action.action.size.memory_bytes = 32_000_000_000;
     action.action.size.disk_bytes = 251_000_000_000;
-    action.action.destination = Destination::Boat(BoatSizeId("xlarge".to_owned()));
+    action.action.destination = Destination::Provider {
+        provider: ProviderId::new(OverflowProvider::Boat.as_str()),
+        size_id: ProviderSizeId("xlarge".to_owned()),
+    };
     action.action.reason = StartReason::OverflowWaitElapsed {
         waited: std::time::Duration::from_secs(60),
     };

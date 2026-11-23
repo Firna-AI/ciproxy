@@ -10,7 +10,7 @@ use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
-use crate::boat::{BoatAccount, Sandbox};
+use crate::provider::{ProviderAccount, ProviderId, Sandbox};
 use crate::registration::RegistrationTarget;
 
 /// One workspace's routing inputs, including all starts still in flight.
@@ -18,7 +18,7 @@ use crate::registration::RegistrationTarget;
 pub struct Snapshot {
     /// Workspace that owns every supplied machine and marked sandbox.
     pub workspace_id: WorkspaceId,
-    /// Boat image sizing and fallback until an own machine reports its image.
+    /// Fallback root sizing until an own machine reports its image.
     pub root_sizing: RootSizing,
     /// Current time on the same clock as queue and retry timestamps.
     pub now: Duration,
@@ -32,12 +32,20 @@ pub struct Snapshot {
     pub queue: Vec<WaitingJob>,
     /// Complete own-machine state, including occupied and retiring VMs.
     pub machines: Vec<Machine>,
-    /// Boat settings and the current account catalog.
-    pub boat: BoatAccount,
-    /// Sandboxes observed by the backend, including marked orphans.
+    /// Workspace switch that allows new starts on overflow providers.
+    pub overflow_enabled: bool,
+    /// Current provider accounts with their catalogs and start requirements.
+    pub providers: Vec<ProviderAccount>,
+    /// Sandboxes observed by providers, including marked orphans.
     pub sandboxes: Vec<Sandbox>,
-    /// Time that eligible own-machine jobs wait before an overflow start.
+    /// Time a job waits for a fitting own machine before trying a later place.
     pub overflow_wait: Duration,
+}
+
+impl Snapshot {
+    pub(crate) fn provider(&self, id: ProviderId) -> Option<&ProviderAccount> {
+        self.providers.iter().find(|provider| provider.id == id)
+    }
 }
 
 /// The one label that warm runners serve on a machine of this platform.
@@ -59,38 +67,45 @@ pub struct Label {
     pub platform: Platform,
     /// Current label dimensions, with disk measured as free job bytes.
     pub size: VmSize,
-    /// Destinations enabled by the customer.
-    pub destinations: Destinations,
-    /// Behavior when neither own machines nor the Boat catalog fits.
+    /// Places that may serve this label, in the customer's order.
+    pub order: Vec<Place>,
+    /// What to do when no place of the order fits the size.
     pub nothing_fits: NothingFits,
 }
 
 impl Label {
-    /// Whether Boat may serve this label.
-    ///
-    /// Only Linux labels use Boat. Cloud Macs bill 24 hours at minimum, so a
-    /// macOS label waits for a free Mac whatever its Boat switch says.
-    pub fn allows_boat(&self) -> bool {
-        self.destinations.boat && self.platform == Platform::LinuxX64
+    pub(crate) fn places(&self) -> impl Iterator<Item = Place> + '_ {
+        self.order
+            .iter()
+            .copied()
+            .filter(|place| self.platform == Platform::LinuxX64 || *place == Place::OwnMachines)
+    }
+
+    pub(crate) fn allows(&self, place: Place) -> bool {
+        self.places().any(|candidate| candidate == place)
+    }
+
+    pub(crate) fn own_machines_first(&self) -> bool {
+        self.places().next() == Some(Place::OwnMachines)
     }
 }
 
-/// The two independent label destination settings.
+/// One place in a label's order.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Destinations {
-    /// Whether the label allows own machines.
-    pub own_machines: bool,
-    /// Whether the label allows Boat.
-    pub boat: bool,
+pub enum Place {
+    /// The workspace's own machines.
+    OwnMachines,
+    /// One provider that can start a sandbox for this label.
+    Provider(ProviderId),
 }
 
-/// The customer's choice for a size unsupported by both destinations.
+/// The customer's choice for a size unsupported by the places in the order.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NothingFits {
     /// Leave demand queued until a destination of the requested size exists.
     Wait,
-    /// Permit the largest Boat size, even when it is smaller than requested.
-    LargestBoatSize,
+    /// Permit a provider's largest size, even when it is smaller than requested.
+    LargestProviderSize,
 }
 
 /// Unassigned demand, which the scaler never pins to a particular runner.

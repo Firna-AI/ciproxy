@@ -7,6 +7,8 @@ mod fallback_tests;
 mod fixtures;
 mod lifecycle_tests;
 mod platform_tests;
+mod provider_fallback_tests;
+mod provider_order_tests;
 mod ready_deadline_tests;
 mod routing_tests;
 mod runner_selection_tests;

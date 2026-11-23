@@ -3,11 +3,11 @@
 use ciproxy_protocol::identifiers::RunnerId;
 
 use crate::actions::{Action, StopReason};
-use crate::boat::SandboxId;
 use crate::decision::decide;
+use crate::provider::SandboxId;
 use crate::snapshot::RunnerState;
 
-use super::fixtures::{allocated, large, own, queued, runner, sandbox, small, snapshot};
+use super::fixtures::{BOAT, allocated, large, own, queued, runner, sandbox, small, snapshot};
 
 #[test]
 fn unknown_idle_targets_retire_without_covering_waiting_demand() {
@@ -26,6 +26,7 @@ fn unknown_idle_targets_retire_without_covering_waiting_demand() {
                 reason: StopReason::LabelChanged
             },
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("boat-unknown".into()),
                 reason: StopReason::LabelChanged
             },
@@ -61,6 +62,7 @@ fn ready_boat_supply_is_kept_before_starting_supply_in_either_order() {
         assert_eq!(
             decide(&state),
             vec![Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("starting".into()),
                 reason: StopReason::NoWaitingJob,
             }],

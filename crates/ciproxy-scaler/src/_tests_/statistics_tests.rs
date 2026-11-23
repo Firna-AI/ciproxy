@@ -44,7 +44,7 @@ fn measured_leases_reduce_start_capacity_and_physical_fit_once() {
         (40, vec![own("a", "ciproxy", small())]),
     ] {
         let mut state = snapshot();
-        state.boat.enabled = false;
+        state.overflow_enabled = false;
         state.machines[0].disk_budget_bytes = 180 * GIGABYTE;
         state.machines[0].docker_leased_bytes = Some(leased_gb * GIGABYTE);
         state.queue = vec![queued("a", "ciproxy", 0); 3];

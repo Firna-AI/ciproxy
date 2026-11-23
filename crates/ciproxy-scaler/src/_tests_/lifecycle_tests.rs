@@ -4,12 +4,12 @@ use ciproxy_protocol::identifiers::{OrganizationId, RunnerId};
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::actions::{Action, StartReason, StopReason};
-use crate::boat::{Refusal, SandboxId};
 use crate::decision::decide;
+use crate::provider::{Refusal, SandboxId};
 use crate::snapshot::RunnerState;
 
 use super::fixtures::{
-    allocated, boat, boat_with_request, large, own, queued, runner, running, sandbox, small,
+    BOAT, allocated, boat, boat_with_request, large, own, queued, runner, running, sandbox, small,
     snapshot, warm,
 };
 
@@ -27,6 +27,7 @@ fn oversized_boat_capacity_does_not_hide_a_label_size_change() {
         decide(&state),
         vec![
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("oversized".into()),
                 reason: StopReason::LabelChanged
             },
@@ -88,6 +89,7 @@ fn an_idle_own_runner_makes_an_unneeded_boat_runner_retire() {
     assert_eq!(
         decide(&state),
         vec![Action::DeleteSandbox {
+            provider: BOAT,
             sandbox_id: SandboxId("idle".into()),
             reason: StopReason::NoWaitingJob,
         }]
@@ -123,6 +125,7 @@ fn size_change_retires_old_idle_runners_and_preserves_running_jobs() {
                 reason: StopReason::LabelChanged
             },
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("old".into()),
                 reason: StopReason::LabelChanged
             },
@@ -163,6 +166,7 @@ fn removing_an_organization_stops_only_its_idle_runners() {
                 reason: StopReason::OrganizationRemoved
             },
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("idle-a".into()),
                 reason: StopReason::OrganizationRemoved
             },
@@ -192,14 +196,17 @@ fn cleans_only_marked_idle_sandboxes_and_always_deletes_exited_runners() {
         decide(&state),
         vec![
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("orphan".into()),
                 reason: StopReason::OrphanSandbox
             },
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("exited".into()),
                 reason: StopReason::RunnerExited
             },
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("idle".into()),
                 reason: StopReason::NoWaitingJob
             },
@@ -220,6 +227,7 @@ fn completed_sandbox_is_deleted_even_when_more_jobs_wait() {
         decide(&state),
         vec![
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("done".into()),
                 reason: StopReason::RunnerExited
             },
@@ -251,9 +259,9 @@ fn failures_never_retire_or_retry_running_jobs() {
         match case {
             "offline" => state.machines[0].connected = false,
             "draining" => state.machines[0].draining = true,
-            "disconnected" => state.boat.connected = false,
-            "rejected-key" => state.boat.refusals = vec![Refusal::RejectedKey],
-            "spend-limit" => state.boat.spend.spent = 100,
+            "disconnected" => state.providers[0].facts.connected = false,
+            "rejected-key" => state.providers[0].facts.refusals = vec![Refusal::RejectedKey],
+            "spend-limit" => state.providers[0].facts.spend.spent = 100,
             "label-removed" => state.labels.clear(),
             "target-unknown" => {
                 state.machines[0].runners[0].target = None;

@@ -5,9 +5,9 @@ use ciproxy_protocol::platform::Platform;
 
 use crate::actions::{Action, Destination, StartReason};
 use crate::decision::decide;
-use crate::snapshot::{Machine, NothingFits, RunnerState, Snapshot};
+use crate::snapshot::{Machine, NothingFits, Place, RunnerState, Snapshot};
 
-use super::fixtures::{boat, label, queued, runner, small, snapshot, start};
+use super::fixtures::{BOAT, boat, label, queued, runner, small, snapshot, start};
 
 fn mac(id: &str) -> Machine {
     let mut machine = snapshot().machines.remove(0);
@@ -65,15 +65,17 @@ fn linux_jobs_never_run_on_macs() {
             StartReason::NoEligibleMachine,
         )]
     );
-    state.labels[0].destinations.boat = false;
+    state.labels[0]
+        .order
+        .retain(|place| *place != Place::Provider(BOAT));
     assert_eq!(decide(&state), vec![]);
 }
 
 #[test]
-fn macos_jobs_wait_for_a_mac_whatever_the_boat_switch_says() {
+fn macos_jobs_wait_for_a_mac_even_with_a_provider_in_the_input() {
     let mut state = with_mac_label();
-    state.labels[2].destinations.boat = true;
-    state.labels[2].nothing_fits = NothingFits::LargestBoatSize;
+    state.labels[2].order = vec![Place::OwnMachines, Place::Provider(BOAT)];
+    state.labels[2].nothing_fits = NothingFits::LargestProviderSize;
     state.queue = vec![queued("a", "macos", 100)];
     assert_eq!(decide(&state), vec![], "a free Linux machine only");
 

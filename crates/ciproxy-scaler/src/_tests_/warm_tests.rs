@@ -124,7 +124,7 @@ fn leaves_free_capacity_for_a_waiting_job_that_needs_more_than_is_free() {
     state.machines[0].warm_count = 1;
     state.machines[0].warm_allocation = vec![OrganizationId("a".into())];
     state.queue = vec![queued("a", "large", 100)];
-    state.boat.enabled = false;
+    state.overflow_enabled = false;
     assert_eq!(decide(&state), vec![]);
 }
 

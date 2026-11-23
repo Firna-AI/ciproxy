@@ -12,7 +12,7 @@ use ciproxy_protocol::identifiers::{LabelName, OrganizationId};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
-use ciproxy_scaler::boat::BoatSizeId;
+use ciproxy_scaler::provider::{ProviderId, ProviderSizeId};
 use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use unimock::Unimock;
@@ -104,7 +104,10 @@ pub(super) async fn start(fixture: &Fixture) {
                         memory_bytes: 16_000_000_000,
                         disk_bytes: 111_000_000_000,
                     },
-                    destination: Destination::Boat(BoatSizeId("large".to_owned())),
+                    destination: Destination::Provider {
+                        provider: ProviderId::new(OverflowProvider::Boat.as_str()),
+                        size_id: ProviderSizeId("large".to_owned()),
+                    },
                     reason: StartReason::NoEligibleMachine,
                 },
                 registration: Secret::new("fake-registration"),

@@ -1,53 +1,112 @@
-//! Boat availability, exact wait thresholds, and catalog size selection.
+//! Walk the label order for demand that has no retained runner.
+
+use std::time::Duration;
 
 use crate::actions::{Destination, StartReason};
-use crate::boat::{BoatAccount, Refusal};
-use crate::size_policy::{BoatChoice, SizePolicy};
-use crate::snapshot::{Label, Snapshot, WaitingJob};
+use crate::capacity::own_fits;
+use crate::placement::place_own;
+use crate::provider::{ProviderAccount, ProviderId, ProviderSize, Refusal};
+use crate::snapshot::{Label, NothingFits, Place, Snapshot, WaitingJob};
 use crate::state::Plan;
 
-pub(crate) fn place_boat(
+/// Remember a fallback candidate while checking later places for full fit.
+pub(crate) fn place_in_order(
     snapshot: &Snapshot,
     plan: &mut Plan,
     job: &WaitingJob,
     label: &Label,
 ) -> bool {
-    if !label.allows_boat() || !available(&snapshot.boat, snapshot) {
-        return false;
-    }
-    let sizes = SizePolicy::for_label(snapshot, label);
-    let waited = snapshot.now.saturating_sub(job.queued_at);
-    if sizes.own_fits && waited < snapshot.overflow_wait {
-        return false;
-    }
-    let (size, reason) = match sizes.boat {
-        Some(BoatChoice::Fitting(size)) => {
-            let reason = if sizes.own_fits {
-                StartReason::OverflowWaitElapsed { waited }
-            } else {
-                StartReason::NoEligibleMachine
-            };
-            (size, reason)
-        }
-        Some(BoatChoice::Largest(size)) => (size, StartReason::LargestBoatSize),
-        None => return false,
+    let own_fits = own_fits(snapshot, label);
+    let mut has_fit = own_fits;
+    let mut fallback = None;
+    let mut reason = if own_fits {
+        StartReason::ProviderBeforeOwnMachines
+    } else {
+        StartReason::NoEligibleMachine
     };
+
+    for place in label.places() {
+        match place {
+            Place::OwnMachines => {
+                if place_own(snapshot, plan, job, label) {
+                    return true;
+                }
+                if own_fits {
+                    let waited = snapshot.now.saturating_sub(job.queued_at);
+                    if waited < snapshot.overflow_wait {
+                        return false;
+                    }
+                    reason = StartReason::OverflowWaitElapsed { waited };
+                }
+            }
+            Place::Provider(id) if snapshot.overflow_enabled => {
+                let Some(provider) = snapshot
+                    .provider(id)
+                    .filter(|provider| provider.connected_and_available())
+                else {
+                    continue;
+                };
+                let Some(required) = provider.root_sizing.vm_size(label.size) else {
+                    continue;
+                };
+                let fitting = provider.fitting_size(required);
+                has_fit |= fitting.is_some();
+                if starts_held(provider, snapshot.now) {
+                    continue;
+                }
+                if let Some(size) = fitting {
+                    start_provider(plan, job, label, id, size, reason);
+                    return true;
+                }
+                if !has_fit
+                    && fallback.is_none()
+                    && label.nothing_fits == NothingFits::LargestProviderSize
+                {
+                    fallback = provider.largest_for_start().map(|size| (id, size));
+                }
+            }
+            Place::Provider(_) => {}
+        }
+    }
+
+    if let Some((provider, size)) = fallback.filter(|_| !has_fit) {
+        start_provider(
+            plan,
+            job,
+            label,
+            provider,
+            size,
+            StartReason::LargestProviderSize,
+        );
+        return true;
+    }
+    false
+}
+
+fn start_provider(
+    plan: &mut Plan,
+    job: &WaitingJob,
+    label: &Label,
+    provider: ProviderId,
+    size: &ProviderSize,
+    reason: StartReason,
+) {
     plan.start(
         job,
         label,
         size.size,
-        Destination::Boat(size.id.clone()),
+        Destination::Provider {
+            provider,
+            size_id: size.id.clone(),
+        },
         reason,
     );
-    true
 }
 
-fn available(boat: &BoatAccount, snapshot: &Snapshot) -> bool {
-    boat.enabled
-        && boat.connected
-        && boat.spend.spent < boat.spend.limit
-        && !boat.refusals.iter().any(|refusal| match refusal {
-            Refusal::RetryAfter { not_before } => snapshot.now < *not_before,
+fn starts_held(provider: &ProviderAccount, now: Duration) -> bool {
+    provider.facts.spend.spent >= provider.facts.spend.limit
+        || provider.facts.refusals.iter().any(|refusal| match refusal {
+            Refusal::RetryAfter { not_before } => now < *not_before,
             Refusal::RejectedKey | Refusal::BillingRequired => true,
             Refusal::SizeNotOnPlan(_) => false,
         })

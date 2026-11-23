@@ -1,6 +1,7 @@
 //! Durable acceptance of a scaler Boat action before provider dispatch.
 
 use ciproxy_scaler::actions::{Destination, StartReason};
+use ciproxy_scaler::provider::ProviderId;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
@@ -22,10 +23,12 @@ impl OverflowService {
         workspace_id: Uuid,
         request: StartRequest,
     ) -> Result<StartOutcome> {
-        let Destination::Boat(_) = &request.action.destination else {
-            return Err(Error::NotBoatAction);
-        };
         let provider = OverflowProvider::Boat;
+        if !matches!(request.action.destination, Destination::Provider { provider: id, .. }
+            if id == ProviderId::new(provider.as_str()))
+        {
+            return Err(Error::NotBoatAction);
+        }
         let session =
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
         let mut snapshot = session.call(|session| session.snapshot()).await?;
@@ -135,7 +138,7 @@ impl OverflowService {
             required_root_disk_bytes,
             own_machine_fits: matches!(
                 request.action.reason,
-                StartReason::OverflowWaitElapsed { .. }
+                StartReason::OverflowWaitElapsed { .. } | StartReason::ProviderBeforeOwnMachines
             ),
             dispatch: None,
             key_id: account.account.id,

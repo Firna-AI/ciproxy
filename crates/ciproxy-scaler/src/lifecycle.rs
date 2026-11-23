@@ -3,16 +3,16 @@
 use std::time::Duration;
 
 use crate::actions::StopReason;
-use crate::size_policy::allows_boat_runner;
-use crate::snapshot::{Runner, RunnerState, Snapshot, WaitingJob};
+use crate::size_policy::allows_provider_runner;
+use crate::snapshot::{Place, Runner, RunnerState, Snapshot, WaitingJob};
 use crate::state::{Plan, idle, label_for, warm_candidate};
 
-const BOAT_READY_DEADLINE: Duration = Duration::from_secs(600);
+const PROVIDER_READY_DEADLINE: Duration = Duration::from_secs(600);
 
 pub(crate) fn retire_obsolete(snapshot: &Snapshot, plan: &mut Plan) {
     for machine in &snapshot.machines {
         for runner in &machine.runners {
-            let reason = obsolete(snapshot, runner, true).or_else(|| {
+            let reason = obsolete(snapshot, runner, Place::OwnMachines).or_else(|| {
                 (machine.draining && idle(runner)).then_some(StopReason::MachineDraining)
             });
             if let Some(reason) = reason {
@@ -22,17 +22,24 @@ pub(crate) fn retire_obsolete(snapshot: &Snapshot, plan: &mut Plan) {
     }
     for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
         let reason = match &sandbox.runner {
-            Some(retained) => obsolete(snapshot, &retained.runner, false)
-                .or_else(|| {
-                    let label = label_for(snapshot, &retained.runner)?;
-                    (idle(&retained.runner) && !allows_boat_runner(snapshot, label, retained))
-                        .then_some(StopReason::SizeNoLongerAllowed)
-                })
-                .or_else(|| {
-                    let deadline = retained.launched_at?.saturating_add(BOAT_READY_DEADLINE);
-                    (idle(&retained.runner) && snapshot.now >= deadline)
-                        .then_some(StopReason::ReadyDeadlinePassed)
-                }),
+            Some(retained) => obsolete(
+                snapshot,
+                &retained.runner,
+                Place::Provider(sandbox.provider),
+            )
+            .or_else(|| {
+                let label = label_for(snapshot, &retained.runner)?;
+                (idle(&retained.runner)
+                    && !allows_provider_runner(snapshot, label, sandbox.provider, retained))
+                .then_some(StopReason::SizeNoLongerAllowed)
+            })
+            .or_else(|| {
+                let deadline = retained
+                    .launched_at?
+                    .saturating_add(PROVIDER_READY_DEADLINE);
+                (idle(&retained.runner) && snapshot.now >= deadline)
+                    .then_some(StopReason::ReadyDeadlinePassed)
+            }),
             None => Some(StopReason::OrphanSandbox),
         };
         if let Some(reason) = reason {
@@ -41,7 +48,7 @@ pub(crate) fn retire_obsolete(snapshot: &Snapshot, plan: &mut Plan) {
     }
 }
 
-fn obsolete(snapshot: &Snapshot, runner: &Runner, own_machine: bool) -> Option<StopReason> {
+fn obsolete(snapshot: &Snapshot, runner: &Runner, place: Place) -> Option<StopReason> {
     if runner.state == RunnerState::Exited {
         return Some(StopReason::RunnerExited);
     }
@@ -57,7 +64,7 @@ fn obsolete(snapshot: &Snapshot, runner: &Runner, own_machine: bool) -> Option<S
     if label.size != runner.requested_size {
         return Some(StopReason::LabelChanged);
     }
-    if (own_machine && !label.destinations.own_machines) || (!own_machine && !label.allows_boat()) {
+    if !label.allows(place) {
         return Some(StopReason::DestinationDisabled);
     }
     None
@@ -97,7 +104,10 @@ fn claim(plan: &mut Plan, runner: &Runner, job: &WaitingJob) -> bool {
 pub(crate) fn retire_unneeded(snapshot: &Snapshot, plan: &mut Plan) {
     for machine in &snapshot.machines {
         for runner in &machine.runners {
-            if idle(runner) && !warm_candidate(runner) && !plan.claimed.contains(&runner.id) {
+            if idle(runner)
+                && !warm_candidate(snapshot, runner)
+                && !plan.claimed.contains(&runner.id)
+            {
                 plan.stop(runner, StopReason::NoWaitingJob);
             }
         }

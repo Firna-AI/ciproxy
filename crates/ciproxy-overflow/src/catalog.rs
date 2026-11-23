@@ -1,7 +1,7 @@
 //! Exact shared-capability catalog mapping without invented dimensions or prices.
 
 use ciproxy_protocol::resources::VmSize;
-use ciproxy_scaler::boat::{BoatSize, BoatSizeId};
+use ciproxy_scaler::provider::{ProviderSize, ProviderSizeId};
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use sandbox_interface::{ResourceAmount, ResourceUnit, SandboxPriceUnit, SandboxSizeOffer};
@@ -11,9 +11,9 @@ use crate::error::{Error, Result};
 /// Known physical sizes, independent of spend and temporary start refusals.
 pub struct ResourceCatalog {
     /// Account sizes with their trusted dimensions and selection prices.
-    pub sizes: Vec<BoatSize>,
+    pub sizes: Vec<ProviderSize>,
     /// The largest size from the provider's ordered account catalog.
-    pub largest_size: Option<BoatSizeId>,
+    pub largest_size: Option<ProviderSizeId>,
 }
 
 pub(crate) fn resources(state: &AccountState) -> Result<ResourceCatalog> {
@@ -29,7 +29,7 @@ pub(crate) fn resources(state: &AccountState) -> Result<ResourceCatalog> {
 }
 
 /// Map eligible catalog facts without reading or requiring any cost facts.
-pub(crate) fn scaler_sizes(state: &AccountState) -> Result<Vec<BoatSize>> {
+pub(crate) fn scaler_sizes(state: &AccountState) -> Result<Vec<ProviderSize>> {
     state
         .sizes
         .iter()
@@ -38,9 +38,9 @@ pub(crate) fn scaler_sizes(state: &AccountState) -> Result<Vec<BoatSize>> {
         .collect()
 }
 
-fn resource_size(size: &SizeOffer) -> Result<BoatSize> {
-    Ok(BoatSize {
-        id: BoatSizeId(size.name.clone()),
+fn resource_size(size: &SizeOffer) -> Result<ProviderSize> {
+    Ok(ProviderSize {
+        id: ProviderSizeId(size.name.clone()),
         size: VmSize {
             vcpu: size.vcpus,
             memory_bytes: size.memory_bytes,

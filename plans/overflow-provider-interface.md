@@ -559,28 +559,30 @@ Depends on: 4
 The scaler takes a list of provider accounts and walks the order of each
 label, as item 4 says.
 
-- [ ] Rename the Boat types of `ciproxy-scaler` to provider-neutral types
+- [x] Rename the Boat types of `ciproxy-scaler` to provider-neutral types
       with a `ProviderId`. Replace `Snapshot.boat` with a list of provider
       accounts.
-- [ ] Replace `Destination::Boat` with a provider destination that names the
+- [x] Replace `Destination::Boat` with a provider destination that names the
       provider and its size.
-- [ ] Replace the label switches with the label order. Replace `place_boat`
+- [x] Replace the label switches with the label order. Replace `place_boat`
       with one walk over the order.
-- [ ] Apply "Run on the largest size" only when no place fits, with the
+- [x] Apply "Run on the largest size" only when no place fits, with the
       first provider of the order that jobs skip only because of its sizes
       and whose largest size holds the image.
-- [ ] Keep warm runners for a label only while own machines are the first
+- [x] Keep warm runners for a label only while own machines are the first
       place of its order.
-- [ ] Skip every provider while the workspace switch is off.
-- [ ] Keep every current scaler test passing on the order "own machines,
+- [x] Skip every provider while the workspace switch is off.
+- [x] Keep every current scaler test passing on the order "own machines,
       then Boat".
-- [ ] Add tests with two providers: the order, the skip of each unavailable
+- [x] Add tests with two providers: the order, the skip of each unavailable
       reason, a provider before own machines, own machines left out, the
       overflow wait only after own machines, and the largest-size rule.
-- [ ] Update the scaler README.
-- [ ] Delete the Milestone 4 adapter in
+- [x] Update the scaler README.
+- [x] Delete the Milestone 4 adapter in
       `crates/ciproxy-control-plane/src/snapshot.rs` and `docker_budget.rs`
       that derives the old label switches from the order.
+
+Evidence: `.context/providers-interface/m6/`.
 
 ## Milestone 7: Overflow service: several providers for a workspace
 
@@ -639,6 +641,10 @@ provider-neutral names.
 - [ ] Update `crates/ciproxy-control-plane/overflow.md`,
       `crates/ciproxy-control-plane/overflow-smoke.md`, and the READMEs of
       the control plane, the guest, metering, and deploy.
+- [ ] Delete the Milestone 6 adapters in
+      `crates/ciproxy-control-plane/src/boat_snapshot.rs`,
+      `boat_runtime.rs`, and `actions.rs` that supply only Boat and send
+      every provider start to the Boat executor.
 
 ## Milestone 9: Dashboard API: provider-neutral wire
 

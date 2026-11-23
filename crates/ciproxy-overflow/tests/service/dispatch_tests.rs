@@ -4,8 +4,9 @@ use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
 use ciproxy_overflow::error::Error;
 use ciproxy_scaler::actions::Destination;
-use ciproxy_scaler::boat::BoatSizeId;
+use ciproxy_scaler::provider::{ProviderId, ProviderSizeId};
 use ciproxy_store_interface::labels::WhenNothingFits;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 use sandbox_interface::{SandboxLifetime, SandboxSizeSelection};
@@ -104,7 +105,10 @@ async fn resumed_fallback_selects_fitting_size_and_reserves_its_current_price() 
         provider.creates.lock().unwrap()[0].size,
         Some(SandboxSizeSelection::ProviderSize("xlarge".to_owned()))
     );
-    action.action.destination = Destination::Boat(BoatSizeId("xlarge".to_owned()));
+    action.action.destination = Destination::Provider {
+        provider: ProviderId::new(OverflowProvider::Boat.as_str()),
+        size_id: ProviderSizeId("xlarge".to_owned()),
+    };
     action.action.size.vcpu = 16;
     action.action.size.memory_bytes = 32_000_000_000;
     action.action.size.disk_bytes = 251_000_000_000;

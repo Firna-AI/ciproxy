@@ -22,6 +22,7 @@ use ciproxy_store_interface::runtime_results::{
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
+use crate::boat_snapshot;
 use crate::snapshot::build;
 
 /// Shared registration authority used by overflow cleanup and runtime recovery.
@@ -114,7 +115,10 @@ impl RunnerAuthority for BoatRunnerAuthority {
         if !takeout && !busy {
             let view = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())?;
             let mut snapshot = build(&input, &runnable, self.clock.now(), self.root_sizing);
-            snapshot.boat = view.retained_scaler_account()?;
+            snapshot.providers.push(boat_snapshot::account(
+                self.root_sizing,
+                view.retained_scaler_account()?,
+            ));
             let sandbox = snapshot.sandboxes.iter().find(|sandbox| {
                 sandbox
                     .runner
@@ -122,8 +126,10 @@ impl RunnerAuthority for BoatRunnerAuthority {
                     .is_some_and(|retained| retained.runner.id.0 == runner_id.to_string())
             });
             let retire = sandbox.is_none_or(|sandbox| {
-                decide(&snapshot).iter().any(|action|
-                matches!(action, Action::DeleteSandbox {sandbox_id,..} if *sandbox_id == sandbox.id))
+                decide(&snapshot).iter().any(|action| {
+                    matches!(action, Action::DeleteSandbox { provider, sandbox_id, .. }
+                    if *provider == sandbox.provider && *sandbox_id == sandbox.id)
+                })
             });
             if !retire {
                 return Ok(Retirement::WaitingDemand);

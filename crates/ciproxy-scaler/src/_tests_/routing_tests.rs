@@ -5,12 +5,13 @@ use std::time::Duration;
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
 use crate::actions::StartReason;
-use crate::boat::BoatSizeId;
 use crate::decision::decide;
-use crate::snapshot::NothingFits;
+use crate::provider::ProviderSizeId;
+use crate::snapshot::{NothingFits, Place};
 
 use super::fixtures::{
-    allocated, boat, boat_size, boat_with_request, large, own, queued, running, small, snapshot,
+    BOAT, allocated, boat, boat_size, boat_with_request, large, own, queued, running, small,
+    snapshot,
 };
 
 #[test]
@@ -84,7 +85,9 @@ fn ineligible_own_machines_do_not_add_an_overflow_wait() {
             "draining" => state.machines[0].draining = true,
             "slots" => state.machines[0].capacity = Slots(0),
             "disk" => state.machines[0].disk_budget_bytes = 79 * GIGABYTE,
-            "disallowed" => state.labels[0].destinations.own_machines = false,
+            "disallowed" => state.labels[0]
+                .order
+                .retain(|place| *place != Place::OwnMachines),
             _ => unreachable!(),
         }
         assert_eq!(
@@ -106,7 +109,7 @@ fn chooses_the_cheapest_boat_size_that_covers_all_dimensions() {
     let mut state = snapshot();
     state.machines.clear();
     state.queue = vec![queued("a", "large", 0)];
-    state.boat.sizes = vec![
+    state.providers[0].facts.sizes = vec![
         boat_size("cpu-short", VmSize { vcpu: 3, ..large() }, 1),
         boat_size(
             "memory-short",
@@ -149,7 +152,7 @@ fn nothing_fits_waits_or_uses_the_explicit_largest_size() {
     };
     state.queue = vec![queued("a", "large", 100)];
     assert_eq!(decide(&state), vec![]);
-    state.labels[1].nothing_fits = NothingFits::LargestBoatSize;
+    state.labels[1].nothing_fits = NothingFits::LargestProviderSize;
     assert_eq!(
         decide(&state),
         vec![boat_with_request(
@@ -161,19 +164,21 @@ fn nothing_fits_waits_or_uses_the_explicit_largest_size() {
             },
             large(),
             "large",
-            StartReason::LargestBoatSize
+            StartReason::LargestProviderSize
         )]
     );
-    state.labels[1].destinations.boat = false;
+    state.labels[1]
+        .order
+        .retain(|place| *place != Place::Provider(BOAT));
     assert_eq!(decide(&state), vec![]);
 }
 
 #[test]
 fn never_uses_a_smaller_boat_vm_while_an_eligible_own_machine_fits() {
     let mut state = snapshot();
-    state.boat.sizes.truncate(1);
-    state.boat.largest_size = Some(BoatSizeId("small".into()));
-    state.labels[1].nothing_fits = NothingFits::LargestBoatSize;
+    state.providers[0].facts.sizes.truncate(1);
+    state.providers[0].facts.largest_size = Some(ProviderSizeId("small".into()));
+    state.labels[1].nothing_fits = NothingFits::LargestProviderSize;
     state.machines[0].capacity = Slots(2);
     let mut occupied = running("busy");
     occupied.size = allocated(large());

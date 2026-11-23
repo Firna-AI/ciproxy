@@ -4,8 +4,8 @@ use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_scaler::actions::{Action, StopReason};
-use ciproxy_scaler::boat::SandboxId;
 use ciproxy_scaler::decision::decide;
+use ciproxy_scaler::provider::{ProviderId, SandboxId};
 use ciproxy_scaler::snapshot::RunnerState;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::labels::LabelPlace;
@@ -132,6 +132,7 @@ fn boat_ready_deadline_starts_at_launch_not_dispatch() {
         [
             vec![],
             vec![Action::DeleteSandbox {
+                provider: ProviderId::new("boat"),
                 sandbox_id: SandboxId("bx_23456789".to_owned()),
                 reason: StopReason::ReadyDeadlinePassed,
             }],

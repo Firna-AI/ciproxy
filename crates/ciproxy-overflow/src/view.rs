@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
-use ciproxy_scaler::boat::{BoatAccount, MonthlySpend, Refusal};
+use ciproxy_scaler::provider::{AccountFacts, MonthlySpend, Refusal};
 use ciproxy_store_interface::overflow::account::AccountState;
 use ciproxy_store_interface::overflow::record::StartRecord;
 use ciproxy_store_interface::overflow::store::OverflowSnapshot;
@@ -91,11 +91,10 @@ impl OverflowView {
     }
 
     /// Preserve catalog policy for retained runners while permitting no new start.
-    pub fn retained_scaler_account(&self) -> Result<BoatAccount> {
+    pub fn retained_scaler_account(&self) -> Result<AccountFacts> {
         let sizes = scaler_sizes(&self.state)?;
-        Ok(BoatAccount {
-            enabled: false,
-            connected: false,
+        Ok(AccountFacts {
+            connected: self.account.is_some(),
             spend: MonthlySpend { spent: 0, limit: 0 },
             largest_size: sizes.last().map(|size| size.id.clone()),
             sizes,
@@ -105,7 +104,7 @@ impl OverflowView {
     /// Map known facts to the scaler, using the same UTC origin as its snapshot.
     ///
     /// Pending and settled bounds count without becoming measured costs.
-    pub fn scaler_account(&self, clock_origin: DateTime<Utc>) -> Result<BoatAccount> {
+    pub fn scaler_account(&self, clock_origin: DateTime<Utc>) -> Result<AccountFacts> {
         let counted = self.spend.counted_usd()?;
         let sizes = scaler_sizes(&self.state)?;
         let mut refusals = Vec::new();
@@ -123,12 +122,8 @@ impl OverflowView {
             let delay = (at - clock_origin).to_std().unwrap_or(Duration::ZERO);
             refusals.push(Refusal::RetryAfter { not_before: delay });
         }
-        Ok(BoatAccount {
-            enabled: self.enabled,
-            connected: self
-                .account
-                .as_ref()
-                .is_some_and(|account| account.rejected_at.is_none()),
+        Ok(AccountFacts {
+            connected: self.account.is_some(),
             spend: MonthlySpend {
                 spent: micros(counted)?,
                 limit: micros(self.limit_usd.unwrap_or(Decimal::ZERO))?,

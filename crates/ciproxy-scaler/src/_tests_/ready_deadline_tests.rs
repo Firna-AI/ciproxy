@@ -3,11 +3,11 @@
 use std::time::Duration;
 
 use crate::actions::{Action, StartReason, StopReason};
-use crate::boat::SandboxId;
 use crate::decision::decide;
+use crate::provider::SandboxId;
 use crate::snapshot::RunnerState;
 
-use super::fixtures::{boat, queued, runner, running, sandbox, small, snapshot};
+use super::fixtures::{BOAT, boat, queued, runner, running, sandbox, small, snapshot};
 
 #[test]
 fn replaces_a_launched_idle_boat_runner_at_but_not_before_the_ready_deadline() {
@@ -28,6 +28,7 @@ fn replaces_a_launched_idle_boat_runner_at_but_not_before_the_ready_deadline() {
         decide(&state),
         vec![
             Action::DeleteSandbox {
+                provider: BOAT,
                 sandbox_id: SandboxId("idle".into()),
                 reason: StopReason::ReadyDeadlinePassed,
             },

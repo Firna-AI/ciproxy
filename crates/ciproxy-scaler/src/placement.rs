@@ -53,7 +53,7 @@ pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, lab
             if future.fits(machine, size) {
                 break;
             }
-            if warm_candidate(runner)
+            if warm_candidate(snapshot, runner)
                 && !plan.claimed.contains(&runner.id)
                 && !plan.retiring.contains(&runner.id)
             {

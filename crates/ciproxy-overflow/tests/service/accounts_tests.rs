@@ -10,10 +10,11 @@ use ciproxy_protocol::identifiers::{LabelName, OrganizationId, WorkspaceId};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Action, Destination};
-use ciproxy_scaler::boat::BoatSizeId;
 use ciproxy_scaler::decision::decide;
+use ciproxy_scaler::provider::{ProviderAccount, ProviderId, ProviderSizeId};
 use ciproxy_scaler::registration::RegistrationTarget;
-use ciproxy_scaler::snapshot::{Destinations, Label, NothingFits, Snapshot, WaitingJob};
+use ciproxy_scaler::snapshot::{Label, NothingFits, Place, Snapshot, WaitingJob};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use sandbox_interface::SandboxAccountCapacityMock;
 use unimock::{MockFn, Unimock, matching};
 
@@ -122,11 +123,13 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
         scale_set_id: id(5).to_string(),
         github_id: 53,
     };
+    let provider = ProviderId::new(OverflowProvider::Boat.as_str());
+    let root_sizing = RootSizing {
+        image_root_bytes: 47_000_000_000,
+    };
     let mut snapshot = Snapshot {
         workspace_id: WorkspaceId(id(1).to_string()),
-        root_sizing: RootSizing {
-            image_root_bytes: 47_000_000_000,
-        },
+        root_sizing,
         now: std::time::Duration::from_secs(300),
         control_plane_available: true,
         organizations: vec![OrganizationId("github-org-42".to_owned())],
@@ -139,10 +142,7 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
                 memory_bytes: 8_000_000_000,
                 disk_bytes: 60_000_000_000,
             },
-            destinations: Destinations {
-                own_machines: true,
-                boat: true,
-            },
+            order: vec![Place::OwnMachines, Place::Provider(provider)],
             nothing_fits: NothingFits::Wait,
         }],
         queue: vec![WaitingJob {
@@ -150,7 +150,13 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
             queued_at: std::time::Duration::ZERO,
         }],
         machines: Vec::new(),
-        boat: view.scaler_account(at()).unwrap(),
+        overflow_enabled: view.enabled,
+        providers: vec![ProviderAccount {
+            id: provider,
+            available: true,
+            root_sizing,
+            facts: view.scaler_account(at()).unwrap(),
+        }],
         sandboxes: Vec::new(),
         overflow_wait: std::time::Duration::from_secs(30),
     };
@@ -161,18 +167,24 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
     };
     assert_eq!(
         start.destination,
-        Destination::Boat(BoatSizeId("large".to_owned()))
+        Destination::Provider {
+            provider,
+            size_id: ProviderSizeId("large".to_owned())
+        }
     );
     snapshot.labels[0].size.vcpu = 100;
     assert_eq!(decide(&snapshot), []);
-    snapshot.labels[0].nothing_fits = NothingFits::LargestBoatSize;
+    snapshot.labels[0].nothing_fits = NothingFits::LargestProviderSize;
     let actions = decide(&snapshot);
     let Action::StartRunner(start) = &actions[0] else {
         panic!("largest start required");
     };
     assert_eq!(
         start.destination,
-        Destination::Boat(BoatSizeId("xlarge".to_owned()))
+        Destination::Provider {
+            provider,
+            size_id: ProviderSizeId("xlarge".to_owned())
+        }
     );
     assert_eq!(start.size.disk_bytes, 251_000_000_000);
 }

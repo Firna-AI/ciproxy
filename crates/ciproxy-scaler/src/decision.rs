@@ -2,8 +2,8 @@
 
 use crate::actions::Action;
 use crate::lifecycle::{claim_existing, retire_obsolete, retire_unneeded};
-use crate::overflow::place_boat;
-use crate::placement::{place_own, reserve_after_retirement};
+use crate::overflow::place_in_order;
+use crate::placement::reserve_after_retirement;
 use crate::snapshot::Snapshot;
 use crate::state::Plan;
 use crate::warm::{reconcile, replenish};
@@ -39,9 +39,7 @@ pub fn decide(snapshot: &Snapshot) -> Vec<Action> {
         else {
             continue;
         };
-        if !place_own(snapshot, &mut plan, job, label)
-            && !place_boat(snapshot, &mut plan, job, label)
-        {
+        if !place_in_order(snapshot, &mut plan, job, label) {
             reserve_after_retirement(snapshot, &mut plan, label);
             pending.push(job);
         }

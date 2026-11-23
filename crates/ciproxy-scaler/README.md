@@ -8,7 +8,8 @@ Depend on it when a caller needs routing decisions without external IO.
 
 Choose runner destinations and retire idle capacity. Reuse
 `ciproxy-protocol` IDs, VM sizes, and the complete resource fit rule.
-Keep GitHub, Boat, storage, clocks, and action delivery outside this crate.
+Keep GitHub, provider integrations, storage, clocks, and action delivery
+outside this crate.
 Use the open agent library for the one root allocation rule.
 The open protocol crate does not depend on this hosted library.
 
@@ -19,21 +20,30 @@ values. Each start names an organization, label, requested size, actual VM
 size, destination, and typed reason. GitHub chooses the job that a runner
 takes. A start has no job or repository assignment.
 
-The scaler counts Ready runners before Starting runners across both
-destinations. It counts persisted starts before it adds capacity.
+The scaler counts Ready runners before Starting runners across all places.
+It counts persisted starts before it adds capacity.
 It matches supply to demand by the exact registration target. That target
 contains the organization, label, binding row, and remote scale-set ID.
 An equal label name does not establish compatibility.
-It tries free own capacity first. It starts eligible overflow
-after the configured wait. Without an eligible own machine, it can start
-Boat at once. It selects the cheapest fitting catalog size or uses the
-label's explicit largest-size choice. Even that fallback must hold the image.
+For remaining demand the scaler walks each label's order. It tries the
+configured places in order, with own machines and providers as entries.
+At own machines it tries free capacity. A waiting job moves past that place
+when no machine fits or when the overflow wait expires. At a provider, it
+tries the cheapest fitting size of that account. Disconnected, unavailable,
+or held accounts pass demand to the next place at once. The workspace switch
+can skip all providers. A macOS label can use own machines only.
 
-New Boat starts use the current image requirement. Retained idle runners
-use the required root saved for their own image release.
-Overflow dispatch uses the public pure selector for new starts.
-Callers supply eligible sizes after current provider refusals are applied.
-The selector takes own-machine fit and the label's current fallback choice.
+When no listed place fits and the label allows the largest-size fallback,
+the scaler uses the first provider that can start its largest size. The
+size must hold that provider's complete image. A fitting machine or a
+fitting catalog of a connected and available provider blocks that fallback
+even during a wait or a start hold.
+
+Each new provider start uses that provider's current image requirement.
+Retained idle runners use the required root saved for their image release.
+Overflow dispatch uses the public size selector for the selected account.
+The selector takes eligible sizes, fit of other places, and the label's
+fallback choice.
 An idle undersized fallback retires when its exception no longer
 applies. `SizeNoLongerAllowed` identifies that retirement. Account spend
 and start refusals do not retire an existing runner whose size still fits.
@@ -51,6 +61,7 @@ Waiting jobs can request warm runner retirement. Each waiting job gets a
 separate projected reservation. That reservation cannot release actual
 capacity or postpone the overflow threshold.
 
+Own machines keep warm runners only when they are first in the label order.
 One warm count caps each machine's shared allocation across organizations.
 Existing warm runners follow current targets on connected machines before
 new replenishment checks capacity. A larger image cannot suppress count or
@@ -60,28 +71,31 @@ queue demand. Waiting jobs have priority over warm starts. The scaler
 retires idle runners after label edits or organization removal. Running
 jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 
-A launched Boat runner that has taken no job by its
+A launched provider runner that has taken no job by its
 [ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
 retires with `ReadyDeadlinePassed`. The deadline counts from
-`BoatRunner.launched_at`. A runner without a launch time has no deadline.
+`ProviderRunner.launched_at`. A runner without a launch time has no deadline.
 The retiring runner is no supply, so no waiting job claims it. The same
 decision can start a replacement by the usual placement.
 
 ### Snapshot contract
 
 - Supply a complete, consistent view of one workspace.
-- Supply `root_sizing` for the current Boat image and the own-machine
-  fallback before a machine reports its selected image.
+- Supply `Snapshot.root_sizing` as the fallback before an own machine
+  reports its selected image. Supply `ProviderAccount.root_sizing` for
+  each provider's current image.
 - Supply `Machine.selected_image` from `report.images.selected().cloned()`.
   Its exact release metadata takes precedence over that fallback.
-- List each machine, runner, and sandbox once.
-- Supply each `Sandbox.runner` as `BoatRunner { runner,
+- List each machine, runner, and sandbox once. Identify each sandbox by
+  its provider and its sandbox ID.
+- Supply each `Sandbox.runner` as `ProviderRunner { runner,
   required_root_disk_bytes, launched_at }`. Take the required root directly
   from that delivery's `StartRecord.required_root_disk_bytes` in
-  `OverflowView.starts`. Keep it required for retained Boat runners. Do not
-  infer it from current image settings or actual catalog disk. Take
-  `launched_at` from `StartRecord.launched_at` of the same record. Use `None`
-  when no launch is saved. Orphans have no runner.
+  `OverflowView.starts`. Take `launched_at` from `StartRecord.launched_at`
+  of the same record. Use `None` when no launch is saved. Orphans have no
+  runner.
+- Preserve the saved order of each label and use the same opaque
+  `ProviderId` in the order, the account, and its sandboxes.
 - Supply each waiting GitHub job once. Exclude jobs already running.
 - Supply each label's active saved `targets` from the same snapshot as
   demand. Each `WaitingJob.target` names its exact saved binding.
@@ -112,9 +126,11 @@ decision can start a replacement by the usual placement.
   warm runner on that machine. Existing supply and warm targets still apply.
   Keep these reservations in the gross disk budget. The scaler subtracts
   measured reservations once for fit and available capacity.
-- Supply current Boat dimensions, comparable catalog prices, and the
-  largest available size. Exclude refused sizes from the largest choice.
-- Supply current UTC calendar month spend for ciproxy sandboxes only.
+- Supply each provider's availability, account connection, catalog dimensions
+  and prices, and largest available size. Exclude refused sizes from the
+  largest choice. The scaler compares prices within one catalog.
+- Supply each provider's current UTC calendar month spend for its ciproxy
+  sandboxes only.
 - Keep key and billing refusals until external checks confirm recovery.
 
 The library adds no snapshot validation or external policy defaults.
@@ -146,10 +162,11 @@ and supplies the per-machine targets. The scaler enforces those targets.
 Its tests check allocation enforcement. The snapshot builder owns the
 history calculation.
 
-The overflow integration supplies the Boat catalog, prices, largest size,
-retry times, billing recovery, key recovery, monthly spend, and launch
+The overflow integration supplies each provider's catalog, prices, largest
+size, retry times, billing recovery, key recovery, monthly spend, and launch
 times. It also applies sandbox marks, exit reports, lifetime limits,
-deletion, and key retention.
+deletion, and key retention. The control plane maps stored provider names
+to opaque `ProviderId` values at the scaler boundary.
 
 Convert label free bytes with `ciproxy-agent::root_sizing::RootSizing`.
 Total and free capacity checks use `ciproxy-protocol::resources::Resources`
@@ -183,20 +200,21 @@ Tests use the public decision entry point with literal states and actions.
 - [src/warm.rs](src/warm.rs) separates existing target reconciliation from
   capacity checks and new warm replenishment.
 - [src/lifecycle.rs](src/lifecycle.rs) lets waiting jobs claim existing
-  runners and retires idle ones, also at the Boat ready deadline.
+  runners and retires idle ones, including at the provider ready deadline.
 - [src/snapshot.rs](src/snapshot.rs) defines the caller's workspace facts.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
+- [src/overflow.rs](src/overflow.rs) walks the label order for new starts.
 - [src/registration.rs](src/registration.rs) defines the immutable target
   carried through demand, supply, and start actions.
-- [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
-  `BoatRunner` requires the saved root for each retained Boat runner, and
-  holds its launch time when one is saved.
+- [src/provider.rs](src/provider.rs) defines provider IDs, account catalogs,
+  refusals, and sandbox facts. `ProviderRunner` holds the saved root
+  requirement and launch time of each retained runner.
 - [src/capacity.rs](src/capacity.rs) checks complete allocated roots with the
   protocol resource API.
 - [Agent root sizing](../ciproxy-agent/src/root_sizing.rs) defines the shared
   free-to-total disk calculation.
-- [src/size_policy.rs](src/size_policy.rs) exposes `select_boat_size` for
-  scaler placement and overflow dispatch.
+- [src/size_policy.rs](src/size_policy.rs) exposes `select_provider_size`
+  for overflow dispatch and shares its fit rules with scaler placement.
 - [examples/own_machine.rs](examples/own_machine.rs) runs the public API.
 
 ### Related Docs
@@ -205,7 +223,8 @@ Tests use the public decision entry point with literal states and actions.
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Job routing](../../docs/protocol/job-routing.md) defines routing rules.
 - [Labels](../../docs/protocol/labels.md) defines labels and size changes.
-- [Overflow](../../docs/protocol/overflow.md) defines the Boat rules.
+- [Label order](../../docs/protocol/labels-order.md) defines the places.
+- [Overflow](../../docs/protocol/overflow.md) defines the provider rules.
 - [Sandbox end](../../docs/protocol/overflow-sandbox-end.md) defines idle
-  Boat retirement and the ready deadline.
+  runner retirement and the ready deadline.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization scope.

@@ -9,14 +9,18 @@ use ciproxy_protocol::identifiers::{
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner};
-use crate::boat::{
-    BoatAccount, BoatRunner, BoatSize, BoatSizeId, MonthlySpend, Sandbox, SandboxId,
+use crate::provider::{
+    AccountFacts, MonthlySpend, ProviderAccount, ProviderId, ProviderRunner, ProviderSize,
+    ProviderSizeId, Sandbox, SandboxId,
 };
 use crate::registration::RegistrationTarget;
 use crate::snapshot::{
-    Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
+    Label, Machine, NothingFits, Place, Runner, RunnerState, Snapshot, WaitingJob,
 };
 use ciproxy_protocol::platform::Platform;
+
+pub(super) const BOAT: ProviderId = ProviderId::new("boat");
+pub(super) const SECOND: ProviderId = ProviderId::new("second");
 
 pub(super) fn small() -> VmSize {
     VmSize {
@@ -56,23 +60,39 @@ pub(super) fn snapshot() -> Snapshot {
             warm_allocation: Vec::new(),
             runners: Vec::new(),
         }],
-        boat: BoatAccount {
-            enabled: true,
-            connected: true,
-            spend: MonthlySpend {
-                spent: 20,
-                limit: 100,
+        overflow_enabled: true,
+        providers: vec![ProviderAccount {
+            id: BOAT,
+            available: true,
+            root_sizing: RootSizing::default(),
+            facts: AccountFacts {
+                connected: true,
+                spend: MonthlySpend {
+                    spent: 20,
+                    limit: 100,
+                },
+                sizes: vec![
+                    boat_size("small", small(), 2),
+                    boat_size("large", large(), 5),
+                ],
+                largest_size: Some(ProviderSizeId("large".into())),
+                refusals: Vec::new(),
             },
-            sizes: vec![
-                boat_size("small", small(), 2),
-                boat_size("large", large(), 5),
-            ],
-            largest_size: Some(BoatSizeId("large".into())),
-            refusals: Vec::new(),
-        },
+        }],
         sandboxes: Vec::new(),
         overflow_wait: Duration::from_secs(30),
     }
+}
+
+pub(super) fn two_provider_snapshot() -> Snapshot {
+    let mut state = snapshot();
+    let mut second = state.providers[0].clone();
+    second.id = SECOND;
+    state.providers.push(second);
+    for label in &mut state.labels {
+        label.order.push(Place::Provider(SECOND));
+    }
+    state
 }
 
 pub(super) fn target(organization: &str, name: &str) -> RegistrationTarget {
@@ -90,10 +110,7 @@ pub(super) fn label(name: &str, size: VmSize) -> Label {
         targets: vec![target("a", name), target("b", name)],
         name: LabelName(name.into()),
         size,
-        destinations: Destinations {
-            own_machines: true,
-            boat: true,
-        },
+        order: vec![Place::OwnMachines, Place::Provider(BOAT)],
         nothing_fits: NothingFits::Wait,
     }
 }
@@ -132,9 +149,10 @@ pub(super) fn warm(id: &str, organization: &str) -> Runner {
 
 pub(super) fn sandbox(id: &str, runner: Option<Runner>) -> Sandbox {
     Sandbox {
+        provider: BOAT,
         id: SandboxId(id.into()),
         marked: true,
-        runner: runner.map(|runner| BoatRunner {
+        runner: runner.map(|runner| ProviderRunner {
             required_root_disk_bytes: allocated(runner.requested_size).disk_bytes,
             runner,
             launched_at: None,
@@ -142,9 +160,9 @@ pub(super) fn sandbox(id: &str, runner: Option<Runner>) -> Sandbox {
     }
 }
 
-pub(super) fn boat_size(id: &str, size: VmSize, price: u64) -> BoatSize {
-    BoatSize {
-        id: BoatSizeId(id.into()),
+pub(super) fn boat_size(id: &str, size: VmSize, price: u64) -> ProviderSize {
+    ProviderSize {
+        id: ProviderSizeId(id.into()),
         size: allocated(size),
         price,
     }
@@ -190,7 +208,7 @@ pub(super) fn boat(
         organization,
         name,
         size,
-        Destination::Boat(BoatSizeId(size_id.into())),
+        provider_destination(BOAT, size_id),
         reason,
     )
 }
@@ -210,9 +228,16 @@ pub(super) fn boat_with_request(
         label: LabelName(name.into()),
         requested_size,
         size: allocated(size),
-        destination: Destination::Boat(BoatSizeId(size_id.into())),
+        destination: provider_destination(BOAT, size_id),
         reason,
     }))
+}
+
+pub(super) fn provider_destination(provider: ProviderId, size_id: &str) -> Destination {
+    Destination::Provider {
+        provider,
+        size_id: ProviderSizeId(size_id.into()),
+    }
 }
 
 pub(super) fn allocated(size: VmSize) -> VmSize {

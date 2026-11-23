@@ -3,7 +3,7 @@
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::resources::{Resources, Slots, VmSize};
 
-use crate::snapshot::{Label, Machine};
+use crate::snapshot::{Label, Machine, Place, Snapshot};
 
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Usage {
@@ -70,7 +70,7 @@ pub(crate) fn eligible(machine: &Machine, label: &Label, sizing: RootSizing) -> 
                 machine.disk_budget_bytes.saturating_sub(leased)
             }),
     };
-    label.destinations.own_machines
+    label.allows(Place::OwnMachines)
         && machine.platform == label.platform
         && machine.platform.vm_limit() != Some(0)
         && machine.connected
@@ -79,4 +79,11 @@ pub(crate) fn eligible(machine: &Machine, label: &Label, sizing: RootSizing) -> 
             .root_sizing(sizing)
             .vm_size(label.size)
             .is_some_and(|size| capacity.fits(size))
+}
+
+pub(crate) fn own_fits(snapshot: &Snapshot, label: &Label) -> bool {
+    snapshot
+        .machines
+        .iter()
+        .any(|machine| eligible(machine, label, snapshot.root_sizing))
 }

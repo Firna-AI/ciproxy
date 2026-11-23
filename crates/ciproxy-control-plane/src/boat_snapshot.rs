@@ -1,15 +1,26 @@
 //! Preserve each accepted Boat delivery in the common scaler snapshot.
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{JobId, LabelName, OrganizationId, RunnerId};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
-use ciproxy_scaler::boat::{BoatRunner, Sandbox, SandboxId};
+use ciproxy_scaler::provider::{AccountFacts, ProviderAccount, ProviderRunner, Sandbox, SandboxId};
 use ciproxy_scaler::snapshot::{Runner, RunnerState};
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners;
 
-use crate::snapshot::{instant, registration_target};
+use crate::snapshot::{instant, provider_id, registration_target};
+
+pub(crate) fn account(root_sizing: RootSizing, facts: AccountFacts) -> ProviderAccount {
+    ProviderAccount {
+        id: provider_id(OverflowProvider::Boat),
+        available: true,
+        root_sizing,
+        facts,
+    }
+}
 
 pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<Sandbox> {
     let mut sandboxes = Vec::new();
@@ -76,6 +87,7 @@ pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<S
             disk_bytes: u64::from(record.requested_disk_gb) * GIGABYTE,
         });
         sandboxes.push(Sandbox {
+            provider: provider_id(intent.provider),
             id: SandboxId(
                 record
                     .and_then(|record| record.sandbox.as_ref())
@@ -85,7 +97,7 @@ pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<S
                     ),
             ),
             marked: true,
-            runner: Some(BoatRunner {
+            runner: Some(ProviderRunner {
                 launched_at: record.and_then(|record| record.launched_at).map(instant),
                 required_root_disk_bytes: record
                     .map_or(intent.required_root_disk_bytes, |record| {

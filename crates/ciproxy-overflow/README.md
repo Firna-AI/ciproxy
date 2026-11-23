@@ -200,7 +200,7 @@ Construct `OverflowService` with `OverflowConfig` and
 `OverflowDependencies` at the control-plane composition root.
 Register `BoatFactory` with the shared snapshot reference and its
 `ImageSource.root_sizing` in `ProviderRegistry`.
-Share that sizing value with the scaler snapshot.
+Share that sizing value with the provider account in the scaler snapshot.
 The agent library defines the complete root allocation from free label bytes.
 Each accepted delivery saves the image length and required root allocation.
 Retries keep those facts when the deployment selects a newer image.
@@ -224,8 +224,8 @@ Call the public boundary in this order:
 6. Obtain the GitHub registration for the action's organization and scale set.
 7. Call `start` with the action and those identities.
 8. Include accepted pending deliveries in the next scaler snapshot.
-   Set `required_root_disk_bytes` and `launched_at` of a retained `BoatRunner`
-   from its saved `StartRecord`, also after an image update.
+   Set `required_root_disk_bytes` and `launched_at` of a retained
+   `ProviderRunner` from its saved `StartRecord`, also after an image update.
 9. Call `resume` after a restart or an uncertain result.
 10. Pass authenticated guest exit reports to `report_end`.
 11. Call `cleanup` during regular reconciliation and after an outage.

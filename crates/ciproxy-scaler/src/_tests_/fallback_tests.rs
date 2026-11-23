@@ -7,12 +7,12 @@ use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner, StopReason};
-use crate::boat::{BoatRunner, BoatSize, BoatSizeId, Refusal, Sandbox, SandboxId};
 use crate::decision::decide;
+use crate::provider::{ProviderRunner, ProviderSize, ProviderSizeId, Refusal, Sandbox, SandboxId};
 use crate::snapshot::{NothingFits, RunnerState, Snapshot};
 
 use super::fixtures::{
-    allocated, boat, boat_size, large, own, queued, runner, sandbox, small, snapshot, warm,
+    BOAT, allocated, boat, boat_size, large, own, queued, runner, sandbox, small, snapshot, warm,
 };
 use ciproxy_protocol::platform::Platform;
 
@@ -23,7 +23,7 @@ fn fallback_snapshot() -> Snapshot {
         vcpu: 16,
         ..large()
     };
-    state.labels[1].nothing_fits = NothingFits::LargestBoatSize;
+    state.labels[1].nothing_fits = NothingFits::LargestProviderSize;
     state.queue = vec![queued("a", "large", 0)];
     let mut idle = runner("fallback-idle", "a", "large", RunnerState::Ready);
     idle.requested_size = VmSize {
@@ -40,6 +40,7 @@ fn fallback_snapshot() -> Snapshot {
 
 fn retire_fallback() -> Action {
     Action::DeleteSandbox {
+        provider: BOAT,
         sandbox_id: SandboxId("idle".into()),
         reason: StopReason::SizeNoLongerAllowed,
     }
@@ -49,13 +50,13 @@ fn retire_fallback() -> Action {
 fn wait_retires_an_idle_undersized_boat_fallback() {
     let mut state = fallback_snapshot();
     assert_eq!(decide(&state), vec![]);
-    state.root_sizing.image_root_bytes = 90_000_000_000;
+    state.providers[0].root_sizing.image_root_bytes = 90_000_000_000;
     state.queue.push(queued("a", "large", 0));
     assert_eq!(decide(&state), vec![]);
-    state.boat.enabled = false;
-    state.boat.connected = false;
-    state.boat.spend.spent = 100;
-    state.boat.refusals = vec![
+    state.overflow_enabled = false;
+    state.providers[0].facts.connected = false;
+    state.providers[0].facts.spend.spent = 100;
+    state.providers[0].facts.refusals = vec![
         Refusal::RejectedKey,
         Refusal::BillingRequired,
         Refusal::RetryAfter {
@@ -93,7 +94,7 @@ fn a_fitting_machine_retires_an_idle_undersized_boat_fallback() {
 fn a_fitting_catalog_retires_an_idle_undersized_boat_fallback() {
     let mut state = fallback_snapshot();
     assert_eq!(decide(&state), vec![]);
-    state.boat.sizes.push(boat_size(
+    state.providers[0].facts.sizes.push(boat_size(
         "fitting",
         VmSize {
             vcpu: 16,
@@ -101,7 +102,7 @@ fn a_fitting_catalog_retires_an_idle_undersized_boat_fallback() {
         },
         9,
     ));
-    state.boat.largest_size = Some(BoatSizeId("fitting".into()));
+    state.providers[0].facts.largest_size = Some(ProviderSizeId("fitting".into()));
     assert_eq!(
         decide(&state),
         vec![
@@ -123,10 +124,16 @@ fn a_fitting_catalog_retires_an_idle_undersized_boat_fallback() {
 #[test]
 fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
     let mut state = fallback_snapshot();
-    let largest = state.boat.sizes.last_mut().unwrap();
+    let largest = state.providers[0].facts.sizes.last_mut().unwrap();
     largest.size.disk_bytes = 60_263_759_871;
     assert_eq!(decide(&state), vec![retire_fallback()]);
-    state.boat.sizes.last_mut().unwrap().size.disk_bytes = 60_263_759_872;
+    state.providers[0]
+        .facts
+        .sizes
+        .last_mut()
+        .unwrap()
+        .size
+        .disk_bytes = 60_263_759_872;
     let actions = decide(&state);
     assert_eq!(actions.len(), 2);
     assert_eq!(actions[0], retire_fallback());
@@ -142,8 +149,11 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
                 disk_bytes: 60_263_759_872,
                 ..large()
             },
-            destination: Destination::Boat(BoatSizeId("large".into())),
-            reason: StartReason::LargestBoatSize,
+            destination: Destination::Provider {
+                provider: BOAT,
+                size_id: ProviderSizeId("large".into())
+            },
+            reason: StartReason::LargestProviderSize,
         }))
     );
 }
@@ -152,7 +162,7 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
 fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_image() {
     let mut state = snapshot();
     state.machines.clear();
-    state.root_sizing.image_root_bytes = 63_000_000_000;
+    state.providers[0].root_sizing.image_root_bytes = 63_000_000_000;
     let requested = VmSize {
         disk_bytes: 47_000_000_000,
         ..small()
@@ -164,19 +174,20 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
         memory_bytes: 16_000_000_000,
         disk_bytes: 111_000_000_000,
     };
-    state.boat.sizes = vec![BoatSize {
-        id: BoatSizeId("largest".into()),
+    state.providers[0].facts.sizes = vec![ProviderSize {
+        id: ProviderSizeId("largest".into()),
         size: actual,
         price: 2,
     }];
-    state.boat.largest_size = Some(BoatSizeId("largest".into()));
+    state.providers[0].facts.largest_size = Some(ProviderSizeId("largest".into()));
     let mut retained = runner("older", "a", "ciproxy", RunnerState::Ready);
     retained.requested_size = requested;
     retained.size = actual;
     state.sandboxes = vec![Sandbox {
+        provider: BOAT,
         id: SandboxId("older".into()),
         marked: true,
-        runner: Some(BoatRunner {
+        runner: Some(ProviderRunner {
             runner: retained,
             required_root_disk_bytes: 109_470_908_416,
             launched_at: None,
@@ -187,12 +198,12 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
         disk_bytes: 112_000_000_000,
         ..actual
     };
-    state.boat.sizes.push(BoatSize {
-        id: BoatSizeId("fitting".into()),
+    state.providers[0].facts.sizes.push(ProviderSize {
+        id: ProviderSizeId("fitting".into()),
         size: fitting,
         price: 3,
     });
-    state.boat.largest_size = Some(BoatSizeId("fitting".into()));
+    state.providers[0].facts.largest_size = Some(ProviderSizeId("fitting".into()));
     assert_eq!(
         decide(&state),
         vec![Action::StartRunner(Box::new(StartRunner {
@@ -202,7 +213,10 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
             label: state.labels[0].name.clone(),
             requested_size: requested,
             size: fitting,
-            destination: Destination::Boat(BoatSizeId("fitting".into())),
+            destination: Destination::Provider {
+                provider: BOAT,
+                size_id: ProviderSizeId("fitting".into())
+            },
             reason: StartReason::NoEligibleMachine,
         }))]
     );
@@ -211,7 +225,7 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
 #[test]
 fn image_growth_keeps_correctly_sized_idle_and_running_roots() {
     let mut state = snapshot();
-    state.boat.enabled = false;
+    state.overflow_enabled = false;
     state.queue = vec![queued("a", "ciproxy", 0)];
     let idle = warm("idle", "a");
     let mut running = idle.clone();

@@ -1,8 +1,8 @@
 //! Pure runner placement and retirement decisions for one workspace.
 
 pub mod actions;
-pub mod boat;
 pub mod decision;
+pub mod provider;
 pub mod registration;
 pub mod size_policy;
 pub mod snapshot;

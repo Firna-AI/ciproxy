@@ -63,7 +63,7 @@ fn reserves_disk_for_all_starts_in_the_same_tick() {
         state.queue = vec![queued("a", name, 0); jobs];
         state.machines[0].capacity = Slots(6);
         state.machines[0].disk_budget_bytes = disk_gb * GIGABYTE;
-        state.boat.enabled = false;
+        state.overflow_enabled = false;
         assert_eq!(decide(&state), expected, "{name}, {disk_gb} GB job disk");
     }
 }
@@ -122,7 +122,7 @@ fn a_label_edit_keeps_the_running_vms_original_job_disk() {
     old.requested_size.disk_bytes = 60 * GIGABYTE;
     state.machines[0].runners = vec![old];
     state.queue = vec![queued("a", "ciproxy", 0), queued("a", "ciproxy", 0)];
-    state.boat.enabled = false;
+    state.overflow_enabled = false;
     assert_eq!(decide(&state), vec![own("a", "ciproxy", small())]);
 }
 
@@ -152,7 +152,7 @@ fn disk_pressure_keeps_the_wait_when_the_total_job_disk_fits() {
 fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
     let mut state = snapshot();
     state.root_sizing.image_root_bytes = 70_000_000_000;
-    state.boat.enabled = false;
+    state.overflow_enabled = false;
     state.machines[0].disk_budget_bytes = 82_500_000_000;
     state.machines[0].selected_image = Some(ImageMetadata {
         image_id: ImageId("newer".into()),

@@ -34,7 +34,9 @@ impl MachineRuntime {
             self.reconcile_boat(&input, &mut snapshot, false).await;
             for action in ciproxy_scaler::decision::decide(&snapshot) {
                 let boat = match &action {
-                    Action::StartRunner(start) => matches!(start.destination, Destination::Boat(_)),
+                    Action::StartRunner(start) => {
+                        matches!(start.destination, Destination::Provider { .. })
+                    }
                     Action::DeleteSandbox { .. } => true,
                     Action::StopRunner { runner_id, .. } => input
                         .overflow_intents

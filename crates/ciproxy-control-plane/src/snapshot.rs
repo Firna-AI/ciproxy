@@ -9,11 +9,10 @@ use ciproxy_protocol::identifiers::{
 };
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
-use ciproxy_scaler::boat::{BoatAccount, MonthlySpend};
+use ciproxy_scaler::provider::ProviderId;
 use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_scaler::snapshot::{
-    Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
-    warm_label,
+    Label, Machine, NothingFits, Place, Runner, RunnerState, Snapshot, WaitingJob, warm_label,
 };
 use ciproxy_store_interface::gateway::{MachineSnapshot, MachineState};
 use ciproxy_store_interface::github::DemandPhase;
@@ -91,15 +90,10 @@ pub(crate) fn build(
                 name: LabelName(label.name.clone()),
                 platform: label.platform,
                 size: size(label.size),
-                destinations: Destinations {
-                    own_machines: label.order.contains(&LabelPlace::Machine),
-                    boat: label
-                        .order
-                        .contains(&LabelPlace::Provider(OverflowProvider::Boat)),
-                },
+                order: label_order(&label.order).collect(),
                 nothing_fits: match label.when_nothing_fits {
                     WhenNothingFits::Wait => NothingFits::Wait,
-                    WhenNothingFits::LargestOverflow => NothingFits::LargestBoatSize,
+                    WhenNothingFits::LargestOverflow => NothingFits::LargestProviderSize,
                 },
             })
             .collect(),
@@ -131,14 +125,8 @@ pub(crate) fn build(
             .iter()
             .map(|machine| machine_input(machine, input, now, &history(machine.machine.platform)))
             .collect(),
-        boat: BoatAccount {
-            enabled: input.settings.overflow_enabled,
-            connected: false,
-            spend: MonthlySpend { spent: 0, limit: 0 },
-            sizes: Vec::new(),
-            largest_size: None,
-            refusals: Vec::new(),
-        },
+        overflow_enabled: input.settings.overflow_enabled,
+        providers: Vec::new(),
         sandboxes: boat_snapshot::project(input, &input.overflow.starts),
         overflow_wait: Duration::from_secs(match input.settings.overflow_wait {
             OverflowWait::AtOnce => 0,
@@ -148,6 +136,17 @@ pub(crate) fn build(
             OverflowWait::Seconds120 => 120,
         }),
     }
+}
+
+pub(crate) fn label_order(order: &[LabelPlace]) -> impl Iterator<Item = Place> + '_ {
+    order.iter().map(|place| match *place {
+        LabelPlace::Machine => Place::OwnMachines,
+        LabelPlace::Provider(provider) => Place::Provider(provider_id(provider)),
+    })
+}
+
+pub(crate) const fn provider_id(provider: OverflowProvider) -> ProviderId {
+    ProviderId::new(provider.as_str())
 }
 
 fn machine_input(

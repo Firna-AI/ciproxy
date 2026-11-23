@@ -7,10 +7,9 @@ use ciproxy_protocol::identifiers::{LabelName, MachineId, OrganizationId, Worksp
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 use ciproxy_scaler::actions::{Action, Destination, StartReason, StartRunner};
-use ciproxy_scaler::boat::{BoatAccount, MonthlySpend};
 use ciproxy_scaler::decision::decide;
 use ciproxy_scaler::registration::RegistrationTarget;
-use ciproxy_scaler::snapshot::{Destinations, Label, Machine, NothingFits, Snapshot, WaitingJob};
+use ciproxy_scaler::snapshot::{Label, Machine, NothingFits, Place, Snapshot, WaitingJob};
 
 fn main() {
     let size = VmSize {
@@ -35,10 +34,7 @@ fn main() {
             targets: vec![target.clone()],
             name: LabelName("ciproxy".into()),
             size,
-            destinations: Destinations {
-                own_machines: true,
-                boat: true,
-            },
+            order: vec![Place::OwnMachines],
             nothing_fits: NothingFits::Wait,
         }],
         queue: vec![WaitingJob {
@@ -58,17 +54,8 @@ fn main() {
             warm_allocation: Vec::new(),
             runners: Vec::new(),
         }],
-        boat: BoatAccount {
-            enabled: false,
-            connected: false,
-            spend: MonthlySpend {
-                spent: 0,
-                limit: 100,
-            },
-            sizes: Vec::new(),
-            largest_size: None,
-            refusals: Vec::new(),
-        },
+        overflow_enabled: false,
+        providers: Vec::new(),
         sandboxes: Vec::new(),
         overflow_wait: Duration::from_secs(30),
     };
