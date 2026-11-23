@@ -8,7 +8,7 @@ license = "Apache-2.0"
 
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.154", features = ["arbitrary_precision"] }
+serde_json = { version = "1.0.154", features = ["arbitrary_precision", "raw_value"] }
 utoipa = { version = "6.0.0", default-features = false, features = ["macros"], optional = true }
 
 [dev-dependencies]

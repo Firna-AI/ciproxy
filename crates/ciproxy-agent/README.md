@@ -64,9 +64,12 @@ A late Drain remains applied and cannot undo removal.
 Reconciliation enforces current mode after each wait.
 
 When a guest reports a runner exit, the agent forwards the CPU and memory
-points and job steps that it can decode. It keeps the exit if it cannot
-decode the usage. It logs the reason without report values. When the agent
-detects a stopped or missing VM itself, it reports the exit without usage.
+points and job steps that it can decode. It keeps the exit if usage does
+not decode, even when usage exceeds the JSON depth limit or has a lone
+UTF-16 surrogate escape. If only the steps do not decode, the agent still
+forwards the points. It logs the reason without report values. When the
+agent detects a stopped or missing VM itself, it reports the exit without
+usage.
 
 State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.

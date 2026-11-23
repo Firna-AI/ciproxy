@@ -1,20 +1,21 @@
 //! Tagged JSON messages on the agent's outbound HTTPS WebSocket.
 
 use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
 
 use crate::cache::DockerBudget;
 use crate::identifiers::{CommandId, JobId, MachineId, OrganizationId, RunnerId, WorkspaceId};
 use crate::images::ImageDownload;
 use crate::jobs::JobFacts;
+use crate::message_usage::usage_message;
 use crate::reports::MachineReport;
 use crate::runners::{RunnerExit, RunnerSpec};
 use crate::secret::Secret;
 use crate::usage::UsageReport;
 use crate::version::ProtocolVersion;
 
+usage_message! {
 /// Messages sent by an agent to the control plane.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
 pub enum AgentMessage {
     /// Register a new machine with its workspace's install token.
     Register {
@@ -72,6 +73,15 @@ pub enum AgentMessage {
         /// Whether the requested operation completed.
         outcome: CommandOutcome,
     },
+}
+}
+
+impl AgentMessage {
+    fn set_raw_usage(&mut self, raw: &RawValue) {
+        if let Self::RunnerExited { usage, .. } = self {
+            *usage = UsageReport::optional_from_raw(raw);
+        }
+    }
 }
 
 /// Commands and connection replies sent by the control plane.

@@ -7,17 +7,18 @@ use ciproxy_protocol::usage::JobUsage;
 use ciproxy_store_interface::job_usage::JobUsageStore;
 use uuid::Uuid;
 
+use crate::runtime::MachineRuntime;
 use crate::runtime_agent_event::parse_runner_id;
 
 /// Usage removed from an exit message before lifecycle admission.
-pub(crate) struct AgentExitUsage {
+struct AgentExitUsage {
     runner_id: Uuid,
     usage: JobUsage,
 }
 
 impl AgentExitUsage {
     /// Extract usage only from a report with a canonical runner identity.
-    pub(crate) fn take(message: &mut AgentMessage) -> Option<Self> {
+    fn take(message: &mut AgentMessage) -> Option<Self> {
         let AgentMessage::RunnerExited {
             runner_id, usage, ..
         } = message
@@ -36,7 +37,7 @@ impl AgentExitUsage {
     }
 
     /// Save valid usage for this machine. A failure does not affect the exit.
-    pub(crate) fn save(
+    fn save(
         self,
         store: &dyn JobUsageStore,
         workspace_id: Uuid,
@@ -66,5 +67,20 @@ impl AgentExitUsage {
         {
             tracing::warn!("dropped final agent job usage: store write failed");
         }
+    }
+}
+
+impl MachineRuntime {
+    /// Prepare the same usage write for queued and direct agent exits.
+    pub(crate) fn prepare_agent_usage(
+        &self,
+        workspace_id: Uuid,
+        machine_id: Uuid,
+        message: &mut AgentMessage,
+    ) -> Option<impl FnOnce() + Send + use<>> {
+        let usage = AgentExitUsage::take(message)?;
+        let store = self.store.clone();
+        let received_at = self.clock.now();
+        Some(move || usage.save(store.as_ref(), workspace_id, machine_id, received_at))
     }
 }

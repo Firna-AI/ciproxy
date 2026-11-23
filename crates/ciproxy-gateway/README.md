@@ -64,10 +64,12 @@ Unsupported versions use code 1008 and the fixed reason
 `[gateway] unsupported protocol version`. A replaced connection uses code
 1008 and `[gateway] connection replaced`. A malformed frame uses code 1008
 and `[gateway] invalid message`. Usage that does not decode does not reject
-a runner exit frame. The hosted runtime handles the drop. A failure while
-the hosted runtime handles a lifecycle message does not close the
-connection. The runtime logs a warning instead. Hosted logging excludes
-dependency targets that can expose frame contents at every verbosity.
+a runner exit frame. This includes usage that exceeds the JSON depth limit
+or has a lone UTF-16 surrogate escape. The hosted runtime handles the drop.
+A failure while the hosted runtime handles a lifecycle message does not
+close the connection. The runtime logs a warning instead. Hosted logging
+excludes dependency targets that can expose frame contents at every
+verbosity.
 
 A first-message deadline closes with code 1008 and the fixed reason
 `[gateway] handshake timed out`. The close operation sends the close frame

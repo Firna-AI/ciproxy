@@ -9,7 +9,6 @@ use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
-use crate::agent_usage::AgentExitUsage;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::{MachineRuntime, OwnMachines};
 use crate::runtime_agent_event::AgentEvent;
@@ -87,17 +86,10 @@ impl OwnMachines for MachineRuntime {
         machine_id: Uuid,
         mut message: AgentMessage,
     ) -> Result<()> {
-        if let Some(usage) = AgentExitUsage::take(&mut message) {
-            let store = self.store.clone();
-            let received_at = self.clock.now();
-            if tokio::task::spawn_blocking(move || {
-                usage.save(store.as_ref(), workspace_id, machine_id, received_at)
-            })
-            .await
-            .is_err()
-            {
-                tracing::warn!("dropped agent job usage: store task failed");
-            }
+        if let Some(save) = self.prepare_agent_usage(workspace_id, machine_id, &mut message)
+            && tokio::task::spawn_blocking(save).await.is_err()
+        {
+            tracing::warn!("dropped agent job usage: store task failed");
         }
         let _operation = self.operation.lock().await;
         let Some((message, worker)) = AgentEvent::from_message(message) else {

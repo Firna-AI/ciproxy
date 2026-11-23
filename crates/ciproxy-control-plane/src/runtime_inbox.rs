@@ -10,7 +10,6 @@ use tracing::Instrument;
 use tracing::instrument::WithSubscriber;
 use uuid::Uuid;
 
-use crate::agent_usage::AgentExitUsage;
 use crate::error::{ErrorResultExt, Result};
 use crate::runtime::{MachineRuntime, OwnMachines};
 use crate::runtime_agent_event::AgentEvent;
@@ -32,13 +31,10 @@ impl RuntimeTasks {
         session: Session,
         mut message: AgentMessage,
     ) {
-        if let Some(usage) = AgentExitUsage::take(&mut message) {
-            usage.save(
-                runtime.store.as_ref(),
-                session.workspace_id,
-                session.machine_id,
-                runtime.clock.now(),
-            );
+        if let Some(save) =
+            runtime.prepare_agent_usage(session.workspace_id, session.machine_id, &mut message)
+        {
+            save();
         }
         if let Some((message, worker)) = AgentEvent::from_message(message) {
             self.enqueue(runtime, Event::Agent(session, message, None), worker);

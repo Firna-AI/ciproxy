@@ -3,7 +3,10 @@
 use std::fmt;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::Value;
+use serde_json::value::RawValue;
+use serde_json::{Map, Value};
+
+use crate::message_usage::split_raw_field;
 
 use super::{JobStep, JobUsage};
 
@@ -45,6 +48,36 @@ impl UsageReport {
             Self::PointsDropped => (None, Some(UsageDecodeDrop::Points)),
         }
     }
+
+    /// Decode a usage object with its step text kept separate from its points.
+    pub(crate) fn from_raw(raw: &RawValue) -> Self {
+        let Ok((points, steps)) = split_raw_field(raw, "steps") else {
+            return Self::PointsDropped;
+        };
+        Self::from_parts(points, || serde_json::from_str(steps?.get()).ok())
+    }
+
+    /// Keep a null exit field equivalent to an omitted field.
+    pub(crate) fn optional_from_raw(raw: &RawValue) -> Option<Self> {
+        (raw.get() != "null").then(|| Self::from_raw(raw))
+    }
+
+    fn from_parts(
+        mut points: Map<String, Value>,
+        decode_steps: impl FnOnce() -> Option<Vec<JobStep>>,
+    ) -> Self {
+        points.insert("steps".into(), Value::Array(Vec::new()));
+        let Ok(mut usage) = serde_json::from_value::<JobUsage>(Value::Object(points)) else {
+            return Self::PointsDropped;
+        };
+        match decode_steps() {
+            Some(steps) => {
+                usage.steps = steps;
+                Self::Decoded(usage)
+            }
+            None => Self::StepsDropped(usage),
+        }
+    }
 }
 
 impl From<JobUsage> for UsageReport {
@@ -64,19 +97,12 @@ impl Serialize for UsageReport {
 
 impl<'de> Deserialize<'de> for UsageReport {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let Ok(Value::Object(mut fields)) = Value::deserialize(deserializer) else {
+        let Ok(Value::Object(mut points)) = Value::deserialize(deserializer) else {
             return Ok(Self::PointsDropped);
         };
-        let steps = fields.insert("steps".into(), Value::Array(Vec::new()));
-        let Ok(mut usage) = serde_json::from_value::<JobUsage>(Value::Object(fields)) else {
-            return Ok(Self::PointsDropped);
-        };
-        match steps.and_then(|value| serde_json::from_value::<Vec<JobStep>>(value).ok()) {
-            Some(steps) => {
-                usage.steps = steps;
-                Ok(Self::Decoded(usage))
-            }
-            None => Ok(Self::StepsDropped(usage)),
-        }
+        let steps = points.remove("steps");
+        Ok(Self::from_parts(points, || {
+            steps.and_then(|value| serde_json::from_value(value).ok())
+        }))
     }
 }

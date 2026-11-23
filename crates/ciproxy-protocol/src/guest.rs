@@ -1,10 +1,12 @@
 //! Tagged guest messages for the agent over vsock or the Boat callback.
 
 use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
 
 use crate::cache::{CacheConnection, DockerDiskAttachment};
 use crate::identifiers::{ImageId, JobId, OrganizationId, RunnerId};
 use crate::jobs::JobFacts;
+use crate::message_usage::usage_message;
 use crate::runners::RunnerExit;
 use crate::runtime::RuntimeCredentials;
 use crate::secret::Secret;
@@ -67,9 +69,8 @@ pub enum AgentToGuest {
     Shutdown,
 }
 
+usage_message! {
 /// Guest observations sent over vsock or to the Boat callback.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
 pub enum GuestToAgent {
     /// Pause before job code and supply the original trusted runtime assignment.
     JobStarting {
@@ -127,4 +128,15 @@ pub enum GuestToAgent {
         /// The entire series collected so far.
         usage: UsageReport,
     },
+}
+}
+
+impl GuestToAgent {
+    fn set_raw_usage(&mut self, raw: &RawValue) {
+        match self {
+            Self::RunnerExited { usage, .. } => *usage = UsageReport::optional_from_raw(raw),
+            Self::UsageSamples { usage, .. } => *usage = UsageReport::from_raw(raw),
+            _ => (),
+        }
+    }
 }

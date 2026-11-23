@@ -137,15 +137,23 @@ async fn gateway_does_not_save_usage_for_another_machines_runner() {
 }
 
 #[tokio::test]
-async fn gateway_keeps_the_exit_when_usage_exceeds_the_vm_allocation() {
+async fn gateway_keeps_the_exit_when_validation_or_the_store_rejects_usage() {
     let fixture = Fixture::new();
-    let usage = JobUsage {
+    let excessive = JobUsage {
         cpu_milli_vcpu: vec![2001],
         ..job_usage()
     };
+    assert_exit_without_usage(fixture, excessive, "usage exceeds the VM allocation").await;
+
+    let mut fixture = Fixture::new();
+    fixture.reject_final_usage();
+    assert_exit_without_usage(fixture, job_usage(), "the store refused final usage").await;
+}
+
+async fn assert_exit_without_usage(fixture: Fixture, usage: JobUsage, case: &str) {
     let runtime = receive_exit(&fixture, fixture.machine, usage);
     runtime.quiesce().await.unwrap();
-    assert_eq!(saved(&fixture).runner.state, RunnerState::Stopped);
-    assert_eq!(saved_usage(&fixture), None);
+    assert_eq!(saved(&fixture).runner.state, RunnerState::Stopped, "{case}");
+    assert_eq!(saved_usage(&fixture), None, "{case}");
     runtime.shutdown().await.unwrap();
 }
