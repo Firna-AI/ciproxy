@@ -73,6 +73,9 @@ fi
 if [[ "$*" == 'try-restart user@1000.service' && ${CIPROXY_FIXTURE_SYSTEM_SCOPE:-} != 1 ]]; then
     exit 75
 fi
+if [[ "$*" == 'start ciproxy-swap.service' && ${CIPROXY_FIXTURE_FAIL_SWAP:-} == 1 ]]; then
+    exit 1
+fi
 if [[ "$*" == 'start ciproxy-boat-guest.service' ]]; then
     if [[ -e /run/ciproxy/registration.json ]]; then
         cp -p /run/ciproxy/registration.json /state/delivered-registration.json

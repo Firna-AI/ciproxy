@@ -1,10 +1,10 @@
 # Agent images
 
-This doc states the requirements for the job images: the Linux image with
-its software, its two builds, and its releases, and the macOS image.
-[Job VMs](agent.md#job-vms) on Linux boot the machine image. Boat
-[sandboxes](overflow.md#terms) start from the Boat snapshot. Job VMs on a
-Mac boot the macOS image.
+This page states the requirements for the Linux image, its two builds and
+releases, and the terms of both images. [Job VMs](agent.md#job-vms) on
+Linux boot the machine image. Boat [sandboxes](overflow.md#terms) start
+from the Boat snapshot. Job VMs on a Mac boot the
+[macOS image](agent-images-macos.md).
 
 ## Terms
 

@@ -217,8 +217,8 @@ In both builds, `provision.sh` installs `ciproxy-swap.sh` as
 `/usr/local/libexec/ciproxy-swap` and installs `ciproxy-swap.service`.
 The machine image enables the unit. It runs the script at boot, before
 `ciproxy-guest.service`.
-A Boat restore does not boot the saved system, so the unit stays disabled
-there. `boat-start.sh` runs the script before it starts the guest.
+A Boat restore keeps the running system. `boat-start.sh` starts the unit
+after Docker and before the guest. It warns and goes on if the unit fails.
 The script changes nothing when a zram swap is already active.
 When zram is a module, the script loads it.
 It sizes a zram device at `MemTotal` of `/proc/meminfo`, but at most
@@ -235,6 +235,10 @@ setting only tunes it.
 The [swap check](checks.md#compressed-swap) covers these cases.
 
 ## Publish and keep the runner current
+
+Before you build a Linux release with changed image contents, set a new
+`IMAGE_ID` in [pins.env](pins.env). Machines and the control plane compare
+only the image ID to decide whether a machine needs an update.
 
 Use an authenticated Google Cloud CLI on the release machine.
 The destination is the image bucket that the deployment provides.

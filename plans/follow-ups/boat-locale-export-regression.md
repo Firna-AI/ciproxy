@@ -22,7 +22,7 @@
   - **Probe:** the command `/usr/bin/locale charmap`. The restore check
     sends it, and the local check runs it.
 - **Background:**
-  - The requirement, at `docs/protocol/agent-images.md:119-122`: from the
+  - The requirement, at `docs/protocol/agent-images.md:148-151`: from the
     first command after a restore, a command of Boat's controller has the
     UTF-8 locale of Boat's base system. The controller adds no locale
     warning to its stderr.

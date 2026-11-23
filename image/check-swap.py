@@ -132,6 +132,13 @@ if tool == 'zramctl' and '--find' in args:
         self.assertEqual(calls[-2:], ["mkswap /dev/zram0", "zramctl --reset /dev/zram0"])
         self.assertIn("Warning: Could not format /dev/zram0 as swap.", stderr)
 
+    def test_releases_device_when_swapon_fails(self):
+        stderr, calls = self.run_swap(FIXTURE_FAIL="swapon")
+        self.assertEqual(calls[-3:], [
+            "mkswap /dev/zram0", "swapon --priority 100 /dev/zram0", "zramctl --reset /dev/zram0",
+        ])
+        self.assertIn("Warning: Could not enable swap on /dev/zram0.", stderr)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

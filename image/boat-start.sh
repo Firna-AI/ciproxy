@@ -17,7 +17,7 @@ systemctl start docker.service docker.socket
 if ! python3 /opt/ciproxy-image/measure.py / --job; then
     printf '%s\n' 'Warning: Boat job disk measurement failed.' >&2
 fi
-if ! /usr/local/libexec/ciproxy-swap; then
+if ! systemctl start ciproxy-swap.service; then
     printf '%s\n' 'Warning: Boat job swap setup failed.' >&2
 fi
 systemctl start ciproxy-boat-guest.service

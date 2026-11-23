@@ -9,6 +9,18 @@ warn() {
     printf 'Warning: %s\n' "$1" >&2
 }
 
+# Bash calls this function from the EXIT trap.
+# shellcheck disable=SC2317
+cleanup_swap() {
+    if (( swap_enabled )) && ! swapoff "$device" >/dev/null; then
+        warn "Could not turn off swap on $device after setup failed."
+        return
+    fi
+    if ! zramctl --reset "$device"; then
+        warn "Could not reset $device after setup failed."
+    fi
+}
+
 zram_available() {
     [[ -d $sys_root/class/zram-control || -d $sys_root/block/zram0 ]]
 }
@@ -39,6 +51,7 @@ if (( memory_kib > cap_kib )); then
 fi
 size_bytes=$((memory_kib * 1024))
 
+swap_enabled=0
 if ! device=$(zramctl --find --algorithm zstd --size "$size_bytes"); then
     warn 'Could not configure zram with zstd. Trying the kernel default compressor.'
     if ! device=$(zramctl --find --size "$size_bytes"); then
@@ -46,20 +59,21 @@ if ! device=$(zramctl --find --algorithm zstd --size "$size_bytes"); then
         exit 0
     fi
 fi
+trap cleanup_swap EXIT
 
 if ! mkswap "$device" >/dev/null; then
     warn "Could not format $device as swap."
-elif ! swapon --priority 100 "$device" >/dev/null; then
-    warn "Could not enable swap on $device."
-else
-    # The read-ahead setting only tunes the swap, so its failure keeps the swap.
-    if ! printf '0\n' 2>/dev/null > "$proc_root/sys/vm/page-cluster"; then
-        warn 'Could not set vm.page-cluster to 0.'
-    fi
     exit 0
 fi
+if ! swapon --priority 100 "$device" >/dev/null; then
+    warn "Could not enable swap on $device."
+    exit 0
+fi
+swap_enabled=1
+trap - EXIT
 
-if ! zramctl --reset "$device"; then
-    warn "Could not reset $device after setup failed."
+# The read-ahead setting only tunes the swap, so its failure keeps the swap.
+if ! printf '0\n' 2>/dev/null > "$proc_root/sys/vm/page-cluster"; then
+    warn 'Could not set vm.page-cluster to 0.'
 fi
 exit 0

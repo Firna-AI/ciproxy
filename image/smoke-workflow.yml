@@ -8,10 +8,14 @@ jobs:
     steps:
       - name: Check compressed swap
         run: |
-          swapon --show
-          if [ ! -e /sys/class/zram-control ] && ! modinfo zram >/dev/null 2>&1; then
+          swapon --show || true
+          if [ ! -e /sys/class/zram-control ]; then
             echo '::warning::This kernel has no zram, so the job runs without compressed swap.'
             exit 0
+          fi
+          if [ ! -r /proc/swaps ]; then
+            echo 'Cannot read /proc/swaps on a kernel with zram.' >&2
+            exit 1
           fi
           awk '
             $1 == "MemTotal:" {

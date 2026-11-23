@@ -8,7 +8,6 @@ import json
 import os
 import pathlib
 import re
-import shutil
 import shlex
 import struct
 import sys
@@ -18,7 +17,7 @@ import unittest
 sys.dont_write_bytecode = True
 
 from _checks_.export_fixture import (
-    CAPABILITY, RELEASE_FSTAB, SOURCE_FSTAB, create, disk_attribute, disk_file, run,
+    CAPABILITY, RELEASE_FSTAB, SOURCE_FSTAB, create, disk_attribute, disk_file, provision, run,
 )
 from _checks_.image_cleanup import assert_clean_image
 
@@ -51,8 +50,7 @@ def check_export(workspace):
     root, source, work, environment = create(workspace, image)
     print("Fixture evidence: " + str(root), flush=True)
     assert not (source / "etc/apt/preferences.d/ciproxy-software").exists()
-    run([shutil.which("chroot"), str(source), "/usr/bin/bash", "/image/provision.sh"], root,
-        "provision", {**os.environ, "PATH": "/usr/bin"})
+    provision(source, root)
     assert_clean_image(source)
     network_path = "etc/systemd/network/10-ciproxy.network"
     check_guest_network((source / network_path).read_text())
@@ -113,6 +111,13 @@ def check_export(workspace):
     assert_clean_image(tree)
     check_guest_network((tree / network_path).read_text())
     assert (tree / service_path).read_bytes() == (source / service_path).read_bytes()
+    swap_helper = tree / "usr/local/libexec/ciproxy-swap"
+    assert swap_helper.is_file(), "Export must contain /usr/local/libexec/ciproxy-swap"
+    assert swap_helper.stat().st_mode & 0o7777 == 0o755, "Export must keep ciproxy-swap mode 0755"
+    swap_unit = tree / "etc/systemd/system/ciproxy-swap.service"
+    assert swap_unit.is_file(), "Export must contain /etc/systemd/system/ciproxy-swap.service"
+    swap_link = swap_unit.parent / "ciproxy-guest.service.wants" / swap_unit.name
+    assert swap_link.is_symlink(), "Export must enable ciproxy-swap.service for ciproxy-guest.service"
     tool = tree / "privileged-tool"
     assert (tool.stat().st_uid, tool.stat().st_gid, tool.stat().st_mode & 0o7777) == (1234, 2345, 0o755)
     assert os.getxattr(tool, "security.capability").hex() == CAPABILITY
@@ -144,6 +149,7 @@ def check_export(workspace):
         "fixture_only": True, "source_mounts_preserved": True,
         "firecracker_fstab": RELEASE_FSTAB,
         "capabilities_acl_owners_hardlinks_sparse_preserved": True,
+        "swap_startup_preserved": True,
         "real_tools": ["tar", "zstd", "mkfs.ext4", "debugfs", "measure.py", "package.sh"],
         "stubbed_tools": ["provisioning tools inside chroot", "virt-customize", "guestfish", "sudo"],
         "not_proved": "Real libguestfs inspection and mounting, a full image build, or VM boot",

@@ -337,8 +337,9 @@ Depends on: 2
 
 Depends on: every other milestone
 
-- [ ] Run the new image checks, the targeted tests, and the complete gate
-      named in `AGENTS.md`.
+- [x] Run the new image checks, the targeted tests, and the complete gate
+      named in `AGENTS.md`. Evidence: `.context/job-vm-swap/gate.log`,
+      `rust-test-nofailfast.log`, and `rust-doctests.log`.
 - [ ] Build the machine image and start one job VM on a disposable KVM
       machine. Record MemTotal, and correct the figures of this plan and
       the docs. Run the `swap` mode of the agent smoke workflow.
@@ -348,7 +349,7 @@ Depends on: every other milestone
       already gives swap, and check that the zram swap is active. When
       the Boat kernel has no zram, ask the user about E of decision 1 on
       Boat.
-- [ ] Commit with Conventional Commits and push the branch.
+- [x] Commit with Conventional Commits and push the branch.
 - [ ] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, record

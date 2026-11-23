@@ -33,28 +33,23 @@ sudo python3 image/check-export.py \
   --work-dir .context/ciproxy-mvp/orchestrator-fix-1
 ```
 
-It needs `chroot`, `ldd`, Bash, Python, tar, zstd, e2fsprogs, `acl`, and
-`setcap` from the Linux capability tools. It keeps all fixtures as evidence.
-It runs provisioning inside a fixture chroot with stub provisioning tools.
-It runs the real export script with stub libguestfs transport boundaries.
-Real archive, ext4, and package tools check the release tree, the ext4 disk,
-and their metadata. Both must keep the owners, modes, file capabilities,
-ACLs, and hard links of the source.
-The release must use the software report of the pinned recipe, not a stale
-report in the unpinned recipe folder.
-A package that differs from its APT pin must appear in the measurement as
-`apt_pin_differences`, also when the release tree has no APT preference
-file. The export must still finish.
-The provision step must remove the build-only files of ciproxy before the
-export, and the final tree must have none of them. The upstream files of
-`/imagegeneration` must stay.
-The ext4 check verifies the approved 1% root reserve.
-It also checks neutral root labels in the release measurement and manifest.
-It checks the small root's free margin and both `root_disk_bytes` fields
-against the actual file length. The fixture uses real ext4 resizing tools.
-It grows a copy of the packaged release disk with plain `resize2fs`.
-It neither forces resizing nor repairs the copy first.
-This check cannot prove real guestfish inspection, mounts, or a VM boot.
+It needs root, `chroot`, `ldd`, Bash, Python, tar, zstd, e2fsprogs, `acl`,
+`setcap`, and `systemctl`. It saves the fixtures as evidence.
+Provisioning runs in a chroot with stub tools and real `install` for the
+guest unit and swap files. The fixture enables the swap unit offline.
+The real exporter uses stub libguestfs transport and real archive, ext4,
+and package tools. The release tree and disk must keep the source owners,
+modes, capabilities, ACLs, and hard links. The tree must keep the swap
+helper with mode 0755, its unit, and its enablement link for the guest.
+The release uses the pinned recipe's software report. A package that
+differs from its APT pin appears in `apt_pin_differences` without failing
+export, including when the tree has no APT preference file.
+Provisioning removes ciproxy's build-only files before export. The final
+tree keeps the upstream `/imagegeneration` files.
+The check verifies a 1% ext4 root reserve, the small root's free margin,
+neutral root labels, and both `root_disk_bytes` fields against disk length.
+A disk copy must grow with plain `resize2fs` without a repair. This check
+cannot prove real guestfish inspection, mounts, or a VM boot.
 
 ## Guest network
 
@@ -159,26 +154,24 @@ It needs root for `chroot` and its private `/proc` mount.
 python3 image/check-swap.py
 ```
 
-It runs the real `ciproxy-swap.sh` on a private `/proc` and `/sys`, with
-stub zram and swap tools. It needs Bash, Python, and `awk`, and no root.
-The script must select zstd before it sets the size, as the kernel
-requires, and cap the size at 8 GiB. Without zstd, it must warn and use
-the default compressor of the kernel. It must load the `zram` module when
-needed, and leave an active zram swap alone. Without zram, it must warn
-and exit 0. When `mkswap` or `swapon` fails, it must release the device.
-When only `vm.page-cluster` cannot be set, it must warn and keep the swap.
+It runs `ciproxy-swap.sh` with private `/proc` and `/sys` inputs and stub
+swap tools. It needs Bash, Python, and `awk`, and no root.
+It checks zstd selection before sizing, the 8 GiB cap, the fallback to
+the kernel compressor with a warning, module loading, and leaving active
+swap alone. Missing zram must warn and exit 0. A failed `mkswap` or
+`swapon` must release the device. A failed `vm.page-cluster` write must
+warn and keep active swap.
 
-These checks cannot see a real zram device. Two live checks print
-`swapon --show` in a job and fail unless a zram swap is active with the
-size that the script sets, within 64 KiB:
+Live smoke prints `swapon --show` for diagnostics. It reads `/proc/swaps`
+and checks for active zram within 64 KiB of the expected size:
 
 - In a job VM, the `swap` mode of the
   [agent smoke workflow](../crates/ciproxy-agent/scripts/github-smoke-workflow.yml),
   as the [KVM and GitHub smoke checks](../crates/ciproxy-agent/smoke-checks.md)
   say.
 - In a Boat job, the first step of [smoke-workflow.yml](smoke-workflow.yml).
-  When the Boat kernel has no zram, this step warns and passes, because
-  such a job still runs without the swap.
+  When `/sys/class/zram-control` is absent after Boat launch, the step
+  warns and passes. With zram, a missing `/proc/swaps` fails the step.
 
 ### Boat build
 
@@ -201,34 +194,30 @@ sudo python3 image/check-boat-run.py \
   --work-dir .context/image-checks/boat-run
 ```
 
-It runs `boat-run.sh` in a fixture root with a `systemctl` spy and the
-real guest. When the launch queues `ciproxy-boat-start.service`, the spy
-runs the real command of that unit. A restart of `user@1000.service`
-fails unless it runs in that unit, as a restart of Boat's user manager
-would end a command in its scope.
-With a registration, the launch must reload systemd and queue the start
-unit. The start unit must reload systemd, stop Docker and its socket,
-restart containerd, and restart each other listed service. It must then
-start Docker and its socket, and then the guest unit.
-The delivered file must arrive at `/run/ciproxy/registration.json` with
-mode 0600 and root as its owner. The source file must be gone, and the
-output must not show its contents.
-Without a registration, the launch must take the same steps. The real
-guest must then end with exit code 1 and its missing-registration error.
-The fixture root holds the real Python, the real `measure.py`, and a `du`
-that records each call and fails.
-With a registration, the start must not call `du`. A fixed `statvfs`
-sample has different block sizes and different free and available block
-counts. The start must measure `/` and print exactly the size as
-`backing_filesystem_bytes`, and the available bytes as
+It runs `boat-run.sh` and the real guest in a chroot with a `systemctl`
+spy. The spy runs the real start command when launch queues the unit.
+A restart of `user@1000.service` must run in that unit to keep the start
+outside the scope of Boat's user manager.
+The launch reloads systemd and queues `ciproxy-boat-start.service`.
+That unit reloads systemd, stops Docker and its socket, and restarts
+containerd and the other listed services. It starts Docker and its
+socket, the swap service, and the guest in that order. A failed swap
+service must warn and still start the guest.
+A delivered registration arrives at `/run/ciproxy/registration.json`
+with mode 0600 and root as its owner. The source file must be gone.
+The output keeps its contents private. Without a registration, the
+launch takes the same steps. The guest then exits with code 1 and its
+missing-registration error.
+The fixture uses the real Python and `measure.py` and a `du` that logs
+each call and fails. In job mode, the start must skip `du`. A fixed
+`statvfs` sample distinguishes block sizes and free and available block
+counts. The start measures `/` and reports the exact size as
+`backing_filesystem_bytes` and available bytes as
 `backing_filesystem_available_bytes` and `free_job_bytes`.
-When `statvfs` fails in the start, the start must print
-`Warning: Boat job disk measurement failed.`, take each refresh step, and
-still start the guest unit.
-Outside job mode, `measure.py` must still call `du`, fail when `du` fails,
-and print nothing.
-The check needs root, `chroot`, and `ldd`, so that the fixture root stays
-private.
+If `statvfs` fails, the start prints
+`Warning: Boat job disk measurement failed.` and still starts the guest.
+Outside job mode, `measure.py` calls `du` and propagates its failure
+with no measurement output. The check needs root, `chroot`, and `ldd`.
 
 ### Boat runner start
 

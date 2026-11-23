@@ -53,6 +53,7 @@ class BoatRun(unittest.TestCase):
             "stop docker.service docker.socket", "restart containerd.service",
             "try-restart example.service", "try-restart user@1000.service",
             "start docker.service docker.socket",
+            "start ciproxy-swap.service",
             "start ciproxy-boat-guest.service",
         ])
 
@@ -112,6 +113,12 @@ os.statvfs = unavailable
         self.assert_refresh(events)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Warning: Boat job disk measurement failed.", result.stderr)
+
+    def test_failed_swap_service_warns_and_starts_guest(self):
+        result, events = self.launch(CIPROXY_FIXTURE_FAIL_SWAP="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Warning: Boat job swap setup failed.", result.stderr)
+        self.assert_refresh(events)
 
     def test_non_job_measurement_propagates_failed_du(self):
         result = self.run_in_root("/usr/bin/python3", MEASURE_PATH, "/")

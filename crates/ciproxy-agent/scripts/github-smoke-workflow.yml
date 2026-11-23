@@ -46,7 +46,7 @@ jobs:
       - name: Check the compressed swap of the job VM
         if: inputs.mode == 'swap'
         run: |
-          swapon --show
+          swapon --show || true
           awk '
             $1 == "MemTotal:" {
               cap_kib = 8 * 1024 * 1024

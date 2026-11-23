@@ -74,6 +74,7 @@
       `agent.md` then has about 218 lines. Update the links to
       `agent.md#platforms` in `docs/architecture.md` near line 72,
       `docs/protocol/agent-images.md` near line 25,
+      `docs/protocol/agent-images-macos.md` near line 26,
       `docs/protocol/agent-install.md` near line 139,
       `docs/protocol/job-routing.md` near line 44, and
       `docs/protocol/labels.md` near line 13. Update the links to

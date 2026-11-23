@@ -9,7 +9,7 @@
 - **Location:** `crates/ciproxy-control-plane/src/image_release.rs`, the
   release key and the offer; `image/macos/write-manifest.py`, the
   `variant` field; `ts/app`, the dashboard; `ts/site` and
-  `docs/protocol/agent-images.md`, the docs.
+  `docs/protocol/agent-images-macos.md`, the docs.
 - **Reason:** Only the standard image fits every Mac today, so the
   environments offer it alone until this work picks a variant per Mac.
 

@@ -4,12 +4,12 @@
 import json
 import os
 import pathlib
-import re
 import shutil
 import subprocess
 import tempfile
 
 from pin_recipe import PINNED_RECIPE_DIRECTORY
+from _checks_.boat_fixture import copy_program
 from _checks_.image_cleanup import legacy_image
 
 
@@ -21,26 +21,18 @@ CAPABILITY = "0100000200200000000000000000000000000000"
 
 def provision_sandbox(source, image):
     for relative in ["usr/bin", "dev", "image", "etc/ciproxy", "etc/sudoers.d",
-                     "etc/systemd/network", "etc/systemd/system", "usr/local/bin", "sbin"]:
+                     "etc/systemd/network", "etc/systemd/system", "usr/local/bin",
+                     "usr/local/libexec", "sbin"]:
         (source / relative).mkdir(parents=True, exist_ok=True)
-    for name in ["provision.sh", "boat-build-clean-image.sh", "pins.env", "ciproxy-guest.service"]:
+    for name in ["provision.sh", "boat-build-clean-image.sh", "pins.env", "ciproxy-guest.service",
+                 "ciproxy-swap.service", "ciproxy-swap.sh"]:
         shutil.copyfile(image / name, source / "image" / name)
     # The Worker install has its own checks, so the export fixture stubs it.
     (source / "image/runner-patch").mkdir()
     (source / "image/runner-patch/install-worker.sh").write_text("exit 0\n")
     for name in ["bash", "rm"]:
-        binary = pathlib.Path(shutil.which(name)).resolve()
-        with binary.open("rb") as command:
-            header = command.readline(256)
-        executable = pathlib.Path(header[2:].split()[0].decode()) if header.startswith(b"#!") else binary
-        libraries = subprocess.check_output(["ldd", str(executable)], text=True)
-        for path in [str(binary), str(executable), *re.findall(r"(/[^\s()]+)", libraries)]:
-            destination = source / path.lstrip("/")
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(path, destination)
-            destination.chmod(0o755)
-        shutil.copyfile(binary, source / "usr/bin" / name)
-        (source / "usr/bin" / name).chmod(0o755)
+        copy_program(shutil.which(name), source, f"/usr/bin/{name}")
+    copy_program(shutil.which("install"), source, "/usr/bin/install-fixture")
     (source / "dev/null").touch()
     stub = source / "usr/bin/provision-stub"
     stub.write_text('''#!/usr/bin/bash
@@ -48,9 +40,13 @@ case "${0##*/}" in
     dirname) printf '%s\\n' "${1%/*}" ;;
     cat) while IFS= read -r line; do printf '%s\\n' "$line"; done ;;
     install)
-        if [[ ${@: -2:1} == /image/ciproxy-guest.service ]]; then
-            while IFS= read -r line; do printf '%s\\n' "$line"; done \\
-                < /image/ciproxy-guest.service > /etc/systemd/system/ciproxy-guest.service
+        case "${@: -2:1}" in
+            /image/ciproxy-guest.service|/image/ciproxy-swap.service|/image/ciproxy-swap.sh)
+                exec /usr/bin/install-fixture "$@" ;;
+        esac ;;
+    systemctl)
+        if [[ $1 == enable ]]; then
+            printf '%s\\n' "${@:2}" >> /systemctl-enable
         fi ;;
     sha256sum) while IFS= read -r line; do :; done ;;
 esac
@@ -64,6 +60,17 @@ exit 0
     for name in ["dirname", "cat", "sha256sum", "install", "id", "useradd",
                  "chmod", "chown", "tar", "cp", "find", "systemctl"]:
         (source / "usr/bin" / name).symlink_to(stub.name)
+
+
+def provision(source, root):
+    run([shutil.which("chroot"), str(source), "/usr/bin/bash", "/image/provision.sh"], root,
+        "provision", {**os.environ, "PATH": "/usr/bin"})
+    record = source / "systemctl-enable"
+    units = record.read_text().splitlines() if record.is_file() else []
+    record.unlink(missing_ok=True)
+    if {"ciproxy-swap", "ciproxy-swap.service"}.intersection(units):
+        run(["systemctl", "--root", str(source), "enable", "ciproxy-swap.service"], root,
+            "enable-swap-service")
 
 
 def create(workspace, image):

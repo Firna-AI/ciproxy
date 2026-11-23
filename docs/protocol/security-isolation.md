@@ -91,7 +91,7 @@ and keys.
 - [Workspaces](workspaces.md): the organizations of a workspace, and what
   the workspace owns.
 - [Agent](agent.md): job VMs, the agent, and removal.
-- [Agent images](agent-images.md): the macOS image and its SIP setting.
+- [The macOS image](agent-images-macos.md) covers the SIP setting.
 - [Cache](cache.md): cache scopes, trusted write-back, and Docker disks.
 - [Overflow](overflow.md): the Boat account and its sandboxes.
 - [Labels](labels.md) and [Job routing](job-routing.md): labels and

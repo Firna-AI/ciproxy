@@ -190,7 +190,9 @@ runs on own machines.
 
 ## The image
 
-[Agent images](agent-images.md) defines image contents, sizing, and releases.
+[Agent images](agent-images.md) defines the Linux image contents, sizing,
+and releases. [The macOS image](agent-images-macos.md) defines the macOS
+image contents and releases.
 
 ## Updates
 
