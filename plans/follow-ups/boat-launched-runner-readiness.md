@@ -69,7 +69,8 @@
   - While a waiting job needs the runner, ciproxy keeps the sandbox
     (`crates/ciproxy-overflow/src/service/inventory.rs:189`). No deadline
     ends a launched start. The sandbox lifetime is the backstop: 6 hours,
-    or 2 hours on a Boat free trial (`docs/protocol/overflow.md:119-128`).
+    or 2 hours on a Boat free trial (section "The lifetime" of
+    `docs/protocol/overflow-sandbox-end.md`).
   - ciproxy sets no limit on new starts for one job, apart from refusals
     by Boat and the monthly spend limit (section "Spend limit" of
     `docs/protocol/overflow.md`).

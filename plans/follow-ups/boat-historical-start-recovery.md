@@ -4,8 +4,8 @@
   **Confidence:** High. **Harder later:** No.
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-17, from plan item 121, option B of answer C.
-- **Location:** `crates/ciproxy-control-plane/overflow.md`, the section
-  "Cleanup and recovery", and the overflow recovery code in
+- **Location:** `crates/ciproxy-control-plane/overflow-smoke.md`, the
+  section "Cleanup and recovery", and the overflow recovery code in
   `crates/ciproxy-overflow`.
 - **Reason:** The user chose a one-time repair for the only known case, and
   this command for later cases.

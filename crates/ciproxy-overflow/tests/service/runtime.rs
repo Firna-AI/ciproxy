@@ -134,6 +134,7 @@ pub(super) fn build(
         Runtime::Connect => Unimock::new((extra, now, seal)),
         Runtime::Recover => Unimock::new((extra, open)),
         Runtime::Read => Unimock::new((extra, now, open)),
+        Runtime::ExitReport => Unimock::new((extra, now, open)).no_verify_in_drop(),
         Runtime::Authority => Unimock::new((extra, now, seal, open)),
         Runtime::Start => Unimock::new((extra, now, token, seal, open)),
     })

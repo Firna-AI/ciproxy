@@ -2,8 +2,6 @@
 
 use std::thread;
 
-use ciproxy_protocol::resources::VmSize;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
@@ -16,7 +14,7 @@ use rust_decimal::Decimal;
 
 use super::super::support::Database;
 use super::guard_cost_support::{backend_pid, tagged_store, wait_for_blocker};
-use super::support::{reserve, setup};
+use super::support::{create_runner_intent, reserve, setup};
 
 const DELIVERY_GATE: i64 = 9_100_000_000;
 
@@ -30,40 +28,7 @@ struct Backend {
 fn boat_result_and_delivery_cost_save_both_complete() {
     let mut database = Database::new();
     let (workspace, _, mut record) = setup(&database);
-    let label = database.store.labels(workspace).unwrap().remove(0);
-    let binding = database
-        .store
-        .scale_sets(workspace, record.organization_id)
-        .unwrap()
-        .remove(0);
-    database
-        .store
-        .create_boat_runner_intent(
-            workspace,
-            &BoatRunnerIntent {
-                registration_scale_set_id: Some(binding.github_id),
-                delivery_id: record.delivery_id,
-                runner_id: record.runner_id,
-                organization_id: record.organization_id,
-                label_id: record.label_id,
-                label_name: label.name,
-                scale_set_id: record.scale_set_id,
-                requested_size: VmSize {
-                    vcpu: 2,
-                    memory_bytes: 8_000_000_000,
-                    disk_bytes: 60_000_000_000,
-                },
-                size: VmSize {
-                    vcpu: 8,
-                    memory_bytes: 16_000_000_000,
-                    disk_bytes: 111_000_000_000,
-                },
-                required_root_disk_bytes: record.required_root_disk_bytes,
-                github_id: Some(84),
-                created_at: record.starts_at,
-            },
-        )
-        .unwrap();
+    create_runner_intent(&database, workspace, &record);
     record.phase = StartPhase::Running;
     record.sandbox = Some(KnownSandbox::observed(
         "guarded-cost-sandbox".to_owned(),

@@ -110,8 +110,9 @@ pass applies only Boat actions, with no new refresh.
   early sandbox deletion after removal.
 - App removal stops new Boat starts. The last organization removal retires
   the Boat key and holds it until the unfinished sandboxes end. Exit
-  reports still delete their sandbox at once. App removal is rare, and the
-  lifetime and spend limit bound its cost, as
+  reports still delete their sandbox, as [Exit callback](#exit-callback)
+  says. App removal is rare, and the lifetime and spend limit bound its
+  cost, as
   [Removing the App](../../docs/protocol/app-removal.md#removing-the-app)
   explains.
 - A new installation clears saved owner removal. Old idle sandboxes can
@@ -129,12 +130,21 @@ The route uses no browser session. The guest sends
 `GuestToAgent::RunnerExited` as JSON with `Authorization: Bearer TOKEN`.
 Each sandbox has its own token, which works only for its own runner.
 
-| Status | Meaning                                                             |
-| ------ | ------------------------------------------------------------------- |
-| 204    | The control plane accepts the report and starts sandbox deletion.   |
-| 400    | The message is not `RunnerExited`, or its runner ID is not a UUID.  |
-| 401    | The token is missing, wrong, already used, or for another runner.   |
-| 503    | The request could not finish. The runtime retries saved cleanup.    |
+The route first saves the report as a one-use claim. The claim needs no
+workspace lock, so other Boat work of the workspace cannot drop it. The
+route then waits up to 5 seconds for that lock and deletes the sandbox in
+the request. When the wait ends first, or a step after the claim fails,
+the route still answers 204, and a later cleanup pass deletes the sandbox.
+Later delivery saves keep the claim and the first recorded end.
+[The exit report](../../docs/protocol/overflow-sandbox-end.md#the-exit-report)
+gives the requirements.
+
+| Status | Meaning                                                                                               |
+| ------ | ----------------------------------------------------------------------------------------------------- |
+| 204    | The control plane saved the report. It deletes the sandbox in the request or at a later cleanup pass. |
+| 400    | The message is not `RunnerExited`, or its runner ID is not a UUID.                                    |
+| 401    | The token is missing, wrong, already used, or for another runner, or its delivery already ended.      |
+| 503    | The request failed before it saved the report.                                                        |
 
 Boat ends a sandbox at its lifetime when no report arrives.
 

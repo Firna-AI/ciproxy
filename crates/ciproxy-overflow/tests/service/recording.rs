@@ -26,6 +26,7 @@ pub(super) struct Capture {
     pub(super) fail_on_key_open: Option<usize>,
     pub(super) key_open_effect: Option<(usize, Box<dyn FnOnce() + Send>)>,
     pub(super) dispatch_effect: Option<Box<dyn FnOnce() + Send>>,
+    pub(super) lock_effect: Option<Box<dyn FnOnce() + Send>>,
     pub(super) disable_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) suspend_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) limit_on_launch_seal: Option<(i64, Arc<dyn Store>)>,
@@ -66,11 +67,25 @@ impl OverflowStore for RecordingStore {
     }
 
     fn lock_overflow(&self, workspace_id: Uuid) -> Result<Box<dyn OverflowSession>> {
+        let effect = self.capture.lock().unwrap().lock_effect.take();
+        if let Some(effect) = effect {
+            effect();
+        }
         Ok(self.wrap(self.inner.lock_overflow(workspace_id)?))
     }
 
     fn overflow_token_workspace(&self, hash: &TokenHash) -> Result<Option<Uuid>> {
         self.inner.overflow_token_workspace(hash)
+    }
+
+    fn accept_end(
+        &self,
+        workspace_id: Uuid,
+        hash: &TokenHash,
+        runner_id: Uuid,
+        at: DateTime<Utc>,
+    ) -> Result<Option<StartRecord>> {
+        self.inner.accept_end(workspace_id, hash, runner_id, at)
     }
 }
 
@@ -167,15 +182,6 @@ impl OverflowSession for RecordingSession {
         self.inner.save_start(record)?;
         self.record(record);
         Ok(())
-    }
-
-    fn accept_end(
-        &mut self,
-        hash: &TokenHash,
-        runner: Uuid,
-        at: DateTime<Utc>,
-    ) -> Result<Option<StartRecord>> {
-        self.inner.accept_end(hash, runner, at)
     }
 
     fn collect(&mut self, before: DateTime<Utc>) -> Result<()> {

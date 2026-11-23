@@ -1,7 +1,9 @@
 //! Dedicated advisory-lock sessions and digest-only workspace authentication.
 
+use chrono::{DateTime, Utc};
 use ciproxy_schema::overflow::{overflow_locks, overflow_starts};
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::overflow::record::StartRecord;
 use ciproxy_store_interface::overflow::store::{OverflowSession, OverflowStore};
 use ciproxy_store_interface::secrets::TokenHash;
 use diesel::prelude::*;
@@ -12,7 +14,7 @@ use crate::connection::PgStore;
 use crate::connector::ConnectionUse;
 use crate::error::QueryResultExt;
 
-use super::Session;
+use super::{Session, completion};
 
 #[derive(QueryableByName)]
 struct LockResult {
@@ -55,6 +57,16 @@ impl OverflowStore for PgStore {
             .first::<Uuid>(&mut *self.connection()?)
             .optional()
             .store()
+    }
+
+    fn accept_end(
+        &self,
+        workspace_id: Uuid,
+        hash: &TokenHash,
+        runner_id: Uuid,
+        at: DateTime<Utc>,
+    ) -> Result<Option<StartRecord>> {
+        completion::accept(&mut *self.connection()?, workspace_id, hash, runner_id, at)
     }
 }
 
