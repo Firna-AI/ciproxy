@@ -295,9 +295,9 @@ no r2.dev access, and no custom domain. So the S3 endpoint is
 
 ## Pull requests
 
-- PR H2, this workspace: Milestone 2, one release for each platform.
-- PR H3, sub-workspace "H3 macOS release from R2": Milestones 1 and 3,
-  stacked on H2.
+- PR H2, this workspace: Milestone 2, merged as #129.
+- PR H3, sub-workspace "H3 macOS release from R2": Milestones 1 and 3, as
+  #130, which targets `main`.
 - PR H5, sub-workspace "H5 resumable image download": Milestone 5, from
   `main`.
 - PR H4, sub-workspace "H4 publish and Xcode fetch": Milestones 4 and 6,
@@ -596,10 +596,11 @@ outcome.
 
 Depends on: decisions 1, 2, and 3.
 
-- [ ] State the hosting of the macOS image in
+- [x] State the hosting of the macOS image in
       `docs/protocol/agent-images.md`: a private store, a URL per send, an
-      image for Macs only, and the resume behaviour.
-- [ ] Add the macOS settings to `deploy/runtime.md` and `deploy/setup.md`.
+      image for Macs only, and the resume behaviour. (resume behaviour: PR
+      #127)
+- [x] Add the macOS settings to `deploy/runtime.md` and `deploy/setup.md`.
 
 ## Milestone 2: One image for each platform
 
@@ -615,9 +616,9 @@ Depends on: none.
 
 Depends on: 1, 2, and decisions 1, 3, and 4.
 
-- [ ] Add the presigned URL signer with the AWS test vector.
-- [ ] Add `R2Releases` and the optional macOS settings.
-- [ ] Wire the settings and the optional credentials through
+- [x] Add the presigned URL signer with the AWS test vector.
+- [x] Add `R2Releases` and the optional macOS settings.
+- [x] Wire the settings and the optional credentials through
       `deploy/scripts/deploy.py`, the chart, and the deploy workflows.
 
 ## Milestone 4: Publish
