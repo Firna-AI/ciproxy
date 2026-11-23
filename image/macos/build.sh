@@ -11,6 +11,13 @@ repository=$(cd "$definition/../.." && pwd)
 disk_override=${DISK_BYTES:-}
 source "$definition/pins.env"
 DISK_BYTES=${disk_override:-$DISK_BYTES}
+# IMAGE_VARIANT selects full (the default) or standard; see image_variant.py.
+IMAGE_VARIANT=${IMAGE_VARIANT:-full}
+case $IMAGE_VARIANT in
+    full) ;;
+    standard) IMAGE_ID=$STANDARD_IMAGE_ID ;;
+    *) echo "IMAGE_VARIANT must be full or standard" >&2; exit 2 ;;
+esac
 work_dir=$(mkdir -p "${1:?Usage: image/macos/build.sh WORK_DIR [PHASE...]}" && cd "$1" && pwd)
 shift
 vm_tool="$work_dir/tools/ciproxy-image-vm"
@@ -92,7 +99,11 @@ phase_provision() {
     # sshd then ignores the build's key. clean-image.sh removes this setting.
     guest_ssh 'echo "StrictModes no" | sudo tee /etc/ssh/sshd_config.d/050-ciproxy-build.conf >/dev/null'
     local template port=8765 ssh_port=2222 server tunnel guard status=0
+    # A fresh upstream tree, because the variant changes files in it.
+    rm -rf "$work_dir/upstream" && mkdir -p "$work_dir/upstream"
+    tar -xzf "$work_dir/inputs/runner-images.tar.gz" -C "$work_dir/upstream" --strip-components 1
     template=$(python3 "$definition/prepare-template.py" "$work_dir/upstream" \
+        --variant "$IMAGE_VARIANT" \
         --template "$RUNNER_IMAGES_TEMPLATE" --xcode-links "$XCODE_LINKS" \
         --xcode-xip "$XCODE_XIP_NAME" --xcode-sha256 "$XCODE_SHA256")
     # The guest downloads the Xcode archive in place of upstream's storage
@@ -213,7 +224,7 @@ phase_test_image() {
     guest_ssh 'sudo bash /tmp/ciproxy/clean-image.sh && sudo shutdown -h now' || true
     vm_wait_stopped 300
     bundle_artifacts "$artifacts"
-    python3 "$definition/write-manifest.py" "$artifacts" --test-image \
+    python3 "$definition/write-manifest.py" "$artifacts" --test-image --variant test \
         --guest-binary "$work_dir/inputs/guest/ciproxy-guest"
     bash "$definition/package.sh" "$artifacts"
 }
@@ -239,7 +250,8 @@ phase_package() {
     local artifacts="$work_dir/artifacts"
     mkdir -p "$artifacts/bundle"
     bundle_artifacts "$artifacts"
-    python3 "$definition/write-manifest.py" "$artifacts" \
+    IMAGE_RELEASE_ID="${IMAGE_RELEASE_ID:-$IMAGE_ID}" python3 "$definition/write-manifest.py" \
+        "$artifacts" --variant "$IMAGE_VARIANT" \
         --guest-binary "$work_dir/inputs/guest/ciproxy-guest"
     bash "$definition/package.sh" "$artifacts"
 }

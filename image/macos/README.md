@@ -37,6 +37,21 @@ Homebrew packages of the recipe resolve at build time, as upstream. The
 build keeps the generated software report next to the reference inventory.
 Compare them before each release.
 
+## Variants
+
+`IMAGE_VARIANT` selects the software set. `image_variant.py` holds the
+changes, and each change fails when the upstream text that it changes is not
+there.
+
+- `full`, the default: the software of the GitHub image, with Xcode 26.6
+  and all its simulator runtimes. Image ID `IMAGE_ID`.
+- `standard`: the same, but with the iOS simulator runtime only, and without
+  the Android SDK, its tests, and its report section. Image ID
+  `STANDARD_IMAGE_ID`. It fits a Mac with 256 GB of storage.
+
+The manifest names the variant in `variant`. The `provision` phase extracts
+a fresh upstream tree each time, because the variant changes files in it.
+
 ## The build
 
 The build runs on an Apple Silicon Mac with the host macOS at the guest's
@@ -187,6 +202,6 @@ version. Refuse an older host.
 
 ## Checks
 
-`python3 image/macos/check-template.py` checks the template and toolset
-preparation offline. `python3 image/macos/check-archive.py` checks the
+`python3 image/macos/check-template.py` checks the template, toolset, and
+variant preparation offline. `python3 image/macos/check-archive.py` checks the
 archive writer and checker against the agent's member list.

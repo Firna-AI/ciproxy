@@ -15,6 +15,8 @@ import json
 import pathlib
 import re
 
+import image_variant
+
 TEMPLATE_NAME = "ciproxy-macos-26-arm64.pkr.hcl"
 TOOLSET_NAME = "toolset-26-ciproxy.json"
 
@@ -197,14 +199,19 @@ def main():
     parser.add_argument("--xcode-links", required=True, help="comma-separated Xcode links")
     parser.add_argument("--xcode-xip", required=True)
     parser.add_argument("--xcode-sha256", required=True)
+    parser.add_argument("--variant", default="full", choices=image_variant.VARIANTS,
+                        help="the image variant; see image_variant.py")
     args = parser.parse_args()
     macos = args.upstream / "images/macos"
     source = (args.upstream / args.template).read_text()
     links = [link for link in re.split(r"[,\s]+", args.xcode_links) if link]
-    toolset = prepare_toolset((macos / "toolsets/toolset-26.json").read_text(), links)
+    toolset = image_variant.toolset(
+        prepare_toolset((macos / "toolsets/toolset-26.json").read_text(), links), args.variant)
     check_xcode_pin(toolset, args.xcode_xip, args.xcode_sha256)
     (macos / "toolsets" / TOOLSET_NAME).write_text(toolset)
-    (macos / "templates" / TEMPLATE_NAME).write_text(prepare_template(source))
+    image_variant.tree(macos, args.variant)
+    (macos / "templates" / TEMPLATE_NAME).write_text(
+        prepare_template(image_variant.template(source, args.variant)))
     print(macos / "templates" / TEMPLATE_NAME)
 
 

@@ -5,6 +5,7 @@
 import importlib.util
 import json
 import pathlib
+import tempfile
 import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -124,6 +125,44 @@ class Toolset(unittest.TestCase):
         prepare.check_xcode_pin(prepared, "Xcode-26.6+17F113.xip", "aa")
         with self.assertRaises(SystemExit):
             prepare.check_xcode_pin(prepared, "Xcode-26.6+17F113.xip", "bb")
+
+
+class Variant(unittest.TestCase):
+    def setUp(self):
+        import image_variant
+        self.variant = image_variant
+
+    def test_full_changes_nothing(self):
+        self.assertEqual(self.variant.toolset(toolset(), "full"), toolset())
+        self.assertEqual(self.variant.template("text", "full"), "text")
+
+    def test_standard_keeps_the_ios_runtime_only(self):
+        result = json.loads(self.variant.toolset(toolset(), "standard"))
+        runtimes = {entry["link"]: entry["install_runtimes"]
+                    for entry in result["xcode"]["arm64"]["versions"]}
+        self.assertEqual(runtimes["26.6"], self.variant.IOS_ONLY)
+        self.assertEqual(runtimes["26.5"], "default")
+
+    def test_standard_drops_android(self):
+        step = self.variant.ANDROID_STEP
+        self.assertEqual(self.variant.template("a\n" + step + "b\n", "standard"), "a\nb\n")
+        with self.assertRaises(SystemExit):
+            self.variant.template("a\n", "standard")
+        root = pathlib.Path(tempfile.mkdtemp())
+        (root / "scripts/tests").mkdir(parents=True)
+        (root / "scripts/docs-gen").mkdir(parents=True)
+        (root / self.variant.ANDROID_TESTS).write_text("tests")
+        report = root / self.variant.REPORT
+        report.write_text("before\n" + self.variant.ANDROID_REPORT + "after\n")
+        self.variant.tree(root, "standard")
+        self.assertFalse((root / self.variant.ANDROID_TESTS).exists())
+        self.assertEqual(report.read_text(), "before\nafter\n")
+        with self.assertRaises(SystemExit):
+            self.variant.tree(root, "standard")
+
+    def test_unknown_variant_fails(self):
+        with self.assertRaises(SystemExit):
+            self.variant.toolset(toolset(), "small")
 
 
 if __name__ == "__main__":

@@ -39,6 +39,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifacts", type=pathlib.Path)
     parser.add_argument("--guest-binary", type=pathlib.Path, required=True)
+    parser.add_argument("--variant", default="full", choices=["full", "standard", "test"],
+                        help="the image variant, as IMAGE_VARIANT of build.sh")
     parser.add_argument("--test-image", action="store_true",
                         help="a test image without Xcode and the upstream toolset")
     args = parser.parse_args()
@@ -67,6 +69,7 @@ def main():
                 "root_disk_bytes": measurement["root_disk_bytes"],
                 "free_job_bytes": measurement["free_job_bytes"],
                 "guest_sha256": sha256(args.guest_binary),
+                "variant": args.variant,
                 "test_image": args.test_image,
                 "measurements": measurement}
     (args.artifacts / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
