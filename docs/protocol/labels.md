@@ -1,9 +1,9 @@
 # Labels
 
 This doc states which jobs use ciproxy, the labels of a workspace, and the
-size that each label gives a job. It also states where the jobs of each
-label may run. [Job routing](job-routing.md) states the slots of an own
-machine and where each job runs.
+size that each label gives a job. It also states the order of the places
+where the jobs of each label run. [Job routing](job-routing.md) states the
+slots of an own machine and where each job runs.
 
 ## Terms
 
@@ -17,6 +17,10 @@ machine and where each job runs.
   product says "VM size" where the word needs a qualifier.
 - **Decision:** "size" is the one word for it. Rejected: "shape". Rejected:
   "machine size", because "machine" names only the hardware of the customer.
+- **label order:** the places where the jobs of a label run, in order. The
+  product says "order".
+- **place:** one entry of a label order: own machines, or one
+  [overflow provider](overflow.md#terms).
 
 ## Jobs that use ciproxy
 
@@ -55,10 +59,12 @@ machine and where each job runs.
 
 - On an own machine, each job runs in a fresh [job VM](agent.md#job-vms)
   of the size and the platform of its label.
-- On Boat, each job runs in a sandbox, as
+- On an overflow provider, each job runs in a sandbox, as
   [Overflow runners](overflow.md#overflow-runners) says.
-- The default Linux labels allow both own machines and Boat.
-- The default macOS labels allow own machines only, as
+- Each default Linux label gets the order of a new Linux label, as
+  [New labels and new providers](labels-order.md#new-labels-and-new-providers)
+  says.
+- The order of each default macOS label holds own machines only, as
   [Platform](#platform) says.
 - The labels of a workspace serve the jobs of all its organizations.
 
@@ -105,6 +111,8 @@ machine and where each job runs.
 - The customer edits the size of any label in the same place.
 - The dialog that adds or edits a label states how many jobs of its size
   fit on each own machine at a time, as [Fit](job-routing.md#fit) says.
+- When the order of the label does not hold own machines, the dialog says
+  so in place of that number.
 - When the machines fit different numbers of jobs, the dialog shows a
   range, such as "1 to 3 jobs".
 - **Decision:** machines that fit different numbers of jobs give a range.
@@ -148,13 +156,14 @@ machine and where each job runs.
 - The jobs of a label run only on own machines of its platform, from the
   image of its platform.
 - A Linux machine runs only Linux labels, and a Mac runs only macOS labels.
-- A macOS label allows own machines only. Its dialog has no "Boat" switch,
-  and it says "macOS jobs run only on your Macs."
+- The order of a macOS label holds own machines only. Its dialog shows that
+  order with no way to move, remove, or add a place, and it says "A macOS
+  label runs on your Macs only."
 - "When nothing fits" of a macOS label offers only "Wait".
-- **Decision:** a macOS label never uses Boat. Reason: cloud Macs that rent
-  by API bill 24 hours at minimum under Apple's licence, so per-minute
-  macOS overflow is not possible. This holds from the MVP foundation plan
-  of 3 November 2026.
+- **Decision:** a macOS label never uses an overflow provider. Reason: cloud
+  Macs that rent by API bill 24 hours at minimum under Apple's licence, so
+  per-minute macOS overflow is not possible. This holds from the MVP
+  foundation plan of 3 November 2026.
 
 ### The disk of a macOS label
 
@@ -175,46 +184,56 @@ machine and where each job runs.
   as [The macOS image](agent-images.md#the-macos-image) says. This is a
   proposal until the user decides it.
 
-## Own machines, Boat, or both
+## The label order
 
-- Each Linux label allows own machines, Boat, or both, with the switches
-  "Your machines" and "Boat" of its dialog.
-- Jobs of a label that allows both start on own machines first, and on
-  Boat when the own machines are busy.
-- While the size of a label [fits](job-routing.md#fit) no own machine, the
-  label runs on Boat only.
-- The dialog says so before the customer saves the label.
-- When an own machine that fits the size connects, the jobs of the label
-  start on own machines first again.
-- This holds unless the customer turned "Your machines" off for the label.
+[Label order](labels-order.md) states the order of the places where the
+jobs of each label run, how the customer changes it, and the order of a new
+label.
 
 ## A size that nothing can run
 
-- ciproxy reads the VM sizes that the customer's Boat account can start
-  now, through the backend contract in [Overflow](overflow.md).
-- A size fits Boat when one of those sizes has at least its vCPU, memory,
-  and a root disk that covers the image, free job disk, and ext4 allowance.
-- Each label has the setting "When nothing fits". It applies while the
-  size fits no own machine and no size of the Boat account.
+- ciproxy reads the VM sizes that each provider account can start now,
+  through the [provider contract](overflow.md#provider-contract), while the
+  provider is connected and available.
+- A size fits a provider when one size of its account has at least its
+  vCPU, memory, and a root disk that covers the image, free job disk, and
+  ext4 allowance.
+- Each label has the setting "When nothing fits". It applies while no place
+  of the label order fits the size.
+- Own machines fit when the order holds them and an own machine fits the
+  size. A provider fits when it is connected and available, and one size of
+  its account fits.
 - "Wait" is the default. The jobs of the label stay queued in GitHub until
-  an own machine that fits connects, or until the Boat account can start a
-  size that fits.
-- "Run on the largest Boat size" starts each job of the label on the
-  largest size that the Boat account can start, also when it is smaller
-  than the label. Its disk must still hold the complete image.
+  a place of the order fits them.
+- "Run on the largest size" starts each job of the label on the largest
+  size of the first provider of the order that jobs skip only because of
+  its sizes, and whose largest size holds the complete image. That size can
+  be smaller than the label.
+- When no provider of the order can do that, the jobs wait.
 - That fallback can give less free disk than the label promises.
+- While the order holds no provider, the dialog says to add a provider for
+  this choice.
 - The dialog, the label list, and the live queue show where the jobs of
-  each label run now: own machines, Boat, or wait.
-- **Decision:** the customer chooses between waiting and a smaller Boat VM.
-  Rejected: rejecting such a label on save, and failing its jobs at once,
-  because a label can stop fitting after a machine leaves or the Boat plan
-  changes.
+  each label run now: the places of its order that can run them, the
+  largest size of a provider, or a wait.
+- When no place of the order can run the jobs of a label now, the label
+  list and the Jobs notice give the reason of the first place of the order
+  that fits the size. Examples are "Overflow providers are off" and the
+  spend limit of that provider.
+- For the wait reason only, a provider that is not connected or not
+  available counts as a place that fits, because ciproxy does not know its
+  sizes. It never stops "When nothing fits" from applying.
+- **Decision:** the customer chooses between waiting and a smaller VM on a
+  provider. Rejected: rejecting such a label on save, and failing its jobs
+  at once, because a label can stop fitting after a machine leaves or the
+  plan of a provider account changes.
 
 ## Related docs
 
 - [Job routing](job-routing.md): slots, the disk of a job, where a job
   runs, and warm runners.
-- [Overflow](overflow.md): the Boat sizes and the sandboxes.
+- [Label order](labels-order.md): the places of each label, in order.
+- [Overflow](overflow.md): the providers, their sizes, and the sandboxes.
 - [Agent](agent.md): own machines and job VMs.
 - [Security](security.md): repository access.
 - [Workspaces](workspaces.md): the organizations whose jobs the labels of a

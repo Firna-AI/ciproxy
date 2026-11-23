@@ -1,8 +1,9 @@
 # Job routing
 
 This doc states the slots of an own machine, where each job runs, and the
-warm runners. It also states what happens when a part fails.
-[Labels](labels.md) states which jobs use ciproxy and the size of each job.
+warm runners. [Failures](job-routing-failures.md) states what happens when a
+part fails. [Labels](labels.md) states which jobs use ciproxy and the size
+of each job.
 
 ## Terms
 
@@ -13,12 +14,12 @@ warm runners. It also states what happens when a part fails.
 - **job disk:** the disk that the image budget and host reserve leave for
   the [job VMs](agent.md#job-vms) and the [machine cache](cache.md#terms).
 - **runner:** the GitHub Actions runner program that takes one job, in a
-  [job VM](agent.md#job-vms) or in a [sandbox](overflow.md#terms) on
-  [Boat](overflow.md#terms).
+  [job VM](agent.md#job-vms) or in a [sandbox](overflow.md#terms) on an
+  [overflow provider](overflow.md#terms).
 - **warm runner:** a runner on an own machine that is registered with
   GitHub before a job arrives.
-- **overflow wait:** how long a job waits for an own machine before
-  ciproxy starts a runner for it on Boat.
+- **overflow wait:** how long a job waits for an own machine before it goes
+  to the next place of its [label order](labels.md#terms).
 
 ## Slots
 
@@ -72,75 +73,101 @@ and a mini PC whose disk limits concurrent jobs.
 
 ## Where a job runs
 
-### Own machines first
-
 - GitHub gives each waiting job to any idle runner of its label.
 - ciproxy decides how many runners start and where, not which job a
   runner takes.
 - So the dashboard shows no machine for a waiting job.
-- A job waits up to the overflow wait for enough free slots and available
-  job disk for its complete root on one own machine.
-- ciproxy starts one Boat runner for each job that has waited the overflow
-  wait.
-- The overflow wait applies only to a job that an own machine can run.
-- An own machine can run a job when the label allows own machines, the
-  machine has the [platform](labels.md#platform) of the label, and the size
-  of the job fits the machine.
+- ciproxy never re-runs a job by itself, for example after an own machine
+  goes offline.
+
+### The label order
+
+- Each label has an [order](labels-order.md) of places. A place is own
+  machines or one provider.
+- ciproxy starts the runner of a waiting job at the first place of its
+  order that can take the job now.
+- A job goes to the next place of its order when the current place cannot
+  take it now. [Own machines](#own-machines) and
+  [When a provider cannot take a job](#when-a-provider-cannot-take-a-job)
+  say when a place cannot take a job.
+- There is no extra wait between providers.
+- **Decision:** a job goes to the next place when the current place cannot
+  take it now, with no extra wait between providers. Rejected: a wait at
+  each place, and a move after a missed
+  [ready deadline](overflow-sandbox-end.md#the-ready-deadline). Reason: the
+  user chose this on 23 November 2026.
+- ciproxy starts one runner on a provider for each job that goes there.
+- A job that no place of its order can take stays queued in GitHub until a
+  place can.
+
+### Own machines
+
+- An own machine can run a job when the order of the label holds own
+  machines, the machine has the [platform](labels.md#platform) of the
+  label, and the size of the job fits the machine.
 - **Decision:** a job runs only on a machine of the platform of its label.
   Reason: a macOS job needs macOS and Xcode, and a Linux job needs Linux.
 - The machine must also be connected, must have reported its selected
   [image](agent.md#the-image), and must not be
   [draining](agent.md#drain-and-remove).
 - ciproxy starts no runner on a machine before it reports its selected
-  image.
-- Until then, the dashboard shows a connected machine as preparing, as
-  [Install](agent.md#install) says.
+  image. Until then, the dashboard shows a connected machine as preparing,
+  as [Install](agent.md#install) says.
 - **Decision:** the dashboard shows the machine state that routing uses.
   Rejected: a copy of the routing rule in the dashboard, because a copy can
   drift from routing.
-- When no own machine can run a job, ciproxy starts a Boat runner for it
-  at once, if Boat can take the job.
-- A job of a macOS label never gets a Boat runner, and no overflow wait
+- A job waits up to the overflow wait for enough free slots and available
+  job disk for its complete root on one own machine.
+- Own machines cannot take a job now when no own machine can run it, or
+  when the job has waited the overflow wait and no own machine has room for
+  it yet.
+- The overflow wait applies only when a job leaves own machines for a later
+  place, and only to a job that an own machine can run.
+- A job without a runner still starts on an own machine as soon as one
+  that can run it has room for it.
+- A job of a macOS label never goes to a provider, and no overflow wait
   applies to it.
 - It waits in GitHub until a Mac that can run it has a free place, as
   [Platform](labels.md#platform) says.
-- ciproxy never re-runs a job by itself, for example after an own machine
-  goes offline.
 
 ### The overflow wait
 
 - The customer sets the overflow wait of the workspace in Settings under
-  Overflow, with "Start on Boat after a job waits".
+  Overflow, with "Wait for a free slot on your machines".
 - The overflow wait is 0, 15, 30, 60, or 120 seconds, and 30 seconds by
   default.
 - The dashboard shows these values as "At once", "15 seconds",
   "30 seconds", "1 minute", and "2 minutes".
 
-### When Boat cannot take a job
+### When a provider cannot take a job
 
 - The customer turns [overflow](overflow.md#terms) on or off for the
-  workspace with "Use Boat when your machines are busy".
-- This switch is in Settings under Overflow.
-- ciproxy starts a Boat runner for a job only when overflow is on, the
-  label of the job allows Boat, and Boat is available.
-- A macOS label never allows Boat.
-- Boat is unavailable before the customer connects Boat and after Boat
-  rejects the key, as [The Boat account](overflow.md#the-boat-account)
-  says.
-- Boat is also unavailable at the [spend limit](overflow.md#spend-limit).
-- While Boat cannot take a job, the job runs on own machines only and
-  waits there for free slots and available job disk.
-- A job that neither an own machine nor Boat can take stays queued in
-  GitHub until one of them can.
+  workspace with "Use overflow providers", in Settings under Overflow. It
+  is one switch for every provider.
+- While overflow is off, each label order skips every provider, also a
+  provider that comes before own machines.
+- A provider cannot take a job now in these cases:
+  - Overflow is off.
+  - The provider is not connected, or it is not
+    [available](overflow.md#terms).
+  - The provider rejected the key, as
+    [A rejected key](overflow.md#a-rejected-key) says.
+  - The [spend limit](overflow-spend.md) of the provider holds new starts,
+    for example at the limit.
+  - The provider refused new sandboxes, and the retry time that it gave has
+    not come, as [Refused sandboxes](overflow.md#refused-sandboxes) says.
+  - The provider account needs billing.
+  - No size of the provider account fits the job.
+- A macOS label never holds a provider.
 
 ### What the dashboard shows
 
 - The live queue shows the running jobs, the waiting jobs, the own slots
-  in use, and the jobs on Boat.
+  in use, and the running jobs on each provider.
 - For each job, the dashboard shows where it ran: the own machine and its
-  slot, or Boat.
+  slot, or the provider and its size.
 - It also shows how long the job waited for a runner, and why it ran
-  there.
+  there. The reason names each place of the order that the job passed.
 - An example of a reason is "A warm runner was ready, so the job started
   at once."
 - Another example is "Your machines were full, so the job started on Boat
@@ -148,6 +175,10 @@ and a mini PC whose disk limits concurrent jobs.
 - The waited time runs from the moment GitHub queued the job to the moment
   a runner took it.
 - The job page also shows the label of the job and the VM size that ran it.
+- The job history can show the jobs of one place: own machines, or one
+  provider that ran jobs in its window.
+- [A size that nothing can run](labels.md#a-size-that-nothing-can-run)
+  gives the wait reason of a label that no place can run now.
 
 ## Warm runners
 
@@ -157,6 +188,12 @@ and a mini PC whose disk limits concurrent jobs.
 - The customer sets the count of each machine on its machine page.
 - On a Linux machine, warm runners serve the label `ciproxy` only.
 - On a Mac, warm runners serve the label `ciproxy-macos` only.
+- Own machines keep warm runners for a label only while own machines are
+  the first place of its [order](labels-order.md).
+- **Decision:** warm runners only while own machines come first. Rejected:
+  warm runners while own machines are at a later place, because a ready
+  warm runner then takes jobs against the order. Reason: the order of each
+  label holds, as the user decided on 23 November 2026.
 - When the workspace has no label `ciproxy-macos`, its Macs keep no warm
   runners.
 - On a Mac, the warm runners also count against the limit of 2 job VMs.
@@ -193,40 +230,9 @@ and a mini PC whose disk limits concurrent jobs.
 
 ## Failures
 
-### Control plane outage
-
-- No new runner starts on an own machine or on Boat until the control
-  plane is back.
-- Jobs without a runner stay queued in GitHub, and they start when the
-  control plane is back.
-- A control plane outage never stops a running job.
-
-### Own machine offline
-
-- [Connection](agent.md#connection) says when an own machine is offline.
-- The dashboard shows no slots for an offline machine.
-- ciproxy starts no runner on an offline machine.
-- New jobs run on the other own machines and on Boat.
-- Ready warm runners of an offline machine that still reach GitHub keep
-  taking jobs.
-- ciproxy does not stop or re-run the running jobs of an offline machine.
-- GitHub decides the result of those jobs.
-- When the machine is back, the dashboard shows its slots again.
-
-### Boat fails
-
-- While Boat refuses or fails to start sandboxes, new jobs run on own
-  machines only and wait there for free slots and available job disk.
-- ciproxy keeps trying Boat for the waiting jobs, as
-  [Refused sandboxes](overflow.md#refused-sandboxes) says.
-- A job that no own machine can run waits until Boat starts a sandbox for
-  it.
-
-### Queue time limit of GitHub
-
-- A queued job stays in GitHub until a runner takes it or the queue time
-  limit of GitHub ends it.
-- ciproxy does not change that limit.
+[Failures](job-routing-failures.md) states what happens when the control
+plane, an own machine, or a provider fails, and the queue time limit of
+GitHub.
 
 ## Related docs
 
@@ -235,7 +241,9 @@ and a mini PC whose disk limits concurrent jobs.
   machine and the fit of a job.
 - [Labels](labels.md): which jobs use ciproxy, the labels, and their sizes.
 - [Agent](agent.md): own machines, job VMs, the connection, and drain.
-- [Overflow](overflow.md): Boat, the spend limit, and refused starts.
+- [Label order](labels-order.md): the places of each label, in order.
+- [Overflow](overflow.md): the providers and refused starts.
+- [Spend limit](overflow-spend.md): the spend limit of each provider.
 - [Cache](cache.md): the machine cache, which uses the available job disk.
 - [Security](security.md): repository access.
 - [Workspaces](workspaces.md): the organizations whose jobs the labels of a

@@ -51,7 +51,7 @@ states the job data and how long ciproxy keeps each kind of data.
 - A person with the Billing role also manages the plan, the add-ons, and
   the invoices, as [Checkout](billing.md#checkout) says.
 - An Admin can do everything: manage the machines, the labels, the
-  settings, the organizations, the Boat account, the roles, and the
+  settings, the organizations, the overflow providers, the roles, and the
   billing.
 - Only an Admin sees Settings, because Settings changes only what an Admin
   may change.
@@ -61,15 +61,15 @@ states the job data and how long ciproxy keeps each kind of data.
 - A person who can see the jobs sees the jobs of all repositories of every
   organization of the workspace, also of those that the person cannot read
   on GitHub.
-- An Admin adds own machines and connects the Boat account. ciproxy checks
-  no GitHub right for it.
-- An own machine and the Boat account run the jobs of every organization of
-  the workspace, with their secrets.
+- An Admin adds own machines and connects overflow providers. ciproxy
+  checks no GitHub right for it.
+- An own machine and a provider account run the jobs of every organization
+  of the workspace, with their secrets.
 - So the Admin role is the trust to control the runners of every
   organization of the workspace.
 - When an Admin gives a person the Admin role, the dialog says that an
-  Admin can add machines and connect Boat, which run the jobs and their
-  secrets of every organization of the workspace.
+  Admin can add machines and connect overflow providers, which run the jobs
+  and their secrets of every organization of the workspace.
 - The dialog also says that an Admin accepts
   [new versions of the Terms](terms-acceptance.md#who-accepts) for the
   customer that holds the workspace, with a link to the Terms.
@@ -180,12 +180,14 @@ states the job data and how long ciproxy keeps each kind of data.
 - The GitHub App private key stays in the
   [control plane](../architecture.md#components).
 - The Stripe keys stay in the control plane.
-- ciproxy stores the [Boat](overflow.md#the-boat-account) key of a
-  workspace encrypted.
-- ciproxy uses the Boat key only for the
-  [sandboxes](overflow.md#overflow-runners) of that workspace.
-- The dashboard never shows the Boat key after the customer saves it.
-- ciproxy never sends the Boat key to an own machine, a
+- ciproxy stores the key of each
+  [overflow provider](overflow.md#provider-accounts) of a workspace
+  encrypted.
+- ciproxy uses each provider key only for the
+  [sandboxes](overflow.md#overflow-runners) of that workspace on that
+  provider.
+- The dashboard never shows a provider key after the customer saves it.
+- ciproxy never sends a provider key to an own machine, a
   [job VM](agent.md#job-vms), or a sandbox.
 - A sandbox holds only a token that reports the end of its own runner, as
   [Overflow runners](overflow.md#overflow-runners) says. Job code can read
@@ -213,7 +215,7 @@ states the job data and how long ciproxy keeps each kind of data.
   the workspace owns.
 - [Agent](agent.md): machine identity, job VMs, and removal.
 - [Cache](cache.md): cache scopes, trusted write-back, and Docker disks.
-- [Overflow](overflow.md): the Boat account and its sandboxes.
+- [Overflow](overflow.md): the provider accounts and their sandboxes.
 - [Billing](billing.md): tiers, Checkout, and the customer portal.
 - [Removing or suspending the App](app-removal.md): what ciproxy revokes,
   keeps, and deletes when an organization removes the App.

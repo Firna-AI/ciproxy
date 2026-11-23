@@ -32,8 +32,8 @@ agent.
 
 - The agent reports to the control plane every 10 seconds.
 - The dashboard shows a machine without contact for 60 seconds as offline.
-- [Failures](job-routing.md#failures) says what happens to the jobs of an
-  offline machine.
+- [Own machine offline](job-routing-failures.md#own-machine-offline) says
+  what happens to the jobs of an offline machine.
 - When the connection fails, the agent keeps its running job VMs and its
   [warm runners](job-routing.md#warm-runners).
 - The agent then tries to connect again.
@@ -86,6 +86,7 @@ agent.
 - [Agent](agent.md): install, machine identity, job VMs, drain, and remove.
 - [Agent endpoint](agent-endpoint.md): the control plane that an agent
   connects to.
-- [Job routing](job-routing.md#failures): the jobs of an offline machine.
+- [Failures](job-routing-failures.md#own-machine-offline): the jobs of an
+  offline machine.
 - [Security](security.md#key-custody): where the machine credential stays.
 - [Architecture](../architecture.md): the gateway and the data flow.

@@ -10,15 +10,17 @@
 - **Category:** Product bug.
 - **Location:** `crates/ciproxy-api/src/wire/settings.rs`, `LabelFit`,
   `crates/ciproxy-api/src/handlers/label_boat.rs`, `enrich`,
-  `crates/ciproxy-api/src/wire/job_overflow.rs`, `JobOverflow`, and
-  `docs/protocol/labels.md`, "A size that nothing can run".
+  `crates/ciproxy-api/src/wire/job_overflow.rs`, `JobOverflow`,
+  `docs/protocol/labels.md`, "A size that nothing can run", and
+  `docs/protocol/labels-order.md`, "Changes to the order".
 - **Reason:** Saved and draft labels have physical Boat fit. Their current
   start holds still need the shared server status that
   `plans/follow-ups/machines-boat-start-status.md` records.
 
 - **Terms:**
-  - **Placement:** where the jobs of a label run now: own machines, Boat,
-    or wait.
+  - **Placement:** where the jobs of a label run now: the places of its
+    order that can run them, the largest size of a provider, or a wait.
+    Today the code gives own machines, Boat, or wait.
   - **`LabelFit`:** physical machine and Boat fit, with account presence,
     required root disk, the largest Boat size, and placement.
   - **`BoatLabelFit`:** physical Boat fit shared by Settings and Jobs:
@@ -30,13 +32,25 @@
     the user left offers out of the label dialog and of the notice of a
     waiting label that nothing fits. An offer is not a placement.
 - **Background:**
-  - `docs/protocol/labels.md:127-128` says that the dialog, the label list,
-    and the live queue show where the jobs of each label run now: own
-    machines, Boat, or wait. At `:105-107`, while a size fits no own
-    machine, the label runs on Boat only, and the dialog says so before the
-    save. At `:118-126`, the setting "When nothing fits" chooses between
-    waiting and the largest Boat size. At `:129-132`, a label that nothing
-    fits is never refused at save.
+  - On 23 November 2026, the user chose several overflow providers for a
+    workspace and an order of places for each label. A place is own
+    machines or one provider. The order replaced the label switches "Your
+    machines" and "Boat".
+  - `docs/protocol/labels.md`, "A size that nothing can run", lines
+    216-218, says that the dialog, the label list, and the live queue show
+    where the jobs of each label run now: the places of its order that can
+    run them, the largest size of a provider, or a wait.
+  - `docs/protocol/labels-order.md`, "Changes to the order", lines 51-53,
+    says that while a size fits no own machine, jobs skip own machines. The
+    dialog says so before the save.
+  - At lines 201-211 of `labels.md`, the setting "When nothing fits"
+    chooses between waiting and the largest size of the first provider of
+    the order that jobs skip only because of its sizes. At lines 226-229, a
+    label that nothing fits is never refused at save.
+  - At lines 219-225 of `labels.md`, the label list and the Jobs notice
+    give the reason of the first place of the order that fits the size,
+    such as the spend limit of that provider. So the label list needs the
+    current start holds too.
   - These responses carry a saved label with the full `LabelFit`:
     - `GET /api/workspaces/<id>/labels`, at
       `crates/ciproxy-api/src/handlers/labels.rs`, `list`.
@@ -117,15 +131,16 @@
     already gives the shared physical fit and placement.
   - The Boat fit of the live queue for saved labels, because it covers only
     labels with waiting jobs, and never a draft.
-  - "Boat" for every label that allows Boat and fits no own machine,
-    because a label that no Boat size fits then shows Boat while its jobs
-    wait.
-  - A protocol change that drops Boat and wait from the label list and the
-    dialog, because `docs/protocol/labels.md:127-128` stays in force.
+  - "Boat" for every label whose order holds Boat and that fits no own
+    machine, because a label that no Boat size fits then shows Boat while
+    its jobs wait.
+  - A protocol change that drops the places and the wait from the label
+    list and the dialog, because `docs/protocol/labels.md`, "A size that
+    nothing can run", lines 216-218, stays in force.
   - The offers of the places, because the user left them out on
     8 November 2026, and they do not identify current start holds.
-  - A refusal at save of a label that nothing fits, because
-    `docs/protocol/labels.md:129-132` rejects it.
+  - A refusal at save of a label that nothing fits, because the decision at
+    lines 226-229 of `docs/protocol/labels.md` rejects it.
 - **Wider fix:** A. One server start status serves the live queue, the
   label list, and the dialog. Clients then need no hold rule of their own.
 - **Previous examples:** Settings and Jobs now use `label_boat::enrich`

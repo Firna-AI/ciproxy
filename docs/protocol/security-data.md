@@ -47,7 +47,7 @@ sign-in, access, GitHub permissions, and keys.
 - ciproxy can delete the other expired quotes, and the references of
   finished Checkout sessions, sooner.
 - [Change key and Disconnect](overflow.md#change-key-and-disconnect) says
-  how long ciproxy keeps a Boat key after a key change or a Disconnect.
+  how long ciproxy keeps a provider key after a key change or a Disconnect.
 - [Removing the App](app-removal.md#removing-the-app) says when ciproxy
   deletes the data of an organization that removes the App.
 - [The last organization](app-removal.md#the-last-organization-of-a-workspace)
@@ -82,7 +82,7 @@ sign-in, access, GitHub permissions, and keys.
 - [Metering](metering.md#savings-report): the daily totals of the savings
   report.
 - [Agent](agent.md#health): what the agent reports about each machine.
-- [Overflow](overflow.md#change-key-and-disconnect): the Boat key after a
+- [Overflow](overflow.md#change-key-and-disconnect): a provider key after a
   key change or a Disconnect.
 - [Workspaces](workspaces.md#add-an-organization): the installation
   entries.

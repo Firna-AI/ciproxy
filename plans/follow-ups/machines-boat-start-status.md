@@ -23,8 +23,9 @@
   it had used its permitted fix rounds.
 
 - **Terms:**
-  - **Boat:** the overflow provider, where ciproxy starts sandboxes in the
-    customer's own Boat account while the machines are busy.
+  - **Boat:** the first overflow provider, and today the only one. ciproxy
+    starts sandboxes in the customer's own Boat account while the machines
+    are busy.
   - **Overflow summary:** `GET /api/workspaces/<id>/overflow/summary`,
     which every role reads, with the same `OverflowSettings` body as the
     Admin read `GET /api/workspaces/<id>/overflow`.
@@ -120,9 +121,9 @@
   - A new backend guard, because backend admission already stops these
     starts.
   - A default bound or a serde alias for an old record, because it
-    overrides the hold of `docs/protocol/overflow.md:177`, which commit
-    `6450c3e` applied on 5 November 2026. It also leaves the billing and
-    retry holds.
+    overrides the hold of `docs/protocol/overflow-spend.md:62-63`, under
+    "What the limit counts", which commit `6450c3e` applied on 5 November
+    2026. It also leaves the billing and retry holds.
   - Absent spend shown as a hold, because absent spend often comes from
     the busy try-lock of `read_view`, while the control plane can still
     start Boat jobs. "What the fix keeps" below gives the facts.
@@ -181,30 +182,47 @@
 
 ## Requirements
 
-`docs/protocol/overflow.md` and `docs/protocol/job-routing.md` already say
-when Boat takes jobs. D shows that status, and it adds no requirement.
-Keep these rules:
+`docs/protocol/overflow.md`, `docs/protocol/overflow-spend.md`,
+`docs/protocol/job-routing.md`, and `docs/protocol/job-routing-failures.md`
+already say when a provider, such as Boat, takes jobs. D shows that status,
+and it adds no requirement. On 23 November 2026, the user chose several
+providers for a workspace, one spend limit for each provider, and an order
+of places for each label. A job then goes to the next place of its order
+when the current place cannot take it now. Keep these rules:
 
-- `overflow.md:177`: when a start has no safe bound, new starts wait until
-  that cost resolves. At `:158`, new starts also wait when no source
-  supplies a start fee.
-- `overflow.md:151-152`: the limit counts confirmed costs and the pending
-  bound of each start that Boat has not confirmed.
-- `overflow.md:185-187`: at the limit, ciproxy starts no new Boat runner,
-  and jobs run on own machines only.
-- `overflow.md:51-52` and `:204-205`: after Boat rejects the key, jobs run
-  on own machines only until the customer connects a new key.
-- `overflow.md:198-202`: when Boat refuses a sandbox, the job keeps
-  waiting, and ciproxy tries again.
-- `overflow.md:178-179`: Settings under Overflow and the Machines page
-  show the confirmed spend and the pending amount apart.
-- `job-routing.md:152-159`: a Boat runner starts only when overflow is on,
-  the label allows Boat, and Boat is available. While Boat cannot take a
-  job, the job runs on own machines only.
-- `job-routing.md:232`: while an own machine is offline, new jobs run on
-  the other own machines and on Boat.
-- `job-routing.md:241-242`: while Boat refuses or fails to start
-  sandboxes, new jobs run on own machines only.
+- `overflow-spend.md:62-63`, under "What the limit counts": when a start
+  has no safe bound, the limit holds new starts on that provider until that
+  cost resolves. At `:79`, under "Boat start fees", the limit also holds
+  new Boat starts when no source supplies a start fee.
+- `overflow-spend.md:46-47`: the limit counts confirmed costs and the
+  pending bound of each start whose cost the provider has not confirmed.
+- `overflow-spend.md:91-95`, under "At the limit": at the limit of a
+  provider, ciproxy starts no new runner there. While the limit holds new
+  starts, jobs skip that provider and go to the next place of their order.
+- `overflow.md:91-92`, under "A rejected key", and `:231-232`: after a
+  provider rejects the key, jobs skip that provider until the customer
+  connects a new key.
+- `overflow.md:220-228`, under "Refused sandboxes": after a refusal of new
+  sandboxes, the provider takes no job until the retry time that it gives.
+  A refused size stops only that size. Jobs that the provider cannot take
+  go to the next place of their order, and ciproxy tries the provider
+  again. At `:233-234`, a billing refusal holds the provider until the
+  account can start sandboxes again.
+- `overflow-spend.md:64-66`: Settings under Overflow and the Machines page
+  show the confirmed spend and the pending amount of each provider apart,
+  against its monthly limit.
+- `job-routing.md:149-160`, under "When a provider cannot take a job": a
+  provider cannot take a job while overflow is off, while it is not
+  connected or not available, after it rejected the key, while its spend
+  limit holds new starts, before the retry time of a refusal, while its
+  account needs billing, or when no size of its account fits. At
+  `:89-92`, under "The label order", such a job goes to the next place of
+  its order.
+- `job-routing-failures.md:21-22`, under "Own machine offline": new jobs
+  run on the other own machines and at the other places of their order.
+- `job-routing-failures.md:31-32`, under "A provider fails": while a
+  provider refuses new sandboxes, new jobs skip it and go to the next place
+  of their order.
 
 ## Evidence
 

@@ -15,9 +15,9 @@ runs on own machines.
   start job VMs.
 - **agent:** the open-source program on an own machine.
 - **job VM:** the VM on an own machine in which one job runs.
-- **image:** the job image. Job VMs boot its machine image, and
-  [Boat sandboxes](overflow.md#overflow-runners) start from its Boat
-  snapshot, as [Agent images](agent-images.md#terms) says.
+- **image:** the job image. Job VMs boot its machine image. The
+  [sandboxes](overflow.md#overflow-runners) of each provider start from a
+  build of it for that provider, as [Agent images](agent-images.md) says.
 - **install token:** the token in the install command.
 - **download site:** the site of ciproxy that serves the install script and
   each version of the agent.
@@ -96,7 +96,7 @@ runs on own machines.
   [slots](job-routing.md#slots).
 - After the install, the agent downloads and extracts its first image.
 - The machine takes no job until it reports its selected image, as
-  [Own machines first](job-routing.md#own-machines-first) says.
+  [Own machines](job-routing.md#own-machines) says.
 - Until then, each page that shows the connected machine or the first job
   shows the machine as preparing.
 - The dashboard says that the machine gets the image, and that jobs start
@@ -273,7 +273,7 @@ runs on own machines.
 - [Labels](labels.md): the labels and the size of each job VM.
 - [Job routing](job-routing.md): slots, the disk of a job, warm runners, and
   failures.
-- [Overflow](overflow.md): the Boat sandboxes, which use the same image.
+- [Overflow](overflow.md): the providers and their sandboxes.
 - [Cache](cache.md): the machine cache and the Docker disks.
 - [Security](security.md): key custody.
 - [Isolation](security-isolation.md#job-isolation): job isolation.

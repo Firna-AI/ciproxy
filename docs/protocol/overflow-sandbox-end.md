@@ -1,22 +1,23 @@
 # Sandbox end
 
-This doc states when ciproxy stops and deletes a Boat sandbox, what the
-control plane does with the exit report of its runner, and how long a
-waiting job waits for that runner.
-[Overflow](overflow.md) states the Boat account, the backend contract, the
-overflow runners, and the spend limit.
+This doc states when ciproxy stops and deletes a sandbox of an overflow
+provider, what the control plane does with the exit report of its runner,
+and how long a waiting job waits for that runner. Its rules hold for every
+provider. [Overflow](overflow.md) states the provider accounts, the
+provider contract, and the overflow runners.
+[Spend limit](overflow-spend.md) states the spend limit of each provider.
 
 ## Terms
 
-- [Overflow](overflow.md#terms) defines overflow, the backend, Boat, the
-  sandbox, and the spend limit.
+- [Overflow](overflow.md#terms) defines overflow, the overflow provider,
+  Boat, the provider account, and the sandbox.
 - **exit report:** the report in which the ciproxy program in a sandbox
   tells the control plane that its runner exited, as
   [Overflow runners](overflow.md#overflow-runners) says.
 - **cleanup:** the regular work in which ciproxy deletes the sandboxes that
   it no longer needs.
-- **launch:** the moment when Boat accepts the command that starts the
-  ciproxy program in a sandbox.
+- **launch:** the moment when the provider accepts the command that starts
+  the ciproxy program in a sandbox.
 - **ready deadline:** the time by which the runner of a sandbox must take a
   job, as [The ready deadline](#the-ready-deadline) says.
 
@@ -53,16 +54,18 @@ overflow runners, and the spend limit.
 
 ## The lifetime
 
-- Each sandbox gets a lifetime of 6 hours, or 2 hours on a Boat free
-  trial. Boat ends the sandbox at that time, also during an outage of the
+- Each sandbox gets a lifetime of 6 hours, or a shorter one that its
+  provider account gives, such as a
+  [Boat free trial](overflow.md#the-boat-account).
+- The provider ends the sandbox at that time, also during an outage of the
   control plane.
-- So a job on Boat runs for at most 6 hours, as a job on a GitHub-hosted
-  runner does.
+- So a job on a provider runs for at most 6 hours, as a job on a
+  GitHub-hosted runner does.
 - **Decision:** the sandbox reports the end of its runner, and a lifetime
-  set at the start is the backstop. Rejected: a Boat key in each sandbox,
-  a lifetime that the control plane renews, a key that ciproxy creates for
-  each sandbox, and AWS EC2 as the first backend. Reason: each sandbox
-  ends soon after its runner exits, and no sandbox bills past its
+  set at the start is the backstop. Rejected: a provider key in each
+  sandbox, a lifetime that the control plane renews, a key that ciproxy
+  creates for each sandbox, and AWS EC2 as the first provider. Reason: each
+  sandbox ends soon after its runner exits, and no sandbox bills past its
   lifetime.
 
 ## The ready deadline
@@ -73,9 +76,10 @@ overflow runners, and the spend limit.
 - When the runner of a sandbox has taken no job by its ready deadline, and
   a waiting job needs that runner, ciproxy replaces the runner.
 - ciproxy starts the new runner at once, by the rules of
-  [Where a job runs](job-routing.md#where-a-job-runs): on an own machine
-  first, and otherwise on Boat within the
-  [spend limit](overflow.md#spend-limit).
+  [Where a job runs](job-routing.md#where-a-job-runs): at the first place
+  of the job's order that can take the job now.
+- A missed ready deadline does not send the job to the next place of its
+  order.
 - ciproxy first removes the GitHub registration of the old runner, and then
   deletes its sandbox.
 - When GitHub gave the old runner a job before that removal, ciproxy keeps
@@ -86,8 +90,9 @@ overflow runners, and the spend limit.
   [After an App removal](#after-an-app-removal) says.
 - So ciproxy also replaces a slow but healthy runner that has taken no job
   by its ready deadline.
-- So a lasting cause of failed starts can repeat paid Boat starts until the
-  spend limit stops new starts.
+- So a lasting cause of failed starts can repeat paid starts on a provider
+  until the [spend limit](overflow-spend.md) of that provider stops new
+  starts there.
 - **Decision:** ciproxy replaces a runner that takes no job within 10
   minutes of its launch while a job waits for it. Rejected: a failure
   report from the sandbox, because it misses a hang, a lost report, and
@@ -99,9 +104,17 @@ overflow runners, and the spend limit.
 
 ## Idle runners
 
-- A Boat runner can stay without a job when an own machine took the
-  waiting job first.
-- ciproxy stops and deletes the sandbox of such a runner as soon as no
+- A runner on a provider can stay without a job when a runner at another
+  place took the waiting job first.
+- A waiting job of its label needs an idle runner while the sandbox still
+  covers the request and the root that the runner started with. A newer
+  image with a larger root does not change that.
+- A waiting job needs an idle runner that started on the largest size only
+  while "Run on the largest size" still applies to its label, as
+  [A size that nothing can run](labels.md#a-size-that-nothing-can-run)
+  says. The size of the runner must also still be the largest size of its
+  provider account. Such a runner keeps the image that it started with.
+- ciproxy stops and deletes the sandbox of an idle runner as soon as no
   waiting job needs the runner.
 - An App removal changes this rule, as
   [After an App removal](#after-an-app-removal) says.
@@ -129,10 +142,11 @@ overflow runners, and the spend limit.
   also when the runner has no job.
 - ciproxy still deletes such a sandbox when its runner reports its exit, as
   [The exit report](#the-exit-report) says.
-- Otherwise, Boat ends the sandbox at its lifetime of 6 hours, or 2 hours on
-  a Boat free trial.
+- Otherwise, the provider ends the sandbox at its
+  [lifetime](#the-lifetime).
 - So an idle sandbox of the organization can bill until its lifetime ends.
-- Boat jobs of the organization that run at the removal finish.
+- The jobs of the organization that run on a provider at the removal
+  finish.
 - ciproxy deletes each sandbox of the organization whose runner has not
   started.
 - **Decision:** after an App removal, ciproxy does not stop idle sandboxes
@@ -142,8 +156,9 @@ overflow runners, and the spend limit.
 
 ## Related docs
 
-- [Overflow](overflow.md): the Boat account, the backend contract, the
-  overflow runners, and the spend limit.
+- [Overflow](overflow.md): the provider accounts, the provider contract,
+  and the overflow runners.
+- [Spend limit](overflow-spend.md): the spend limit of each provider.
 - [Job routing](job-routing.md#where-a-job-runs): where a waiting job gets
   its next runner.
 - [Removing the App](app-removal.md#removing-the-app): the other effects of

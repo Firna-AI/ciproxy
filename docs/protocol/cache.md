@@ -2,7 +2,8 @@
 
 ciproxy gives each job the cache of GitHub Actions without workflow edits.
 This doc states the cache rules for jobs on
-[own machines](agent.md#terms) and on [Boat](overflow.md#the-boat-account).
+[own machines](agent.md#terms) and on
+[overflow providers](overflow.md#terms).
 
 ## Terms
 
@@ -169,8 +170,8 @@ This doc states the cache rules for jobs on
 - Otherwise the contents come from the GitHub cache, and the machine cache
   keeps them.
 - A save goes to the machine cache and through to the GitHub cache, so
-  other own machines and jobs on Boat can restore it.
-- A job on Boat uses the GitHub cache only.
+  other own machines and jobs on providers can restore it.
+- A job on a provider uses the GitHub cache only.
 - The job page shows the cache source of each job: "This machine", "The
   GitHub cache", or "This machine and the GitHub cache".
 - On an own machine, the cache source names the caches that gave the
@@ -181,18 +182,18 @@ This doc states the cache rules for jobs on
   and the GitHub cache". Rejected: one of the two sources for such a job,
   because it is false for some of its entries. Reason: the cache source is
   then true for every job.
-- A job on Boat has the cache source "The GitHub cache".
+- A job on a provider has the cache source "The GitHub cache".
 - A job that restored no entry shows "No entries restored". Reason: it is
   true for every such job.
 - The job page shows the cache counts of a job only when the machine cache
   handled the restores of the job, for example "3 restored · 2.1 GB".
-- A job on Boat, and a job that fell back to the GitHub cache, show only
-  the cache source.
+- A job on a provider, and a job that fell back to the GitHub cache, show
+  only the cache source.
 - **Decision:** only a job whose restores the machine cache handled shows
   cache counts. Rejected: counts that the image sends with a token, because
-  job code could fake them. Rejected: counts through the Boat API, and no
-  counts on any job. Reason: the counts need no data from a sandbox, and
-  the rule holds for every later backend.
+  job code could fake them. Rejected: counts through the API of a
+  provider, and no counts on any job. Reason: the counts need no data from
+  a sandbox, and the rule holds for every provider.
 - The Machines page and the machine page show the used space and the total
   space of the machine cache.
 - The total space of the machine cache changes as job VMs start and end,
@@ -246,4 +247,4 @@ This doc states the cache rules for jobs on
 - [Docker disks](docker-disks.md): the Docker disks of own machines.
 - [Isolation](security-isolation.md#job-isolation): job isolation.
 - [Data and retention](security-data.md): job data.
-- [Overflow](overflow.md): the jobs that run on Boat.
+- [Overflow](overflow.md): the jobs that run on providers.

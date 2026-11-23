@@ -24,8 +24,9 @@
 - **Terms:**
   - **Overflow policy:** the overflow switch, the wait, and the spend limit
     of a workspace. Settings under Overflow edits them.
-  - **Spend limit:** the monthly bound of the customer on Boat spending, an
-    amount above zero.
+  - **Spend limit:** the monthly bound of the customer on the spending at
+    one overflow provider, such as Boat, an amount above zero. Each
+    provider of a workspace has its own limit.
   - **Policy request:** `PUT /workspaces/{workspace_id}/overflow` with the
     body `OverflowPolicy`: `enabled`, `wait_seconds`, and
     `spend_limit_cents`.
@@ -54,17 +55,27 @@
   - A connection changes only the limit and keeps the saved switch, in
     `crates/ciproxy-store-pg/src/overflow/accounts.rs`. So an off state
     saved before Boat connects carries into the next connection.
-  - "Spend limit" in `docs/protocol/overflow.md` asks for the limit at each
-    connection. The limit stays above zero, and the customer can change it
-    at any time. The section rejects a default limit. It sets no request
-    shape.
+  - "The limit of each provider" in `docs/protocol/overflow-spend.md`,
+    lines 21-40, gives each provider of a workspace its own monthly limit.
+    The user chose one limit for each provider on 23 November 2026.
+  - That section asks for the limit of a provider at each of its
+    connections. A key change, and a connection after a rejected key or a
+    Disconnect, start the field with the saved limit. ciproxy keeps the
+    limit after a key change and a Disconnect.
+  - The limit stays above zero, and the customer can change it at any
+    time. The section rejects a default limit. It sets no request shape.
   - The dashboard already edits the limit in its own panel,
     `spend-panel.tsx`.
   - The Boat reservation check in
     `crates/ciproxy-store-pg/src/overflow/admission.rs` refuses a start with
     a spend reading while no limit is stored. Each connection saves a limit.
-  - Before Boat connects, the switch changes no start, as
-    `docs/protocol/job-routing.md` says.
+  - Before a provider connects, the switch changes no start. "When a
+    provider cannot take a job" in `docs/protocol/job-routing.md`, lines
+    149-160, says that jobs skip a provider that is not connected.
+  - "Provider accounts" in `docs/protocol/overflow.md`, lines 57-61, shows
+    the switch and the wait only while a provider is connected. With no
+    connected provider, Settings asks for a provider, its key, and its
+    limit, as Setup does.
 - **Problem:** Each save sends the complete policy. This gives two defects:
   - A save from an older page writes back the values that it read, also
     those that another Admin changed since.
@@ -120,16 +131,18 @@
 - **Left out:**
   - Whole-policy last write wins, the current behaviour: a lost spend limit
     costs money.
-  - A made-up default limit: it is the current workaround, and "Spend
-    limit" in `docs/protocol/overflow.md` rejects a default limit.
+  - A made-up default limit: it is the current workaround, and "The limit
+    of each provider" in `docs/protocol/overflow-spend.md`, lines 36-40,
+    rejects a default limit.
   - Overflow off by default until the first connection, which turns it on:
     a save of the wait still needs a limit. The connection would also undo
     a saved off state.
   - A refusal of switch and wait saves before a connection: it fails the
     goal, because the off state still cannot be saved.
-  - A switch on the page of a workspace with no Boat connection: not a fix
-    of the API rule. Before Boat connects, the switch changes no start, so
-    such a switch is a new feature for the `brainstorming` skill.
+  - A switch on the page of a workspace with no provider connection: not a
+    fix of the API rule. Before a provider connects, the switch changes no
+    start, and `docs/protocol/overflow.md` shows no switch then. So such a
+    switch is a new feature for the `brainstorming` skill.
 - **Wider fix:** B, changed from F, the former option A of this item. Each
   save sends only the fields that it changes. So a new policy field cannot
   block other saves, and no save writes back a field that it did not

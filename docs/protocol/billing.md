@@ -37,8 +37,8 @@ against a tier.
 - The customer picks a paid tier by hand, and ciproxy never picks one by
   itself.
 - Free needs no Stripe customer and no card.
-- No tier price includes the Boat cost of
-  [overflow](overflow.md#the-boat-account).
+- No tier price includes the cost of
+  [overflow](overflow.md#provider-accounts) on a provider.
 - **Decision:** three tiers, each priced by the starts and the own machines
   that it includes. [Starts](metering.md#starts) gives the rejected price
   bases and the reason.
@@ -46,7 +46,7 @@ against a tier.
 ### Tier features
 
 - Every tier includes own machines, both x64 Linux computers and Apple
-  Silicon Macs, Boat overflow for Linux jobs, the
+  Silicon Macs, overflow providers for Linux jobs, the
   [transparent cache](cache.md#transparent-cache), warm runners, the
   dashboard, and the [savings report](metering.md#savings-report).
 - A Mac counts as one own machine, on every tier and in the add-ons, at the
@@ -257,5 +257,5 @@ against a tier.
 - [Removing or suspending the App](app-removal.md): the end of the
   subscription when the last organization of a workspace removes the App.
 - [Cache](cache.md#docker-disks): the Docker disks of Team and Business.
-- [Overflow](overflow.md#the-boat-account): the Boat account of the
-  customer, which Boat bills for overflow.
+- [Overflow](overflow.md#provider-accounts): the provider accounts of the
+  customer, which each provider bills for overflow.

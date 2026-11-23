@@ -47,7 +47,7 @@ the warm runners.
 - The agent reports the exact root length of each local image release.
 - Scheduling uses each machine's selected local release for new roots.
 - A machine that has not reported its selected image gets no new root, as
-  [Own machines first](job-routing.md#own-machines-first) says.
+  [Own machines](job-routing.md#own-machines) says.
 - The agent selects and holds its newest image before final sizing and
   admission.
 - It rechecks capacity if publication changed the image after the last report.

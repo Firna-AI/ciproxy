@@ -3,8 +3,8 @@
 ciproxy runs the GitHub Actions jobs of a customer's GitHub
 [organizations](docs/protocol/workspaces.md#terms) on the customer's
 [own machines](docs/protocol/agent.md#terms) first. When those machines are
-busy, it starts runners in the customer's own
-[Boat](docs/protocol/overflow.md#the-boat-account) account. A
+busy, it starts runners in the customer's own account at an
+[overflow provider](docs/protocol/overflow.md#terms), such as Boat. A
 [workspace](docs/protocol/workspaces.md#terms) holds the organizations, the
 machines, and the plan of one customer.
 
@@ -13,18 +13,22 @@ machines, and the plan of one customer.
 A job uses ciproxy when its `runs-on` line names a ciproxy
 [label](docs/protocol/labels.md). ciproxy is the runner provider
 for its labels. It starts each [runner](docs/protocol/job-routing.md#terms)
-on a free own machine, or else on Boat.
+at the first place of the label's order that can take the job: by default a
+free own machine, or else an overflow provider.
 
 - **Own machines first.** The [agent](docs/protocol/agent.md#terms) runs on
   each own machine. Each own machine keeps
   [warm runners](docs/protocol/job-routing.md#warm-runners) ready, so a job
   can start at once.
-- **Overflow to Boat.** When the own machines are busy, ciproxy starts
+- **Overflow providers.** When the own machines are busy, ciproxy starts
   [overflow](docs/protocol/overflow.md#overflow-runners) runners in the
-  customer's own Boat account. Boat bills the customer. The customer sets a
-  monthly [spend limit](docs/protocol/overflow.md#spend-limit) for Boat.
+  customer's own account at an overflow provider, such as Boat. The
+  provider bills the customer. A workspace can connect several providers,
+  and each label sets its [order](docs/protocol/labels-order.md) of places.
+  The customer sets a monthly
+  [spend limit](docs/protocol/overflow-spend.md) for each provider.
 - **A fresh VM for each job.** Each job runs in a new
-  [job VM](docs/protocol/agent.md#job-vms) or Boat
+  [job VM](docs/protocol/agent.md#job-vms) or
   [sandbox](docs/protocol/overflow.md#terms) that no other job used.
 - **A transparent cache.** `actions/cache` works without workflow edits. On
   an own machine, it reads and writes through the
@@ -138,11 +142,18 @@ The protocol docs hold the requirements and the decisions in force:
   workspace, what the workspace owns, and how an Admin adds an organization
   or takes one out.
 - [Labels](docs/protocol/labels.md): the jobs that use ciproxy, the default
-  and custom labels, their sizes, and where the jobs of each label may run.
+  and custom labels, and their sizes.
+  [Label order](docs/protocol/labels-order.md) states the places where the
+  jobs of each label run, in order.
 - [Job routing](docs/protocol/job-routing.md): slots, the disk of a job,
-  where a job runs, warm runners, and failures.
-- [Overflow](docs/protocol/overflow.md): the Boat account, the backend
-  contract, overflow runners, the spend limit, and refused sandboxes.
+  where a job runs, and warm runners.
+  [Failures](docs/protocol/job-routing-failures.md) states what happens
+  when a part fails.
+- [Overflow](docs/protocol/overflow.md): the provider accounts, the Boat
+  account, the provider contract, overflow runners, and refused sandboxes.
+  [Spend limit](docs/protocol/overflow-spend.md) states the spend limit of
+  each provider, and [Sandbox end](docs/protocol/overflow-sandbox-end.md)
+  when ciproxy deletes a sandbox.
 - [Agent](docs/protocol/agent.md): install, the connection, machine
   identity, job VMs, the image, updates, health, drain, and remove.
 - [Security](docs/protocol/security.md): sign-in and access, GitHub App

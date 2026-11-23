@@ -24,7 +24,7 @@ and keys.
 - Each job on an own machine runs in a fresh
   [job VM](agent.md#job-vms).
 - So a job never reads the files or the secrets of another job.
-- On Boat, each job runs in its own sandbox, as
+- On an overflow provider, each job runs in its own sandbox, as
   [Overflow runners](overflow.md#overflow-runners) says.
 - A job VM cannot reach another job VM, the agent, or the host of its own
   machine.
@@ -34,7 +34,7 @@ and keys.
 - A job VM cannot reach a private network or a cloud metadata service, also
   when its machine can reach them.
 - **Decision:** a job VM reaches the internet only, as on GitHub-hosted
-  runners, so a job behaves the same on an own machine and on Boat.
+  runners, so a job behaves the same on an own machine and on a provider.
   Rejected: the private networks too, as on a classic self-hosted runner,
   because the code of a pull request could then probe the internal network
   and read the cloud credentials of the host.
@@ -93,6 +93,6 @@ and keys.
 - [Agent](agent.md): job VMs, the agent, and removal.
 - [Agent images](agent-images.md): the macOS image and its SIP setting.
 - [Cache](cache.md): cache scopes, trusted write-back, and Docker disks.
-- [Overflow](overflow.md): the Boat account and its sandboxes.
+- [Overflow](overflow.md): the provider accounts and their sandboxes.
 - [Labels](labels.md) and [Job routing](job-routing.md): labels and
   runners.

@@ -18,14 +18,14 @@ of each tier.
 ## Starts
 
 - A start is one job that a ciproxy runner takes, on an own machine or on
-  [Boat](overflow.md#terms), whatever its result.
+  an [overflow provider](overflow.md#terms), whatever its result.
 - The starts of a workspace count the jobs of all its
   [organizations](workspaces.md#terms).
 - A job becomes a start at the moment that a runner takes it.
 - A re-run of a job is a new start.
 - A [warm runner](job-routing.md#warm-runners) that takes no job is not a
   start.
-- A Boat runner that takes no job is not a start.
+- A runner on a provider that takes no job is not a start.
 - A job that no runner takes is not a start, for example a job that someone
   cancels while it waits.
 - The job page of each start says "Counts as 1 start".
@@ -156,8 +156,8 @@ of each tier.
   month, or the last calendar month.
 - It opens on the last 30 days.
 - The days of the report are UTC days.
-- The cost with ciproxy is the cost of the own machines, plus the Boat
-  cost, plus the price of the tier and its add-ons.
+- The cost with ciproxy is the cost of the own machines, plus the cost on
+  each provider, plus the price of the tier and its add-ons.
 - The customer enters the monthly cost of each own machine on its machine
   page.
 - The report counts the monthly cost of an own machine for the days of the
@@ -185,10 +185,11 @@ of each tier.
 - **Decision:** each date uses the day count of its calendar month.
   Rejected: a fixed 30 days, 365 divided by 12, mixed bases, and billing
   periods. Reason: the same date then has the same cost in every range.
-- The Boat cost counts the same [sandboxes](overflow.md#terms) as the
-  [spend limit](overflow.md#spend-limit), for the days of the range.
-- Boat start fees count at the highest published price, as the spend limit
-  counts them.
+- The cost on each provider counts the same [sandboxes](overflow.md#terms)
+  as the [spend limit](overflow-spend.md) of that provider, for the days of
+  the range.
+- Boat start fees count at the highest published price, as
+  [Boat start fees](overflow-spend.md#boat-start-fees) says.
 - The savings against an alternative are its cost minus the cost with
   ciproxy.
 - The report leads with the savings against the cheaper alternative.
@@ -196,10 +197,12 @@ of each tier.
   the report shows how much higher it is.
 - When an own machine has no monthly cost, the report shows no savings
   figure and asks for the missing costs.
-- The report then still shows the costs of the alternatives, the Boat cost,
-  and the tier price.
-- The report shows the starts and the minutes on own machines and on Boat.
-- It shows the starts of each day, on own machines and on Boat.
+- The report then still shows the costs of the alternatives, the cost on
+  each provider, and the tier price.
+- The report shows the starts, the minutes, and the cost in one row for own
+  machines, and in one row for each provider that ran jobs in the range.
+- It shows the starts of each day on own machines and on the providers
+  together.
 - On every tier, ciproxy keeps the daily totals of 90 days, as
   [Data retention](security-data.md#data-retention) says.
 - The daily totals stay also when the [job history](billing.md#tiers) of
@@ -215,4 +218,5 @@ of each tier.
 - [Job routing](job-routing.md#where-a-job-runs): where a runner takes each
   job.
 - [Agent](agent.md#machine-identity): how an own machine registers.
-- [Overflow](overflow.md#spend-limit): the Boat spend of the workspace.
+- [Spend limit](overflow-spend.md): the spend of the workspace on each
+  provider.

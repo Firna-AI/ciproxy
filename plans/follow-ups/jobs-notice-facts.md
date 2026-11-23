@@ -33,8 +33,11 @@
     with only the facts that the API gives, as under
     `docs/mockups/src/entries/app/jobs/current-contract/` and
     `docs/mockups/src/entries/app/jobs/fit-facts/`.
-  - **Largest-size fallback:** the setting "Run on the largest Boat size",
-    which runs a job on the largest Boat size when no size fits its label.
+  - **Largest-size fallback:** the setting "Run on the largest size". When
+    no place of the order of a label fits it, the setting runs a job on the
+    largest size of the first provider of the order that jobs skip only
+    because of its sizes. With Boat as the only provider, that is the
+    largest Boat size.
   - **Size choice:** the Boat size that the overflow service picks when it
     prepares a sandbox, and its kind: a size that fits the label, or the
     largest-size fallback.
@@ -67,7 +70,7 @@
     webhook also names a `sender`, the owner or member who caused the event,
     by a numeric ID only, at `crates/ciproxy-github/src/app/webhook.rs:63-67`
     and `:80`. A suspension saves no person and no day.
-    `docs/protocol/app-removal.md:116` asks for a notice that names the
+    `docs/protocol/app-removal.md:115-116` asks for a notice that names the
     organization and links to GitHub, and the product meets it.
   - "Data retention" in `docs/protocol/security-data.md` keeps the record
     of a person only while the person has a role or an open request for
@@ -85,10 +88,11 @@
     refusals, it gives only `retry_at` and `refused_sizes`. No API field
     and no overflow code holds an address of the Boat account.
   - Fit: `JobView` gives the Boat size name, the actual size, and the
-    retained request of the label. `docs/protocol/overflow.md` says that
-    the job page names the Boat size that ran the job, because Boat bills
-    that size, and that the largest-size fallback can make it smaller than
-    the label. The scaler gives such a start the reason
+    retained request of the label. "Overflow runners" in
+    `docs/protocol/overflow.md`, lines 195-198, says that the job page names
+    the provider and the size that ran the job, because the provider bills
+    that size. It also says that the largest-size fallback can make that
+    size smaller than the label. The scaler gives such a start the reason
     `StartReason::LargestBoatSize`, at
     `crates/ciproxy-scaler/src/actions.rs:75`, but no store keeps it.
   - The overflow service then makes the size choice again when it prepares
@@ -115,13 +119,14 @@
     `crates/ciproxy-protocol/src/resources.rs:108-119` and
     `crates/ciproxy-scaler/src/size_policy.rs:120-124`.
   - Own machines have no separate vCPU and memory. A slot is 2 vCPU and
-    8 GB, at `docs/protocol/job-routing.md:9`. A job takes the larger of
-    its vCPU divided by 2 and its memory divided by 8 GB, at `:25-28`. A
+    8 GB, at `docs/protocol/job-routing.md:10`. A job takes the larger of
+    its vCPU divided by 2 and its memory divided by 8 GB, at `:26-29`. A
     machine has the smaller of its CPU and its memory slot count after the
-    host reserve, at `:34-36`, as
+    host reserve, at `:36-38`, as
     `crates/ciproxy-protocol/src/resources.rs:34-48` computes. A size fits
     a machine when the machine has those slots and its job disk covers the
-    complete VM root, at `:95-96`. So a machine with 32 threads and 512 GB
+    complete VM root, at `docs/protocol/job-routing-capacity.md:85-86`,
+    under "Fit". So a machine with 32 threads and 512 GB
     has 12 slots, and it takes no job of 2 vCPU and 128 GB, which takes 16
     slots. "No machine has 128 GB" would be false there.
   - One cause across all places has gaps. Boat sizes of 32 vCPU with 64 GB
@@ -234,8 +239,10 @@
     `ts/app/src/view/jobs-label-notices.ts:105-114`. The same API facts can
     later feed the fit note of the label dialog. G drops the shared
     assumption that every option describes the request of the label and
-    never what the places offer. `docs/protocol/labels.md:127-128` asks
-    only where the jobs of each label run now. Accept the current-contract
+    never what the places offer. "A size that nothing can run" in
+    `docs/protocol/labels.md`, lines 216-225, asks only where the jobs of
+    each label run now, and the reason of the first place of the order
+    that fits when no place can run them. Accept the current-contract
     copy for the other three facts. G does not depend on another option,
     so the user can take it alone or with B, C, D, or E. Taken with C, D,
     or E, G replaces their acceptance of the current-contract copy for the
@@ -257,8 +264,9 @@
     resource offers of each place, because a second fit rule in the app can
     disagree with the scaler, which counts slots, the image root, and the
     ext4 allowance.
-  - A refusal at save of a label that nothing fits, because
-    `docs/protocol/labels.md:129-132` rejects it, and that decision stays.
+  - A refusal at save of a label that nothing fits, because the decision at
+    lines 226-229 of `docs/protocol/labels.md` rejects it, and that decision
+    stays.
   - A list of every place with its offer or its short resources, because
     it is a detail of F or G with a longer notice, not another approach.
 - **Wider fix:** None. Each fact needs its own source. The current-contract

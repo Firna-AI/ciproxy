@@ -25,14 +25,13 @@ person installs the App.
   whose runner started, also when the runner has no job.
 - Each such sandbox ends when its runner reports its exit, as
   [After an App removal](overflow-sandbox-end.md#after-an-app-removal) says.
-- Otherwise, Boat ends it at its
-  [lifetime](overflow-sandbox-end.md#the-lifetime) of 6 hours, or 2 hours
-  on a Boat free trial.
+- Otherwise, its provider ends it at its
+  [lifetime](overflow-sandbox-end.md#the-lifetime).
 - **Decision:** after an App removal, ciproxy does not stop idle sandboxes
   early, and they end at their lifetime. Rejected: a new mechanism in the
   sandbox that lets ciproxy stop idle sandboxes early. Reason: App removal
   is rare, and the cost is bounded by the lifetime and the
-  [spend limit](overflow.md#spend-limit).
+  [spend limit](overflow-spend.md).
 - The scale sets and the runners of the organization stay on GitHub,
   because ciproxy has no GitHub access left to delete them.
 - Only the current workspace of an organization receives new jobs through
@@ -69,7 +68,7 @@ person installs the App.
   with the same reasons. A new install ends no reason.
 - **Decision:** a removal takes only that organization out of its
   workspace. Reason: the other organizations of the workspace still use its
-  machines, its Boat account, and its subscription.
+  machines, its provider accounts, and its subscription.
 
 ### The last organization of a workspace
 
@@ -80,12 +79,12 @@ person installs the App.
   [install token](agent.md#install) of the workspace at once.
 - Each [own machine](agent.md#terms) of the workspace then acts as a
   removed machine, as [Drain and remove](agent.md#drain-and-remove) says.
-- At the removal, ciproxy starts no new Boat runner.
-- The Boat jobs that run at that moment finish.
+- At the removal, ciproxy starts no new runner on a provider.
+- The jobs that run on a provider at that moment finish.
 - The sandboxes of the workspace end as
   [After an App removal](overflow-sandbox-end.md#after-an-app-removal) says.
-- ciproxy deletes the Boat key when the last of these sandboxes ends, as
-  after [Disconnect](overflow.md#change-key-and-disconnect).
+- ciproxy deletes the key of each provider when the last of its sandboxes
+  ends, as after [Disconnect](overflow.md#change-key-and-disconnect).
 - Reason: ciproxy needs the key to delete each sandbox when its runner
   reports its exit.
 - The subscription of the workspace ends as
@@ -95,7 +94,7 @@ person installs the App.
 - A new install within these 30 days finds the labels, the settings, and
   the job history of the workspace again.
 - After such an install, each own machine needs the install command again,
-  and Boat needs a new connection.
+  and each provider needs a new connection.
 - **Decision:** when the last organization leaves, the subscription ends at
   the end of the paid period, every credential goes at once, and the data
   goes after 30 days. Rejected: no change, an end at once with a refund, a
@@ -109,8 +108,8 @@ person installs the App.
   ciproxy runner.
 - Jobs that run when the suspension starts finish.
 - A suspension changes nothing else: the organization stays in its
-  workspace, and the machines, the Boat key, the subscription, and the data
-  stay.
+  workspace, and the machines, the provider keys, the subscription, and the
+  data stay.
 - After an unsuspend, the jobs of the organization start on ciproxy runners
   again.
 - While an organization is suspended, the Jobs page shows a notice that
@@ -129,7 +128,7 @@ person installs the App.
 - [Agent](agent.md#drain-and-remove): what a removed machine does.
 - [Sandbox end](overflow-sandbox-end.md#after-an-app-removal): the
   sandboxes after a removal.
-- [Overflow](overflow.md#change-key-and-disconnect): the Boat key.
+- [Overflow](overflow.md#change-key-and-disconnect): the provider keys.
 - [Billing](billing.md#subscription-states): the end of a subscription.
 - [Architecture](../architecture.md#boundaries): the events that GitHub
   sends to the control plane.

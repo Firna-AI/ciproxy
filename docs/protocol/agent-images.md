@@ -1,10 +1,11 @@
 # Agent images
 
 This doc states the requirements for the job images: the Linux image with
-its software, its two builds, and its releases, and the macOS image.
-[Job VMs](agent.md#job-vms) on Linux boot the machine image. Boat
-[sandboxes](overflow.md#terms) start from the Boat snapshot. Job VMs on a
-Mac boot the macOS image.
+its software, its builds, and its releases, and the macOS image.
+[Job VMs](agent.md#job-vms) on Linux boot the machine image. The
+[sandboxes](overflow.md#terms) of each overflow provider start from a build
+of the image definition for that provider. Boat sandboxes start from the
+Boat snapshot. Job VMs on a Mac boot the macOS image.
 
 ## Terms
 
@@ -47,25 +48,26 @@ Mac boot the macOS image.
 - Custom VM images come later, on Business, as
   [Tier features](billing.md#tier-features) says.
 
-## One definition, two builds
+## One definition, a build for each place
 
-- **Decision:** one image definition serves the job VMs and the Boat
-  sandboxes. Each release builds it as the machine image and as the Boat
-  snapshot. Rejected: a separate image for each, because a job must behave
-  the same wherever it runs.
-- Both builds run the same recipe with the same version pins.
+- **Decision:** one image definition serves the job VMs and the sandboxes
+  of every overflow provider. Each release builds it as the machine image
+  and as the Boat snapshot. Rejected: a separate image for each place,
+  because a job must behave the same wherever it runs.
+- Every build runs the same recipe with the same version pins.
 - The recipe selects some software at its latest version. The image
-  definition pins each of these versions, and both builds use the pins.
+  definition pins each of these versions, and every build uses the pins.
 - Versions that no pin covers can differ between the builds. Examples are
   package revisions and the packages of each base system.
 - Each build reports the software versions that it installed.
-- Each release records each version difference between the two reports.
+- Each release records each version difference between the reports of its
+  builds.
 - A version difference does not stop a release.
-- A job starts with Docker and containerd running, in both builds.
+- A job starts with Docker and containerd running, in every build.
 - The services that the recipe disables, such as the databases and the web
-  servers, stay stopped until a step starts them, in both builds.
+  servers, stay stopped until a step starts them, in every build.
 - A step can start, stop, and restart an installed service with
-  `systemctl`, in both builds.
+  `systemctl`, in every build.
 
 ## The machine image
 
@@ -180,7 +182,8 @@ Mac boot the macOS image.
 - Each release file that the control plane reads, `manifest.json` and
   `downloads.json`, holds at most 1 MiB. A larger file fails the read.
 - When no macOS release is set, or the control plane cannot read it, Macs
-  get no image. Linux machines and Boat jobs are not affected.
+  get no image. Linux machines and jobs on overflow providers are not
+  affected.
 - **Decision:** a private store, and a signed read URL for each download.
   Rejected: a public store on a custom domain, because anyone with the path
   could then download Xcode. Rejected: a Worker that checks a token in
@@ -219,8 +222,9 @@ Mac boot the macOS image.
   Reason: the user chose this on 23 November 2026.
 - The macOS image holds the VM disk and the platform files that
   Virtualization.framework needs to start it.
-- The macOS image has no Boat snapshot, because a macOS job never runs on
-  Boat, as [Overflow runners](overflow.md#overflow-runners) says.
+- The macOS image has no build for an overflow provider, because a macOS
+  job never runs on a provider, as
+  [Overflow runners](overflow.md#overflow-runners) says.
 - The image disk has a fixed logical size, now planned at 200 GB. It holds
   free space for the jobs inside its APFS container.
 - Each release supplies the logical bytes of its disk, as the machine image

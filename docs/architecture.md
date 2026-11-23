@@ -3,18 +3,18 @@
 ciproxy runs the GitHub Actions jobs of a customer's GitHub
 [organizations](protocol/workspaces.md#terms) on the customer's
 [own machines](protocol/agent.md#terms) first. When those machines are busy,
-it starts runners in the customer's own
-[Boat](protocol/overflow.md#the-boat-account) account. A
-[workspace](protocol/workspaces.md#terms) holds the organizations, the
-machines, and the plan of one customer. The protocol docs hold the rules.
-Each section links to the doc that owns them.
+it starts runners in the customer's own account at an
+[overflow provider](protocol/overflow.md#terms), such as Boat. Each label
+sets the order of these places. A [workspace](protocol/workspaces.md#terms)
+holds the organizations, the machines, and the plan of one customer. The
+protocol docs hold the rules. Each section links to the doc that owns them.
 
 ## Components
 
 The control plane is the hosted service of ciproxy. The dashboard is the web
 app of ciproxy, where a person signs in. ciproxy also has the public site,
-and the [agent](protocol/agent.md#terms) on each own machine. It uses three
-external services: GitHub, Boat, and Stripe.
+and the [agent](protocol/agent.md#terms) on each own machine. Its external
+services are GitHub, Stripe, and the overflow providers.
 
 ```text
                      +-----------------+
@@ -22,7 +22,7 @@ external services: GitHub, Boat, and Stripe.
                      +-----------------+                    | starts
                        ^      |      |                      v
                        v      v      v            Job VM with a runner
-                    Stripe  GitHub  Boat                    |
+                    Stripe  GitHub  Overflow providers      |
                               ^      | starts               |
                               |      v                      |
                               |  Sandbox with a runner      |
@@ -49,11 +49,15 @@ The control plane is closed source and written in Rust. It has these parts:
 - **Machine gateway:** keeps the connections of the agents. It also
   answers the requests of the agents for the cache
   [entry facts](protocol/cache.md#terms) of their running jobs.
-- **Backend client:** starts and deletes the
-  [sandboxes](protocol/overflow.md#terms) of
-  [overflow](protocol/overflow.md#overflow-runners) runners on the
-  [backend](protocol/overflow.md#backend-contract), Boat. It counts the Boat
-  spend against the [spend limit](protocol/overflow.md#spend-limit).
+- **Overflow service:** starts and deletes the
+  [sandboxes](protocol/overflow.md#terms) of the
+  [overflow](protocol/overflow.md#overflow-runners) runners of every
+  workspace. It counts the spend on each provider against its
+  [spend limit](protocol/overflow-spend.md).
+- **Provider registry:** holds, for each provider of ciproxy, the parts
+  that only that provider has: its key check, its account facts, its guest
+  launch, and its image source. Each adapter comes from the shared sandbox
+  library `futex-ai/sandbox`.
 - **Metering:** counts the [starts](protocol/metering.md#starts) and the own
   machines of each workspace. It builds the
   [savings report](protocol/metering.md#savings-report).
@@ -87,8 +91,8 @@ these things:
 
 ### Job VMs and sandboxes
 
-A job VM is a fresh VM on an own machine. A Boat sandbox plays the same
-part for overflow of Linux jobs. Both start from the image, which holds the
+A job VM is a fresh VM on an own machine. A sandbox plays the same part on
+an overflow provider. Both start from a build of the image, which holds the
 GitHub Actions runner. The runner takes one job.
 
 - On an x64 Linux machine, a job VM is a Firecracker VM over KVM. It runs
@@ -96,7 +100,7 @@ GitHub Actions runner. The runner takes one job.
 - On a Mac, a job VM is a macOS VM over Apple's Virtualization.framework.
   The agent drives the framework with its own Rust code, through the
   `objc2-virtualization` crate.
-- A macOS job never runs on Boat, as
+- A macOS job never runs on an overflow provider, as
   [Overflow runners](protocol/overflow.md#overflow-runners) says.
 - **Decision:** the agent runs macOS VMs with its own Rust code over
   Virtualization.framework. Rejected: Tart and Lume as external tools.
@@ -123,8 +127,8 @@ design tokens that the dashboard uses.
 - **GitHub:** the GitHub App, the scale set API, the Actions service, the
   [GitHub cache](protocol/cache.md#terms), and sign-in. The Actions service
   queues the jobs and talks to each runner.
-- **Boat:** the backend. It runs the sandboxes in the customer's own Boat
-  account, and it bills the customer for them.
+- **Overflow providers:** such as Boat. Each runs the sandboxes in the
+  customer's own account, and bills the customer for them.
 - **Stripe:** Checkout, the customer portal, and the events that confirm
   payments and subscription changes.
 - **Download site:** the release server of `futex-ai/cli-release` at
@@ -177,11 +181,12 @@ design tokens that the dashboard uses.
   through to the GitHub cache. It also fetches GitHub's public keys to
   check each runtime token, as
   [Trusted write-back](protocol/cache.md#trusted-write-back) says.
-- **The control plane and Boat:** the backend client calls Boat with the
-  Boat key of the customer. The
-  [backend contract](protocol/overflow.md#backend-contract) says what Boat
-  must give ciproxy. [Key custody](protocol/security.md#key-custody) says
-  how ciproxy keeps the key.
+- **The control plane and the overflow providers:** the overflow service
+  calls each provider with the customer's key of that provider. The
+  [provider contract](protocol/overflow.md#provider-contract) says what
+  each provider must give ciproxy, and
+  [Key custody](protocol/security.md#key-custody) how ciproxy keeps each
+  key. Each sandbox reports the exit of its runner to the control plane.
 - **The control plane and Stripe:** billing opens Checkout and the customer
   portal for the customer, and Stripe sends its events back. The card goes
   to Stripe only.
@@ -197,14 +202,14 @@ The [data flow](architecture/data-flow.md) page follows the main flows
 across these boundaries:
 
 - [A job on an own machine][flow-own-machine]
-- [A job on Boat][flow-boat]
+- [A job on an overflow provider][flow-provider]
 - [A cache restore and save][flow-cache]
 - [A checkout and a failed payment][flow-checkout]
 - [Machine reports and offline detection][flow-reports]
 - [A control plane outage][flow-outage]
 
 [flow-own-machine]: architecture/data-flow.md#a-job-on-an-own-machine
-[flow-boat]: architecture/data-flow.md#a-job-on-boat
+[flow-provider]: architecture/data-flow.md#a-job-on-an-overflow-provider
 [flow-cache]: architecture/data-flow.md#a-cache-restore-and-save
 [flow-checkout]: architecture/data-flow.md#a-checkout-and-a-failed-payment
 [flow-reports]: architecture/data-flow.md#machine-reports-and-offline-detection

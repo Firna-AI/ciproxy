@@ -47,7 +47,7 @@ machine cache.
 - ciproxy discards that copy when the job ends.
 - The Docker disk of one repository never attaches to a job of another
   repository.
-- A job on Boat gets no Docker disk.
+- A job on an overflow provider gets no Docker disk.
 - **Decision:** only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as for the machine cache. Rejected: any
   event on the default branch, because a person outside the repository
@@ -90,7 +90,8 @@ machine cache.
 - ciproxy starts no new runner on the machine, also no warm runner.
 - ciproxy still counts the machine for the labels whose size it
   [fits](job-routing.md#fit), so their jobs still wait the
-  [overflow wait](job-routing.md#terms) before Boat runners start for them.
+  [overflow wait](job-routing.md#terms) before they go to the next place of
+  their order.
 - The jobs and the runners already on the machine stay, and a ready warm
   runner can still take a job.
 - The agent refuses each runner start while it cannot read the reservations.

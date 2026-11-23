@@ -27,20 +27,24 @@ each main flow of data across the
    scaler sends the agent a registration for a new warm runner.
 6. When the job ends, the agent ends the job VM and reports it.
 
-## A job on Boat
+## A job on an overflow provider
 
-1. GitHub queues a job of a ciproxy label. No own machine has free slots
-   for it, so the job waits in GitHub.
+1. GitHub queues a job of a ciproxy label. The first place of the
+   [order](../protocol/labels-order.md) of the label is own machines. No
+   own machine has free slots for the job, so the job waits in GitHub.
 2. When the job has waited the
-   [overflow wait](../protocol/job-routing.md#where-a-job-runs), the scaler
-   starts a runner on Boat. The backend client starts its sandbox from the
-   image in the customer's Boat account.
-3. GitHub gives a waiting job of the label to the new runner. Metering
+   [overflow wait](../protocol/job-routing.md#the-overflow-wait), the scaler
+   picks the next place of the order that can take the job, such as Boat.
+   It starts a runner on that provider.
+3. The overflow service takes the parts of that provider from the provider
+   registry. It starts the sandbox from the image of that provider, in the
+   customer's own account at that provider.
+4. GitHub gives a waiting job of the label to the new runner. Metering
    counts one start.
    [Idle runners](../protocol/overflow-sandbox-end.md#idle-runners) says
-   what a Boat runner without a job does.
-4. When the job ends, the backend client deletes the sandbox. It adds the
-   cost of the sandbox to the Boat spend of the month.
+   what a runner on a provider without a job does.
+5. When the job ends, the overflow service deletes the sandbox. It adds the
+   cost of the sandbox to the spend of that provider for the month.
 
 ## A cache restore and save
 
@@ -59,7 +63,8 @@ each main flow of data across the
 4. A save goes to the machine cache and through to the GitHub cache.
    [Trusted write-back](../protocol/cache.md#trusted-write-back) says which
    saves other branches can restore.
-5. A job on Boat restores and saves through the GitHub cache only.
+5. A job on an overflow provider restores and saves through the GitHub
+   cache only.
 6. The agent reports the cache hits of its machine to the control plane.
    It also reports the [cache counts](../protocol/cache.md#terms) of each
    job whose restores the machine cache handled. A sandbox reports no cache
@@ -91,18 +96,19 @@ each main flow of data across the
 3. When no report arrives for a
    [set time](../protocol/agent.md#connection), the control plane marks the
    machine offline. The scaler starts no new runner on it.
-   [Failures](../protocol/job-routing.md#failures) says what happens to its
-   jobs.
+   [Own machine offline](../protocol/job-routing-failures.md#own-machine-offline)
+   says what happens to its jobs.
 4. When the agent connects again, the machine is back online.
 
 ## A control plane outage
 
 1. Running jobs go on, because each runner talks to GitHub directly.
-2. No new runner starts on an own machine or on Boat. Jobs without a runner
-   stay queued in GitHub. [Failures](../protocol/job-routing.md#failures)
+2. No new runner starts on an own machine or on an overflow provider. Jobs
+   without a runner stay queued in GitHub.
+   [Control plane outage](../protocol/job-routing-failures.md#control-plane-outage)
    holds the rules.
 3. The agents keep their job VMs and warm runners, and they try to connect
    again.
 4. When the control plane is back, the scaler starts runners for the queued
-   jobs. The backend client deletes each sandbox that ciproxy started, that
-   runs no job, and that no waiting job needs.
+   jobs. The overflow service deletes each sandbox that ciproxy started,
+   that runs no job, and that no waiting job needs.

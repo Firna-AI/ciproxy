@@ -52,8 +52,8 @@ workspace and takes one out, and when an organization is inactive.
 
 - The workspace owns the tier, the subscription, the members and their
   roles, the [own machines](agent.md#terms), the
-  [install tokens](agent.md#install), the [labels](labels.md),
-  the settings, and the [Boat account](overflow.md#the-boat-account).
+  [install tokens](agent.md#install), the [labels](labels.md), the
+  settings, and the [provider accounts](overflow.md#provider-accounts).
 - Each organization keeps its own repository access, as
   [Repository access](security.md#repository-access) says.
 - An own machine runs the jobs of every organization of its workspace, as
@@ -110,7 +110,7 @@ workspace and takes one out, and when an organization is inactive.
 - On Free, an Admin can also add an organization. It joins inactive, as
   [Inactive organizations](#inactive-organizations) says.
 - The jobs of a new active organization use the labels, the own machines,
-  the settings, and the Boat account of the workspace at once.
+  the settings, and the provider accounts of the workspace at once.
 
 ### Choose the workspace
 

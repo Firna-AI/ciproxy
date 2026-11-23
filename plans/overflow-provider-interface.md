@@ -33,10 +33,13 @@ move to the follow-up item of item 3. Notes of this brainstorm:
 
 Contract owners:
 
-- [Overflow](../docs/protocol/overflow.md) and
+- [Overflow](../docs/protocol/overflow.md),
+  [Overflow spend](../docs/protocol/overflow-spend.md), and
   [Sandbox end](../docs/protocol/overflow-sandbox-end.md).
 - [Labels](../docs/protocol/labels.md),
-  [Job routing](../docs/protocol/job-routing.md), and
+  [Label order](../docs/protocol/labels-order.md),
+  [Job routing](../docs/protocol/job-routing.md),
+  [Job routing failures](../docs/protocol/job-routing-failures.md), and
   [Agent images](../docs/protocol/agent-images.md).
 - [Security](../docs/protocol/security.md),
   [Metering](../docs/protocol/metering.md), and
@@ -180,9 +183,10 @@ Replaced ways:
   one switch for all providers. When it is off, every order skips every
   provider, also a provider that comes before own machines.
 - "Run on the largest size" applies only when no place of the order fits.
-  It uses the first available provider of the order whose largest size
-  holds the complete image. When no such provider exists, the job waits, as
-  today.
+  It uses the first provider of the order that jobs skip only because of
+  its sizes, and whose largest size holds the complete image. Only a
+  provider that is connected and available can be that provider. When no
+  such provider exists, the job waits, as today.
 - Each provider of a workspace has its own monthly spend limit. Each
   connection asks for the limit of its provider, as Boat does today.
 - When a customer connects a provider that the workspace never offered
@@ -272,6 +276,18 @@ My calls from the mockups, 23 November 2026:
   reason. The label list, the order rows, and the Jobs notice take the
   reason from one function. An order row shows "off", "not connected", or
   "unavailable" before it says whether a size fits.
+- A provider that counts as fitting for the wait reason never stops "Run
+  on the largest size". Reason: the counting exists only to give a true
+  reason, and the largest-size rule needs a provider that can start.
+- Own machines keep warm runners for a label only while they are the first
+  place of its order. Reason: the user's item 2 decision says that each
+  label's order holds, and a ready warm runner would take jobs first.
+- Protocol docs carry no status line for rules that later milestones of
+  this plan build. Reason: the `documentation` skill allows status lines
+  only on page kinds that `AGENTS.md` names, and it names none.
+- Three protocol sections move to their own pages to stay near the length
+  target: `overflow-spend.md`, `labels-order.md`, and
+  `job-routing-failures.md`. Each old page keeps a pointer section.
 - An unavailable provider keeps its account, spend, and Disconnect in
   Settings, and hides Change key. Reason: no new connection can start.
 - The job history place filter wraps its choices onto a second line on a
@@ -400,32 +416,33 @@ Depends on: 1
 The protocol and architecture docs state the provider rules and the
 decisions of this plan. A Boat-only rule stays under Boat.
 
-- [ ] In `docs/protocol/overflow.md`, use the provider terms. Replace
+- [x] In `docs/protocol/overflow.md`, use the provider terms. Replace
       "Decision: Boat is the only backend" with the decisions of items 1 and
       2 and their date. Keep the contract as the provider contract.
-- [ ] In `docs/protocol/overflow.md`, state that a workspace can connect
+- [x] In `docs/protocol/overflow.md`, state that a workspace can connect
       several providers, one key for each, and the rule of item 6. Keep
       "The Boat account" for the Boat key, wallets, and trial.
-- [ ] In "Spend limit", state one limit for each provider, as item 5 says.
+- [x] In "Spend limit", state one limit for each provider, as item 5 says.
       Keep the start fee under Boat.
-- [ ] In `docs/protocol/overflow.md`, make "Overflow runners" and "Refused
+- [x] In `docs/protocol/overflow.md`, make "Overflow runners" and "Refused
       sandboxes" provider-neutral. In
       `docs/protocol/overflow-sandbox-end.md`, make the end report, "Orphan
       cleanup", and "After an App removal" provider-neutral.
-- [ ] In `docs/protocol/labels.md`, replace "Own machines, Boat, or both"
+- [x] In `docs/protocol/labels.md`, replace "Own machines, Boat, or both"
       with the label order. Make "A size that nothing can run"
-      provider-neutral, with the first available provider of the order.
-- [ ] In `docs/protocol/job-routing.md`, state how a job moves along its
+      provider-neutral, with the first provider of the order that jobs skip
+      only because of its sizes.
+- [x] In `docs/protocol/job-routing.md`, state how a job moves along its
       order, as item 4 says. Make "When Boat cannot take a job", "What the
       dashboard shows", and "Boat fails" provider-neutral.
-- [ ] In `docs/protocol/security.md`, state key custody for every provider.
-- [ ] Make the other Boat text of `overflow-sandbox-end.md`, `metering.md`,
+- [x] In `docs/protocol/security.md`, state key custody for every provider.
+- [x] Make the other Boat text of `overflow-sandbox-end.md`, `metering.md`,
       `billing.md`, `app-removal.md`, `cache.md`, `docker-disks.md`,
       `agent.md`, `agent-images.md`, and `workspaces.md` provider-neutral
       where the rule holds for every provider.
-- [ ] Update `docs/architecture.md` and `docs/architecture/data-flow.md`:
+- [x] Update `docs/architecture.md` and `docs/architecture/data-flow.md`:
       the provider registry and "A job on an overflow provider".
-- [ ] Update the overflow lines of `README.md`.
+- [x] Update the overflow lines of `README.md`.
 
 ## Milestone 3: Store and schema: provider-neutral overflow records
 
@@ -516,6 +533,8 @@ its only provider. All Boat tests pass with no change of behaviour.
       seams and descriptor.
 - [ ] Move the Boat code behind the new seams in `src/boat/`. Keep its
       tests, the Boat live examples, and `LIVE.md` working.
+- [ ] Repoint the `overflow.md#spend-limit` link of
+      `crates/ciproxy-overflow/accounting.md` to `overflow-spend.md`.
 - [ ] Add "Add a provider" to the `ciproxy-overflow` README: the adapter in
       `futex-ai/sandbox`, the enum value and descriptor, the seams under
       `src/<provider>/`, the image source, the connect form and copy, the
@@ -537,8 +556,10 @@ label, as item 4 says.
 - [ ] Replace the label switches with the label order. Replace `place_boat`
       with one walk over the order.
 - [ ] Apply "Run on the largest size" only when no place fits, with the
-      first available provider of the order whose largest size holds the
-      image.
+      first provider of the order that jobs skip only because of its sizes
+      and whose largest size holds the image.
+- [ ] Keep warm runners for a label only while own machines are the first
+      place of its order.
 - [ ] Skip every provider while the workspace switch is off.
 - [ ] Keep every current scaler test passing on the order "own machines,
       then Boat".
@@ -595,6 +616,8 @@ provider-neutral names.
 - [ ] Change `JobPlace::Boat` and `RunnerPlace::Boat` of metering to one
       overflow place with the provider. Give the daily costs and the savings
       report a row for each provider.
+- [ ] Repoint the `overflow.md#spend-limit` link of
+      `crates/ciproxy-metering/README.md` to `overflow-spend.md`.
 - [ ] Update `crates/ciproxy-control-plane/overflow.md`,
       `crates/ciproxy-control-plane/overflow-smoke.md`, and the READMEs of
       the control plane, the guest, metering, and deploy.
