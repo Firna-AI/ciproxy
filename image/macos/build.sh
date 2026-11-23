@@ -85,7 +85,9 @@ phase_provision() {
     wait_ssh 600
     # Also in configure-guest.sh. A guest that an older build configured lacks
     # these folders, which the upstream recipe expects.
-    guest_ssh 'sudo mkdir -p /usr/local/bin /usr/local/share'
+    guest_ssh 'sudo mkdir -p /usr/local/bin /usr/local/share &&
+        sudo chown runner:admin /usr/local/bin /usr/local/share &&
+        sudo chmod 775 /usr/local/bin /usr/local/share'
     # The upstream configure-ssh.sh makes ~/.ssh writable for everyone, and
     # sshd then ignores the build's key. clean-image.sh removes this setting.
     guest_ssh 'echo "StrictModes no" | sudo tee /etc/ssh/sshd_config.d/050-ciproxy-build.conf >/dev/null'
