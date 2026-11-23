@@ -171,8 +171,15 @@ My calls, 23 November 2026:
   `started_at`. It joins the job view of the dashboard for the machine, the
   Boat size, and the cache source. It drops each sample that ran in the
   wrong place and counts it. Cost is the billed minutes times the list
-  price, the Boat bill for Boat, and the monthly machine cost divided by use
-  for an own machine. Each price names its date.
+  price for a hosted leg. For Boat, it is the dated list price of the
+  job's Boat size, times its queue time plus its run time. For an own
+  machine, it is the monthly machine cost divided by use. Each price
+  names its date.
+  My call, 23 November 2026, after finding 5 of the first review of
+  `bench-source`: Boat bills a monthly plan plus overage and puts deleted
+  sandboxes in one line, so no Boat bill states the cost of a round or a
+  job. This replaces "the Boat bill for Boat". A round bill stays an
+  optional cross-check.
 - **Environment.** The main preview runs the ciproxy legs. Production
   repeats them during its smoke test.
 - **GCP machine.** An `n2-standard-16` VM with nested KVM and a 500 GB
