@@ -91,8 +91,8 @@ newer patch release.
 - The first image is a download of about 46.2 GB. Each new image is a new
   download of the same size.
 - The unpacked image takes about 77 GB on the disk of the Mac.
-- While a new image unpacks, the Mac also keeps its download. So a Mac
-  needs about 150 GB of free disk, as
+- The disk area of the agent keeps 100 GB for the image, and the rest for
+  the jobs. So a Mac needs about 176 GB of free disk, as
   [Add a Mac](/docs/guides/add-a-machine/#add-a-mac) says.
 - The download comes from Cloudflare R2, at
   `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`.

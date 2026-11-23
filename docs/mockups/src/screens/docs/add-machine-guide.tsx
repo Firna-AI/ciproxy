@@ -49,8 +49,8 @@ function MacNeeds() {
         than its Mac, so the Mac needs the macOS of the job image.
       </li>
       <li>
-        {unbroken("16 GB")} of memory, and about {unbroken("150 GB")} of free
-        disk for the macOS image, its download, and the jobs.
+        {unbroken("16 GB")} of memory, and about {unbroken("176 GB")} of free
+        disk for the macOS image and the jobs.
       </li>
       {network}
     </ul>

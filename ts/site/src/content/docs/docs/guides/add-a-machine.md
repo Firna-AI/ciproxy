@@ -38,10 +38,12 @@ how it differs from GitHub `macos-latest`. A Mac needs:
 - macOS 26.7.3 or later. A macOS VM cannot run a newer macOS than its Mac,
   so the Mac needs the macOS of the job image.
 - 16 GB of memory or more.
-- About 150 GB of free disk on the startup disk. The unpacked image takes
-  about 77 GB, a new image downloads about 46 GB while it unpacks, and the
-  jobs need the rest. In place of the startup disk, you can use an external
-  APFS SSD, as [Use an external disk](#use-an-external-disk) says.
+- About 176 GB of free disk. The agent takes three quarters of the free
+  space for its disk area, which holds the macOS image and the jobs. With
+  176 to 200 GB free, the Mac runs one macOS job at a time. With less free
+  space, the install command stops and says how much to free. In place of
+  the startup disk, you can use an external APFS SSD, as
+  [Use an external disk](#use-an-external-disk) says.
 - Outbound HTTPS to ciproxy, to GitHub, to `get.ciproxy.dev`, and to
   `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
   the macOS image. The Mac opens no inbound port.

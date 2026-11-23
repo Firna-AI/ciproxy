@@ -240,7 +240,7 @@ pub(crate) async fn issue_token(
         expires_at: token.expires_at,
         requirements: "x64 Linux with KVM, 4 cores, 16 GB of memory, and 250 GB of disk, \
             or a Mac with Apple Silicon, macOS 26.7.3 or later, 16 GB of memory, \
-            and about 150 GB of free disk."
+            and about 176 GB of free disk."
             .to_owned(),
     }))
 }

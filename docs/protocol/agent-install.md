@@ -138,9 +138,16 @@ command, and the wait for the first image.
 - When a Mac cannot run the image that it has, its
   [virtualization check](agent.md#the-virtualization-check) reports
   `operating_system_too_old`.
-- A Mac needs about 150 GB of free disk on its startup disk. The unpacked
-  [macOS image](agent-images.md#the-macos-image) takes about 77 GB, a new
-  image downloads about 46 GB while it unpacks, and the jobs need the rest.
+- A Mac needs about 176 GB of free disk. The default area volume takes
+  three quarters of the free space, and it needs at least 132 GB: the
+  100 GB image budget and the job disk of one default job. A Mac with
+  160 GB free sets `CIPROXY_AREA_BYTES` to 132 GB or more, or keeps the
+  area on another disk.
+- With 176 to 200 GB free, a Mac runs one default macOS job at a time. Its
+  16 GB of memory also gives it 1 slot.
+- A Mac must stay awake. The agent prevents system sleep while it runs.
+- Other apps can also run macOS VMs. Each such VM counts against the limit
+  of 2 macOS VMs on the Mac, as [Platforms](agent.md#platforms) says.
 - In place of the startup disk, the disk area can be on an external APFS
   disk. The agent then needs Full Disk Access, as
   [Area on another disk](../../crates/ciproxy-agent/macos-host.md#area-on-another-disk)
@@ -148,9 +155,6 @@ command, and the wait for the first image.
 - A Mac also needs outbound HTTPS to
   `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
   the macOS image.
-- A Mac must stay awake. The agent prevents system sleep while it runs.
-- Other apps can also run macOS VMs. Each such VM counts against the limit
-  of 2 macOS VMs on the Mac, as [Platforms](agent.md#platforms) says.
 - **Decision:** own machines run x64 Linux or macOS on Apple Silicon. This
   replaces the decision of x64 Linux only. Reason: the user chose macOS
   jobs on the customer's own Macs on 21 November 2026. Rejected: Linux
