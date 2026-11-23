@@ -10,8 +10,8 @@ description: Each job runs in a fresh VM that no other job used.
 - A job VM runs one runner, which takes one job. The VM ends when its job
   ends, and the agent never uses its disk again.
 - So a job never reads the files or the secrets of another job.
-- On Boat, each job runs in its own sandbox, which ciproxy deletes when the
-  job ends.
+- On an overflow provider, each job runs in its own sandbox. ciproxy
+  deletes the sandbox when the job ends.
 
 ## The network of a job VM
 
@@ -22,8 +22,8 @@ description: Each job runs in a fresh VM that no other job used.
   its machine can reach them.
 
 So the code of a pull request cannot probe your internal network or read the
-cloud credentials of the machine. A job behaves the same on your machines
-and on Boat.
+cloud credentials of the machine. The same network isolation applies on
+your machines and on overflow providers.
 
 ## Your workspace and its organizations
 
@@ -69,13 +69,14 @@ on one machine between the jobs of that repository.
 - When the spare disk of the machine has no room for the disk, or the disk
   cannot attach, the job runs without its Docker disk. Docker then keeps its
   data on the root disk of the job VM.
-- A job on Boat gets no Docker disk.
+- A job on an overflow provider gets no Docker disk.
 
 ## What a job can read
 
 - A job VM holds the registration of its own runner, which works for that
   one runner only.
-- ciproxy never sends the Boat key to a machine, a job VM, or a sandbox.
+- [Keys that stay with ciproxy][key-custody] explains how ciproxy keeps
+  provider keys out of machines, job VMs, and sandboxes.
 - A sandbox holds a token that reports the end of its own runner. Job code
   can read this token, but it can only end its own job.
 
@@ -92,3 +93,5 @@ on one machine between the jobs of that repository.
 - Job logs stay on GitHub, and the page of each job links to them.
 - ciproxy keeps the details of each finished job for 90 days, on every plan.
   Each page shows the job history of your plan.
+
+[key-custody]: /docs/security/agent-connection/#keys-that-stay-with-ciproxy

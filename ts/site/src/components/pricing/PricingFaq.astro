@@ -16,7 +16,7 @@ const faqs: readonly { question: string; answer: string }[] = [
   {
     question: "What is a start?",
     answer:
-      "A start is one job that a ciproxy runner takes, on your machine or on Boat, whatever its result. A re-run is a new start. A warm runner that waits without a job is not a start.",
+      "A start is one job that a ciproxy runner takes on your machine or on an overflow provider. A rerun counts as a new start. A runner counts only when it takes a job.",
   },
   {
     question: "What counts as an own machine?",
@@ -24,13 +24,13 @@ const faqs: readonly { question: string; answer: string }[] = [
       "Every machine that is registered to your workspace, also while it is offline. Remove a machine in the dashboard to free its place.",
   },
   {
-    question: "What happens when I pass a limit?",
-    answer: `Your jobs keep running. The dashboard shows a warning and offers the plan or add-on that covers your use, such as ${formatCount(tiers.team.starts)} starts on ${tiers.team.name}. You decide when to change; ciproxy adds no charges by itself.`,
+    question: "What happens when I pass a start or machine limit?",
+    answer: `Your jobs keep running. The dashboard shows a warning and offers the plan or add-on that covers your use, such as ${formatCount(tiers.team.starts)} starts on ${tiers.team.name}. You decide when to change. ciproxy adds no charges by itself.`,
   },
   {
     question: "Who pays for overflow?",
     answer:
-      "You pay Boat directly. Overflow runners start in your own Boat account, which bills by the second. Set a monthly spend limit in ciproxy; at the limit, jobs wait for a free slot on your machines.",
+      "You pay each overflow provider directly for runners in your own account. Boat bills by the second. Set a monthly spend limit for each provider in ciproxy. At the limit, jobs skip that provider and follow their label order.",
   },
   {
     question: "How do I cancel?",

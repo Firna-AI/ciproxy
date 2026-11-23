@@ -68,12 +68,14 @@ the supported distributions.
    When the machine connects, ciproxy shows it with its slots. A new machine
    first downloads the job image and takes jobs when it is ready.
 
-3. ### Connect Boat
+3. ### Connect an overflow provider
 
-   To start jobs on Boat when your machines are full, connect your Boat
-   account in Setup, or in **Settings** under **Overflow**. Give an API key
-   of your Boat account and a monthly spend limit. You can connect Boat
-   later.
+   To run Linux jobs in your own account at an overflow provider, connect
+   one in Setup or in **Settings** under **Overflow**. Pick the provider,
+   such as Boat. Enter an API key from your account and a monthly spend
+   limit for that provider. You can connect a provider later.
+
+   [Connect an overflow provider][connect] gives the steps.
 
 4. ### Change runs-on
 
@@ -89,3 +91,5 @@ the supported distributions.
 ## Next steps
 
 {jsx(CardGrid, { children: nextStepsCards.map((card) => jsx(LinkCard, card)) })}
+
+[connect]: /docs/guides/connect-an-overflow-provider/

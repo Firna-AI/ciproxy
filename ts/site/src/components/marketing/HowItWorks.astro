@@ -30,7 +30,7 @@ const steps = [
   },
   {
     title: "Change runs-on",
-    text: "Point a workflow at ciproxy. Its jobs start on your machines, and on Boat when they are full.",
+    text: "Point a workflow at ciproxy. Each job follows the order of its label, which can include your machines and, for Linux, overflow providers.",
     visual: "runs-on",
   },
 ] as const;

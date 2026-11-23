@@ -60,8 +60,10 @@ start when the control plane is back.
 
 - The private key of the GitHub App and the Stripe keys stay in the control
   plane of ciproxy.
-- ciproxy stores the Boat key of a workspace encrypted, and never sends it
-  to a machine, a job VM, or a sandbox.
+- ciproxy stores each overflow provider's key encrypted. It uses the key
+  only for that workspace's sandboxes on that provider.
+- The dashboard shows the connected account name. The saved key stays
+  with the control plane and never goes to a machine, job VM, or sandbox.
 - Stripe takes the card, so the card never reaches ciproxy.
 
 ## Open source

@@ -1,8 +1,9 @@
 ---
 title: Overview
 description: >-
-  ciproxy runs your GitHub Actions jobs on your own machines first. When they
-  are full, it starts runners in your Boat account.
+  ciproxy runs your GitHub Actions jobs on your own machines first by
+  default. You can also run Linux jobs in your own account at an overflow
+  provider, such as Boat.
 ---
 
 import { CardGrid, LinkCard } from "@astrojs/starlight/components";
@@ -40,12 +41,11 @@ export const startHereCards = [
 ## How a job runs
 
 1. GitHub queues a job whose workflow says `runs-on: ciproxy`.
-2. A ready warm runner on one of your machines takes the job at once. Or
-   ciproxy starts a runner where a machine has room. The job runs in a
-   fresh VM.
-3. When your machines have no room for the job, ciproxy can start a runner
-   for it in your Boat account instead. By default, it waits 30 seconds
-   for room on your machines first.
+2. ciproxy follows the [label order][label-order] to start a runner in a
+   fresh VM. On your machines, a ready warm runner takes the job at once.
+3. If your machines have no room, the job can go to the next place in its
+   order, such as your Boat account. The wait for room on your machines
+   is 30 seconds by default.
 4. On your machines, `actions/cache` restores entries from the disk of the
    machine when it has them, and saves them there and to GitHub.
 
@@ -57,6 +57,10 @@ export const startHereCards = [
   for macOS jobs.
   [Add a machine](/docs/guides/add-a-machine/#what-the-machine-needs) lists
   the supported distributions and what a Mac needs.
-- A Boat account for overflow. You can connect it later.
+- For overflow, [connect a provider][connect] such as Boat. You can do
+  this later.
 
 {freePlanNote} See [Pricing](/pricing/) for the plans.
+
+[label-order]: /docs/reference/labels/#custom-labels
+[connect]: /docs/guides/connect-an-overflow-provider/

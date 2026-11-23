@@ -4,8 +4,8 @@ description: >-
   Connect a Linux machine or a Mac to your workspace with one command.
 ---
 
-ciproxy runs your jobs on your own machines first. Each machine runs the
-open-source agent, which starts a fresh VM for each job.
+By default, ciproxy runs your jobs on your own machines first. Each machine
+runs the open-source agent, which starts a fresh VM for each job.
 
 ## What the machine needs
 
@@ -47,9 +47,9 @@ measured. -->
 A Mac uses the same slots as a Linux machine, but it runs at most 2 jobs at
 a time, because Apple allows at most 2 macOS VMs on one Mac. A Mac with
 16 GB of memory has room for 1 slot, so it runs 1 job at a time. Jobs of a
-macOS label never run on Boat. They wait for a free Mac. A Mac counts as one
-machine of your plan, as a Linux machine does. Other apps that run macOS
-VMs on the Mac count against its limit of 2 VMs too.
+macOS label run only on your Macs. They wait for a free Mac. A Mac counts
+as one machine of your plan, as a Linux machine does. Other apps that run
+macOS VMs on the Mac count against its limit of 2 VMs too.
 
 Run the same install command in Terminal on the Mac. The agent runs as a
 launchd service, and it keeps the Mac awake, so the Mac needs no sleep
@@ -123,8 +123,9 @@ The page of a machine that cannot run jobs offers to remove it.
 ## After the machine connects
 
 - **Warm runners:** the warm runner count of each machine is 2 by default.
-  ciproxy starts warm runners up to that count when the machine has free
-  slots and disk for them. Change the count on the page of the machine.
+  When your machines come first in the label order, ciproxy starts warm
+  runners up to that count if the machine has free slots and disk. Change
+  the count on the page of the machine.
 - **Cost:** enter the monthly cost of the machine on its page. The savings
   report compares that cost with the cost of hosted runners.
 - **Plan:** each machine counts toward the machines of your plan, also while

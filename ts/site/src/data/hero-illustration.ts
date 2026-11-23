@@ -6,8 +6,8 @@
 
 export type SlotState = "busy" | "warm" | "free";
 
-/** Where a running job runs: an own machine, or Boat. */
-export type JobPlace = { machine: string } | "boat";
+/** Where a job runs: an own machine or an overflow provider. */
+export type JobPlace = { machine: string } | { provider: string };
 
 export type IllustrationJob = {
   name: string;
@@ -18,6 +18,7 @@ export type IllustrationJob = {
 };
 
 const fullMachine: readonly SlotState[] = Array<SlotState>(6).fill("busy");
+const providerName = "Boat";
 
 export const heroIllustration = {
   workspace: "mokly-ai",
@@ -27,13 +28,10 @@ export const heroIllustration = {
     { name: "hetzner-ax42-2", slots: fullMachine },
     { name: "hetzner-ax42-3", slots: fullMachine },
   ],
-  onBoat: 46,
+  overflow: { name: providerName, running: 46, spent: 61.2, limit: 200 },
   running: 64,
   waiting: 12,
-  /** How long a job waits for a slot before it starts on Boat. */
-  boatWaitSeconds: 30,
-  boatSpent: 61.2,
-  boatLimit: 200,
+  overflowWaitSeconds: 30,
   jobs: [
     {
       name: "build (linux-x64)",
@@ -53,14 +51,14 @@ export const heroIllustration = {
       name: "e2e (chromium) 1/4",
       repo: "mokly",
       ref: "#1544",
-      place: "boat",
+      place: { provider: providerName },
       time: "1m 12s",
     },
     {
       name: "e2e (chromium) 2/4",
       repo: "mokly",
       ref: "#1544",
-      place: "boat",
+      place: { provider: providerName },
       time: "1m 12s",
     },
     {
@@ -70,12 +68,18 @@ export const heroIllustration = {
       place: { machine: "hetzner-ax42-3" },
       time: "2m 40s",
     },
-    { name: "clippy", repo: "mokly", ref: "#1544", place: "boat", time: "58s" },
+    {
+      name: "clippy",
+      repo: "mokly",
+      ref: "#1544",
+      place: { provider: providerName },
+      time: "58s",
+    },
     {
       name: "unit (node 24)",
       repo: "mokly-cloud",
       ref: "#319",
-      place: "boat",
+      place: { provider: providerName },
       time: "44s",
     },
   ] satisfies readonly IllustrationJob[],

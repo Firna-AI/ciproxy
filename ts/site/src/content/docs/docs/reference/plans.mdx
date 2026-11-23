@@ -26,7 +26,8 @@ machines. Every workspace starts on {tiers.free.name}.
 - Prices are in US dollars, and do not include tax. ciproxy collects no tax.
 - Own machines count Linux machines and Macs alike: a Mac is one machine,
   at the same price.
-- No plan includes the Boat cost of overflow. Boat bills you for it.
+- You pay each overflow provider directly for its sandboxes, separately
+  from your ciproxy plan.
 - [Pricing](/pricing/) compares the features of the plans, and marks the
   features that come later.
 
@@ -43,13 +44,13 @@ effect at once, and Stripe prorates it for the rest of the period.
 
 ## What counts as a start
 
-A start is one job that a ciproxy runner takes, on your machines or on
-Boat, whatever its result.
+A start is one job that a ciproxy runner takes, whatever its result. The
+runner can be on your machines or on an overflow provider.
 
 - A job counts at the moment that a runner takes it.
 - A job that runs again is a new start.
 - A warm runner that takes no job is not a start.
-- A Boat runner that takes no job is not a start.
+- A runner on an overflow provider counts only if it takes a job.
 - A job that no runner takes is not a start, for example a job that someone
   cancels while it waits.
 - The starts of a workspace count the jobs of all its organizations.

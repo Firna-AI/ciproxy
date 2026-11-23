@@ -722,15 +722,17 @@ Depends on: 2
 
 Pages that name Boat for a rule of every provider become provider-neutral.
 
-- [ ] Rename or split `guides/connect-boat.md` to match the mockup docs
+- [x] Rename or split `guides/connect-boat.md` to match the mockup docs
       sidebar and Quickstart step "Connect an overflow provider". Keep the
       Boat key and wallet steps.
-- [ ] Update `set-a-spend-limit.md`,
+- [x] Update `set-a-spend-limit.md`,
       `how-ciproxy-works.md`, `reference/labels.mdx`, `plans.mdx`, the
       security pages, the quickstart, and the index. Describe the label
       order.
-- [ ] Update `tiers.ts` and `plan-compare.ts`.
-- [ ] Run the site lint, typecheck, and build.
+- [x] Update `tiers.ts` and `plan-compare.ts`.
+- [x] Run the site lint, typecheck, and build.
+
+Evidence: `.context/providers-interface/m11-screens/`.
 
 ## Milestone 12: Second provider follow-up
 

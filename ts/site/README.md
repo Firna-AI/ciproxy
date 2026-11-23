@@ -18,8 +18,8 @@ The pages follow the marketing and docs mockups under
 - `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
   of the docs sidebar mockup, in its order:
   - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
-  - Guides under `/docs/guides/`: Add a machine, Connect Boat, Move your
-    workflows, Set a spend limit, and Remove a machine.
+  - Guides under `/docs/guides/`: Add a machine, Connect an overflow
+    provider, Move your workflows, Set a spend limit, and Remove a machine.
   - Reference under `/docs/reference/`: Labels and VM sizes, Agent install
     options, GitHub App permissions, and Plans and starts.
   - Security under `/docs/security/`: Job isolation, and The agent
@@ -237,6 +237,9 @@ This keeps it separate from the Markdown lint tool's YAML version.
 - [src/content/docs/docs/](src/content/docs/docs/index.mdx) holds the docs
   pages: `index.mdx` is `/docs/`, and the folders `guides`, `reference`, and
   `security` hold the pages of those sidebar groups.
+  Connect an overflow provider links to the Boat guide. The Boat guide
+  keeps its source path for the overflow crate README. It uses the slug
+  `docs/guides/boat`, and Astro redirects its old URL there.
 - [src/components/docs/StepsList.astro](src/components/docs/StepsList.astro)
   shows the ordered list of a docs page as Starlight steps.
 - [src/data/docs-links.ts](src/data/docs-links.ts) names the docs pages that

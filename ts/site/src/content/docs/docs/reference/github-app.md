@@ -62,9 +62,9 @@ An owner can suspend or remove the App on GitHub.
 - **Remove:** the organization leaves its workspace. Its warm runners stop
   at once, and its running jobs finish. A job that a warm runner took just
   before the removal can fail.
-- Boat sandboxes of the organization whose runner started end when their
-  runner exits, or at their lifetime of 6 hours, or 2 hours on a Boat free
-  trial.
+- When a sandbox's runner has started, the sandbox ends when its runner
+  reports its exit or when the sandbox reaches its lifetime. The lifetime
+  is 6 hours, or less if the provider account gives a shorter lifetime.
 - The scale sets and the runners of the organization stay on GitHub, because
   ciproxy has no GitHub access left to delete them.
 - ciproxy deletes the data of the organization 30 days after the removal. A
@@ -72,5 +72,5 @@ An owner can suspend or remove the App on GitHub.
   workspace, with its job history.
 - When the last organization of a workspace removes the App, ciproxy revokes
   each machine and each install token of the workspace at once, and starts
-  no new Boat runner. The subscription ends at the end of the paid period.
-  ciproxy deletes the data of the workspace 30 days after the removal.
+  no new runner on any provider. The subscription ends at the end of the
+  paid period. ciproxy deletes the workspace data 30 days after the removal.

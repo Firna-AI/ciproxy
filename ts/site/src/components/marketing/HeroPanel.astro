@@ -15,8 +15,9 @@ import "./hero-panel.css";
 
 const slots = scene.machines.flatMap((machine) => machine.slots);
 const busy = slots.filter((slot) => slot === "busy").length;
-const spentPercent = Math.min(scene.boatSpent / scene.boatLimit, 1) * 100;
-const spent = `${formatMoney(scene.boatSpent)} of ${formatMoney(scene.boatLimit)}`;
+const { overflow } = scene;
+const spentPercent = Math.min(overflow.spent / overflow.limit, 1) * 100;
+const spent = `${formatMoney(overflow.spent)} of ${formatMoney(overflow.limit)}`;
 ---
 
 <figure class="hero-figure">
@@ -61,25 +62,26 @@ const spent = `${formatMoney(scene.boatSpent)} of ${formatMoney(scene.boatLimit)
             </li>
           ))}
         </ul>
-        <div class="hp-boat">
-          <span class="hp-boat-name">
+        <div class="hp-provider">
+          <span class="hp-provider-name">
             <Icon
               name="cloud"
               size={15}
               strokeWidth={1.75}
               class="icon-muted"
             />
-            <span class="strong">Boat</span>
+            <span class="strong">{overflow.name}</span>
           </span>
-          <span class="num">{formatCount(scene.onBoat)} running</span>
+          <span class="num">{formatCount(overflow.running)} running</span>
         </div>
         <p class="caption">
-          {scene.waiting} jobs wait for a slot. Each starts on Boat after{" "}
-          {scene.boatWaitSeconds} seconds.
+          {scene.waiting} jobs wait for a slot. If no slot opens in{" "}
+          {scene.overflowWaitSeconds} seconds, they can start on {overflow.name}
+          .
         </p>
         <div class="hp-spend">
           <p class="hp-meter-head">
-            <span class="strong">Boat this month</span>
+            <span class="strong">{overflow.name} this month</span>
             <span class="num hp-meter-value">{spent}</span>
           </p>
           <span class="hp-meter" role="img" aria-label={spent}>
@@ -103,10 +105,10 @@ const spent = `${formatMoney(scene.boatSpent)} of ${formatMoney(scene.boatLimit)
               <span class="hp-job-ref muted">
                 {job.repo} {job.ref}
               </span>
-              {job.place === "boat" ? (
+              {"provider" in job.place ? (
                 <span class="hp-where">
                   <Icon name="cloud" size={14} class="icon-muted" />
-                  <span>Boat</span>
+                  <span>{job.place.provider}</span>
                 </span>
               ) : (
                 <span class="hp-where">

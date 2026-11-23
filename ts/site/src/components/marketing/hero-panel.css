@@ -147,7 +147,7 @@
   background: var(--c-slot-warm);
 }
 
-.hp-boat {
+.hp-provider {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -158,7 +158,7 @@
   background: var(--c-bg);
 }
 
-.hp-boat-name,
+.hp-provider-name,
 .hp-where {
   display: inline-flex;
   align-items: center;
@@ -174,7 +174,7 @@
   color: var(--c-ink);
 }
 
-/* The Boat spend against its limit: a thin bar on the soft accent. */
+/* The provider's spend against its limit: a thin bar on the soft accent. */
 
 .hp-spend {
   display: flex;

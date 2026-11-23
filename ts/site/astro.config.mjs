@@ -9,6 +9,9 @@ const tint = (token, percent) =>
 
 export default defineConfig({
   site: "https://ciproxy.dev",
+  redirects: {
+    "/docs/guides/connect-boat": "/docs/guides/boat/",
+  },
   integrations: [
     starlight({
       title: "ciproxy",
@@ -101,7 +104,10 @@ export default defineConfig({
           label: "Guides",
           items: [
             { label: "Add a machine", slug: "docs/guides/add-a-machine" },
-            { label: "Connect Boat", slug: "docs/guides/connect-boat" },
+            {
+              label: "Connect an overflow provider",
+              slug: "docs/guides/connect-an-overflow-provider",
+            },
             {
               label: "Move your workflows",
               slug: "docs/guides/move-your-workflows",

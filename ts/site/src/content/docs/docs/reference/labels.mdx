@@ -17,9 +17,10 @@ import {
   macStudio,
 } from "../../../../data/hardware.ts";
 
-Each job starts in a fresh VM of the platform and size of its label: on
-your machines first, and on Boat when they are busy. A job of a macOS label
-runs on your Macs only.
+Each job starts in a fresh VM at the first place in its label order that
+can take it. A new Linux label puts your machines first, then the providers
+your workspace has connected, in the order you first connected them. A job
+of a macOS label runs on your Macs only.
 
 ## Default labels
 
@@ -71,8 +72,7 @@ A job of a macOS label, such as `ciproxy-macos`, runs in a fresh macOS VM
 on one of your Macs. The macOS image holds Xcode and the tools of the
 GitHub runner image for `macos-latest`.
 
-- A macOS label runs on your Macs only. Its jobs never run on Boat, so they
-  wait for a free Mac.
+- A macOS label runs on your Macs only. Its jobs wait for a free Mac.
 - A Mac uses the same slots as a Linux machine, but it runs at most
   {macosVmLimit} job VMs at a time, because Apple allows at most
   {macosVmLimit} macOS VMs on one Mac. A Mac Studio with {macStudio.threads}
@@ -88,10 +88,15 @@ Add a label with its own platform and size in **Settings**, under
 disk in GB, with at least 1 GB of free disk. Sizes use decimal GB, so 1 GB
 is 1,000,000,000 bytes.
 
-Each Linux label runs on your machines, on Boat, or on both, with the
-switches **Your machines** and **Boat**. A label that allows both starts its
-jobs on your machines first. A macOS label runs on your Macs only, so its
-dialog has no switches.
+Each Linux label has an order of places. You can put a provider before
+your machines or leave your machines out. In the label dialog, move or
+remove a place. Use **Add a place** to add your machines or a provider
+that your workspace has connected before.
+
+The first time you connect a provider, ciproxy adds it to the end of each
+Linux label's order. A disconnected or unavailable provider stays in the
+order, and jobs skip it while it cannot take them. If the order is empty,
+jobs wait in GitHub. The order for macOS is fixed to your machines.
 
 - A label name follows the rules of GitHub for runner labels. ciproxy checks
   the name with GitHub when you save the label.
@@ -102,27 +107,39 @@ dialog has no switches.
   label stay queued in GitHub, and its running jobs finish.
 - After you change the size of a label, each job that a runner takes gets
   the new size. A job that runs during the change keeps its VM.
-- The dialog of a label says how many jobs of its size fit on each of your
-  machines at a time.
+- When the order includes your machines, the dialog shows how many jobs
+  of the label's size fit on each machine at a time.
+
+### When nothing fits
 
 :::note[Sizes larger than your machines]
-A Linux job whose size fits none of your machines runs on Boat only. When no Boat
-size fits either, the label setting **When nothing fits** decides: its jobs
-wait, or run on the largest Boat size.
+If a Linux job fits none of your machines, it can run at a provider in
+its order that has a size that fits. When no place in the order fits the
+job, the label setting **When nothing fits** applies.
 :::
 
-**Wait** is the default. **Run on the largest Boat size** can give a job
-less vCPU, memory, or free disk than its label, but its disk always holds
-the image.
+- **Wait** is the default. Jobs stay queued in GitHub until a place in the
+  order fits.
+- **Run on the largest size** uses the largest size of the first eligible
+  provider in the order. A provider is eligible when jobs skip it only
+  because of its sizes and its largest size holds the complete image.
+  The job can get less vCPU, memory, or free disk than its label requests.
+  When no provider meets these conditions, the job waits.
 
 ## Where a job runs
 
-A job that one of your machines can run waits there for room, up to the
-overflow wait. Then it starts on Boat, when Boat can take it. The wait is
-30 seconds by default. Set it in **Settings**, under **Overflow**: at once,
-15 seconds, 30 seconds, 1 minute, or 2 minutes.
+A job goes to the next place in its order when the current place cannot
+take it. Jobs move between providers without an extra wait.
 
-At the Boat spend limit, jobs run on your machines only, and wait there for
-room.
+A Linux job waits up to the overflow wait before it leaves your machines
+for the next place. It skips the wait if none of your machines can run it.
+In **Settings**, under **Overflow**, set **Wait for a free slot on your
+machines** to **At once**, **15 seconds**, **30 seconds**, **1 minute**, or
+**2 minutes**. The default is 30 seconds.
+
+Each overflow provider has its own monthly spend limit. Jobs skip a
+provider while its limit holds new starts.
+[Set a spend limit](/docs/guides/set-a-spend-limit/) explains when it can
+take jobs again.
 
 [container]: /docs/guides/move-your-workflows/#run-steps-in-another-image
