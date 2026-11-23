@@ -56,6 +56,13 @@ User decisions, 23 November 2026, from the brainstorm of the same day:
 - Item 5, A: the GCP leg runs on a new nested-KVM VM, and its results carry
   the word "nested". Rejected: B, a GCP bare-metal instance, because of its
   cost.
+- Item 6, C, 23 November 2026: a new GitHub organization with its own
+  main-preview workspace on Team holds the benchmark repositories. Rejected:
+  A, `firna-test-org` as it is, B, `Firna-AI`, D, `firna-test-org` for the
+  benchmark only, E, `futex-ai` or `mokly-ai`, and F, two organizations.
+  The user did not choose the wider fix G, a guide of the test
+  organizations. Reason: only a new organization gives a workspace that no
+  other work shares.
 
 ### 6. Which GitHub organization holds the benchmark repositories?
 
@@ -178,7 +185,7 @@ My calls, 23 November 2026:
 
 ## Milestone 1: Accounts and the workspace
 
-Depends on: none. Waits for item 6.
+Depends on: none
 
 The user creates the accounts. The agent checks each step.
 
