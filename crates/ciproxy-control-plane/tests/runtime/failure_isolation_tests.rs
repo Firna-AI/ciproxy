@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_control_plane::runtime::{ImageOffer, MachineRuntime};
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -96,7 +96,7 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        Some(image),
+        Some(ImageOffer::unsigned(image)),
         Arc::new(Unimock::new(())),
     );
     runtime.settled_tick().await.unwrap();
