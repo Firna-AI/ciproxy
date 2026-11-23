@@ -13,7 +13,8 @@ the CPU and the memory of each step.
 The guest program samples the CPU and the memory of its VM once per second,
 from the start of the job to the exit of the runner. It sends the samples
 with its runner exit report. On an own machine, the agent forwards them to
-the control plane. On Boat, the end report of the sandbox carries them. The
+the control plane. On Boat, the end report of the sandbox carries them, and
+the guest also sends them every 30 seconds while the job runs. The
 control plane stores the samples with the job, and it gets the steps of the
 job as decision 1 says. The job page shows the peaks of the job, a chart
 over time, and the figures of each step.
@@ -22,8 +23,9 @@ The change does not cover size hints, figures on the job list, figures
 while a job runs, figures for each process, alerts, or an export to the
 customer's own monitoring. A job that ran before the change has no figures.
 
-Decisions 1 to 4 wait for the user. Each TODO that needs an answer ends
-with "Waits for decision N". The other TODOs do not wait.
+Decision 1 waits for the user. The user answered decisions 2, 3, and 4 on
+23 November 2026. Each TODO that needs the answer to decision 1 ends with
+"Waits for decision 1". The other TODOs do not wait.
 
 Contract owners:
 
@@ -115,8 +117,7 @@ Contract owners:
   likeness to GitHub. B also keeps the guest alive when something stops
   the whole job group. A is enough if Milestone 4 finds no `systemd-oomd`
   on Boat. Choose D for the job behaviour of today with figures.
-- **Action:** ask the user, because B changes what a job does when it runs
-  out of memory, and no requirement covers that behaviour.
+- **Action:** The user chose B on 23 November 2026, in the words "2 = B".
 
 ## Decision 1. Customers cannot see step CPU and memory
 
@@ -300,9 +301,7 @@ and the
 - **Recommendation:** C. It keeps the stores-or-logs rule, and it keeps the
   names of named steps and of remote action steps. Choose E if readers
   need the names of script steps.
-- **Action:** ask the user, because A, C, and E trade the security rule
-  against the names that a reader needs, and every option changes the
-  words of that rule.
+- **Action:** The user chose C on 23 November 2026, in the words "3 = C".
 
 ## Decision 4. Boat can delete a sandbox before its report
 
@@ -370,8 +369,8 @@ and the
 - **Recommendation:** B. It keeps the figures of each Boat job, and Boat
   bills more only when a report is late. Choose D for figures also when a
   report is lost or refused.
-- **Action:** ask the user, because B changes when ciproxy deletes a
-  sandbox, which `docs/protocol/overflow.md` states.
+- **Action:** The user chose B and C together on 23 November 2026, in the
+  words "4 = B + C".
 
 ## Design
 
@@ -403,13 +402,15 @@ Design calls, my calls, 22 November 2026:
 - **Transport:** the existing runner exit messages get an optional `usage`
   field: guest to agent, agent to control plane, and the end report of a
   Boat sandbox. Reason: no new message and no version change. Older guests
-  send no field, and older readers ignore it.
+  send no field, and older readers ignore it. On Boat, decision 4 adds one
+  new message, the sample report.
 - **Control plane queue:** the queue of agent events holds only small
   events of a fixed size. The usage takes the byte-bounded worker payloads
   beside the queue, or a store write before the queue.
 - **Lost reports:** a lost exit report loses the figures, and the job page
   says that the job has no figures. No queue retries them. Reason: the
-  figures inform and never decide.
+  figures inform and never decide. On Boat, the sample reports of decision
+  4 keep all but the last 30 seconds.
 - **Checks:** the control plane drops a `usage` value with more than 3,600
   points, arrays of different lengths, CPU above the vCPUs of the VM that
   ran the job, or memory above its memory. On Boat, these limits come
@@ -457,6 +458,42 @@ Design calls, my calls, 22 November 2026:
   session. That session runs the agent, the model, and the effort of the
   `brainstorming` action.
 
+Design calls, my calls, 23 November 2026, for the answers:
+
+- **Runner scope:** the guest starts the runner through `systemd-run
+  --scope` with `OOMPolicy=continue`. The runner stays a child process of
+  the guest, but it leaves the control group of the guest service.
+  Reason: the guest keeps its supervision and the exit code of the runner.
+- **Guest protection:** the guest gives itself the lowest out-of-memory
+  score, and the runner scope gets the normal score. Reason: the kernel
+  then stops a job process, not the guest.
+- **Out-of-memory rule home:** `docs/protocol/job-usage.md` states what a
+  job does when the kernel stops one of its processes. Reason: the rule
+  and the out-of-memory figure belong together, and `agent.md` already
+  passes 250 lines.
+- **Script names:** a step name that starts with "Run", "Pre Run", or
+  "Post Run" keeps its text only when the rest is a remote action, such as
+  `actions/checkout@v4` or `docker://alpine:3.20`. Each other such name
+  becomes "Run script". Reason: only a remote action reference is safe to
+  keep, as decision 3 says.
+- **Rule words:** "Secrets and job data" and the site page then say that
+  the control plane never stores or logs the code of a job. Reason: the
+  timing read already receives step names, as decision 3 says.
+- **Hold:** the hold of decision 4 runs on the existing 10-second cleanup
+  tick, with no timer of its own. Reason: up to about 25 seconds of hold
+  costs less than a second timer path.
+- **Sample reports:** on Boat, the guest posts its samples every 30 seconds
+  to the existing callback URL, with the sandbox token. Each report holds
+  the whole series so far. The end report also holds the final series.
+  Reason: a report then never depends on an earlier one.
+- **Report limits:** the control plane accepts sample reports only while
+  the sandbox record is live, at most one each 10 seconds for a sandbox.
+  It keeps only the newest series. The end report stays one-time. Reason:
+  job code can read the token from the memory of the guest.
+- **Report traffic:** a long job sends up to about 100 KB every 30 seconds.
+  Reason: whole-series reports are simpler than deltas, because the
+  points merge as the series grows.
+
 Contract sketch, for the protocol crate:
 
 - `JobUsage`: the platform, the UTC start of the first point, the length
@@ -465,6 +502,9 @@ Contract sketch, for the protocol crate:
   out-of-memory kills.
 - `GuestToAgent::RunnerExited` and `AgentMessage::RunnerExited` get
   `usage: Option<JobUsage>`, which serializes only when present.
+- `GuestToAgent::UsageSamples` holds the runner and its `JobUsage`. Only a
+  Boat guest sends it, to the callback URL. A guest in `vsock` mode never
+  sends it, so older agents never see it.
 
 ## Milestone 1: Mockups
 
@@ -482,8 +522,8 @@ five screens, so a new sub-page holds the other states of the panel.
       `@firna/ui` and its chart family first.
 - [ ] Add usage fixtures to the own-machine and Boat states of the job
       page. Include a step that holds no point.
-- [ ] Name the steps of the fixtures as decision 3 says. Waits for
-      decision 3.
+- [ ] Name the steps of the fixtures with the script names design call.
+      Include a script step that shows as "Run script".
 - [ ] Add a sub-page for the panel under
       `docs/mockups/src/entries/app/jobs/`, with at most five states: a
       step that ran out of memory, a macOS job, a running job, a job
@@ -506,16 +546,17 @@ The protocol docs state the requirements of the figures before the code.
       mockup pages of Milestone 1. Waits for decision 1.
 - [ ] Add the CPU and memory samples and the steps of each job to the job
       metadata in "Secrets and job data" of `docs/protocol/security.md`,
-      with the rule for step names, and the rule words that decision 3
-      gives. Link the new doc. Waits for decision 3.
+      with the script names and rule words design calls. Say in "Key
+      custody" that the sandbox token also sends the samples of its own
+      job. Link the new doc.
 - [ ] Split `docs/protocol/security.md` as the doc split design call says.
       Update every link to the moved sections in `docs/`, `plans/`, the
       READMEs, the mockups, and `ts/site`.
-- [ ] Write what a job does when one of its processes runs out of memory.
-      Waits for decision 2.
-- [ ] Write the answer to decision 4 into `docs/protocol/overflow.md`, when
-      it changes that doc. That doc has 267 lines, so split it as the
-      `documentation` skill says. Waits for decision 4.
+- [ ] Write the out-of-memory rule of decision 2 into the new doc: only
+      the stopped process ends, and the job goes on.
+- [ ] Write the hold and the sample reports of decision 4 into
+      `docs/protocol/overflow.md`. That doc has 267 lines, so split it as
+      the `documentation` skill says.
 - [ ] Link the new doc from "What the dashboard shows" in
       `docs/protocol/job-routing.md`.
 - [ ] Add the samples to the boundaries "GitHub and the control plane" and
@@ -536,6 +577,8 @@ plane accepts the field and ignores it until Milestone 8.
 - [ ] Add the optional `usage` field to `GuestToAgent::RunnerExited` and
       `AgentMessage::RunnerExited`. Test that a message without the field
       parses, and that the field round-trips.
+- [ ] Add `GuestToAgent::UsageSamples`, as the contract sketch says. Test
+      that it round-trips.
 - [ ] Forward the usage of a guest exit report in
       `crates/ciproxy-agent/src/observations.rs`. An exit report that the
       agent makes itself carries no usage. Test both cases.
@@ -548,15 +591,18 @@ Depends on: 2
 A Linux guest keeps running when the kernel stops a step process for lack
 of memory.
 
-- [ ] Apply the chosen option to `image/ciproxy-guest.service`,
-      `image/ciproxy-boat-guest.service`, and the guest program. Waits for
-      decision 2.
+- [ ] Start the runner in its own scope, as the runner scope design call
+      says, in `crates/ciproxy-guest/src/platform.rs`.
+- [ ] Give the guest and the runner their out-of-memory scores, as the
+      guest protection design call says.
+- [ ] Add a stand-in for `systemd-run` to the chroot check in
+      `image/check-runner-environment.py`.
 - [ ] Prove in a Linux job VM and in a Boat sandbox that a step that runs
       out of memory fails alone, and that the later steps and the exit
-      report still run. Check whether Boat runs `systemd-oomd`. Waits for
-      decision 2.
-- [ ] Update the READMEs of `ciproxy-guest` and `image`. Waits for
-      decision 2.
+      report still run. Check whether Boat runs `systemd-oomd`.
+- [ ] Update `plans/follow-ups/boat-runner-stderr-drain.md`, because its
+      stderr helper leaves the control group of the guest.
+- [ ] Update the READMEs of `ciproxy-guest` and `image`.
 
 ## Milestone 5: Guest sampler on Linux
 
@@ -574,6 +620,9 @@ The guest program measures Linux job VMs and Boat sandboxes.
       job. End them when the runner exits.
 - [ ] Send the samples with the exit report in `vsock` mode and in `boat`
       mode.
+- [ ] In `boat` mode, also post the samples every 30 seconds, as the sample
+      reports design call says. A failed post logs a warning and changes
+      nothing else.
 - [ ] Prove that a failed sample changes neither the runner nor its exit
       report. Log a warning, as the guest does for other failed
       observations.
@@ -612,7 +661,8 @@ The store keeps the samples and the steps of each job.
 
 Depends on: 7
 
-The control plane saves the samples from both exit reports.
+The control plane saves the samples from both exit reports and from the
+Boat sample reports.
 
 - [ ] Save the usage of `AgentMessage::RunnerExited` for the job of its
       runner. Pass it as the control plane queue design call says, not in
@@ -620,8 +670,13 @@ The control plane saves the samples from both exit reports.
       `crates/ciproxy-control-plane/src/runtime_agent_event.rs`.
 - [ ] Save the usage of the Boat end report that
       `crates/ciproxy-control-plane/src/boat_callback.rs` receives.
-- [ ] Apply the answer to decision 4 to the Boat cleanup, with a test for
-      a late and a lost end report. Waits for decision 4.
+- [ ] Accept the Boat sample reports with the report limits design call.
+      Test the rate limit, a report after the record ends, and a newer
+      series that replaces an older one.
+- [ ] Add the hold of decision 4 to the retirement check in
+      `crates/ciproxy-control-plane/src/boat_authority.rs`, not inside the
+      cleanup lock. Test a late end report, which keeps the final series,
+      and a lost one, which keeps the newest sample report.
 - [ ] Apply the checks of the design. Test each check, and test that a
       dropped usage keeps the exit.
 - [ ] Update the READMEs of `ciproxy-control-plane` and `ciproxy-overflow`.
@@ -640,8 +695,8 @@ the milestone starts.
       API in `crates/ciproxy-github/src/rest/job_times.rs`. Save the steps
       of every finished job of the run that the reply covers. Waits for
       decision 1.
-- [ ] Apply the rule of decision 3 to the step names before the store
-      write. Waits for decision 3.
+- [ ] Apply the script names design call to the step names before the
+      store write. Test each kind of name.
 - [ ] Test that one read serves all finished jobs of a run, and that a step
       without times is saved without them. Waits for decision 1.
 - [ ] Update the `ciproxy-github` README. Waits for decision 1.
@@ -686,7 +741,8 @@ The public docs explain the figures.
 
 - [ ] Add the samples and the steps to the stored job details in
       `ts/site/src/content/docs/docs/security/job-isolation.md`, with the
-      rule words that decision 3 gives.
+      rule words design call. Say that the sandbox token also sends the
+      samples of its own job.
 - [ ] Add a docs page about the CPU and memory panel: what each figure
       means, and how to use the figures to choose a label size.
 - [ ] Build the site with `npm --prefix ts run site:build`.
@@ -701,6 +757,9 @@ The change works end to end, and the review passes.
       Linux machine, a Mac, and Boat. Check that the step figures match the
       step times on GitHub within one second. Save the evidence under
       `.context/job-step-cpu-and-memory/`.
+- [ ] Run a step whose name uses a secret. Check that the GitHub jobs API
+      masks the secret in the name. If it does not, stop and raise a
+      decision, because decision 3 relies on it.
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
 - [ ] Review the complete local diff against `origin/main` with the
