@@ -96,7 +96,7 @@ class Live:
     def intents(self):
         sql = """SELECT COALESCE(json_agg(json_build_object(
           'runner',runner_id,'delivery',delivery_id)), '[]'::json)
-          FROM boat_runner_intents WHERE workspace_id='%s'::uuid""" % self.workspace
+          FROM overflow_runner_intents WHERE workspace_id='%s'::uuid""" % self.workspace
         return self.query(sql)
 
     def new_intents(self):

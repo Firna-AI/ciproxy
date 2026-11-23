@@ -103,7 +103,7 @@ pub fn compare(list: &PriceList, days: &[DailyTotal]) -> Comparison {
     let mut amount = Decimal::ZERO;
     let mut missing = Vec::new();
     for size in days.iter().flat_map(|day| &day.sizes) {
-        let minutes = size.machines.minutes + size.boat.minutes;
+        let minutes = size.machines.minutes + size.overflow.minutes;
         if minutes == Decimal::ZERO {
             continue;
         }

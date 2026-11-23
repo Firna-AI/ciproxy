@@ -1,7 +1,7 @@
-//! Encrypted Boat key versions and safe account metadata.
+//! Encrypted overflow provider keys and safe account metadata.
 
 diesel::table! {
-    boat_accounts (id) {
+    overflow_provider_accounts (id) {
         id -> Uuid,
         workspace_id -> Uuid,
         account_name -> Text,
@@ -9,5 +9,6 @@ diesel::table! {
         connected_at -> Timestamptz,
         retired_at -> Nullable<Timestamptz>,
         rejected_at -> Nullable<Timestamptz>,
+        provider -> Text,
     }
 }

@@ -5,7 +5,7 @@ use std::thread;
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
-use ciproxy_store_interface::runtime_results::{BoatRunnerResult, BoatRunnerWrite};
+use ciproxy_store_interface::runtime_results::{OverflowRunnerResult, OverflowRunnerWrite};
 use ciproxy_store_interface::secrets::TokenHash;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
@@ -54,7 +54,7 @@ fn boat_result_and_delivery_cost_save_both_complete() {
     }
     let expected = database
         .store
-        .boat_runner_guard(workspace, record.runner_id)
+        .overflow_runner_guard(workspace, record.runner_id)
         .unwrap()
         .unwrap();
     database
@@ -82,9 +82,11 @@ fn boat_result_and_delivery_cost_save_both_complete() {
     wait_for_blocker(&mut observer, writer_pid, controller);
     let reader = tagged_store(&database.url);
     let guard = thread::spawn(move || {
-        reader
-            .store
-            .apply_boat_runner_result(workspace, &expected, BoatRunnerResult::Checked)
+        reader.store.apply_overflow_runner_result(
+            workspace,
+            &expected,
+            OverflowRunnerResult::Checked,
+        )
     });
     wait_for_blocker(&mut observer, reader.pid, writer_pid);
     diesel::sql_query("SELECT pg_advisory_unlock($1)")
@@ -99,8 +101,8 @@ fn boat_result_and_delivery_cost_save_both_complete() {
         "guard failed: {:?}",
         applied.as_ref().err()
     );
-    assert!(matches!(applied.unwrap(), BoatRunnerWrite::Applied(_)));
-    let saved = database.store.boat_runtime_snapshot(workspace).unwrap();
+    assert!(matches!(applied.unwrap(), OverflowRunnerWrite::Applied(_)));
+    let saved = database.store.overflow_runtime_snapshot(workspace).unwrap();
     let saved = saved
         .starts
         .iter()

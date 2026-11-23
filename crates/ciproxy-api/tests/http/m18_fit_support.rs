@@ -11,9 +11,10 @@ use ciproxy_overflow::provider::{BackendFactoryMock, BoatAccountApi, Capabilitie
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::SizeOffer;
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use rust_decimal::Decimal;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
@@ -29,16 +30,17 @@ pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn BoatAccoun
         .fixture
         .database
         .store
-        .connect_boat(
+        .connect_overflow_provider(
             pages.fixture.workspace,
-            &BoatAccount {
+            &OverflowProviderAccount {
+                provider: OverflowProvider::Boat,
                 id: Uuid::new_v4(),
                 account_name: "fit-test".into(),
                 connected_at: at("2026-11-01T00:00:00Z"),
                 retired_at: None,
                 rejected_at: None,
             },
-            &EncryptedBoatKey::new(vec![17]),
+            &EncryptedOverflowKey::new(vec![17]),
             1_000_000,
         )
         .unwrap();

@@ -25,8 +25,8 @@ Contact writes contain only observed columns.
 
 Own-machine queries save runner and command reservations atomically.
 A repeatable-read routing snapshot keeps reports, demand, and settings
-consistent. It also reads the Boat account, deliveries, registration
-identities, and the runner rows of Boat sandboxes in the same transaction.
+consistent. It also reads overflow accounts, deliveries, registration
+identities, and sandbox runner rows in the same transaction.
 A separate negative advisory-key range owns execution leases.
 Mutable machine, organization, and label authority is checked again under
 row locks before a new reservation commits.
@@ -43,13 +43,13 @@ updates the command. The first write saves the opaque ID. An identical
 replay preserves it. A different ID, invalid scope, missing command, or
 stopped runner returns false. State and command updates preserve the saved ID.
 Guarded result writes lock their guard rows and compare them again in one
-transaction. An own-machine result needs the complete saved guard. A Boat
-result needs only its lifecycle authority: the organization, the
-registration intent, the runner, its jobs, and a `BoatDeliveryGuard`. That
+transaction. An own-machine result needs the complete saved guard.
+An overflow result uses the organization, the registration intent, the
+runner, its jobs, and an `OverflowDeliveryGuard`. That
 delivery part holds the fixed inputs, phase, sandbox ID, end, and end
 report of the delivery. A usage or billing reading, a measured start, or a
-lifetime bound does not reject a Boat result.
-`apply_boat_runner_result` returns `BoatRunnerWrite::Applied` with the
+lifetime bound does not reject an overflow result.
+`apply_overflow_runner_result` returns `OverflowRunnerWrite::Applied` with the
 exact guard after the write, `Retired` after it removes the registration
 intent, or `Rejected`. A rejected result saves nothing, with one
 exception. A late registration can still save its actual GitHub runner ID

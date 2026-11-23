@@ -42,6 +42,7 @@ Each workspace has one PostgreSQL session lock.
 Synchronous queries run on blocking workers.
 The service saves the delivery, callback digest, and encrypted input before
 the first provider mutation.
+Each saved delivery identifies its provider. The service uses Boat.
 The durable `Unsent` phase keeps pending demand and permits preparation retries.
 It holds no fixed provider parameters and counts no provider cost bound.
 Both key preparations finish before an atomic `Creating` transition.

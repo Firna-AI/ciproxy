@@ -73,10 +73,10 @@ pub fn savings_report(input: ReportInput<'_>) -> SavingsReport {
     for size in days.iter().flat_map(|day| &day.sizes) {
         machines.starts += size.machines.starts;
         machines.minutes += size.machines.minutes;
-        boat.starts += size.boat.starts;
-        boat.minutes += size.boat.minutes;
+        boat.starts += size.overflow.starts;
+        boat.minutes += size.overflow.minutes;
     }
-    let boat_usd = days.iter().map(|day| day.boat_usd).sum();
+    let boat_usd = days.iter().map(|day| day.overflow_usd).sum();
     let costs = calculate_costs(input.machines, input.costs, input.range, input.at, boat_usd);
     let comparisons = input
         .price_lists

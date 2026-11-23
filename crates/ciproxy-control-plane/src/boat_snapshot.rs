@@ -13,7 +13,7 @@ use crate::snapshot::{instant, registration_target};
 
 pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<Sandbox> {
     let mut sandboxes = Vec::new();
-    for intent in &input.boat_intents {
+    for intent in &input.overflow_intents {
         let record = records
             .iter()
             .find(|record| record.delivery_id == intent.delivery_id);
@@ -34,7 +34,7 @@ pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<S
                 && job.runner_github_id.is_some()
                 && job.runner_github_id == intent.github_id
         });
-        let saved = input.boat_runners.iter().find(|runner| {
+        let saved = input.overflow_runners.iter().find(|runner| {
             runner.id == intent.runner_id
                 && runner.organization_id == intent.organization_id
                 && runner.scale_set_id == intent.scale_set_id

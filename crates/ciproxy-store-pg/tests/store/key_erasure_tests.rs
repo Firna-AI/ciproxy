@@ -4,7 +4,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use ciproxy_store_interface::runners::RunnerPlace;
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::store::StoreFactory;
 use ciproxy_store_pg::factory::PgStoreFactory;
 use diesel::connection::SimpleConnection;
@@ -53,16 +53,19 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
     let organization = database.organization(&workspace);
     let (label, scale_set) = database.label_and_scale_set(&organization);
     let key = account();
-    let ciphertext = EncryptedBoatKey::new(vec![1, 2, 3]);
+    let ciphertext = EncryptedOverflowKey::new(vec![1, 2, 3]);
     database
         .store
-        .connect_boat(workspace.id, &key, &ciphertext, 50_000_000)
+        .connect_overflow_provider(workspace.id, &key, &ciphertext, 50_000_000)
         .unwrap();
-    database.store.disconnect_boat(workspace.id, at()).unwrap();
+    database
+        .store
+        .disconnect_overflow_provider(workspace.id, at())
+        .unwrap();
     assert_eq!(
         database
             .store
-            .delete_unused_boat_keys(Uuid::new_v4())
+            .delete_unused_overflow_keys(Uuid::new_v4())
             .unwrap(),
         0
     );
@@ -100,7 +103,7 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
     diesel::sql_query(
         "INSERT INTO runners (
              id, workspace_id, organization_id, label_id, scale_set_id, state,
-             vcpus, memory_bytes, disk_bytes, boat_key_id, sandbox_id, boat_size_name, github_id
+             vcpus, memory_bytes, disk_bytes, overflow_key_id, sandbox_id, overflow_size_name, github_id
          ) VALUES ($1, $2, $3, $4, $5, 'busy', $6, $7, $8, $9, $10, $11, $12)",
     )
     .bind::<sql_types::Uuid, _>(pending.id)
@@ -118,7 +121,7 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
     .execute(&mut database.connection)
     .unwrap();
     let workspace_id = workspace.id;
-    let erase = thread::spawn(move || eraser.delete_unused_boat_keys(workspace_id));
+    let erase = thread::spawn(move || eraser.delete_unused_overflow_keys(workspace_id));
     wait_for_insert_blocker(&mut observer, insert_pid, erase_pid);
     database.connection.batch_execute("COMMIT").unwrap();
     let deleted = erase.join().unwrap().unwrap();
@@ -126,7 +129,7 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
     assert_eq!(
         database
             .store
-            .encrypted_boat_key(workspace.id, key.id)
+            .encrypted_overflow_key(workspace.id, key.id)
             .unwrap(),
         Some(ciphertext)
     );

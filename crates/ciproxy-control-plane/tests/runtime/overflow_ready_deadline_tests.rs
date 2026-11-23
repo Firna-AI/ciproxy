@@ -137,7 +137,7 @@ fn progress(harness: &Harness) -> Progress {
     let mut starts = harness
         .fixture
         .store
-        .boat_runtime_snapshot(harness.fixture.workspace)
+        .overflow_runtime_snapshot(harness.fixture.workspace)
         .unwrap()
         .starts;
     starts.sort_by_key(|start| start.launched_at);

@@ -32,7 +32,7 @@ async fn reinstall_then_boat_reconnect_retires_old_idle_supply_and_preserves_run
         .record_app_removal(workspace, organization, at())
         .unwrap();
     harness.runtime.settled_tick().await.unwrap();
-    let removed = store.boat_runtime_snapshot(workspace).unwrap();
+    let removed = store.overflow_runtime_snapshot(workspace).unwrap();
     let old_key = removed.accounts[0].account.id;
     assert_eq!(removed.accounts[0].account.retired_at, Some(at()));
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
@@ -57,7 +57,7 @@ async fn reinstall_then_boat_reconnect_retires_old_idle_supply_and_preserves_run
         "{result:?}"
     );
     result.unwrap();
-    let before_reconnect = store.boat_runtime_snapshot(workspace).unwrap();
+    let before_reconnect = store.overflow_runtime_snapshot(workspace).unwrap();
     assert_eq!(
         before_reconnect
             .starts
@@ -91,7 +91,7 @@ async fn reinstall_then_boat_reconnect_retires_old_idle_supply_and_preserves_run
         .await
         .unwrap();
     harness.runtime.settled_tick().await.unwrap();
-    let reconnected = store.boat_runtime_snapshot(workspace).unwrap();
+    let reconnected = store.overflow_runtime_snapshot(workspace).unwrap();
     assert_eq!(reconnected.accounts.len(), 2);
     assert_eq!(
         reconnected

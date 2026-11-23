@@ -3,12 +3,12 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::boat_delivery::BoatDeliveryGuard;
-use crate::boat_runtime::BoatRunnerIntent;
 use crate::error::Result;
 use crate::gateway::MachineSnapshot;
 use crate::github::GithubJob;
 use crate::organizations::Organization;
+use crate::overflow_delivery::OverflowDeliveryGuard;
+use crate::overflow_runtime::OverflowRunnerIntent;
 use crate::own_runners::OwnRunner;
 use crate::runners::Runner;
 use crate::scale_sets::RegistrationTarget;
@@ -64,23 +64,23 @@ pub enum OwnRunnerResult {
     Prepared,
 }
 
-/// Saved Boat identity, lifecycle, and installation at remote dispatch.
+/// Saved overflow identity, lifecycle, and installation at remote dispatch.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BoatRunnerGuard {
+pub struct OverflowRunnerGuard {
     /// Credential-free registration reservation.
-    pub intent: BoatRunnerIntent,
+    pub intent: OverflowRunnerIntent,
     /// Current installation identity and removal authority.
     pub organization: Option<Organization>,
     /// Current delivery phase and completion evidence.
-    pub delivery: Option<BoatDeliveryGuard>,
+    pub delivery: Option<OverflowDeliveryGuard>,
     /// Current materialized runner, including trusted Busy state.
     pub runner: Option<Runner>,
     /// Trusted jobs mapped to this registration.
     pub jobs: Vec<GithubJob>,
 }
 
-/// Conditional Boat registration result.
-pub enum BoatRunnerResult {
+/// Conditional overflow registration result.
+pub enum OverflowRunnerResult {
     /// Confirm unchanged saved authority before provider retirement.
     Checked,
     /// Preserve the actual response target and allow startup only under current admission.
@@ -99,31 +99,31 @@ pub enum BoatRunnerResult {
     Retired,
 }
 
-/// Exact saved authority after one conditional Boat result write.
-pub enum BoatRunnerWrite {
+/// Exact saved authority after one conditional overflow result write.
+pub enum OverflowRunnerWrite {
     /// The result applied and this authority remains saved in the same transaction.
-    Applied(Box<BoatRunnerGuard>),
+    Applied(Box<OverflowRunnerGuard>),
     /// Retirement applied and removed the registration reservation.
     Retired,
     /// Newer saved authority rejected the result.
     Rejected,
 }
 
-/// Scoped Boat authority reads and atomic conditional remote-result writes.
-pub trait BoatResultStore: Send + Sync {
-    /// Capture one Boat reservation under row locks.
-    fn boat_runner_guard(
+/// Scoped overflow authority reads and conditional remote-result writes.
+pub trait OverflowResultStore: Send + Sync {
+    /// Capture one overflow reservation under row locks.
+    fn overflow_runner_guard(
         &self,
         workspace_id: Uuid,
         runner_id: Uuid,
-    ) -> Result<Option<BoatRunnerGuard>>;
+    ) -> Result<Option<OverflowRunnerGuard>>;
     /// Apply against current lifecycle authority and return its exact saved result.
-    fn apply_boat_runner_result(
+    fn apply_overflow_runner_result(
         &self,
         workspace_id: Uuid,
-        expected: &BoatRunnerGuard,
-        result: BoatRunnerResult,
-    ) -> Result<BoatRunnerWrite>;
+        expected: &OverflowRunnerGuard,
+        result: OverflowRunnerResult,
+    ) -> Result<OverflowRunnerWrite>;
 }
 
 /// Scoped own-machine command reads and conditional remote results.

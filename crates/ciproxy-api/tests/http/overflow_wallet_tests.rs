@@ -75,7 +75,7 @@ async fn connects_wallet(orgs: Value, expected_wallets: Value, selected_wallet: 
         fixture
             .database
             .store
-            .boat_accounts(fixture.workspace)
+            .overflow_provider_accounts(fixture.workspace)
             .unwrap(),
         Vec::new()
     );
@@ -98,7 +98,7 @@ async fn connects_wallet(orgs: Value, expected_wallets: Value, selected_wallet: 
     let saved = fixture
         .database
         .store
-        .boat_runtime_snapshot(fixture.workspace)
+        .overflow_runtime_snapshot(fixture.workspace)
         .unwrap();
     assert_eq!(saved.accounts.len(), 1);
     assert_eq!(saved.accounts[0].state.wallet, ORGANIZATION);

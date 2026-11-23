@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
-use ciproxy_store_interface::metering::history::BoatCost;
-use ciproxy_store_interface::metering::totals::{AccountedBoat, DailyBoatCost};
+use ciproxy_store_interface::metering::history::OverflowCost;
+use ciproxy_store_interface::metering::totals::{AccountedOverflow, DailyOverflowCost};
 use rust_decimal::Decimal;
 
 use crate::report::range::{DateRange, midnight};
@@ -12,10 +12,10 @@ use crate::report::runtime::elapsed_minutes;
 
 /// Allocate start charges to their start date and runtime to UTC day overlap.
 pub fn daily_boat_costs(
-    costs: &[BoatCost],
+    costs: &[OverflowCost],
     range: DateRange,
     at: DateTime<Utc>,
-) -> Vec<DailyBoatCost> {
+) -> Vec<DailyOverflowCost> {
     let mut days = Vec::new();
     let mut day = range.from;
     while day < range.until && day <= at.date_naive() {
@@ -42,7 +42,7 @@ pub fn daily_boat_costs(
                     ) * cost.minute_usd
             })
             .sum();
-        days.push(DailyBoatCost { day, usd });
+        days.push(DailyOverflowCost { day, usd });
         day = next;
     }
     days
@@ -50,10 +50,10 @@ pub fn daily_boat_costs(
 
 /// Compute signed daily cost corrections without replaying a sandbox's start fee.
 pub fn boat_cost_deltas(
-    previous: Option<&AccountedBoat>,
-    current: &AccountedBoat,
+    previous: Option<&AccountedOverflow>,
+    current: &AccountedOverflow,
     range: DateRange,
-) -> Vec<DailyBoatCost> {
+) -> Vec<DailyOverflowCost> {
     let mut changes: BTreeMap<_, Decimal> = BTreeMap::new();
     if let Some(previous) = previous {
         for day in daily_boat_costs(
@@ -74,7 +74,7 @@ pub fn boat_cost_deltas(
     changes
         .into_iter()
         .filter(|(_, usd)| *usd != Decimal::ZERO)
-        .map(|(day, usd)| DailyBoatCost { day, usd })
+        .map(|(day, usd)| DailyOverflowCost { day, usd })
         .collect()
 }
 

@@ -112,7 +112,11 @@ impl OverflowSession for Session {
         )
         .execute(&mut self.connection)
         .store()?;
-        crate::boat::erase_unused_keys(&mut self.connection, self.workspace_id).store()?;
+        crate::overflow_provider_accounts::erase_unused_keys(
+            &mut self.connection,
+            self.workspace_id,
+        )
+        .store()?;
         Ok(())
     }
 }

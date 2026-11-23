@@ -65,7 +65,7 @@ async fn revoked_connection(reinstall: bool) {
         harness
             .database
             .store
-            .encrypted_boat_key(id(1), id(8))
+            .encrypted_overflow_key(id(1), id(8))
             .unwrap(),
         None
     );

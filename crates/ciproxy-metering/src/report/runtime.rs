@@ -47,11 +47,11 @@ pub fn daily_totals(jobs: &[UsageJob], range: DateRange, at: DateTime<Utc>) -> V
                 .or_insert_with(|| SizeTotal {
                     size: job.size,
                     machines: LocationTotals::default(),
-                    boat: LocationTotals::default(),
+                    overflow: LocationTotals::default(),
                 });
             let location = match job.place {
                 JobPlace::Machine => &mut total.machines,
-                JobPlace::Boat => &mut total.boat,
+                JobPlace::Boat => &mut total.overflow,
             };
             location.starts += starts;
             location.minutes += minutes;
@@ -59,7 +59,7 @@ pub fn daily_totals(jobs: &[UsageJob], range: DateRange, at: DateTime<Utc>) -> V
         days.push(DailyTotal {
             day,
             sizes: sizes.into_values().collect(),
-            boat_usd: Decimal::ZERO,
+            overflow_usd: Decimal::ZERO,
         });
         day = next;
     }
@@ -95,9 +95,9 @@ pub fn accounting_deltas(
         .into_values()
         .filter(|change| {
             change.machine_starts != 0
-                || change.boat_starts != 0
+                || change.overflow_starts != 0
                 || change.machine_minutes != Decimal::ZERO
-                || change.boat_minutes != Decimal::ZERO
+                || change.overflow_minutes != Decimal::ZERO
         })
         .collect()
 }
@@ -178,13 +178,13 @@ fn add_changes(
                 size: size.size,
                 machine_starts: 0,
                 machine_minutes: Decimal::ZERO,
-                boat_starts: 0,
-                boat_minutes: Decimal::ZERO,
+                overflow_starts: 0,
+                overflow_minutes: Decimal::ZERO,
             });
         delta.machine_starts += direction * size.machines.starts as i64;
         delta.machine_minutes += Decimal::from(direction) * size.machines.minutes;
-        delta.boat_starts += direction * size.boat.starts as i64;
-        delta.boat_minutes += Decimal::from(direction) * size.boat.minutes;
+        delta.overflow_starts += direction * size.overflow.starts as i64;
+        delta.overflow_minutes += Decimal::from(direction) * size.overflow.minutes;
     }
 }
 

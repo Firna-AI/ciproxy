@@ -3,10 +3,6 @@
 #![warn(unreachable_pub)]
 
 mod billing;
-mod boat;
-mod boat_registration_ownership;
-mod boat_results;
-mod boat_runtime;
 mod connection;
 mod connector;
 mod dashboard;
@@ -31,6 +27,11 @@ mod organization_lifecycle;
 mod organization_rows;
 mod organizations;
 mod overflow;
+mod overflow_provider;
+mod overflow_provider_accounts;
+mod overflow_registration_ownership;
+mod overflow_results;
+mod overflow_runtime;
 mod own_job_bindings;
 mod own_lease;
 mod own_observation;

@@ -3,9 +3,6 @@
 #![warn(unreachable_pub)]
 
 pub mod billing;
-pub mod boat;
-pub mod boat_delivery;
-pub mod boat_runtime;
 pub mod dashboard;
 pub mod error;
 pub mod gateway;
@@ -23,6 +20,9 @@ pub mod machines;
 pub mod metering;
 pub mod organizations;
 pub mod overflow;
+pub mod overflow_delivery;
+pub mod overflow_provider_accounts;
+pub mod overflow_runtime;
 pub mod own_runners;
 pub mod runners;
 pub mod runtime_results;

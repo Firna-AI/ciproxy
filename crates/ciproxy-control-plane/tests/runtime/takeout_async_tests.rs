@@ -27,7 +27,7 @@ async fn takeout_callback_waits_for_current_busy_answer_and_rechecks_changed_sav
     let intent = harness
         .fixture
         .store
-        .boat_runner_intents(workspace)
+        .overflow_runner_intents(workspace)
         .unwrap()
         .remove(0);
     harness
@@ -115,7 +115,7 @@ async fn takeout_busy_proof_survives_cost_refresh_during_and_after_its_remote_ch
     let intent = harness
         .fixture
         .store
-        .boat_runner_intents(workspace)
+        .overflow_runner_intents(workspace)
         .unwrap()
         .remove(0);
     harness

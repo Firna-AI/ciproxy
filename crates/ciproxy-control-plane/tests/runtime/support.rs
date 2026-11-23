@@ -227,7 +227,7 @@ impl Fixture {
         .bind::<sql_types::Uuid, _>(runner)
         .execute(&mut self.connection)
         .unwrap();
-        diesel::sql_query("UPDATE boat_runner_intents SET body=body-'registration_scale_set_id' WHERE workspace_id=$1 AND runner_id=$2")
+        diesel::sql_query("UPDATE overflow_runner_intents SET body=body-'registration_scale_set_id' WHERE workspace_id=$1 AND runner_id=$2")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(runner)
             .execute(&mut self.connection).unwrap();
     }
@@ -259,7 +259,7 @@ impl Fixture {
     /// Remove source proof to model conservative legacy registration recovery.
     pub(super) fn clear_boat_installation_authority(&mut self, runner: Uuid) {
         let count = diesel::sql_query(
-            "UPDATE boat_runner_intents SET installation_id=NULL
+            "UPDATE overflow_runner_intents SET installation_id=NULL
              WHERE workspace_id=$1 AND runner_id=$2",
         )
         .bind::<sql_types::Uuid, _>(self.workspace)

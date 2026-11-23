@@ -3,7 +3,7 @@
 use crate::error::{Error, Result, ResultExt};
 use serde::{Deserialize, Serialize};
 
-/// The whole-GB label request of one job VM or Boat sandbox.
+/// The whole-GB label request of one job VM or overflow sandbox.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct VmSize {
     /// The virtual CPU count.

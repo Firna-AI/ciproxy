@@ -57,7 +57,7 @@ impl MachineRuntime {
         }
         let store = self.store.clone();
         let current =
-            tokio::task::spawn_blocking(move || store.boat_runner_guard(workspace, runner))
+            tokio::task::spawn_blocking(move || store.overflow_runner_guard(workspace, runner))
                 .await
                 .internal()?
                 .internal()?;
@@ -120,7 +120,7 @@ impl MachineRuntime {
             return Err(Error::StateChanged);
         }
         for intent in input
-            .boat_intents
+            .overflow_intents
             .iter()
             .filter(|intent| intent.organization_id == organization_id)
         {

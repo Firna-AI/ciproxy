@@ -60,7 +60,7 @@ fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
         from: start.date_naive(),
         until: start.date_naive().succ_opt().unwrap(),
     };
-    let read = database.store.boat_accounting(workspace_id).unwrap();
+    let read = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(read.costs[0].ends_at, Some(start + Duration::hours(6)));
     assert_eq!(
         daily_boat_costs(&read.costs, range, start + Duration::hours(7))[0].usd,
@@ -69,7 +69,7 @@ fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
     record.phase = StartPhase::Ended;
     record.ends_at = Some(start + Duration::hours(7));
     session.save_start(&record).unwrap();
-    let read = database.store.boat_accounting(workspace_id).unwrap();
+    let read = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(read.costs[0].ends_at, Some(start + Duration::hours(6)));
     assert_eq!(
         daily_boat_costs(&read.costs, range, start + Duration::hours(7))[0].usd,

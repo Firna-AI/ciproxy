@@ -35,7 +35,7 @@ Each partial own-machine registration date counts as one cost date.
 Stored monthly prices supply machine and tier costs.
 The last monthly price on each UTC date applies to the full date.
 Each date uses the day count of its calendar month for both monthly costs.
-Stored Boat rates supply start charges and elapsed sandbox costs.
+Stored overflow rates supply start charges and elapsed sandbox costs.
 A Boat sandbox can cost money without taking a job.
 Each savings report reads registrations, range totals, and monthly costs
 from one coherent store snapshot.
@@ -55,14 +55,14 @@ It applies no invoice, minute, or display rounding.
 Missing monthly price history produces a CostGap.
 Other known costs remain visible when a gap prevents a savings figure.
 
-Anonymous daily totals retain byte-precise actual VM sizes and Boat costs.
+Anonymous daily totals retain byte-precise actual VM sizes and overflow costs.
 The same protocol resource type serves runner facts, cursors, and totals.
 No integer-GB conversion rounds an actual root allocation.
 Anonymous timestamp counts preserve exact billing-period boundaries.
 These aggregates retain no job or organization identifier.
 Accounting cursors retain job and runner references only until deletion.
 Their signed corrections make refresh idempotent.
-Boat source costs and cost cursors come from one coherent store snapshot.
+Overflow source costs and cost cursors come from one coherent store snapshot.
 Each new observation preserves the stored cursor's later observation time.
 Corrections include every affected UTC date through that time.
 Organization deletion keeps the anonymous workspace aggregates.
@@ -95,7 +95,7 @@ Trusted fact producers must supply these inputs:
    Update completed-at times when trusted GitHub facts arrive.
 4. Persist Boat execution through OverflowStore.
    The metering queries read its durable start fee and runtime prices.
-   save_boat_cost remains available for trusted standalone cost facts.
+   `save_overflow_cost` remains available for trusted standalone cost facts.
 5. Confirm billing through BillingSession::commit.
    PostgreSQL records a changed monthly PlanCost with the billing state.
    Checkout uses the Stripe period start. Subscription end uses the Free anchor.

@@ -457,33 +457,35 @@ The store keeps the same data under provider-neutral names, with a
 `provider` column. Boat stays the only provider. Its behaviour does not
 change.
 
-- [ ] Add a migration that renames `boat_accounts` to
+- [x] Add a migration that renames `boat_accounts` to
       `overflow_provider_accounts` and adds `provider`. Existing rows get
       `boat`. A check allows `boat`.
-- [ ] In the same migration, rename `boat_runner_intents`, its index
+- [x] In the same migration, rename `boat_runner_intents`, its index
       `boat_runner_intents_workspace`, and the view
       `boat_registration_ownership` to overflow names.
-- [ ] In the same migration, rename `runners.boat_key_id`,
+- [x] In the same migration, rename `runners.boat_key_id`,
       `runners.boat_size_name`, and the index `runners_boat_key`.
-- [ ] Rename the metering tables `metering_boat_costs`,
+- [x] Rename the metering tables `metering_boat_costs`,
       `metering_daily_boat_costs`, and `metering_boat_cursors`, and the
       indexes `metering_boat_costs_workspace` and
       `metering_boat_cursors_workspace`. Add `provider` to the cost tables.
       Rename `boat_starts` and `boat_minutes` of `metering_daily_sizes`.
-- [ ] Add the provider to the JSON records of `overflow_accounts`,
+- [x] Add the provider to the JSON records of `overflow_accounts`,
       `overflow_starts`, and the runner intents. Read a record without it as
       Boat.
-- [ ] Rewrite the place `"boat"` in the `facts` JSON of
+- [x] Rewrite the place `"boat"` in the `facts` JSON of
       `metering_job_cursors` to the overflow place with the provider `boat`.
-- [ ] Rename the `boat`, `boat_delivery`, and `boat_runtime` modules of
+- [x] Rename the `boat`, `boat_delivery`, and `boat_runtime` modules of
       `ciproxy-store-interface` and their types, such as `EncryptedBoatKey`,
       `BoatCost`, `AccountedBoat`, and `DailyBoatCost`. Rename
       `RoutingSnapshot.boat_intents` and `RoutingSnapshot.boat_runners`. Add
       `OverflowProvider` to the account rows.
-- [ ] Update `ciproxy-store-pg`, its tests, and each consumer that the
+- [x] Update `ciproxy-store-pg`, its tests, and each consumer that the
       rename touches, so that the workspace builds.
-- [ ] Update the READMEs of `ciproxy-schema`, `ciproxy-store-interface`, and
+- [x] Update the READMEs of `ciproxy-schema`, `ciproxy-store-interface`, and
       `ciproxy-store-pg`.
+
+Evidence: `.context/providers-interface/m3/`.
 
 ## Milestone 4: Store and schema: several providers and the label order
 

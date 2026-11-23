@@ -17,7 +17,7 @@ impl MachineRuntime {
             return Ok(());
         }
         let Some(intent) =
-            input.boat_intents.iter().find(|intent| {
+            input.overflow_intents.iter().find(|intent| {
                 intent.organization_id == job.organization_id
                     && intent.scale_set_id == job.scale_set_id
                     && job.runner_github_id.is_some()

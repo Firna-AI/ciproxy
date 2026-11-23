@@ -28,11 +28,11 @@ pub(super) fn save(
     };
     diesel::sql_query(
         "INSERT INTO runners (id, workspace_id, organization_id, label_id, scale_set_id,
-            state, vcpus, memory_bytes, disk_bytes, boat_key_id, sandbox_id, boat_size_name,
+            state, vcpus, memory_bytes, disk_bytes, overflow_key_id, sandbox_id, overflow_size_name,
             registration_scale_set_id, github_id)
          SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-            (SELECT (body->>'registration_scale_set_id')::bigint FROM boat_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5),
-            (SELECT (body->>'github_id')::bigint FROM boat_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5)
+            (SELECT (body->>'registration_scale_set_id')::bigint FROM overflow_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5),
+            (SELECT (body->>'github_id')::bigint FROM overflow_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5)
          WHERE EXISTS (SELECT 1 FROM organizations WHERE id = $3 AND workspace_id = $2)
          AND EXISTS (SELECT 1 FROM scale_sets WHERE id = $5 AND workspace_id = $2)
          ON CONFLICT (id) DO UPDATE SET state =
@@ -56,9 +56,9 @@ pub(super) fn save(
     .execute(connection).store()?;
     if let (Some(start_usd), Some(interval)) = (record.counted_start_fee_usd(), record.billing) {
         diesel::sql_query(
-            "INSERT INTO metering_boat_costs
-                (runner_id, workspace_id, starts_at, ends_at, start_usd, minute_usd)
-             SELECT $1, $2, $3, $4, $5, $6 WHERE EXISTS
+            "INSERT INTO metering_overflow_costs
+                (runner_id, workspace_id, starts_at, ends_at, start_usd, minute_usd, provider)
+             SELECT $1, $2, $3, $4, $5, $6, $7 WHERE EXISTS
                 (SELECT 1 FROM runners WHERE id = $1 AND workspace_id = $2)
              ON CONFLICT (runner_id) DO UPDATE SET starts_at = EXCLUDED.starts_at,
                 ends_at = EXCLUDED.ends_at, start_usd = EXCLUDED.start_usd,
@@ -70,6 +70,7 @@ pub(super) fn save(
         .bind::<Timestamptz, _>(interval.ends_at())
         .bind::<diesel::sql_types::Numeric, _>(start_usd)
         .bind::<diesel::sql_types::Numeric, _>(parameters.size.hourly_usd / Decimal::from(60))
+        .bind::<Text, _>(record.provider.as_str())
         .execute(connection)
         .store()?;
     }

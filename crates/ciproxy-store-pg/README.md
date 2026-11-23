@@ -17,18 +17,19 @@ Scopes resource reads and writes to a workspace.
 Keeps GitHub installations and repository access per organization.
 Keeps each scale set, runner, and job attached to its organization.
 Shared machines can serve every organization of their own workspace.
-Stores only caller-supplied token hashes and Boat key ciphertext.
-Keeps retired Boat key versions while their sandbox runners are live.
+Stores caller-supplied token hashes and overflow provider key ciphertext.
+Each account row identifies its provider. Each workspace has one active key
+at most. Retired keys stay while their sandbox runners are live.
 Key erasure waits for concurrent runner inserts before it checks references.
 Removing one organization preserves live sandbox-end tokens.
 It preserves shared execution resources while another organization remains.
 Removal of the last App revokes machine and install credentials.
-It retires Boat keys and erases those that no live sandbox needs.
+It retires provider keys and erases those that no live sandbox needs.
 Live sandbox-end tokens stay usable after App removal.
 They name one workspace, organization, and runner.
 They stop working after that runner reaches its stopped state.
 These mutations run in one transaction under a workspace row lock.
-The last removal also deletes pending Boat connection grants.
+The last removal also deletes pending overflow connection grants.
 Install, removal, and purge queries serialize on that workspace lock.
 Retention queries delete finished jobs after 90 days.
 They delete removed organization data after 30 days.
@@ -36,7 +37,7 @@ The workspace purge deletes one empty workspace after its 30-day deadline.
 A reinstall clears that deadline without restoring execution credentials.
 It preserves labels, settings, and job resource history.
 Dashboard jobs read current label requests only while queued.
-Executed jobs read the retained own-machine or Boat request by runner identity.
+Executed jobs read the retained request by runner identity.
 Missing retained requests stay unknown, including their vCPUs and decimal-GB
 memory and free job disk. Actual allocation stays separate.
 Job rows map machine-handled entry and byte measurements as one optional bundle.
@@ -49,18 +50,20 @@ An install into another workspace creates a separate registration.
 It transfers no history or shared resource from the old workspace.
 Individual and workspace removal preserve each machine's first removal time.
 
-One helper gives workspace usage, savings, and Boat accounting read-only
+One helper gives workspace usage, savings, and overflow accounting read-only
 repeatable-read snapshots.
-Boat source costs and cost cursors share one repeatable-read snapshot.
+Overflow source costs and cost cursors share one repeatable-read snapshot.
 Savings registrations, range totals, and monthly costs share one
 repeatable-read read-only snapshot.
 The savings read includes removed registrations without loading retained
 jobs, start counts, or accounting cursors.
-Daily aggregates keep VM sizes and Boat costs without job identifiers.
+Daily aggregates keep VM sizes and overflow costs without job identifiers.
+Cost rows and cost cursors keep the provider. Saved Boat job cursors record
+an overflow place with the Boat provider.
 Timestamp aggregates keep exact starts without organization identifiers.
 Cursor writes apply caller-supplied signed corrections atomically.
 They return false for a stale cursor or a deleted source record.
-Accounting and Boat history writes lock the workspace before its children.
+Accounting and overflow history writes lock the workspace before its children.
 Deleting organization data preserves anonymous workspace totals.
 The metering service computes the rules and supplies the retention cutoff.
 Call its refresh before deleting retained job or organization data.
@@ -135,9 +138,9 @@ Async services must call them from blocking workers.
 This crate contains no scheduler, listener, gateway, KMS client, Boat
 client, or runtime composition.
 
-The [overflow store guide](overflow.md) gives the Boat execution sessions,
+The [overflow store guide](overflow.md) gives the overflow execution sessions,
 delivery authority, dispatch, callbacks, runtime registration identities,
-and Boat accounting reads.
+and overflow accounting reads.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
@@ -241,7 +244,7 @@ CI starts the database for the existing workspace test phase.
   under the exact registered machine runner scope.
 - [src/routing_snapshot.rs](src/routing_snapshot.rs) reads coherent routing.
 - [src/own_results.rs](src/own_results.rs) and
-  [src/boat_results.rs](src/boat_results.rs) apply guarded remote results.
+  [src/overflow_results.rs](src/overflow_results.rs) apply guarded results.
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/billing/payments.rs](src/billing/payments.rs) reads and saves
@@ -262,10 +265,11 @@ CI starts the database for the existing workspace test phase.
   runner dimensions.
 - [src/scale_set_tracking.rs](src/scale_set_tracking.rs) owns retired binding
   context, listener discovery, and exact remote cleanup confirmation.
-- [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
-- [src/boat_runtime.rs](src/boat_runtime.rs) stores Boat registration
-  identities.
-- [src/overflow](src/overflow) owns durable Boat execution transactions.
+- [src/overflow_provider_accounts.rs](src/overflow_provider_accounts.rs)
+  rotates and erases encrypted overflow provider keys.
+- [src/overflow_runtime.rs](src/overflow_runtime.rs) stores overflow
+  registration identities.
+- [src/overflow](src/overflow) owns durable overflow execution transactions.
 - [src/overflow/authority.rs](src/overflow/authority.rs) reads current
   startup authority for one saved delivery.
 - [src/overflow/connections.rs](src/overflow/connections.rs) issues pending

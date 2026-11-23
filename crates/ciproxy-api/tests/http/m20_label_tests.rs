@@ -171,7 +171,7 @@ async fn m20_labels_supply_current_placement_allocations_and_retained_thirty_day
         .fixture
         .database
         .store
-        .reject_boat_key(
+        .reject_overflow_key(
             pages.fixture.workspace,
             current_account,
             at("2026-11-06T12:00:00Z"),
@@ -185,7 +185,7 @@ async fn m20_labels_supply_current_placement_allocations_and_retained_thirty_day
         .fixture
         .database
         .store
-        .disconnect_boat(pages.fixture.workspace, at("2026-11-06T12:00:00Z"))
+        .disconnect_overflow_provider(pages.fixture.workspace, at("2026-11-06T12:00:00Z"))
         .unwrap();
     label.size.vcpus = 2;
     label.size.memory_gb = 8;

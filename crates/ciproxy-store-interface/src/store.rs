@@ -3,8 +3,6 @@
 use std::sync::Arc;
 
 use crate::billing::store::BillingStore;
-use crate::boat::BoatStore;
-use crate::boat_runtime::BoatRuntimeStore;
 use crate::dashboard::store::DashboardStore;
 use crate::error::Result;
 use crate::gateway::GatewayStore;
@@ -17,9 +15,11 @@ use crate::machines::MachineStore;
 use crate::metering::store::MeteringStore;
 use crate::organizations::OrganizationStore;
 use crate::overflow::store::OverflowStore;
+use crate::overflow_provider_accounts::OverflowProviderAccountStore;
+use crate::overflow_runtime::OverflowRuntimeStore;
 use crate::own_runners::OwnRunnerStore;
 use crate::runners::RunnerStore;
-use crate::runtime_results::{BoatResultStore, RuntimeResultStore};
+use crate::runtime_results::{OverflowResultStore, RuntimeResultStore};
 use crate::scale_sets::ScaleSetStore;
 use crate::settings::SettingsStore;
 use crate::tokens::TokenStore;
@@ -37,8 +37,8 @@ pub trait Store:
     + RunnerStore
     + JobStore
     + SettingsStore
-    + BoatStore
-    + BoatRuntimeStore
+    + OverflowProviderAccountStore
+    + OverflowRuntimeStore
     + OverflowStore
     + MeteringStore
     + GatewayStore
@@ -48,7 +48,7 @@ pub trait Store:
     + InstallationLinkStore
     + OwnRunnerStore
     + RuntimeResultStore
-    + BoatResultStore
+    + OverflowResultStore
 {
 }
 

@@ -2,16 +2,17 @@
 
 use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use std::sync::Arc;
 
 use chrono::Duration;
 use ciproxy_github::app::InstallationOutcome;
 use ciproxy_github::app::webhook::{Actor, Installation, InstallationAction, InstallationEvent};
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::machines::Machine;
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
-use ciproxy_store_interface::secrets::{EncryptedBoatKey, TokenHash};
+use ciproxy_store_interface::secrets::{EncryptedOverflowKey, TokenHash};
 use ciproxy_store_interface::store::Store;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use ciproxy_store_interface::workspaces::Workspace;
@@ -58,7 +59,8 @@ fn credentials(store: &Arc<dyn Store>) -> (TokenHash, TokenHash, TokenHash) {
             &machine_hash,
         )
         .unwrap();
-    let account = BoatAccount {
+    let account = OverflowProviderAccount {
+        provider: OverflowProvider::Boat,
         id: id(83),
         account_name: "cleanup".to_owned(),
         connected_at: at(),
@@ -66,7 +68,12 @@ fn credentials(store: &Arc<dyn Store>) -> (TokenHash, TokenHash, TokenHash) {
         rejected_at: None,
     };
     store
-        .connect_boat(id(1), &account, &EncryptedBoatKey::new(vec![4]), 50_000_000)
+        .connect_overflow_provider(
+            id(1),
+            &account,
+            &EncryptedOverflowKey::new(vec![4]),
+            50_000_000,
+        )
         .unwrap();
     let label = store.labels(id(1)).unwrap().remove(0);
     store
@@ -174,12 +181,15 @@ async fn replacement_creation_before_old_deletion_revokes_old_access_before_acti
                 .is_some()
         );
         assert_eq!(
-            database.store.boat_accounts(id(1)).unwrap()[0].retired_at,
+            database.store.overflow_provider_accounts(id(1)).unwrap()[0].retired_at,
             Some(at())
         );
         assert_eq!(
-            database.store.encrypted_boat_key(id(1), id(83)).unwrap(),
-            Some(EncryptedBoatKey::new(vec![4]))
+            database
+                .store
+                .encrypted_overflow_key(id(1), id(83))
+                .unwrap(),
+            Some(EncryptedOverflowKey::new(vec![4]))
         );
         let events = fixture.output.accepted.lock().unwrap().clone();
         assert!(

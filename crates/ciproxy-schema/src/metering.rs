@@ -20,13 +20,14 @@ diesel::table! {
     }
 }
 diesel::table! {
-    metering_boat_costs (runner_id) {
+    metering_overflow_costs (runner_id) {
         runner_id -> Uuid,
         workspace_id -> Uuid,
         starts_at -> Timestamptz,
         ends_at -> Nullable<Timestamptz>,
         start_usd -> Numeric,
         minute_usd -> Numeric,
+        provider -> Text,
     }
 }
 diesel::table! {
@@ -38,15 +39,16 @@ diesel::table! {
         disk_bytes -> Int8,
         machine_starts -> Int8,
         machine_minutes -> Numeric,
-        boat_starts -> Int8,
-        boat_minutes -> Numeric,
+        overflow_starts -> Int8,
+        overflow_minutes -> Numeric,
     }
 }
 diesel::table! {
-    metering_daily_boat_costs (workspace_id, day) {
+    metering_daily_overflow_costs (workspace_id, day) {
         workspace_id -> Uuid,
         day -> Date,
         usd -> Numeric,
+        provider -> Text,
     }
 }
 diesel::table! {
@@ -67,7 +69,7 @@ diesel::table! {
     }
 }
 diesel::table! {
-    metering_boat_cursors (runner_id) {
+    metering_overflow_cursors (runner_id) {
         runner_id -> Uuid,
         workspace_id -> Uuid,
         starts_at -> Timestamptz,
@@ -75,5 +77,6 @@ diesel::table! {
         start_usd -> Numeric,
         minute_usd -> Numeric,
         observed_at -> Timestamptz,
+        provider -> Text,
     }
 }

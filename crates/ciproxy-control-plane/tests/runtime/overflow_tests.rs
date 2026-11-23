@@ -58,7 +58,7 @@ async fn wait_deadline_starts_boat_once_and_provider_failure_preserves_pending_s
             harness
                 .fixture
                 .store
-                .boat_runner_intents(harness.fixture.workspace)
+                .overflow_runner_intents(harness.fixture.workspace)
                 .unwrap()
                 .len(),
             1
@@ -81,7 +81,7 @@ async fn no_eligible_machine_starts_boat_immediately_and_retains_its_original_ro
     let stored = harness
         .fixture
         .store
-        .boat_runtime_snapshot(harness.fixture.workspace)
+        .overflow_runtime_snapshot(harness.fixture.workspace)
         .unwrap();
     assert_eq!(stored.starts[0].required_root_disk_bytes, 80_899_612_672);
     harness.runtime.images = [ImageOffer::unsigned(ImageDownload {
@@ -155,7 +155,7 @@ async fn idle_cleanup_preserves_a_github_busy_race_then_deletes_after_completion
             harness
                 .fixture
                 .store
-                .boat_runtime_snapshot(harness.fixture.workspace)
+                .overflow_runtime_snapshot(harness.fixture.workspace)
                 .unwrap()
                 .starts[0]
                 .phase,
@@ -233,7 +233,7 @@ async fn callback_checks_runner_scope_and_consumes_its_token_before_deletion() {
         harness
             .fixture
             .store
-            .boat_runtime_snapshot(harness.fixture.workspace)
+            .overflow_runtime_snapshot(harness.fixture.workspace)
             .unwrap()
             .accounts
             .len(),

@@ -7,10 +7,11 @@ use ciproxy_scaler::actions::{Action, StopReason};
 use ciproxy_scaler::boat::SandboxId;
 use ciproxy_scaler::decision::decide;
 use ciproxy_scaler::snapshot::RunnerState;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners;
 use uuid::Uuid;
@@ -43,8 +44,8 @@ fn accepted_boat_supply_covers_waiting_demand_before_account_refresh() {
 #[test]
 fn boat_job_evidence_takes_priority_over_saved_busy_state() {
     let mut input = accepted();
-    let intent = input.boat_intents[0].clone();
-    input.boat_runners.push(runners::Runner {
+    let intent = input.overflow_intents[0].clone();
+    input.overflow_runners.push(runners::Runner {
         id: intent.runner_id,
         organization_id: intent.organization_id,
         label_id: intent.label_id,
@@ -151,7 +152,8 @@ fn accepted() -> RoutingSnapshot {
         memory_bytes: 8_000_000_000,
         disk_bytes: 80_000_000_000,
     };
-    input.boat_intents.push(BoatRunnerIntent {
+    input.overflow_intents.push(OverflowRunnerIntent {
+        provider: OverflowProvider::Boat,
         registration_scale_set_id: Some(input.scale_sets[0].github_id),
         delivery_id: Uuid::from_u128(11),
         runner_id: Uuid::from_u128(12),
@@ -169,6 +171,7 @@ fn accepted() -> RoutingSnapshot {
         created_at: at(),
     });
     input.overflow.starts.push(StartRecord {
+        provider: OverflowProvider::Boat,
         delivery_id: Uuid::from_u128(11),
         runner_id: Uuid::from_u128(12),
         organization_id: input.organizations[0].id,

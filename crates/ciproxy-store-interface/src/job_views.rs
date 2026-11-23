@@ -56,14 +56,14 @@ pub struct DashboardJob {
     pub requested_size: Option<vm_size::VmSize>,
     /// Runner's immutable resources, absent until placement is known.
     pub actual_size: Option<VmSize>,
-    /// Own-machine identity, absent for Boat or unknown placement.
+    /// Own-machine identity, absent for overflow or unknown placement.
     pub machine_id: Option<Uuid>,
     /// Own-machine hostname, including removed machines.
     pub machine_name: Option<String>,
     /// First assigned own-machine slot.
     pub first_slot: Option<i32>,
-    /// Actual Boat size name, absent for an own machine.
-    pub boat_size: Option<String>,
+    /// Actual overflow size name, absent for an own machine.
+    pub overflow_size: Option<String>,
     /// Saved reason when the trusted routing service supplied one.
     pub routing_reason: Option<String>,
     /// Restored content origins, absent for zero or unknown restores.

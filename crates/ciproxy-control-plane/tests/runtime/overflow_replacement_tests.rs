@@ -40,7 +40,7 @@ async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bi
         harness.runtime.settled_tick().await.unwrap();
         assert_eq!(harness.ports.creates.lock().unwrap().len(), 1, "{scenario}");
         let old = store
-            .boat_runtime_snapshot(workspace)
+            .overflow_runtime_snapshot(workspace)
             .unwrap()
             .starts
             .remove(0);
@@ -70,7 +70,7 @@ async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bi
             deleted,
             "{scenario}"
         );
-        let starts = store.boat_runtime_snapshot(workspace).unwrap().starts;
+        let starts = store.overflow_runtime_snapshot(workspace).unwrap().starts;
         let old = starts
             .iter()
             .find(|record| record.delivery_id == old.delivery_id)
@@ -78,7 +78,7 @@ async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bi
         assert_eq!(old.ends_at, ended, "{scenario}");
         let target = if creating {
             store
-                .boat_runner_intents(workspace)
+                .overflow_runner_intents(workspace)
                 .unwrap()
                 .into_iter()
                 .find(|intent| intent.runner_id == old.runner_id)

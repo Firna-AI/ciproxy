@@ -31,8 +31,8 @@ pub(super) fn report(
         {
             machines.starts += size.machines.starts;
             machines.minutes += size.machines.minutes;
-            boat.starts += size.boat.starts;
-            boat.minutes += size.boat.minutes;
+            boat.starts += size.overflow.starts;
+            boat.minutes += size.overflow.minutes;
         }
         days.push(SavingsDay {
             day,

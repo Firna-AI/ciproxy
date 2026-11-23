@@ -1,6 +1,7 @@
 //! A retained complete runtime with the defined unknown start-fee accounting gap.
 
 use ciproxy_store_interface::overflow::known::KnownSandbox;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{
     EncryptedLaunch, ProviderParameters, RuntimeCharge, RuntimeTotal, StartPhase, StartRecord,
 };
@@ -32,6 +33,7 @@ pub(super) fn seed(pages: &Pages) -> Uuid {
     let starts = at("2026-11-06T10:00:00Z");
     let ends = at("2026-11-06T11:00:00Z");
     let mut record = StartRecord {
+        provider: OverflowProvider::Boat,
         delivery_id: Uuid::new_v4(),
         runner_id: Uuid::new_v4(),
         organization_id: pages.fixture.organization.id,

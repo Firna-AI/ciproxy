@@ -5,8 +5,8 @@ use chrono::{DateTime, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::StartRunner;
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::record::StartRecord;
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use sandbox_interface::SandboxStartRefusal;
 use unimock::unimock;
 use uuid::Uuid;
@@ -118,7 +118,7 @@ pub trait Overflow: Send + Sync {
         key: Secret,
         wallet: String,
         spend_limit_usd_micros: i64,
-    ) -> Result<BoatAccount>;
+    ) -> Result<OverflowProviderAccount>;
     /// Stop new starts and retain keys until their last unfinished delivery ends.
     async fn disconnect(&self, workspace_id: Uuid) -> Result<()>;
     /// Refresh account sizes when five minutes old and return current scaler facts.

@@ -1,22 +1,22 @@
-//! Durable Boat registration identities and their scoped runner mappings.
+//! Durable overflow registration identities and their scoped runner mappings.
 
 use chrono::{DateTime, Utc};
-use ciproxy_schema::boat_runner_intents::boat_runner_intents;
-use ciproxy_store_interface::boat_runtime::{BoatRunnerIntent, BoatRuntimeStore};
+use ciproxy_schema::overflow_runner_intents::overflow_runner_intents;
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::overflow::store::OverflowSnapshot;
+use ciproxy_store_interface::overflow_runtime::{OverflowRunnerIntent, OverflowRuntimeStore};
 use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use diesel::prelude::*;
 use diesel::sql_types::{self, BigInt, Jsonb};
 use uuid::Uuid;
 
-use crate::boat_registration_ownership;
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
+use crate::overflow_registration_ownership;
 
-impl BoatRuntimeStore for PgStore {
-    fn save_boat_registration(
+impl OverflowRuntimeStore for PgStore {
+    fn save_overflow_registration(
         &self,
         workspace_id: Uuid,
         runner_id: Uuid,
@@ -25,7 +25,7 @@ impl BoatRuntimeStore for PgStore {
     ) -> Result<()> {
         transaction(&mut *self.connection()?, |connection| {
             let count = diesel::sql_query(
-                "UPDATE boat_runner_intents SET body=jsonb_set(jsonb_set(body,'{github_id}',to_jsonb($3::bigint)),
+                "UPDATE overflow_runner_intents SET body=jsonb_set(jsonb_set(body,'{github_id}',to_jsonb($3::bigint)),
                  '{registration_scale_set_id}',to_jsonb($4::bigint))
                  WHERE workspace_id=$1 AND runner_id=$2 AND organization_id=$5 AND label_id=$6 AND scale_set_id=$7
                  AND (body->>'registration_scale_set_id' IS NULL OR (body->>'registration_scale_set_id')::bigint=$4)",
@@ -44,19 +44,27 @@ impl BoatRuntimeStore for PgStore {
             Ok(())
         })
     }
-    fn boat_runtime_snapshot(&self, workspace_id: Uuid) -> Result<OverflowSnapshot> {
+    fn overflow_runtime_snapshot(&self, workspace_id: Uuid) -> Result<OverflowSnapshot> {
         crate::overflow::rows::snapshot(&mut *self.connection()?, workspace_id)
     }
-    fn boat_runner_intents(&self, workspace_id: Uuid) -> Result<Vec<BoatRunnerIntent>> {
+    fn overflow_runner_intents(&self, workspace_id: Uuid) -> Result<Vec<OverflowRunnerIntent>> {
         load(&mut *self.connection()?, workspace_id)
     }
 
-    fn boat_registration_access_ended(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<bool> {
-        boat_registration_ownership::access_ended(&mut *self.connection()?, workspace_id, runner_id)
-            .store()
+    fn overflow_registration_access_ended(
+        &self,
+        workspace_id: Uuid,
+        runner_id: Uuid,
+    ) -> Result<bool> {
+        overflow_registration_ownership::access_ended(
+            &mut *self.connection()?,
+            workspace_id,
+            runner_id,
+        )
+        .store()
     }
 
-    fn purge_terminal_boat_runner_intents(
+    fn purge_terminal_overflow_runner_intents(
         &self,
         workspace_id: Uuid,
         at: DateTime<Utc>,
@@ -66,15 +74,15 @@ impl BoatRuntimeStore for PgStore {
                 diesel::sql_query("SELECT id FROM workspaces WHERE id=$1 FOR UPDATE")
                     .bind::<sql_types::Uuid, _>(workspace_id)
                     .execute(connection)?;
-                boat_registration_ownership::purge(connection, workspace_id, at)
+                overflow_registration_ownership::purge(connection, workspace_id, at)
             })
             .store()
     }
 
-    fn create_boat_runner_intent(
+    fn create_overflow_runner_intent(
         &self,
         workspace_id: Uuid,
-        intent: &BoatRunnerIntent,
+        intent: &OverflowRunnerIntent,
     ) -> Result<()> {
         transaction(&mut *self.connection()?, |connection| {
             diesel::sql_query("SELECT id FROM workspaces WHERE id=$1 FOR UPDATE")
@@ -82,7 +90,7 @@ impl BoatRuntimeStore for PgStore {
                 .execute(connection)
                 .store()?;
             let saved = diesel::sql_query(
-            "INSERT INTO boat_runner_intents
+            "INSERT INTO overflow_runner_intents
              (runner_id,workspace_id,delivery_id,organization_id,label_id,scale_set_id,body,installation_id)
              SELECT $1,$2,$3,$4,$5,$6,$7,o.installation_id FROM workspaces w
              JOIN settings s ON s.workspace_id=w.id
@@ -95,7 +103,7 @@ impl BoatRuntimeStore for PgStore {
              AND l.vcpus=($7::jsonb->'requested_size'->>'vcpu')::bigint
              AND l.memory_gb::numeric*1000000000=($7::jsonb->'requested_size'->>'memory_bytes')::numeric
              AND l.disk_gb::numeric*1000000000=($7::jsonb->'requested_size'->>'disk_bytes')::numeric
-             AND EXISTS (SELECT 1 FROM boat_accounts k WHERE k.workspace_id=w.id AND k.retired_at IS NULL AND k.rejected_at IS NULL)",
+             AND EXISTS (SELECT 1 FROM overflow_provider_accounts k WHERE k.workspace_id=w.id AND k.retired_at IS NULL AND k.rejected_at IS NULL)",
         )
         .bind::<sql_types::Uuid,_>(intent.runner_id).bind::<sql_types::Uuid,_>(workspace_id)
         .bind::<sql_types::Uuid,_>(intent.delivery_id).bind::<sql_types::Uuid,_>(intent.organization_id)
@@ -109,7 +117,7 @@ impl BoatRuntimeStore for PgStore {
         })
     }
 
-    fn register_boat_runner(
+    fn register_overflow_runner(
         &self,
         workspace_id: Uuid,
         runner_id: Uuid,
@@ -117,7 +125,7 @@ impl BoatRuntimeStore for PgStore {
     ) -> Result<()> {
         transaction(&mut *self.connection()?, |connection| {
             let updated = diesel::sql_query(
-                "UPDATE boat_runner_intents SET body=jsonb_set(body,'{github_id}',to_jsonb($3::bigint)) WHERE workspace_id=$1 AND runner_id=$2",
+                "UPDATE overflow_runner_intents SET body=jsonb_set(body,'{github_id}',to_jsonb($3::bigint)) WHERE workspace_id=$1 AND runner_id=$2",
             ).bind::<sql_types::Uuid,_>(workspace_id).bind::<sql_types::Uuid,_>(runner_id)
                 .bind::<BigInt,_>(github_id).execute(connection).store()?;
             if updated == 0 {
@@ -130,11 +138,11 @@ impl BoatRuntimeStore for PgStore {
         })
     }
 
-    fn remove_boat_runner_intent(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<()> {
+    fn remove_overflow_runner_intent(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<()> {
         diesel::delete(
-            boat_runner_intents::table
-                .filter(boat_runner_intents::workspace_id.eq(workspace_id))
-                .filter(boat_runner_intents::runner_id.eq(runner_id)),
+            overflow_runner_intents::table
+                .filter(overflow_runner_intents::workspace_id.eq(workspace_id))
+                .filter(overflow_runner_intents::runner_id.eq(runner_id)),
         )
         .execute(&mut *self.connection()?)
         .store()?;
@@ -145,11 +153,11 @@ impl BoatRuntimeStore for PgStore {
 pub(crate) fn load(
     connection: &mut PgConnection,
     workspace_id: Uuid,
-) -> Result<Vec<BoatRunnerIntent>> {
-    boat_runner_intents::table
-        .filter(boat_runner_intents::workspace_id.eq(workspace_id))
-        .order(boat_runner_intents::runner_id)
-        .select(boat_runner_intents::body)
+) -> Result<Vec<OverflowRunnerIntent>> {
+    overflow_runner_intents::table
+        .filter(overflow_runner_intents::workspace_id.eq(workspace_id))
+        .order(overflow_runner_intents::runner_id)
+        .select(overflow_runner_intents::body)
         .load::<serde_json::Value>(connection)
         .store()?
         .into_iter()

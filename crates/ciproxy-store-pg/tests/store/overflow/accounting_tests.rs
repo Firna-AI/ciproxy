@@ -41,7 +41,11 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     record.phase = StartPhase::Running;
     session.save_start(&record).unwrap();
     assert_eq!(
-        database.store.boat_accounting(workspace_id).unwrap().costs,
+        database
+            .store
+            .overflow_accounting(workspace_id)
+            .unwrap()
+            .costs,
         []
     );
     record.starts_at = at() + Duration::seconds(30);
@@ -61,13 +65,13 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
         running: true,
     }];
     session.save_start(&record).unwrap();
-    let live = database.store.boat_accounting(workspace_id).unwrap();
+    let live = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(live.costs[0].starts_at, at() + Duration::seconds(30));
     assert_eq!(live.costs[0].ends_at, Some(at() + Duration::seconds(120)));
     record.phase = StartPhase::Ended;
     record.ends_at = Some(at() + Duration::seconds(120));
     session.save_start(&record).unwrap();
-    let complete = database.store.boat_accounting(workspace_id).unwrap();
+    let complete = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(complete.costs[0].starts_at, at() + Duration::seconds(30));
     assert_eq!(
         complete.costs[0].ends_at,
@@ -84,7 +88,7 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     record.ends_at = Some(at() + Duration::days(1));
     record.runtime_complete = false;
     session.save_start(&record).unwrap();
-    let known = database.store.boat_accounting(workspace_id).unwrap();
+    let known = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(known.costs[0].ends_at, Some(at() + Duration::seconds(120)));
     assert!(matches!(
         database.store.savings_snapshot(workspace_id, from, until),

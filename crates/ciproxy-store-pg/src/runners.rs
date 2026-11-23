@@ -27,31 +27,31 @@ pub(crate) struct RunnerRow {
     disk_bytes: i64,
     machine_id: Option<Uuid>,
     first_slot: Option<i32>,
-    boat_key_id: Option<Uuid>,
+    overflow_key_id: Option<Uuid>,
     sandbox_id: Option<String>,
-    boat_size_name: Option<String>,
+    overflow_size_name: Option<String>,
 }
 
 impl RunnerRow {
     pub(crate) fn from_record(workspace_id: Uuid, runner: &Runner) -> Result<Self> {
-        let (machine_id, first_slot, boat_key_id, sandbox_id, boat_size_name) = match &runner.place
-        {
-            RunnerPlace::Machine {
-                machine_id,
-                first_slot,
-            } => (Some(*machine_id), Some(*first_slot), None, None, None),
-            RunnerPlace::Boat {
-                key_id,
-                sandbox_id,
-                size_name,
-            } => (
-                None,
-                None,
-                *key_id,
-                Some(sandbox_id.clone()),
-                Some(size_name.clone()),
-            ),
-        };
+        let (machine_id, first_slot, overflow_key_id, sandbox_id, overflow_size_name) =
+            match &runner.place {
+                RunnerPlace::Machine {
+                    machine_id,
+                    first_slot,
+                } => (Some(*machine_id), Some(*first_slot), None, None, None),
+                RunnerPlace::Boat {
+                    key_id,
+                    sandbox_id,
+                    size_name,
+                } => (
+                    None,
+                    None,
+                    *key_id,
+                    Some(sandbox_id.clone()),
+                    Some(size_name.clone()),
+                ),
+            };
         let state: &str = runner.state.into();
         Ok(Self {
             id: runner.id,
@@ -67,9 +67,9 @@ impl RunnerRow {
             disk_bytes: i64::try_from(runner.size.disk_bytes).internal()?,
             machine_id,
             first_slot,
-            boat_key_id,
+            overflow_key_id,
             sandbox_id,
-            boat_size_name,
+            overflow_size_name,
         })
     }
 
@@ -78,14 +78,14 @@ impl RunnerRow {
             self.machine_id,
             self.first_slot,
             self.sandbox_id,
-            self.boat_size_name,
+            self.overflow_size_name,
         ) {
             (Some(machine_id), Some(first_slot), None, None) => RunnerPlace::Machine {
                 machine_id,
                 first_slot,
             },
             (None, None, Some(sandbox_id), Some(size_name)) => RunnerPlace::Boat {
-                key_id: self.boat_key_id,
+                key_id: self.overflow_key_id,
                 sandbox_id,
                 size_name,
             },

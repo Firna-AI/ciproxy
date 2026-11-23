@@ -4,7 +4,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 
 use crate::metering::facts::UsageJob;
-use crate::metering::history::BoatCost;
+use crate::metering::history::OverflowCost;
 use ciproxy_protocol::resources::VmSize;
 
 /// The starts and elapsed runtime of one execution location.
@@ -23,8 +23,8 @@ pub struct SizeTotal {
     pub size: VmSize,
     /// Jobs on the workspace's own machines.
     pub machines: LocationTotals,
-    /// Jobs on ciproxy-created Boat runners.
-    pub boat: LocationTotals,
+    /// Jobs on ciproxy-created overflow runners.
+    pub overflow: LocationTotals,
 }
 
 /// Daily execution totals for every organization of a workspace.
@@ -34,8 +34,8 @@ pub struct DailyTotal {
     pub day: NaiveDate,
     /// Totals for each actual VM size used that day.
     pub sizes: Vec<SizeTotal>,
-    /// Cost of all ciproxy Boat sandboxes, including those with no job.
-    pub boat_usd: Decimal,
+    /// Cost of all ciproxy overflow sandboxes, including those with no job.
+    pub overflow_usd: Decimal,
 }
 
 /// The previous job facts and observation time used for incremental accounting.
@@ -60,27 +60,27 @@ pub struct DailyDelta {
     pub machine_starts: i64,
     /// The change to own-machine elapsed minutes.
     pub machine_minutes: Decimal,
-    /// The change to Boat starts.
-    pub boat_starts: i64,
-    /// The change to Boat elapsed minutes.
-    pub boat_minutes: Decimal,
+    /// The change to overflow starts.
+    pub overflow_starts: i64,
+    /// The change to overflow elapsed minutes.
+    pub overflow_minutes: Decimal,
 }
 
-/// The Boat facts and observation time used by the previous cost calculation.
+/// The overflow facts and observation time used by the previous cost calculation.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AccountedBoat {
+pub struct AccountedOverflow {
     /// The stored start and runtime rates of a ciproxy sandbox.
-    pub cost: BoatCost,
+    pub cost: OverflowCost,
     /// The explicit time through which runtime cost was accounted.
     pub observed_at: DateTime<Utc>,
 }
 
 /// An anonymous USD correction for one UTC date.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DailyBoatCost {
+pub struct DailyOverflowCost {
     /// The UTC date to update.
     pub day: NaiveDate,
-    /// The signed change in ciproxy Boat costs.
+    /// The signed change in ciproxy overflow costs.
     pub usd: Decimal,
 }
 

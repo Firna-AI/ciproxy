@@ -4,7 +4,9 @@ use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::registrations::RegistrationRetirement;
 use ciproxy_store_interface::own_runners::{OwnRunner, RoutingSnapshot};
 use ciproxy_store_interface::runners::RunnerState;
-use ciproxy_store_interface::runtime_results::{BoatRunnerResult, OwnRunnerGuard, OwnRunnerResult};
+use ciproxy_store_interface::runtime_results::{
+    OverflowRunnerResult, OwnRunnerGuard, OwnRunnerResult,
+};
 use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use uuid::Uuid;
 
@@ -154,7 +156,7 @@ impl MachineRuntime {
                     .internal()?;
             let store = runtime.store.clone();
             let boat =
-                tokio::task::spawn_blocking(move || store.boat_runner_guard(workspace, runner))
+                tokio::task::spawn_blocking(move || store.overflow_runner_guard(workspace, runner))
                     .await
                     .internal()?
                     .internal()?;
@@ -192,10 +194,10 @@ impl MachineRuntime {
                     if let Some(expected) = boat {
                         let store = runtime.store.clone();
                         tokio::task::spawn_blocking(move || {
-                            store.apply_boat_runner_result(
+                            store.apply_overflow_runner_result(
                                 workspace,
                                 &expected,
-                                BoatRunnerResult::Retired,
+                                OverflowRunnerResult::Retired,
                             )
                         })
                         .await

@@ -25,20 +25,20 @@ async fn organization_expiry_forgets_only_terminal_owned_registrations() {
     let store = harness.fixture.store.clone();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
-    let intents = store.boat_runner_intents(workspace).unwrap();
+    let intents = store.overflow_runner_intents(workspace).unwrap();
     let ended = &intents[0];
     let live = &intents[1];
     let mut missing = ended.clone();
     missing.runner_id = Uuid::new_v4();
     missing.delivery_id = Uuid::new_v4();
     store
-        .create_boat_runner_intent(workspace, &missing)
+        .create_overflow_runner_intent(workspace, &missing)
         .unwrap();
     let mut unknown = missing.clone();
     unknown.runner_id = Uuid::new_v4();
     unknown.delivery_id = Uuid::new_v4();
     store
-        .create_boat_runner_intent(workspace, &unknown)
+        .create_overflow_runner_intent(workspace, &unknown)
         .unwrap();
     harness
         .fixture
@@ -60,43 +60,50 @@ async fn organization_expiry_forgets_only_terminal_owned_registrations() {
             .unwrap(),
         0
     );
-    assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 5);
+    assert_eq!(store.overflow_runner_intents(workspace).unwrap().len(), 5);
     assert_eq!(
         store
             .purge_removed_organizations(workspace, at() + Duration::days(30))
             .unwrap(),
         1
     );
-    let mut retained = store.boat_runner_intents(workspace).unwrap();
+    let mut retained = store.overflow_runner_intents(workspace).unwrap();
     retained.sort_by_key(|intent| intent.runner_id);
     let mut expected = vec![live.clone(), sibling.clone(), unknown.clone()];
     expected.sort_by_key(|intent| intent.runner_id);
     assert_eq!(retained, expected);
     assert_eq!(
-        store.boat_runner_intents(other_workspace).unwrap(),
+        store.overflow_runner_intents(other_workspace).unwrap(),
         vec![other.clone()]
     );
     assert_eq!(store.organization(workspace, organization).unwrap(), None);
     assert_eq!(
-        store.boat_runtime_snapshot(workspace).unwrap().starts.len(),
+        store
+            .overflow_runtime_snapshot(workspace)
+            .unwrap()
+            .starts
+            .len(),
         2
     );
     store
-        .remove_boat_runner_intent(sibling_workspace, sibling.runner_id)
+        .remove_overflow_runner_intent(sibling_workspace, sibling.runner_id)
         .unwrap();
     store
-        .remove_boat_runner_intent(other_workspace, other.runner_id)
+        .remove_overflow_runner_intent(other_workspace, other.runner_id)
         .unwrap();
     report_end(&harness, live.runner_id).await;
     *harness.ports.now.lock().unwrap() = at() + Duration::days(31);
     harness.runtime.overflow = None;
     harness.runtime.boat_retirement = None;
     harness.runtime.settled_tick().await.unwrap();
-    assert_eq!(store.boat_runner_intents(workspace).unwrap(), vec![unknown]);
+    assert_eq!(
+        store.overflow_runner_intents(workspace).unwrap(),
+        vec![unknown]
+    );
     assert_eq!(*remote.calls.lock().unwrap(), Vec::<Call>::new());
     assert_eq!(
         store
-            .boat_runtime_snapshot(workspace)
+            .overflow_runtime_snapshot(workspace)
             .unwrap()
             .starts
             .iter()
@@ -115,7 +122,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     let store = harness.fixture.store.clone();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
-    let intents = store.boat_runner_intents(workspace).unwrap();
+    let intents = store.overflow_runner_intents(workspace).unwrap();
     let first = intents
         .iter()
         .find(|intent| intent.github_id == Some(100))
@@ -149,11 +156,13 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     newer.delivery_id = Uuid::new_v4();
     newer.runner_id = Uuid::new_v4();
     newer.github_id = Some(102);
-    store.create_boat_runner_intent(workspace, &newer).unwrap();
+    store
+        .create_overflow_runner_intent(workspace, &newer)
+        .unwrap();
     *remote.answer.lock().unwrap() = Answer::DeleteUnavailable;
     remote.calls.lock().unwrap().clear();
     harness.runtime.settled_tick().await.unwrap();
-    assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 3);
+    assert_eq!(store.overflow_runner_intents(workspace).unwrap().len(), 3);
     let calls = remote.calls.lock().unwrap().clone();
     assert!(calls.contains(&Call::Remove(100)), "{calls:?}");
     assert!(calls.contains(&Call::Remove(102)), "{calls:?}");
@@ -168,7 +177,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
         .event
         .clone();
     harness.runtime.settled_tick().await.unwrap();
-    assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 3);
+    assert_eq!(store.overflow_runner_intents(workspace).unwrap().len(), 3);
     remote.answers.lock().unwrap().insert(100, Answer::Removed);
     remote.answers.lock().unwrap().insert(101, Answer::Busy);
     remote.answers.lock().unwrap().insert(102, Answer::Removed);
@@ -182,19 +191,19 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     remote.contexts.lock().unwrap().clear();
     harness.runtime.settled_tick().await.unwrap();
     assert_eq!(
-        store.boat_runner_intents(workspace).unwrap(),
+        store.overflow_runner_intents(workspace).unwrap(),
         vec![second.clone()]
     );
     assert_eq!(store.github_jobs(workspace, organization).unwrap(), history);
     assert_eq!(store.runners(workspace, organization).unwrap(), runners);
     report_end(&harness, second.runner_id).await;
-    let deliveries = store.boat_runtime_snapshot(workspace).unwrap().starts;
+    let deliveries = store.overflow_runtime_snapshot(workspace).unwrap().starts;
     let runners = store.runners(workspace, organization).unwrap();
     remote.answers.lock().unwrap().clear();
     for tick in 1..=3 {
         harness.runtime.settled_tick().await.unwrap();
         assert_eq!(
-            store.boat_runner_intents(workspace).unwrap(),
+            store.overflow_runner_intents(workspace).unwrap(),
             Vec::new(),
             "tick: {tick}"
         );
@@ -215,7 +224,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
             "tick: {tick}"
         );
         assert_eq!(
-            store.boat_runtime_snapshot(workspace).unwrap().starts,
+            store.overflow_runtime_snapshot(workspace).unwrap().starts,
             deliveries,
             "tick: {tick}"
         );

@@ -2,7 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use uuid::Uuid;
 
@@ -38,17 +38,17 @@ fn last_app_removal_retires_keys_and_keeps_live_sandbox_reports() {
     let mut unused = account();
     unused.connected_at -= Duration::minutes(1);
     store
-        .connect_boat(
+        .connect_overflow_provider(
             workspace.id,
             &unused,
-            &EncryptedBoatKey::new(vec![1]),
+            &EncryptedOverflowKey::new(vec![1]),
             50_000_000,
         )
         .unwrap();
     let mut active = account();
-    let ciphertext = EncryptedBoatKey::new(vec![2, 3]);
+    let ciphertext = EncryptedOverflowKey::new(vec![2, 3]);
     store
-        .connect_boat(workspace.id, &active, &ciphertext, 50_000_000)
+        .connect_overflow_provider(workspace.id, &active, &ciphertext, 50_000_000)
         .unwrap();
     let live = runner(
         &label,
@@ -92,15 +92,19 @@ fn last_app_removal_retires_keys_and_keeps_live_sandbox_reports() {
     assert_eq!(store.machines(workspace.id).unwrap(), vec![]);
     active.retired_at = Some(removed_at);
     assert_eq!(
-        store.boat_accounts(workspace.id).unwrap(),
+        store.overflow_provider_accounts(workspace.id).unwrap(),
         vec![active.clone()]
     );
     assert_eq!(
-        store.encrypted_boat_key(workspace.id, unused.id).unwrap(),
+        store
+            .encrypted_overflow_key(workspace.id, unused.id)
+            .unwrap(),
         None
     );
     assert_eq!(
-        store.encrypted_boat_key(workspace.id, active.id).unwrap(),
+        store
+            .encrypted_overflow_key(workspace.id, active.id)
+            .unwrap(),
         Some(ciphertext.clone())
     );
     store
@@ -111,7 +115,7 @@ fn last_app_removal_retires_keys_and_keeps_live_sandbox_reports() {
         )
         .unwrap();
     assert_eq!(
-        store.boat_accounts(workspace.id).unwrap(),
+        store.overflow_provider_accounts(workspace.id).unwrap(),
         vec![active.clone()]
     );
     assert_eq!(
@@ -131,9 +135,11 @@ fn last_app_removal_retires_keys_and_keeps_live_sandbox_reports() {
         store.authenticate_token(&sandbox_hash, removed_at).unwrap(),
         None
     );
-    assert_eq!(store.delete_unused_boat_keys(workspace.id).unwrap(), 1);
+    assert_eq!(store.delete_unused_overflow_keys(workspace.id).unwrap(), 1);
     assert_eq!(
-        store.encrypted_boat_key(workspace.id, active.id).unwrap(),
+        store
+            .encrypted_overflow_key(workspace.id, active.id)
+            .unwrap(),
         None
     );
 }

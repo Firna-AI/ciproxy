@@ -3,7 +3,6 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::boat_runtime::BoatRunnerIntent;
 use crate::error::Result;
 use crate::gateway::MachineSnapshot;
 use crate::github::GithubJob;
@@ -11,6 +10,7 @@ use crate::job_bindings::{OwnJobBinding, WorkerJobId};
 use crate::labels::Label;
 use crate::organizations::Organization;
 use crate::overflow::store::OverflowSnapshot;
+use crate::overflow_runtime::OverflowRunnerIntent;
 use crate::runners::{Runner, RunnerState};
 use crate::scale_sets::ScaleSet;
 use crate::settings::Settings;
@@ -110,12 +110,12 @@ pub trait OwnRunnerStore: Send + Sync {
 pub struct RoutingSnapshot {
     /// Active saved bindings from the same committed view as labels and demand.
     pub scale_sets: Vec<ScaleSet>,
-    /// Boat account and delivery facts from this same committed snapshot.
+    /// Overflow account and delivery facts from this same committed snapshot.
     pub overflow: OverflowSnapshot,
     /// Registration identities saved before GitHub JIT requests.
-    pub boat_intents: Vec<BoatRunnerIntent>,
-    /// Saved Boat runner lifecycles from the same committed view as demand.
-    pub boat_runners: Vec<Runner>,
+    pub overflow_intents: Vec<OverflowRunnerIntent>,
+    /// Saved overflow runner lifecycles from the same committed view as demand.
+    pub overflow_runners: Vec<Runner>,
     /// Workspace that owns every resource below.
     pub workspace_id: Uuid,
     /// Current and retained organization registrations.

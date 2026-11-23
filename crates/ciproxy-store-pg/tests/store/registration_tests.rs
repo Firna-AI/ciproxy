@@ -4,7 +4,7 @@ use chrono::Duration;
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::organizations::{AppState, RepositoryAccess};
 use ciproxy_store_interface::runners::RunnerPlace;
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use uuid::Uuid;
 
 use super::support::{Database, account, at, job, machine, runner};
@@ -29,9 +29,9 @@ fn reinstall_into_another_workspace_keeps_old_history_with_its_tenant() {
         .create_machine(previous_workspace.id, &old_machine)
         .unwrap();
     let mut old_account = account();
-    let old_key = EncryptedBoatKey::new(vec![10, 20]);
+    let old_key = EncryptedOverflowKey::new(vec![10, 20]);
     store
-        .connect_boat(previous_workspace.id, &old_account, &old_key, 50_000_000)
+        .connect_overflow_provider(previous_workspace.id, &old_account, &old_key, 50_000_000)
         .unwrap();
     let old_runner = runner(
         &old_label,
@@ -57,10 +57,10 @@ fn reinstall_into_another_workspace_keeps_old_history_with_its_tenant() {
         .unwrap();
     let target_account = account();
     store
-        .connect_boat(
+        .connect_overflow_provider(
             target_workspace.id,
             &target_account,
-            &EncryptedBoatKey::new(vec![30]),
+            &EncryptedOverflowKey::new(vec![30]),
             60_000_000,
         )
         .unwrap();
@@ -123,23 +123,27 @@ fn reinstall_into_another_workspace_keeps_old_history_with_its_tenant() {
     );
     old_account.retired_at = Some(at());
     assert_eq!(
-        store.boat_accounts(previous_workspace.id).unwrap(),
+        store
+            .overflow_provider_accounts(previous_workspace.id)
+            .unwrap(),
         vec![old_account.clone()]
     );
     assert_eq!(
         store
-            .encrypted_boat_key(previous_workspace.id, old_account.id)
+            .encrypted_overflow_key(previous_workspace.id, old_account.id)
             .unwrap(),
         Some(old_key)
     );
     assert_eq!(
         store
-            .encrypted_boat_key(target_workspace.id, old_account.id)
+            .encrypted_overflow_key(target_workspace.id, old_account.id)
             .unwrap(),
         None
     );
     assert_eq!(
-        store.boat_accounts(target_workspace.id).unwrap(),
+        store
+            .overflow_provider_accounts(target_workspace.id)
+            .unwrap(),
         vec![target_account]
     );
     let mut expected = vec![previous.clone(), registration.clone()];

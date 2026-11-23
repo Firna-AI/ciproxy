@@ -2,10 +2,10 @@
 
 use ciproxy_github::persistence::lease::Lease;
 use ciproxy_overflow::api::Retirement;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
-use ciproxy_store_interface::runtime_results::BoatRunnerResult;
+use ciproxy_store_interface::runtime_results::OverflowRunnerResult;
 use uuid::Uuid;
 
 use crate::error::{Error, ErrorResultExt, Result};
@@ -23,7 +23,7 @@ impl MachineRuntime {
     ) -> Result<Vec<RunnerRetirement>> {
         let mut results = Vec::new();
         for intent in input
-            .boat_intents
+            .overflow_intents
             .iter()
             .filter(|intent| intent.organization_id == organization_id)
         {
@@ -58,13 +58,13 @@ impl MachineRuntime {
     pub(crate) async fn retire_boat_registration(
         &self,
         workspace: Uuid,
-        intent: &BoatRunnerIntent,
+        intent: &OverflowRunnerIntent,
         delivery: Option<&StartRecord>,
     ) -> Result<RunnerRetirement> {
         let store = self.store.clone();
         let runner = intent.runner_id;
         let access_ended = tokio::task::spawn_blocking(move || {
-            store.boat_registration_access_ended(workspace, runner)
+            store.overflow_registration_access_ended(workspace, runner)
         })
         .await
         .internal()?
@@ -88,7 +88,7 @@ impl MachineRuntime {
         let store = self.store.clone();
         let runner = intent.runner_id;
         let Some(expected) =
-            tokio::task::spawn_blocking(move || store.boat_runner_guard(workspace, runner))
+            tokio::task::spawn_blocking(move || store.overflow_runner_guard(workspace, runner))
                 .await
                 .internal()?
                 .internal()?
@@ -125,10 +125,10 @@ impl MachineRuntime {
                 Retirement::Removed if withdrawn => {
                     let store = runtime.store.clone();
                     tokio::task::spawn_blocking(move || {
-                        store.apply_boat_runner_result(
+                        store.apply_overflow_runner_result(
                             workspace,
                             &expected,
-                            BoatRunnerResult::Retired,
+                            OverflowRunnerResult::Retired,
                         )
                     })
                     .await

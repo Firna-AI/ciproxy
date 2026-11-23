@@ -8,9 +8,10 @@ use ciproxy_overflow::api::OverflowConfig;
 use ciproxy_overflow::clock::ClockMock;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::dashboard::records::Role;
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
@@ -22,7 +23,8 @@ use super::m18_support::{Pages, at};
 async fn m18_live_exposes_saved_provider_refusals_without_keys_or_starting_sandboxes() {
     let mut pages = Pages::new(Stripe::new().provider());
     let admin = pages.fixture.login(7, Some(Role::Admin)).await;
-    let account = BoatAccount {
+    let account = OverflowProviderAccount {
+        provider: OverflowProvider::Boat,
         id: Uuid::new_v4(),
         account_name: "test-account".into(),
         connected_at: at("2026-11-01T12:00:00Z"),
@@ -33,10 +35,10 @@ async fn m18_live_exposes_saved_provider_refusals_without_keys_or_starting_sandb
         .fixture
         .database
         .store
-        .connect_boat(
+        .connect_overflow_provider(
             pages.fixture.workspace,
             &account,
-            &EncryptedBoatKey::new(vec![17, 18, 19]),
+            &EncryptedOverflowKey::new(vec![17, 18, 19]),
             1_000_000,
         )
         .unwrap();

@@ -2,15 +2,16 @@
 
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::resources::VmSize;
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::SizeOffer;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{
     EncryptedLaunch, ProviderParameters, StartPhase, StartRecord,
 };
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use ciproxy_store_interface::own_runners::OwnRunner;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
-use ciproxy_store_interface::secrets::{EncryptedBoatKey, TokenHash};
+use ciproxy_store_interface::secrets::{EncryptedOverflowKey, TokenHash};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -75,16 +76,17 @@ pub(super) fn boat_runner(pages: &Pages, github: i64) -> Runner {
     store.save_settings(workspace, &settings).unwrap();
     let key_id = Uuid::new_v4();
     store
-        .connect_boat(
+        .connect_overflow_provider(
             workspace,
-            &BoatAccount {
+            &OverflowProviderAccount {
+                provider: OverflowProvider::Boat,
                 id: key_id,
                 account_name: "retained-request".into(),
                 connected_at: at("2026-11-01T00:00:00Z"),
                 retired_at: None,
                 rejected_at: None,
             },
-            &EncryptedBoatKey::new(vec![17]),
+            &EncryptedOverflowKey::new(vec![17]),
             1_000_000,
         )
         .unwrap();
@@ -103,6 +105,7 @@ pub(super) fn boat_runner(pages: &Pages, github: i64) -> Runner {
     };
     let starts_at = at("2026-11-06T11:59:00Z");
     let mut record = StartRecord {
+        provider: OverflowProvider::Boat,
         delivery_id: Uuid::new_v4(),
         runner_id: Uuid::new_v4(),
         organization_id: fixture.organization.id,

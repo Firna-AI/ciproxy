@@ -1,33 +1,38 @@
-//! Ciphertext-only Boat key rotation, retention, and erasure queries.
+//! Ciphertext-only overflow key rotation, retention, and erasure queries.
 
 use chrono::{DateTime, Utc};
-use ciproxy_schema::boat::boat_accounts;
+use ciproxy_schema::overflow_provider_accounts::overflow_provider_accounts;
 use ciproxy_schema::settings::settings;
 use ciproxy_schema::workspaces::workspaces;
-use ciproxy_store_interface::boat::{BoatAccount, BoatStore};
 use ciproxy_store_interface::error::Result;
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::overflow_provider_accounts::{
+    OverflowProviderAccount, OverflowProviderAccountStore,
+};
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use diesel::prelude::*;
 use diesel::sql_types;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
+use crate::overflow_provider::DbOverflowProvider;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = boat_accounts)]
+#[diesel(table_name = overflow_provider_accounts)]
 struct AccountRow {
     id: Uuid,
+    provider: DbOverflowProvider,
     account_name: String,
     connected_at: DateTime<Utc>,
     retired_at: Option<DateTime<Utc>>,
     rejected_at: Option<DateTime<Utc>>,
 }
 
-impl From<AccountRow> for BoatAccount {
+impl From<AccountRow> for OverflowProviderAccount {
     fn from(row: AccountRow) -> Self {
         Self {
             id: row.id,
+            provider: row.provider.0,
             account_name: row.account_name,
             connected_at: row.connected_at,
             retired_at: row.retired_at,
@@ -36,12 +41,12 @@ impl From<AccountRow> for BoatAccount {
     }
 }
 
-impl BoatStore for PgStore {
-    fn connect_boat(
+impl OverflowProviderAccountStore for PgStore {
+    fn connect_overflow_provider(
         &self,
         workspace_id: Uuid,
-        account: &BoatAccount,
-        key: &EncryptedBoatKey,
+        account: &OverflowProviderAccount,
+        key: &EncryptedOverflowKey,
         spend_limit_usd_micros: i64,
     ) -> Result<()> {
         self.connection()?
@@ -58,19 +63,21 @@ impl BoatStore for PgStore {
                     return Err(diesel::result::Error::NotFound);
                 }
                 diesel::update(
-                    boat_accounts::table
-                        .filter(boat_accounts::workspace_id.eq(workspace_id))
-                        .filter(boat_accounts::retired_at.is_null()),
+                    overflow_provider_accounts::table
+                        .filter(overflow_provider_accounts::workspace_id.eq(workspace_id))
+                        .filter(overflow_provider_accounts::retired_at.is_null()),
                 )
-                .set(boat_accounts::retired_at.eq(account.connected_at))
+                .set(overflow_provider_accounts::retired_at.eq(account.connected_at))
                 .execute(connection)?;
-                diesel::insert_into(boat_accounts::table)
+                diesel::insert_into(overflow_provider_accounts::table)
                     .values((
-                        boat_accounts::id.eq(account.id),
-                        boat_accounts::workspace_id.eq(workspace_id),
-                        boat_accounts::account_name.eq(&account.account_name),
-                        boat_accounts::key_ciphertext.eq(key.as_bytes()),
-                        boat_accounts::connected_at.eq(account.connected_at),
+                        overflow_provider_accounts::id.eq(account.id),
+                        overflow_provider_accounts::workspace_id.eq(workspace_id),
+                        overflow_provider_accounts::provider
+                            .eq(DbOverflowProvider(account.provider)),
+                        overflow_provider_accounts::account_name.eq(&account.account_name),
+                        overflow_provider_accounts::key_ciphertext.eq(key.as_bytes()),
+                        overflow_provider_accounts::connected_at.eq(account.connected_at),
                     ))
                     .execute(connection)?;
                 QueryResult::Ok(())
@@ -78,46 +85,53 @@ impl BoatStore for PgStore {
             .store()
     }
 
-    fn boat_accounts(&self, workspace_id: Uuid) -> Result<Vec<BoatAccount>> {
-        Ok(boat_accounts::table
-            .filter(boat_accounts::workspace_id.eq(workspace_id))
-            .order(boat_accounts::connected_at)
+    fn overflow_provider_accounts(
+        &self,
+        workspace_id: Uuid,
+    ) -> Result<Vec<OverflowProviderAccount>> {
+        Ok(overflow_provider_accounts::table
+            .filter(overflow_provider_accounts::workspace_id.eq(workspace_id))
+            .order(overflow_provider_accounts::connected_at)
             .select(AccountRow::as_select())
             .load::<AccountRow>(&mut *self.connection()?)
             .store()?
             .into_iter()
-            .map(BoatAccount::from)
+            .map(OverflowProviderAccount::from)
             .collect())
     }
 
-    fn encrypted_boat_key(&self, workspace_id: Uuid, id: Uuid) -> Result<Option<EncryptedBoatKey>> {
-        Ok(boat_accounts::table
-            .filter(boat_accounts::workspace_id.eq(workspace_id))
+    fn encrypted_overflow_key(
+        &self,
+        workspace_id: Uuid,
+        id: Uuid,
+    ) -> Result<Option<EncryptedOverflowKey>> {
+        Ok(overflow_provider_accounts::table
+            .filter(overflow_provider_accounts::workspace_id.eq(workspace_id))
             .find(id)
-            .select(boat_accounts::key_ciphertext)
+            .select(overflow_provider_accounts::key_ciphertext)
             .first::<Vec<u8>>(&mut *self.connection()?)
             .optional()
             .store()?
-            .map(EncryptedBoatKey::new))
+            .map(EncryptedOverflowKey::new))
     }
 
-    fn reject_boat_key(&self, workspace_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()> {
+    fn reject_overflow_key(&self, workspace_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()> {
         let count = diesel::update(
-            boat_accounts::table
-                .filter(boat_accounts::workspace_id.eq(workspace_id))
+            overflow_provider_accounts::table
+                .filter(overflow_provider_accounts::workspace_id.eq(workspace_id))
                 .find(id),
         )
-        .set(boat_accounts::rejected_at.eq(at))
+        .set(overflow_provider_accounts::rejected_at.eq(at))
         .execute(&mut *self.connection()?)
         .store()?;
         require_record(count)
     }
 
-    fn disconnect_boat(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<()> {
+    fn disconnect_overflow_provider(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<()> {
         retire_keys(&mut *self.connection()?, workspace_id, at).store()
     }
 
-    fn delete_unused_boat_keys(&self, workspace_id: Uuid) -> Result<usize> {
+    fn delete_unused_overflow_keys(&self, workspace_id: Uuid) -> Result<usize> {
         erase_unused_keys(&mut *self.connection()?, workspace_id).store()
     }
 }
@@ -129,11 +143,11 @@ pub(crate) fn retire_keys(
     at: DateTime<Utc>,
 ) -> QueryResult<()> {
     diesel::update(
-        boat_accounts::table
-            .filter(boat_accounts::workspace_id.eq(workspace_id))
-            .filter(boat_accounts::retired_at.is_null()),
+        overflow_provider_accounts::table
+            .filter(overflow_provider_accounts::workspace_id.eq(workspace_id))
+            .filter(overflow_provider_accounts::retired_at.is_null()),
     )
-    .set(boat_accounts::retired_at.eq(at))
+    .set(overflow_provider_accounts::retired_at.eq(at))
     .execute(connection)?;
     Ok(())
 }
@@ -156,12 +170,12 @@ pub(crate) fn erase_unused_keys(
             return Ok(0);
         }
         diesel::sql_query(
-            "DELETE FROM boat_accounts AS account
+            "DELETE FROM overflow_provider_accounts AS account
              WHERE account.workspace_id = $1 AND account.retired_at IS NOT NULL
              AND NOT EXISTS (
                  SELECT 1 FROM runners
                  WHERE runners.workspace_id = account.workspace_id
-                 AND runners.boat_key_id = account.id AND runners.state <> 'stopped'
+                 AND runners.overflow_key_id = account.id AND runners.state <> 'stopped'
              ) AND NOT EXISTS (
                  SELECT 1 FROM overflow_starts
                  WHERE overflow_starts.workspace_id = account.workspace_id

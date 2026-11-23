@@ -3,11 +3,13 @@
 use chrono::NaiveDate;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::metering::facts::WorkspaceUsage;
-use ciproxy_store_interface::metering::history::{BoatAccounting, BoatCost, MachineCost, PlanCost};
+use ciproxy_store_interface::metering::history::{
+    MachineCost, OverflowAccounting, OverflowCost, PlanCost,
+};
 use ciproxy_store_interface::metering::report::SavingsSnapshot;
 use ciproxy_store_interface::metering::store::MeteringStore;
 use ciproxy_store_interface::metering::totals::{
-    AccountedBoat, AccountedJob, DailyBoatCost, DailyDelta, StartTotal,
+    AccountedJob, AccountedOverflow, DailyDelta, DailyOverflowCost, StartTotal,
 };
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -17,7 +19,7 @@ use crate::error::QueryResultExt;
 use crate::gateway_transaction::read_snapshot;
 use crate::overflow::accounting;
 
-use super::{aggregates, boat_cursors, facts, history, job_cursors, snapshot};
+use super::{aggregates, facts, history, job_cursors, overflow_cursors, snapshot};
 
 impl MeteringStore for PgStore {
     fn retire_accounting(
@@ -48,8 +50,8 @@ impl MeteringStore for PgStore {
         history::save_plan(&mut *self.connection()?, workspace_id, cost)
     }
 
-    fn save_boat_cost(&self, workspace_id: Uuid, cost: &BoatCost) -> Result<()> {
-        history::save_boat(&mut *self.connection()?, workspace_id, cost)
+    fn save_overflow_cost(&self, workspace_id: Uuid, cost: &OverflowCost) -> Result<()> {
+        history::save_overflow(&mut *self.connection()?, workspace_id, cost)
     }
 
     fn savings_snapshot(
@@ -83,25 +85,25 @@ impl MeteringStore for PgStore {
             .store()
     }
 
-    fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting> {
+    fn overflow_accounting(&self, workspace_id: Uuid) -> Result<OverflowAccounting> {
         read_snapshot(&mut *self.connection()?, |connection| {
-            Ok(BoatAccounting {
-                costs: history::load_boat(connection, workspace_id).store()?,
-                accounted: boat_cursors::load(connection, workspace_id).store()?,
+            Ok(OverflowAccounting {
+                costs: history::load_overflow(connection, workspace_id).store()?,
+                accounted: overflow_cursors::load(connection, workspace_id).store()?,
             })
         })
     }
 
-    fn apply_boat_accounting(
+    fn apply_overflow_accounting(
         &self,
         workspace_id: Uuid,
-        previous: Option<&AccountedBoat>,
-        current: &AccountedBoat,
-        deltas: &[DailyBoatCost],
+        previous: Option<&AccountedOverflow>,
+        current: &AccountedOverflow,
+        deltas: &[DailyOverflowCost],
     ) -> Result<bool> {
         self.connection()?
             .transaction(|connection| {
-                boat_cursors::apply(connection, workspace_id, previous, current, deltas)
+                overflow_cursors::apply(connection, workspace_id, previous, current, deltas)
             })
             .store()
     }

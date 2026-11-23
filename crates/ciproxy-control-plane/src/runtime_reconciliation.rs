@@ -37,7 +37,7 @@ impl MachineRuntime {
                     Action::StartRunner(start) => matches!(start.destination, Destination::Boat(_)),
                     Action::DeleteSandbox { .. } => true,
                     Action::StopRunner { runner_id, .. } => input
-                        .boat_intents
+                        .overflow_intents
                         .iter()
                         .any(|intent| intent.runner_id.to_string() == runner_id.0),
                 };

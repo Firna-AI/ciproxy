@@ -8,7 +8,7 @@ use ciproxy_store_interface::billing::state::Selection;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::metering::history::Period;
 use ciproxy_store_interface::metering::store::MeteringStore;
-use ciproxy_store_interface::metering::totals::{AccountedBoat, AccountedJob};
+use ciproxy_store_interface::metering::totals::{AccountedJob, AccountedOverflow};
 use uuid::Uuid;
 
 use crate::report::boat::boat_cost_deltas;
@@ -138,7 +138,7 @@ impl Metering for StoredMetering {
                 outcome.stale_jobs += 1;
             }
         }
-        let boat = self.store.boat_accounting(workspace_id)?;
+        let boat = self.store.overflow_accounting(workspace_id)?;
         let previous: BTreeMap<_, _> = boat
             .accounted
             .into_iter()
@@ -146,7 +146,7 @@ impl Metering for StoredMetering {
             .collect();
         for cost in boat.costs {
             let before = previous.get(&cost.runner_id);
-            let current = AccountedBoat {
+            let current = AccountedOverflow {
                 cost,
                 observed_at: before.map_or(at, |previous| at.max(previous.observed_at)),
             };
@@ -159,7 +159,7 @@ impl Metering for StoredMetering {
             }
             if self
                 .store
-                .apply_boat_accounting(workspace_id, before, &current, &changes)?
+                .apply_overflow_accounting(workspace_id, before, &current, &changes)?
             {
                 outcome.updated_sandboxes += 1;
             } else {

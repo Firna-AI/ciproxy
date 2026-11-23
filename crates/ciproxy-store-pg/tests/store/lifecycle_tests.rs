@@ -3,7 +3,7 @@
 use chrono::Duration;
 use ciproxy_store_interface::organizations::{AppState, RepositoryAccess};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use uuid::Uuid;
 
@@ -53,10 +53,10 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
         .unwrap();
     let account = account();
     store
-        .connect_boat(
+        .connect_overflow_provider(
             workspace.id,
             &account,
-            &EncryptedBoatKey::new(vec![1, 2]),
+            &EncryptedOverflowKey::new(vec![1, 2]),
             50_000_000,
         )
         .unwrap();
@@ -112,7 +112,7 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
         Some(credential.clone())
     );
     assert_eq!(
-        store.boat_accounts(workspace.id).unwrap(),
+        store.overflow_provider_accounts(workspace.id).unwrap(),
         vec![account.clone()]
     );
     store
@@ -169,7 +169,7 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
         Some(workspace.clone())
     );
     assert_eq!(
-        store.boat_accounts(workspace.id).unwrap(),
+        store.overflow_provider_accounts(workspace.id).unwrap(),
         vec![account.clone()]
     );
     assert_eq!(store.machines(workspace.id).unwrap(), vec![machine.clone()]);
@@ -203,7 +203,7 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
         Some(credential)
     );
     assert_eq!(
-        store.boat_accounts(workspace.id).unwrap(),
+        store.overflow_provider_accounts(workspace.id).unwrap(),
         vec![account.clone()]
     );
     store
@@ -242,5 +242,8 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
         Some(second.clone())
     );
     assert_eq!(store.machines(workspace.id).unwrap(), vec![machine]);
-    assert_eq!(store.boat_accounts(workspace.id).unwrap(), vec![account]);
+    assert_eq!(
+        store.overflow_provider_accounts(workspace.id).unwrap(),
+        vec![account]
+    );
 }

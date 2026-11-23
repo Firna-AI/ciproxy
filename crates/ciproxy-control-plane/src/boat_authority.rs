@@ -12,12 +12,12 @@ use ciproxy_overflow::error::{Error, Result};
 use ciproxy_overflow::view::OverflowView;
 use ciproxy_scaler::actions::Action;
 use ciproxy_scaler::decision::decide;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::runtime_results::{
-    BoatRunnerGuard, BoatRunnerResult, BoatRunnerWrite,
+    OverflowRunnerGuard, OverflowRunnerResult, OverflowRunnerWrite,
 };
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
@@ -41,14 +41,18 @@ pub struct BoatRemoval {
     /// GitHub's current retirement decision.
     pub retirement: Retirement,
     /// Exact saved authority after the conditional result write.
-    pub guard: BoatRunnerGuard,
+    pub guard: OverflowRunnerGuard,
 }
 
 /// GitHub retirement shared by startup recovery, take-out, and overflow maintenance.
 #[async_trait]
 pub trait BoatRegistrationRetirement: Send + Sync {
     /// Obtain live GitHub removal or Busy proof. Callers enforce delivery safety.
-    async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<BoatRemoval>;
+    async fn remove(
+        &self,
+        workspace_id: Uuid,
+        intent: &OverflowRunnerIntent,
+    ) -> Result<BoatRemoval>;
 }
 
 #[async_trait]
@@ -75,7 +79,7 @@ impl RunnerAuthority for BoatRunnerAuthority {
             Ok(Ok(value)) => value,
             _ => return Err(Error::ProviderUnavailable),
         };
-        let intents = &input.boat_intents;
+        let intents = &input.overflow_intents;
         let intent = intents
             .iter()
             .find(|intent| {
@@ -102,7 +106,7 @@ impl RunnerAuthority for BoatRunnerAuthority {
         {
             return Ok(Retirement::RunningJob);
         }
-        let busy = input.boat_runners.iter().any(|runner| {
+        let busy = input.overflow_runners.iter().any(|runner| {
             runner.id == runner_id
                 && runner.organization_id == organization_id
                 && runner.state == RunnerState::Busy
@@ -139,7 +143,11 @@ impl RunnerAuthority for BoatRunnerAuthority {
 
 #[async_trait]
 impl BoatRegistrationRetirement for BoatRunnerAuthority {
-    async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<BoatRemoval> {
+    async fn remove(
+        &self,
+        workspace_id: Uuid,
+        intent: &OverflowRunnerIntent,
+    ) -> Result<BoatRemoval> {
         if self
             .registration_access_ended(workspace_id, intent.runner_id)
             .await?
@@ -149,7 +157,7 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
         let store = self.store.clone();
         let runner = intent.runner_id;
         let expected = match tokio::task::spawn_blocking(move || {
-            store.boat_runner_guard(workspace_id, runner)
+            store.overflow_runner_guard(workspace_id, runner)
         })
         .await
         {
@@ -172,19 +180,19 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
             Ok(RegistrationRetirement::Busy { id }) => {
                 let store = self.store.clone();
                 match tokio::task::spawn_blocking(move || {
-                    store.apply_boat_runner_result(
+                    store.apply_overflow_runner_result(
                         workspace_id,
                         &expected,
-                        BoatRunnerResult::Busy { github_id: id },
+                        OverflowRunnerResult::Busy { github_id: id },
                     )
                 })
                 .await
                 {
-                    Ok(Ok(BoatRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
+                    Ok(Ok(OverflowRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
                         retirement: Retirement::RunningJob,
                         guard: *saved,
                     }),
-                    Ok(Ok(BoatRunnerWrite::Rejected | BoatRunnerWrite::Retired)) => {
+                    Ok(Ok(OverflowRunnerWrite::Rejected | OverflowRunnerWrite::Retired)) => {
                         Err(Error::RunnerNeeded)
                     }
                     _ => Err(Error::ProviderUnavailable),
@@ -193,19 +201,19 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
             Ok(RegistrationRetirement::Removed { .. } | RegistrationRetirement::Absent) => {
                 let store = self.store.clone();
                 match tokio::task::spawn_blocking(move || {
-                    store.apply_boat_runner_result(
+                    store.apply_overflow_runner_result(
                         workspace_id,
                         &expected,
-                        BoatRunnerResult::Checked,
+                        OverflowRunnerResult::Checked,
                     )
                 })
                 .await
                 {
-                    Ok(Ok(BoatRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
+                    Ok(Ok(OverflowRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
                         retirement: Retirement::Removed,
                         guard: *saved,
                     }),
-                    Ok(Ok(BoatRunnerWrite::Rejected | BoatRunnerWrite::Retired)) => {
+                    Ok(Ok(OverflowRunnerWrite::Rejected | OverflowRunnerWrite::Retired)) => {
                         Err(Error::RunnerNeeded)
                     }
                     _ => Err(Error::ProviderUnavailable),
@@ -220,7 +228,7 @@ impl BoatRunnerAuthority {
     async fn registration_access_ended(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<bool> {
         let store = self.store.clone();
         match tokio::task::spawn_blocking(move || {
-            store.boat_registration_access_ended(workspace_id, runner_id)
+            store.overflow_registration_access_ended(workspace_id, runner_id)
         })
         .await
         {

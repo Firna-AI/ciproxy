@@ -3,8 +3,9 @@
 use std::thread;
 
 use ciproxy_metering::service::{Metering, StoredMetering};
-use ciproxy_store_interface::metering::history::BoatCost;
-use ciproxy_store_interface::metering::totals::AccountedBoat;
+use ciproxy_store_interface::metering::history::OverflowCost;
+use ciproxy_store_interface::metering::totals::AccountedOverflow;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
@@ -34,9 +35,10 @@ fn boat_read_snapshot_preserves_completed_cost_and_cursor_after_price_change() {
     database.store.create_runner(workspace.id, &vm).unwrap();
     database
         .store
-        .save_boat_cost(
+        .save_overflow_cost(
             workspace.id,
-            &BoatCost {
+            &OverflowCost {
+                provider: OverflowProvider::Boat,
                 runner_id: vm.id,
                 starts_at: time("2026-11-04T12:00:00Z"),
                 ends_at: None,
@@ -54,7 +56,7 @@ fn boat_read_snapshot_preserves_completed_cost_and_cursor_after_price_change() {
     database.connection.batch_execute("BEGIN").unwrap();
     database
         .connection
-        .batch_execute("LOCK TABLE metering_boat_cursors IN ACCESS EXCLUSIVE MODE")
+        .batch_execute("LOCK TABLE metering_overflow_cursors IN ACCESS EXCLUSIVE MODE")
         .unwrap();
     let workspace_id = workspace.id;
     let refresh = thread::spawn(move || {
@@ -62,21 +64,21 @@ fn boat_read_snapshot_preserves_completed_cost_and_cursor_after_price_change() {
     });
     wait_for_blocker(&mut observer, reader.pid, controller_pid);
     diesel::sql_query(
-        "UPDATE metering_boat_costs SET ends_at = $2, minute_usd = $3 WHERE runner_id = $1",
+        "UPDATE metering_overflow_costs SET ends_at = $2, minute_usd = $3 WHERE runner_id = $1",
     )
     .bind::<sql_types::Uuid, _>(vm.id)
     .bind::<sql_types::Timestamptz, _>(time("2026-11-04T12:05:00Z"))
     .bind::<sql_types::Numeric, _>(usd("0.03"))
     .execute(&mut database.connection)
     .unwrap();
-    diesel::sql_query("UPDATE metering_boat_cursors SET ends_at = $2, minute_usd = $3, observed_at = $4 WHERE runner_id = $1")
+    diesel::sql_query("UPDATE metering_overflow_cursors SET ends_at = $2, minute_usd = $3, observed_at = $4 WHERE runner_id = $1")
         .bind::<sql_types::Uuid, _>(vm.id)
         .bind::<sql_types::Timestamptz, _>(time("2026-11-04T12:05:00Z"))
         .bind::<sql_types::Numeric, _>(usd("0.03"))
         .bind::<sql_types::Timestamptz, _>(time("2026-11-04T12:06:00Z"))
         .execute(&mut database.connection).unwrap();
     diesel::sql_query(
-        "UPDATE metering_daily_boat_costs SET usd = $2 WHERE workspace_id = $1 AND day = $3",
+        "UPDATE metering_daily_overflow_costs SET usd = $2 WHERE workspace_id = $1 AND day = $3",
     )
     .bind::<sql_types::Uuid, _>(workspace.id)
     .bind::<sql_types::Numeric, _>(usd("0.15"))
@@ -97,21 +99,22 @@ fn boat_read_snapshot_preserves_completed_cost_and_cursor_after_price_change() {
         snapshot
             .days
             .iter()
-            .map(|day| day.boat_usd)
+            .map(|day| day.overflow_usd)
             .sum::<Decimal>(),
         usd("0.15")
     );
     assert_eq!((outcome.updated_sandboxes, outcome.stale_sandboxes), (0, 1));
     let cursor = database
         .store
-        .boat_accounting(workspace.id)
+        .overflow_accounting(workspace.id)
         .unwrap()
         .accounted
         .remove(0);
     assert_eq!(
         cursor,
-        AccountedBoat {
-            cost: BoatCost {
+        AccountedOverflow {
+            cost: OverflowCost {
+                provider: OverflowProvider::Boat,
                 runner_id: vm.id,
                 starts_at: time("2026-11-04T12:00:00Z"),
                 ends_at: Some(time("2026-11-04T12:05:00Z")),

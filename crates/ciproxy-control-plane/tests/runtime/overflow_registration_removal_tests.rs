@@ -23,15 +23,15 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
     let store = harness.fixture.store.clone();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
-    let ended = store.boat_runner_intents(workspace).unwrap().remove(0);
+    let ended = store.overflow_runner_intents(workspace).unwrap().remove(0);
     let mut missing = ended.clone();
     missing.runner_id = Uuid::new_v4();
     missing.delivery_id = Uuid::new_v4();
     missing.github_id = Some(101);
     store
-        .create_boat_runner_intent(workspace, &missing)
+        .create_overflow_runner_intent(workspace, &missing)
         .unwrap();
-    let expected = store.boat_runner_intents(workspace).unwrap();
+    let expected = store.overflow_runner_intents(workspace).unwrap();
     job.phase = DemandPhase::Completed;
     job.completed_at = Some(at());
     store.save_github_job(workspace, &job, at()).unwrap();
@@ -48,7 +48,7 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
         .await
         .unwrap();
     let completed = store
-        .boat_runtime_snapshot(workspace)
+        .overflow_runtime_snapshot(workspace)
         .unwrap()
         .starts
         .remove(0);
@@ -68,12 +68,12 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
         );
         assert_eq!(*remote.contexts.lock().unwrap(), Vec::new(), "tick: {tick}");
         assert_eq!(
-            store.boat_runner_intents(workspace).unwrap(),
+            store.overflow_runner_intents(workspace).unwrap(),
             expected,
             "tick: {tick}"
         );
         assert_eq!(
-            store.boat_runtime_snapshot(workspace).unwrap().starts,
+            store.overflow_runtime_snapshot(workspace).unwrap().starts,
             vec![completed.clone()],
             "tick: {tick}"
         );
@@ -86,7 +86,10 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
     store.install_organization(&reinstalled).unwrap();
     *remote.answer.lock().unwrap() = Answer::Removed;
     harness.runtime.settled_tick().await.unwrap();
-    assert_eq!(store.boat_runner_intents(workspace).unwrap(), Vec::new());
+    assert_eq!(
+        store.overflow_runner_intents(workspace).unwrap(),
+        Vec::new()
+    );
     let mut calls = remote.calls.lock().unwrap().clone();
     calls.sort_by_key(|call| match call {
         Call::Find => 0,
@@ -104,7 +107,7 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
         vec![49; 2]
     );
     assert_eq!(
-        store.boat_runtime_snapshot(workspace).unwrap().starts,
+        store.overflow_runtime_snapshot(workspace).unwrap().starts,
         vec![completed]
     );
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 1);

@@ -23,7 +23,7 @@ async fn pending_takeout_refreshes_positive_installation_proof_and_stops_only_af
     let intents = harness
         .fixture
         .store
-        .boat_runner_intents(harness.fixture.workspace)
+        .overflow_runner_intents(harness.fixture.workspace)
         .unwrap();
     assert_eq!(intents.len(), 1);
     assert_eq!(intents[0].github_id, Some(100));
@@ -60,7 +60,7 @@ async fn pending_takeout_refreshes_positive_installation_proof_and_stops_only_af
         saved(fixture),
         fixture
             .store
-            .boat_runner_guard(fixture.workspace, boat_runner)
+            .overflow_runner_guard(fixture.workspace, boat_runner)
     );
     assert!(calls.contains(&Call::Remove(47)));
     assert!(calls.contains(&Call::Remove(100)));

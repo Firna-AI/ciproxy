@@ -5,5 +5,6 @@ pub mod admission;
 pub mod billing;
 pub mod connection;
 pub mod known;
+pub mod provider;
 pub mod record;
 pub mod store;

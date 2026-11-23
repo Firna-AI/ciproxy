@@ -2,10 +2,11 @@
 
 use async_trait::async_trait;
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::AccountState;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::store::AccountRecord;
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use uuid::Uuid;
 
 use crate::api::{Overflow, StartOutcome, StartRequest};
@@ -38,7 +39,7 @@ impl Overflow for OverflowService {
         key: Secret,
         wallet: String,
         limit: i64,
-    ) -> Result<BoatAccount> {
+    ) -> Result<OverflowProviderAccount> {
         if limit <= 0 {
             return Err(Error::InvalidSpendLimit);
         }
@@ -64,8 +65,9 @@ impl Overflow for OverflowService {
                 SecretBytes::new(key.expose_secret().as_bytes().to_vec()),
             )
             .await?;
-        let metadata = BoatAccount {
+        let metadata = OverflowProviderAccount {
             id: key_id,
+            provider: OverflowProvider::Boat,
             account_name: facts.name,
             connected_at: now,
             retired_at: None,
@@ -73,8 +75,9 @@ impl Overflow for OverflowService {
         };
         let account = AccountRecord {
             account: metadata.clone(),
-            key: EncryptedBoatKey::new(bytes),
+            key: EncryptedOverflowKey::new(bytes),
             state: AccountState {
+                provider: metadata.provider,
                 wallet: facts.wallet,
                 checked_at: Some(now),
                 sizes,

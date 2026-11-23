@@ -29,7 +29,7 @@ async fn boat_root(releases: Vec<ImageOffer>) -> u64 {
     harness
         .fixture
         .store
-        .boat_runtime_snapshot(harness.fixture.workspace)
+        .overflow_runtime_snapshot(harness.fixture.workspace)
         .unwrap()
         .starts[0]
         .required_root_disk_bytes

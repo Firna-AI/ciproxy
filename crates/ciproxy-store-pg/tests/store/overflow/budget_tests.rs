@@ -61,7 +61,7 @@ fn bounded_start_fee_supplies_savings_without_becoming_a_confirmed_charge() {
         Some(Decimal::new(3, 2))
     );
     assert_eq!(saved.starts[0].start_usd, None);
-    let bounded = database.store.boat_accounting(workspace_id).unwrap();
+    let bounded = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(bounded.costs.len(), 1);
     assert_eq!(bounded.costs[0].start_usd, Decimal::new(3, 2));
     let from = at().date_naive();
@@ -75,7 +75,7 @@ fn bounded_start_fee_supplies_savings_without_becoming_a_confirmed_charge() {
     );
     record.start_usd = Some(Decimal::new(7, 2));
     session.save_start(&record).unwrap();
-    let measured = database.store.boat_accounting(workspace_id).unwrap();
+    let measured = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(measured.costs[0].start_usd, Decimal::new(7, 2));
     assert_eq!(
         measured.costs[0].ends_at,

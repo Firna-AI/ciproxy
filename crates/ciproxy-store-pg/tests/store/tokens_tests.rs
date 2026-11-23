@@ -3,7 +3,7 @@
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use uuid::Uuid;
 
@@ -147,10 +147,10 @@ fn reusable_install_tokens_expire_and_scoped_credentials_revoke() {
     assert_eq!(store.authenticate_token(&hash(), at()).unwrap(), None);
     let account = account();
     store
-        .connect_boat(
+        .connect_overflow_provider(
             owner.id,
             &account,
-            &EncryptedBoatKey::new(vec![7, 8]),
+            &EncryptedOverflowKey::new(vec![7, 8]),
             20_000_000,
         )
         .unwrap();
@@ -178,7 +178,7 @@ fn reusable_install_tokens_expire_and_scoped_credentials_revoke() {
         )
         .unwrap();
     assert_eq!(store.authenticate_token(&sandbox_hash, at()).unwrap(), None);
-    assert_eq!(store.boat_accounts(owner.id).unwrap(), vec![]);
+    assert_eq!(store.overflow_provider_accounts(owner.id).unwrap(), vec![]);
     assert_eq!(store.labels(owner.id).unwrap(), vec![label]);
     assert_eq!(
         store.organization(owner.id, organization.id).unwrap(),

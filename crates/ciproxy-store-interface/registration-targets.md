@@ -12,9 +12,9 @@ write. `runner_registration_target` reads that captured value. It returns
 
 `OwnRunner.registration_scale_set_id` exposes the captured remote ID beside
 the runner's existing organization, label, and binding IDs.
-`BoatRunnerIntent.registration_scale_set_id` exposes the same field for
-Boat startup and recovery. Its JSON reader accepts an absent field as
-unknown. The Boat registration write saves the response in the intent and
+`OverflowRunnerIntent.registration_scale_set_id` exposes the same field
+for overflow startup and recovery. Its JSON reader accepts an absent field
+as unknown. The registration write saves the response in the intent and
 the materialized runner together.
 
 Lifecycle observations update runner IDs and states without changing the

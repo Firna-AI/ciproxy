@@ -62,9 +62,14 @@ fn late_metering_refresh_prices_only_the_ninety_second_measured_prefix() {
         .store
         .savings_snapshot(workspace_id, day, day.succ_opt().unwrap())
         .unwrap();
-    assert_eq!(snapshot.days[0].boat_usd, Decimal::new(318, 4));
+    assert_eq!(snapshot.days[0].overflow_usd, Decimal::new(318, 4));
     assert_eq!(
-        database.store.boat_accounting(workspace_id).unwrap().costs[0].ends_at,
+        database
+            .store
+            .overflow_accounting(workspace_id)
+            .unwrap()
+            .costs[0]
+            .ends_at,
         Some(at() + Duration::seconds(90))
     );
 }

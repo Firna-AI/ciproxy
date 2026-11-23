@@ -73,8 +73,8 @@ pub(crate) fn snapshot(
                 .map(Into::into)
                 .collect(),
             overflow: crate::overflow::rows::load(connection, workspace_id)?,
-            boat_intents: crate::boat_runtime::load(connection, workspace_id)?,
-            boat_runners: runners::table
+            overflow_intents: crate::overflow_runtime::load(connection, workspace_id)?,
+            overflow_runners: runners::table
                 .filter(runners::workspace_id.eq(workspace_id))
                 .filter(runners::sandbox_id.is_not_null())
                 .order(runners::id)

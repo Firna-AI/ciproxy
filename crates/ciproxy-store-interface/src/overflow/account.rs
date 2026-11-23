@@ -4,6 +4,8 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use crate::overflow::provider::OverflowProvider;
+
 /// One eligible published size with its exact runtime price.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct SizeOffer {
@@ -22,11 +24,14 @@ pub struct SizeOffer {
 /// Durable account facts. A capacity read does not reserve a machine.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AccountState {
-    /// Explicit immutable wallet selector, either personal or an organization ID.
+    /// The provider that supplied these observations.
+    #[serde(default)]
+    pub provider: OverflowProvider,
+    /// Boat wallet selector, either personal or an organization ID.
     pub wallet: String,
     /// Last successful five-minute catalog read.
     pub checked_at: Option<DateTime<Utc>>,
-    /// Sizes offered by the shared backend.
+    /// Sizes offered by the provider.
     pub sizes: Vec<SizeOffer>,
     /// The account currently has a free trial.
     pub trial: bool,

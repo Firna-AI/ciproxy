@@ -19,7 +19,7 @@ pub(crate) fn access_ended(
     runner: Uuid,
 ) -> QueryResult<bool> {
     let access = diesel::sql_query(
-        "SELECT github_access_ended FROM boat_registration_ownership
+        "SELECT github_access_ended FROM overflow_registration_ownership
          WHERE workspace_id=$1 AND runner_id=$2",
     )
     .bind::<diesel::sql_types::Uuid, _>(workspace)
@@ -36,7 +36,7 @@ pub(crate) fn purge(
     at: DateTime<Utc>,
 ) -> QueryResult<usize> {
     diesel::sql_query(
-        "DELETE FROM boat_runner_intents i USING boat_registration_ownership o
+        "DELETE FROM overflow_runner_intents i USING overflow_registration_ownership o
          WHERE i.workspace_id=$1 AND o.workspace_id=i.workspace_id
          AND o.runner_id=i.runner_id AND o.terminal AND o.forget_after <= $2",
     )
@@ -53,7 +53,7 @@ pub(crate) fn retain_deadlines(
     at: DateTime<Utc>,
 ) -> QueryResult<()> {
     diesel::sql_query(
-        "UPDATE boat_runner_intents i SET delete_after=o.delete_after
+        "UPDATE overflow_runner_intents i SET delete_after=o.delete_after
          FROM organizations o WHERE i.workspace_id=$1
          AND o.workspace_id=i.workspace_id AND o.id=i.organization_id
          AND o.app_state='removed' AND o.removed_at IS NOT NULL

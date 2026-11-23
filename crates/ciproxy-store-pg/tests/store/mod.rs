@@ -1,6 +1,5 @@
 //! Public store integration tests on the PostgreSQL at DATABASE_URL.
 
-mod boat_tests;
 mod cleanup_tests;
 mod connection_tests;
 mod dashboard_continuation_tests;
@@ -17,6 +16,8 @@ mod lock_tests;
 mod machine_snapshot_tests;
 mod metering;
 mod overflow;
+mod overflow_provider_accounts_tests;
+mod overflow_provider_migration_tests;
 mod platform_tests;
 mod registration_tests;
 mod retention_tests;

@@ -11,10 +11,10 @@ use crate::error::QueryResultExt;
 use super::rows::AccountRow;
 
 const ACCOUNT: &str = "
-    SELECT a.id, a.account_name, a.key_ciphertext, a.connected_at,
+    SELECT a.id, a.provider, a.account_name, a.key_ciphertext, a.connected_at,
            a.retired_at, a.rejected_at, s.state_json
     FROM delivery d
-    JOIN boat_accounts a ON a.id = d.key_id AND a.workspace_id = d.workspace_id
+    JOIN overflow_provider_accounts a ON a.id = d.key_id AND a.workspace_id = d.workspace_id
     JOIN organizations o ON o.id = (d.record_json::jsonb ->> 'organization_id')::uuid
         AND o.workspace_id = d.workspace_id
     JOIN settings w ON w.workspace_id = d.workspace_id

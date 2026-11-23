@@ -19,7 +19,7 @@ pub enum Error {
     /// A value conflicts with a stored requirement.
     #[error("[store] invalid stored value")]
     InvalidValue,
-    /// Required Boat cost facts cannot be represented as a complete price interval.
+    /// Required overflow cost facts cannot form a complete price interval.
     #[error("[store] Boat accounting is incomplete")]
     AccountingIncomplete,
     /// An implementation failed for an unhandled reason.

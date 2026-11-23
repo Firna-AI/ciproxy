@@ -1,4 +1,4 @@
-//! Operation-specific liveness authority for a pending Boat connection.
+//! Operation-specific liveness authority for a pending overflow connection.
 
 use uuid::Uuid;
 

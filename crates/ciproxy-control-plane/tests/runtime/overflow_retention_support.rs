@@ -1,7 +1,7 @@
 //! Additional owned registration identities for retention boundaries.
 
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
 
@@ -10,9 +10,9 @@ use super::overflow_support::Harness;
 /// Save a registration in a sibling organization or a separate workspace.
 pub(super) async fn extra_intent(
     harness: &Harness,
-    source: &BoatRunnerIntent,
+    source: &OverflowRunnerIntent,
     separate_workspace: bool,
-) -> (Uuid, BoatRunnerIntent) {
+) -> (Uuid, OverflowRunnerIntent) {
     let fixture = &harness.fixture;
     let store = &fixture.store;
     let workspace = if separate_workspace {
@@ -69,7 +69,9 @@ pub(super) async fn extra_intent(
     intent.organization_id = organization.id;
     intent.label_id = label.id;
     intent.scale_set_id = scale_set.id;
-    store.create_boat_runner_intent(workspace, &intent).unwrap();
+    store
+        .create_overflow_runner_intent(workspace, &intent)
+        .unwrap();
     (workspace, intent)
 }
 

@@ -1,21 +1,27 @@
 //! Public store fixtures for encrypted account and sandbox delivery records.
 
 use ciproxy_protocol::resources::VmSize;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
+use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use ciproxy_store_interface::overflow::admission::{
     PreparedDispatch, ReservationBudget, ReservationOutcome,
 };
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{
     EncryptedLaunch, ProviderParameters, StartPhase, StartRecord,
 };
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use ciproxy_store_interface::overflow::store::OverflowSession;
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::secrets::TokenHash;
+use diesel::connection::SimpleConnection;
+use diesel::prelude::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
+
+use crate::store::metering::concurrent::support::backend_pid;
 
 use super::super::support::{Database, account, at};
 
@@ -25,7 +31,7 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
     let (label, scale_set) = database.label_and_scale_set(&organization);
     let account = AccountRecord {
         account: account(),
-        key: EncryptedBoatKey::new(vec![8, 9]),
+        key: EncryptedOverflowKey::new(vec![8, 9]),
         state: AccountState {
             wallet: "personal".to_owned(),
             checked_at: Some(at()),
@@ -47,6 +53,7 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
             .unwrap()
     );
     let record = StartRecord {
+        provider: account.account.provider,
         delivery_id: Uuid::new_v4(),
         runner_id: Uuid::new_v4(),
         organization_id: organization.id,
@@ -97,9 +104,10 @@ pub(super) fn create_runner_intent(database: &Database, workspace: Uuid, record:
         .remove(0);
     database
         .store
-        .create_boat_runner_intent(
+        .create_overflow_runner_intent(
             workspace,
-            &BoatRunnerIntent {
+            &OverflowRunnerIntent {
+                provider: record.provider,
                 registration_scale_set_id: Some(binding.github_id),
                 delivery_id: record.delivery_id,
                 runner_id: record.runner_id,
@@ -153,4 +161,44 @@ pub(super) fn reserve(
     }
     session.save_start(record)?;
     Ok(ReservationOutcome::Reserved)
+}
+
+pub(super) fn save_running_delivery(
+    session: &mut dyn OverflowSession,
+    record: &mut StartRecord,
+    hash: &TokenHash,
+) {
+    assert_eq!(
+        reserve(
+            session,
+            record,
+            &EncryptedLaunch(vec![71]),
+            hash,
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
+        ReservationOutcome::Reserved
+    );
+    record.sandbox = Some(KnownSandbox::observed(
+        "bx_23456789".to_owned(),
+        record.starts_at,
+        record.dispatch.as_ref().unwrap().lifetime_seconds,
+    ));
+    record.phase = StartPhase::Running;
+    session.save_start(record).unwrap();
+}
+
+pub(super) fn hold_delivery_row(connection: &mut PgConnection, delivery_id: Uuid) -> i32 {
+    let controller_pid = backend_pid(connection);
+    connection.batch_execute("BEGIN").unwrap();
+    overflow_starts::table
+        .find(delivery_id)
+        .select(overflow_starts::delivery_id)
+        .for_update()
+        .first::<Uuid>(connection)
+        .unwrap();
+    controller_pid
 }

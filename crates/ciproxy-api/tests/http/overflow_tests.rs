@@ -91,7 +91,7 @@ async fn boat_connection_requires_admin_positive_limit_and_accepted_key() {
         fixture
             .database
             .store
-            .boat_accounts(fixture.workspace)
+            .overflow_provider_accounts(fixture.workspace)
             .unwrap()
             .len(),
         0
@@ -158,13 +158,13 @@ async fn replacement_and_disconnect_preserve_a_running_sandbox_and_saved_reconne
     let old = fixture
         .database
         .store
-        .boat_accounts(fixture.workspace)
+        .overflow_provider_accounts(fixture.workspace)
         .unwrap()[0]
         .id;
     let old_key = fixture
         .database
         .store
-        .encrypted_boat_key(fixture.workspace, old)
+        .encrypted_overflow_key(fixture.workspace, old)
         .unwrap()
         .unwrap();
     start(&fixture).await;
@@ -184,7 +184,7 @@ async fn replacement_and_disconnect_preserve_a_running_sandbox_and_saved_reconne
         fixture
             .database
             .store
-            .encrypted_boat_key(fixture.workspace, old)
+            .encrypted_overflow_key(fixture.workspace, old)
             .unwrap(),
         Some(old_key.clone())
     );
@@ -213,7 +213,7 @@ async fn replacement_and_disconnect_preserve_a_running_sandbox_and_saved_reconne
         fixture
             .database
             .store
-            .encrypted_boat_key(fixture.workspace, old)
+            .encrypted_overflow_key(fixture.workspace, old)
             .unwrap(),
         Some(old_key.clone())
     );

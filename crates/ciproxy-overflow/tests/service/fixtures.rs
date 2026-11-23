@@ -12,12 +12,13 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::BoatSizeId;
 use ciproxy_scaler::registration::RegistrationTarget;
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{ProviderParameters, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
-use ciproxy_store_interface::secrets::{EncryptedBoatKey, TokenHash};
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
+use ciproxy_store_interface::secrets::{EncryptedOverflowKey, TokenHash};
 use rust_decimal::Decimal;
 use sha2::{Digest, Sha256};
 use unimock::Unimock;
@@ -43,15 +44,17 @@ pub(super) fn offer() -> SizeOffer {
 pub(super) fn snapshot() -> OverflowSnapshot {
     OverflowSnapshot {
         accounts: vec![AccountRecord {
-            account: BoatAccount {
+            account: OverflowProviderAccount {
+                provider: OverflowProvider::Boat,
                 id: id(2),
                 account_name: "Customer".to_owned(),
                 connected_at: at(),
                 retired_at: None,
                 rejected_at: None,
             },
-            key: EncryptedBoatKey::new(vec![7, 7]),
+            key: EncryptedOverflowKey::new(vec![7, 7]),
             state: AccountState {
+                provider: OverflowProvider::Boat,
                 wallet: "personal".to_owned(),
                 checked_at: Some(at()),
                 sizes: vec![offer()],
@@ -110,6 +113,7 @@ pub(super) fn request() -> StartRequest {
 
 pub(super) fn record(phase: StartPhase) -> StartRecord {
     StartRecord {
+        provider: OverflowProvider::Boat,
         delivery_id: id(11),
         runner_id: id(12),
         organization_id: id(3),

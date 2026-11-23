@@ -61,8 +61,8 @@ fn stale_accounting_snapshot_cannot_apply_the_same_delta_twice() {
         .days;
     assert_eq!(
         (
-            totals[0].sizes[0].boat.starts,
-            totals[0].sizes[0].boat.minutes
+            totals[0].sizes[0].overflow.starts,
+            totals[0].sizes[0].overflow.minutes
         ),
         (1, usd("1"))
     );

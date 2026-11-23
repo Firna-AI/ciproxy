@@ -122,7 +122,7 @@ async fn stored(
     workspace: Uuid,
 ) -> error::Result<ciproxy_overflow::view::OverflowView> {
     let stored = query(state.store.clone(), move |store| {
-        store.boat_runtime_snapshot(workspace)
+        store.overflow_runtime_snapshot(workspace)
     })
     .await?;
     result(ciproxy_overflow::view::OverflowView::from_snapshot(

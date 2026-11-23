@@ -4,21 +4,21 @@ use chrono::{DateTime, Utc};
 use unimock::unimock;
 use uuid::Uuid;
 
-use crate::boat::BoatAccount;
 use crate::error::Result;
 use crate::overflow::account::AccountState;
 use crate::overflow::admission::{DispatchFacts, PreparedDispatch, ReservationOutcome};
 use crate::overflow::connection::ConnectionGrant;
 use crate::overflow::record::{EncryptedLaunch, StartRecord};
-use crate::secrets::{EncryptedBoatKey, TokenHash};
+use crate::overflow_provider_accounts::OverflowProviderAccount;
+use crate::secrets::{EncryptedOverflowKey, TokenHash};
 
 /// A retained key and its credential-free account observations.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountRecord {
     /// Safe customer-visible account metadata.
-    pub account: BoatAccount,
+    pub account: OverflowProviderAccount,
     /// KMS ciphertext, never a plaintext API key.
-    pub key: EncryptedBoatKey,
+    pub key: EncryptedOverflowKey,
     /// Durable capacity and refusal facts.
     pub state: AccountState,
 }

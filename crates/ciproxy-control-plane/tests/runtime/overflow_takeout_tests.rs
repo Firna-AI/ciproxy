@@ -24,7 +24,7 @@ async fn takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers() {
     let store = harness.fixture.store.clone();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
-    let intents = store.boat_runner_intents(workspace).unwrap();
+    let intents = store.overflow_runner_intents(workspace).unwrap();
     let idle_id = intents
         .iter()
         .find(|intent| intent.github_id == Some(100))
@@ -75,7 +75,7 @@ async fn takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers() {
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
     assert_eq!(
         store
-            .boat_runtime_snapshot(workspace)
+            .overflow_runtime_snapshot(workspace)
             .unwrap()
             .starts
             .iter()
@@ -109,7 +109,7 @@ async fn takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers() {
         .settled_lifecycle(event.clone())
         .await
         .unwrap();
-    let retiring = store.boat_runtime_snapshot(workspace).unwrap();
+    let retiring = store.overflow_runtime_snapshot(workspace).unwrap();
     assert_eq!(
         retiring
             .starts
@@ -128,7 +128,7 @@ async fn takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers() {
     );
     assert_eq!(
         store
-            .boat_runner_intents(workspace)
+            .overflow_runner_intents(workspace)
             .unwrap()
             .iter()
             .map(|intent| intent.runner_id)
@@ -155,7 +155,7 @@ async fn takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers() {
     );
     harness.ports.delete_fail.store(false, Ordering::SeqCst);
     harness.service.cleanup(workspace).await.unwrap();
-    let retired = store.boat_runtime_snapshot(workspace).unwrap();
+    let retired = store.overflow_runtime_snapshot(workspace).unwrap();
     assert_eq!(
         retired
             .starts
@@ -193,7 +193,7 @@ async fn takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers() {
         .unwrap();
     assert_eq!(
         store
-            .boat_runtime_snapshot(workspace)
+            .overflow_runtime_snapshot(workspace)
             .unwrap()
             .starts
             .iter()
@@ -211,7 +211,7 @@ async fn takeout_keeps_ambiguous_starts_pending_and_retires_ended_or_absent_inte
     harness.runtime.settled_tick().await.unwrap();
     let workspace = harness.fixture.workspace;
     let store = harness.fixture.store.clone();
-    let ended = store.boat_runner_intents(workspace).unwrap().remove(0);
+    let ended = store.overflow_runner_intents(workspace).unwrap().remove(0);
     old.phase = DemandPhase::Completed;
     old.completed_at = Some(at());
     store.save_github_job(workspace, &old, at()).unwrap();
@@ -219,14 +219,18 @@ async fn takeout_keeps_ambiguous_starts_pending_and_retires_ended_or_absent_inte
     harness.ports.pending.store(true, Ordering::SeqCst);
     harness.queued();
     harness.runtime.settled_tick().await.unwrap();
-    store.create_boat_runner_intent(workspace, &ended).unwrap();
+    store
+        .create_overflow_runner_intent(workspace, &ended)
+        .unwrap();
     let mut absent = ended.clone();
     absent.delivery_id = Uuid::new_v4();
     absent.runner_id = Uuid::new_v4();
     absent.github_id = None;
-    store.create_boat_runner_intent(workspace, &absent).unwrap();
+    store
+        .create_overflow_runner_intent(workspace, &absent)
+        .unwrap();
     let pending = store
-        .boat_runner_intents(workspace)
+        .overflow_runner_intents(workspace)
         .unwrap()
         .into_iter()
         .find(|intent| intent.github_id == Some(101))
@@ -240,13 +244,13 @@ async fn takeout_keeps_ambiguous_starts_pending_and_retires_ended_or_absent_inte
     let event = prepare(&mut harness, remote.clone());
     let result = harness.runtime.settled_lifecycle(event.clone()).await;
     assert!(matches!(result, Err(Error::StateChanged)), "{result:?}");
-    assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 3);
+    assert_eq!(store.overflow_runner_intents(workspace).unwrap().len(), 3);
     assert_eq!(store.pending_github_lifecycle(42).unwrap().len(), 1);
     *remote.answer.lock().unwrap() = Answer::Busy;
     remote.answers.lock().unwrap().insert(100, Answer::Removed);
     let result = harness.runtime.settled_lifecycle(event.clone()).await;
     assert!(matches!(result, Err(Error::StateChanged)), "{result:?}");
-    let held = store.boat_runner_intents(workspace).unwrap();
+    let held = store.overflow_runner_intents(workspace).unwrap();
     assert_eq!(held.len(), 2);
     assert_eq!(
         held.iter()
@@ -269,11 +273,11 @@ async fn takeout_keeps_ambiguous_starts_pending_and_retires_ended_or_absent_inte
     let result = harness.runtime.settled_lifecycle(event.clone()).await;
     assert!(matches!(result, Err(Error::StateChanged)), "{result:?}");
     assert_eq!(
-        store.boat_runner_intents(workspace).unwrap(),
+        store.overflow_runner_intents(workspace).unwrap(),
         vec![pending.clone()]
     );
     let record = store
-        .boat_runtime_snapshot(workspace)
+        .overflow_runtime_snapshot(workspace)
         .unwrap()
         .starts
         .into_iter()
@@ -283,11 +287,11 @@ async fn takeout_keeps_ambiguous_starts_pending_and_retires_ended_or_absent_inte
     assert_eq!(record.sandbox, None);
     assert_eq!(record.ends_at, None);
     store
-        .remove_boat_runner_intent(workspace, pending.runner_id)
+        .remove_overflow_runner_intent(workspace, pending.runner_id)
         .unwrap();
     let result = harness.runtime.settled_lifecycle(event).await;
     assert!(matches!(result, Err(Error::StateChanged)), "{result:?}");
-    assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 0);
+    assert_eq!(store.overflow_runner_intents(workspace).unwrap().len(), 0);
     assert_eq!(harness.ports.creates.lock().unwrap().len(), 2);
     assert_eq!(harness.ports.launches.load(Ordering::SeqCst), 1);
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 1);

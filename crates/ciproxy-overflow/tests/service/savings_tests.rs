@@ -105,8 +105,8 @@ async fn measured_production_start_uses_saved_fee_in_the_public_savings_report()
     assert_eq!(report.machines.starts, 0);
     assert_eq!(report.machines.minutes, Decimal::ZERO);
     assert_eq!(report.days.len(), 1);
-    assert_eq!(report.days[0].sizes[0].boat.starts, 1);
-    assert_eq!(report.days[0].sizes[0].boat.minutes, Decimal::from(10));
+    assert_eq!(report.days[0].sizes[0].overflow.starts, 1);
+    assert_eq!(report.days[0].sizes[0].overflow.minutes, Decimal::from(10));
     assert_eq!(report.comparisons[0].usd, Some(Decimal::new(16, 2)));
     assert_eq!(report.comparisons[1].usd, Some(Decimal::new(32, 2)));
     assert_eq!(report.savings[0].usd, Some(Decimal::new(78, 3)));

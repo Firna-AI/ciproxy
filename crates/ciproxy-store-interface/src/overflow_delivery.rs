@@ -3,11 +3,14 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use crate::overflow::provider::OverflowProvider;
 use crate::overflow::record::{ProviderParameters, StartPhase, StartRecord};
 
 /// Immutable delivery inputs and current lifecycle used by guarded remote results.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BoatDeliveryGuard {
+pub struct OverflowDeliveryGuard {
+    /// The provider of the saved delivery.
+    pub provider: OverflowProvider,
     /// Stable delivery identity.
     pub delivery_id: Uuid,
     /// Runner that owns this delivery.
@@ -48,9 +51,10 @@ pub struct BoatDeliveryGuard {
     pub reported_at: Option<DateTime<Utc>>,
 }
 
-impl From<StartRecord> for BoatDeliveryGuard {
+impl From<StartRecord> for OverflowDeliveryGuard {
     fn from(record: StartRecord) -> Self {
         let StartRecord {
+            provider,
             delivery_id,
             runner_id,
             organization_id,
@@ -81,6 +85,7 @@ impl From<StartRecord> for BoatDeliveryGuard {
             runtime_complete: _,
         } = record;
         Self {
+            provider,
             delivery_id,
             runner_id,
             organization_id,

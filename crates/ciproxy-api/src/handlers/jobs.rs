@@ -69,7 +69,7 @@ pub(crate) async fn history(
         .filter(|job| {
             input.place.is_none_or(|place| match place {
                 HistoryPlace::Machine => job.machine_id.is_some(),
-                HistoryPlace::Boat => job.boat_size.is_some(),
+                HistoryPlace::Boat => job.overflow_size.is_some(),
             })
         })
         .filter(|job| {

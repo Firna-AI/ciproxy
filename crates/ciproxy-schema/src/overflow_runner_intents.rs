@@ -1,7 +1,7 @@
-//! Credential-free runner identities saved before Boat registration delivery.
+//! Credential-free runner identities saved before overflow registration.
 
 diesel::table! {
-    boat_runner_intents (runner_id) {
+    overflow_runner_intents (runner_id) {
         runner_id -> Uuid,
         workspace_id -> Uuid,
         delivery_id -> Uuid,

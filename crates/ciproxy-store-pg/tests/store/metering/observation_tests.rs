@@ -2,7 +2,8 @@
 
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_store_interface::jobs::{JobResult, JobState};
-use ciproxy_store_interface::metering::history::BoatCost;
+use ciproxy_store_interface::metering::history::OverflowCost;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 use ciproxy_store_interface::store::Store;
 use rust_decimal::Decimal;
@@ -27,7 +28,7 @@ fn totals(store: &dyn Store, workspace_id: Uuid) -> (Decimal, Decimal) {
             .flat_map(|day| &day.sizes)
             .map(|size| size.machines.minutes)
             .sum(),
-        snapshot.days.iter().map(|day| day.boat_usd).sum(),
+        snapshot.days.iter().map(|day| day.overflow_usd).sum(),
     )
 }
 
@@ -66,14 +67,18 @@ fn older_refresh_preserves_next_day_cursor_and_corrects_every_affected_date() {
     taken.started_at = Some(time("2026-11-04T23:59:00Z"));
     taken.state = JobState::Running;
     database.store.insert_job(workspace.id, &taken).unwrap();
-    let open = BoatCost {
+    let open = OverflowCost {
+        provider: OverflowProvider::Boat,
         runner_id: boat_vm.id,
         starts_at: time("2026-11-04T23:59:00Z"),
         ends_at: None,
         start_usd: usd("0"),
         minute_usd: usd("0.02"),
     };
-    database.store.save_boat_cost(workspace.id, &open).unwrap();
+    database
+        .store
+        .save_overflow_cost(workspace.id, &open)
+        .unwrap();
     let service: &dyn Metering = &StoredMetering::new(database.store.clone());
     service
         .refresh(workspace.id, time("2026-11-05T00:01:00Z"))
@@ -84,9 +89,9 @@ fn older_refresh_preserves_next_day_cursor_and_corrects_every_affected_date() {
     database.store.update_job(workspace.id, &taken).unwrap();
     database
         .store
-        .save_boat_cost(
+        .save_overflow_cost(
             workspace.id,
-            &BoatCost {
+            &OverflowCost {
                 ends_at: Some(time("2026-11-05T00:00:30Z")),
                 ..open
             },
@@ -116,7 +121,7 @@ fn older_refresh_preserves_next_day_cursor_and_corrects_every_affected_date() {
     assert_eq!(job_cursor.observed_at, time("2026-11-05T00:01:00Z"));
     let boat_cursor = database
         .store
-        .boat_accounting(workspace.id)
+        .overflow_accounting(workspace.id)
         .unwrap()
         .accounted
         .remove(0);

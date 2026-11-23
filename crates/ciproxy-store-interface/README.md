@@ -14,7 +14,8 @@ Keep persistence separate from scheduling and external services.
 ## What This Crate Does
 
 Defines object-safe traits for workspace data and each store area.
-A workspace owns shared machines, labels, credentials, settings, and Boat.
+A workspace owns shared machines, labels, credentials, and settings.
+It also owns its overflow provider accounts.
 Each GitHub organization keeps its installation and repository access.
 Scale sets serve one organization and one shared workspace label.
 Runners and jobs keep their organization identity.
@@ -22,9 +23,12 @@ Resource queries require the workspace identifier.
 Organization-specific queries also require the organization identifier.
 Token authentication finds workspace authority from a precomputed hash.
 
-TokenHash and EncryptedBoatKey accept bytes from trusted callers.
+`TokenHash` and `EncryptedOverflowKey` accept bytes from trusted callers.
 Their Debug output hides the bytes.
 Account metadata excludes encrypted keys.
+Each account identifies its `OverflowProvider`. Boat is the only provider.
+Older account, delivery, and intent JSON reads as Boat when it has no
+provider field.
 Token metadata excludes hashes.
 KMS encryption and token hashing belong to callers.
 
@@ -40,7 +44,7 @@ Measured GitHub-only fetches and zero-entry restores keep that bundle.
 Direct GitHub use and fallback have no measured count bundle.
 Organization removal keeps shared resources while another App remains.
 Removal of the last App revokes machine and install credentials.
-Live sandbox-end tokens and retired Boat keys stay available for cleanup.
+Live sandbox-end tokens and retired provider keys stay available for cleanup.
 Sandbox-end tokens stop working when their runner ends.
 Organization and empty-workspace records have 30-day deletion deadlines.
 Reinstall clears the workspace deadline and preserves its retained data.
@@ -49,7 +53,7 @@ GitHub-ID lookup returns current and retained registrations.
 The caller selects a workspace from the install intent.
 A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
-They do not stop machines, call GitHub, or delete Boat sandboxes.
+They do not stop machines, call GitHub, or delete overflow sandboxes.
 
 The GitHub area stores visible repository metadata and default branches.
 It atomically registers a new workspace with labels and a pending first
@@ -81,19 +85,19 @@ all GitHub identity bits in the separate two-key advisory namespace.
 
 MeteringStore reads coherent workspace facts across all organizations.
 Workspace creation and machine registration save their trusted times.
-MeteringStore stores machine, plan, and Boat cost histories.
+MeteringStore stores machine, plan, and overflow cost histories.
 BillingState supplies the current Free or Stripe billing period.
-Anonymous daily aggregates keep actual VM sizes and Boat costs.
+Anonymous daily aggregates keep actual VM sizes and overflow costs.
 Anonymous timestamp counts preserve exact period boundaries.
 Job and runner cursors support atomic signed aggregate corrections.
-BoatAccounting holds source costs and cursors from one coherent snapshot.
+`OverflowAccounting` holds source costs and cursors from one snapshot.
 SavingsSnapshot holds registrations, range totals, and monthly costs
 from one coherent snapshot.
 Its registrations include removed machines for historical cost dates.
 The savings read excludes jobs, start counts, and accounting cursors.
 Deleting a job or runner deletes its cursor and preserves its aggregates.
 The metering service supplies all calculation rules and retention dates.
-Boat accounting returns known price intervals and bounded measured prefixes.
+Overflow accounting returns known price intervals and measured prefixes.
 It remains available when another overflow cost lacks a fee or final reading.
 The metering refresh can then complete its retention pass.
 Savings snapshots return `AccountingIncomplete` for gaps in their requested
@@ -104,11 +108,11 @@ BillingSession: state, commands, quotes, payments, renewals, receipts, and
 cancellations.
 
 The [overflow store guide](src/overflow/README.md) describes OverflowStore:
-Boat sessions, connection grants, deliveries, dispatch, callbacks, and costs.
+sessions, connection grants, deliveries, dispatch, callbacks, and costs.
 
-BoatRuntimeStore keeps credential-free Boat registration identities.
+`OverflowRuntimeStore` keeps credential-free registration identities.
 The runtime saves each identity before the GitHub JIT request.
-A save requires current organization, label, scale-set, and Boat authority.
+A save requires current organization, label, scale-set, and provider authority.
 Its durable snapshot read needs no provider access or overflow session.
 
 The gateway queries atomically register a machine and its hashed credential.
@@ -175,8 +179,9 @@ Retired-label cleanup discovers workspaces and reads exact scale-set bindings.
 It preserves the retired labels and their job history.
 
 OwnRunnerStore exposes one coherent workspace routing snapshot.
-It also holds the Boat account, deliveries, registration identities, and
-the saved Boat runners in `RoutingSnapshot.boat_runners`.
+It holds overflow accounts and deliveries in the same snapshot.
+`RoutingSnapshot.overflow_intents` holds the saved registration identities.
+`RoutingSnapshot.overflow_runners` holds the saved overflow runners.
 `RoutingSnapshot` cannot be cloned. Background work retains narrow inputs.
 The store's dedicated session lease serializes own-machine decisions.
 Runner intents retain exact slot sets and the original whole-GB label
@@ -252,10 +257,15 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/job_bindings.rs](src/job_bindings.rs) defines authenticated Worker job
   bindings, separate from numeric Actions job identities.
 - [src/runtime_results.rs](src/runtime_results.rs) defines the remote result
-  guards and `BoatRunnerWrite`, the exact guard after a Boat write.
-  [src/boat_delivery.rs](src/boat_delivery.rs) defines `BoatDeliveryGuard`,
-  the delivery part of a Boat guard, with no usage or billing reading.
-- [src/boat_runtime.rs](src/boat_runtime.rs) owns Boat registration identities.
+  guards and `OverflowRunnerWrite`, the exact guard after an overflow write.
+- [src/overflow_delivery.rs](src/overflow_delivery.rs) defines the delivery
+  guard with the fixed inputs and lifecycle fields.
+- [src/overflow_runtime.rs](src/overflow_runtime.rs) owns saved registration
+  identities.
+- [src/overflow_provider_accounts.rs](src/overflow_provider_accounts.rs)
+  defines account metadata and key retention queries.
+- [src/overflow/provider.rs](src/overflow/provider.rs) defines the supported
+  provider identifiers.
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
 - [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.
@@ -281,7 +291,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/metering](src/metering) defines metering facts and history APIs.
 - [src/gateway.rs](src/gateway.rs) defines atomic registration, reports,
   and `MachineSnapshot::state` for shared contact and image readiness.
-- [src/overflow](src/overflow) defines durable Boat sessions and deliveries.
+- [src/overflow](src/overflow) defines durable overflow sessions and deliveries.
 - [src/overflow/admission.rs](src/overflow/admission.rs) defines required
   monthly amounts, current label facts, prepared dispatch, and its outcomes.
 - [src/overflow/connection.rs](src/overflow/connection.rs) defines pending

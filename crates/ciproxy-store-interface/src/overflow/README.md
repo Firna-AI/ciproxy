@@ -3,7 +3,7 @@
 These traits and types form the overflow area of
 [ciproxy-store-interface](../../README.md).
 
-OverflowStore adds exclusive workspace sessions for Boat execution.
+OverflowStore adds exclusive workspace sessions for overflow execution.
 Pending connections use fresh store-issued grants before external work.
 Last-App removal revokes these grants, and activation consumes one live grant.
 Reusing a key-version identity cannot reuse an earlier grant.

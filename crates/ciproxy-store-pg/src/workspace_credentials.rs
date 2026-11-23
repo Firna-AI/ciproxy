@@ -6,8 +6,8 @@ use ciproxy_schema::tokens::tokens;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-use crate::boat::{erase_unused_keys, retire_keys};
 use crate::machine_removal::mark_removed;
+use crate::overflow_provider_accounts::{erase_unused_keys, retire_keys};
 
 pub(crate) fn revoke_workspace_access(
     connection: &mut PgConnection,

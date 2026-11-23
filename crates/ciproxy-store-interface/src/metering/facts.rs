@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::metering::totals::{AccountedJob, StartTotal};
+use crate::overflow::provider::OverflowProvider;
 
 /// Explicit metadata source; a UUID alone never aliases two source namespaces.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, Ord, PartialEq, PartialOrd)]
@@ -30,12 +31,42 @@ pub enum Completion {
 }
 /// The execution location kept with a metered job.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[serde(from = "StoredJobPlace", into = "StoredJobPlace")]
 pub enum JobPlace {
     /// A VM on a customer's own machine.
     Machine,
     /// A sandbox that ciproxy created in Boat.
     Boat,
+}
+
+/// Cursor JSON names the provider for each overflow job.
+#[derive(Clone, Copy, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum StoredJobPlace {
+    Machine,
+    Overflow { provider: OverflowProvider },
+}
+
+impl From<JobPlace> for StoredJobPlace {
+    fn from(place: JobPlace) -> Self {
+        match place {
+            JobPlace::Machine => Self::Machine,
+            JobPlace::Boat => Self::Overflow {
+                provider: OverflowProvider::Boat,
+            },
+        }
+    }
+}
+
+impl From<StoredJobPlace> for JobPlace {
+    fn from(place: StoredJobPlace) -> Self {
+        match place {
+            StoredJobPlace::Machine => Self::Machine,
+            StoredJobPlace::Overflow {
+                provider: OverflowProvider::Boat,
+            } => Self::Boat,
+        }
+    }
 }
 
 /// One runner-taken job, including running and failed jobs.

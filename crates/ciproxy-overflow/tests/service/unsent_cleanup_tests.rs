@@ -89,7 +89,7 @@ async fn replacement_cancels_unsent_without_opening_the_old_key() {
             harness
                 .database
                 .store
-                .encrypted_boat_key(id(1), id(2))
+                .encrypted_overflow_key(id(1), id(2))
                 .unwrap(),
             None
         );

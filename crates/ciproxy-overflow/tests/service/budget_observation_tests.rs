@@ -140,7 +140,7 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
             retained
                 .database
                 .store
-                .delete_unused_boat_keys(id(1))
+                .delete_unused_overflow_keys(id(1))
                 .unwrap(),
             1
         );

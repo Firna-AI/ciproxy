@@ -6,8 +6,9 @@ use ciproxy_metering::report::boat::boat_cost_deltas;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_schema::runners::runners;
-use ciproxy_store_interface::metering::history::BoatCost;
-use ciproxy_store_interface::metering::totals::AccountedBoat;
+use ciproxy_store_interface::metering::history::OverflowCost;
+use ciproxy_store_interface::metering::totals::AccountedOverflow;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
@@ -36,25 +37,29 @@ fn coherent_boat_snapshot_cannot_restore_a_competing_completed_cost() {
         },
     );
     database.store.create_runner(workspace.id, &vm).unwrap();
-    let open = BoatCost {
+    let open = OverflowCost {
+        provider: OverflowProvider::Boat,
         runner_id: vm.id,
         starts_at: time("2026-11-04T12:00:00Z"),
         ends_at: None,
         start_usd: usd("0"),
         minute_usd: usd("0.02"),
     };
-    database.store.save_boat_cost(workspace.id, &open).unwrap();
+    database
+        .store
+        .save_overflow_cost(workspace.id, &open)
+        .unwrap();
     StoredMetering::new(database.store.clone())
         .refresh(workspace.id, time("2026-11-04T12:05:00Z"))
         .unwrap();
     let old = database
         .store
-        .boat_accounting(workspace.id)
+        .overflow_accounting(workspace.id)
         .unwrap()
         .accounted
         .remove(0);
-    let completed = AccountedBoat {
-        cost: BoatCost {
+    let completed = AccountedOverflow {
+        cost: OverflowCost {
             ends_at: Some(time("2026-11-04T12:05:00Z")),
             ..open
         },
@@ -76,7 +81,7 @@ fn coherent_boat_snapshot_cannot_restore_a_competing_completed_cost() {
         .for_update()
         .first::<Uuid>(&mut database.connection)
         .unwrap();
-    diesel::sql_query("UPDATE metering_boat_costs SET ends_at = $2 WHERE runner_id = $1")
+    diesel::sql_query("UPDATE metering_overflow_costs SET ends_at = $2 WHERE runner_id = $1")
         .bind::<sql_types::Uuid, _>(vm.id)
         .bind::<sql_types::Timestamptz, _>(time("2026-11-04T12:05:00Z"))
         .execute(&mut database.connection)
@@ -85,7 +90,7 @@ fn coherent_boat_snapshot_cannot_restore_a_competing_completed_cost() {
     let write = thread::spawn(move || {
         writer
             .store
-            .apply_boat_accounting(workspace_id, Some(&old), &completed, &deltas)
+            .apply_overflow_accounting(workspace_id, Some(&old), &completed, &deltas)
     });
     wait_for_blocker(&mut observer, writer.pid, controller_pid);
     let refresh = thread::spawn(move || {
@@ -103,14 +108,14 @@ fn coherent_boat_snapshot_cannot_restore_a_competing_completed_cost() {
         snapshot
             .days
             .iter()
-            .map(|day| day.boat_usd)
+            .map(|day| day.overflow_usd)
             .sum::<Decimal>(),
         usd("0.10")
     );
     assert_eq!((outcome.updated_sandboxes, outcome.stale_sandboxes), (0, 1));
     let cursor = database
         .store
-        .boat_accounting(workspace.id)
+        .overflow_accounting(workspace.id)
         .unwrap()
         .accounted
         .remove(0);

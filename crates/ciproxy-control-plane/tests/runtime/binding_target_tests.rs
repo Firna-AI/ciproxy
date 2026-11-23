@@ -36,7 +36,7 @@ async fn captures_and_replaces(own: bool) {
             .id
     } else {
         store
-            .boat_runner_intents(workspace)
+            .overflow_runner_intents(workspace)
             .unwrap()
             .remove(0)
             .runner_id

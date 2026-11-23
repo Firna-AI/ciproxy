@@ -42,7 +42,7 @@ async fn retirement_preserves_an_already_running_runner_until_its_end() {
             harness
                 .database
                 .store
-                .encrypted_boat_key(id(1), id(2))
+                .encrypted_overflow_key(id(1), id(2))
                 .unwrap()
                 .unwrap()
                 .as_bytes(),
@@ -56,7 +56,7 @@ async fn retirement_preserves_an_already_running_runner_until_its_end() {
             harness
                 .database
                 .store
-                .encrypted_boat_key(id(1), id(2))
+                .encrypted_overflow_key(id(1), id(2))
                 .unwrap(),
             None
         );
@@ -102,7 +102,7 @@ async fn retired_launching_delivery_inspects_the_marker_and_preserves_a_started_
             harness
                 .database
                 .store
-                .encrypted_boat_key(id(1), id(2))
+                .encrypted_overflow_key(id(1), id(2))
                 .unwrap()
                 .is_some()
         );
@@ -136,7 +136,7 @@ async fn retired_launching_delivery_keeps_recovery_authority_when_inspection_is_
         harness
             .database
             .store
-            .encrypted_boat_key(id(1), id(2))
+            .encrypted_overflow_key(id(1), id(2))
             .unwrap()
             .is_some()
     );
@@ -172,7 +172,7 @@ async fn retired_ambiguous_create_stays_recover_only_until_its_identity_is_found
         harness
             .database
             .store
-            .encrypted_boat_key(id(1), id(2))
+            .encrypted_overflow_key(id(1), id(2))
             .unwrap()
             .is_some()
     );
@@ -186,7 +186,7 @@ async fn retired_ambiguous_create_stays_recover_only_until_its_identity_is_found
         harness
             .database
             .store
-            .encrypted_boat_key(id(1), id(2))
+            .encrypted_overflow_key(id(1), id(2))
             .unwrap(),
         None
     );

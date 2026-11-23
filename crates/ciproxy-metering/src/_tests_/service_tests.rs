@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::metering::facts::{JobPlace, WorkspaceUsage};
-use ciproxy_store_interface::metering::history::{BoatAccounting, Period};
+use ciproxy_store_interface::metering::history::{OverflowAccounting, Period};
 use ciproxy_store_interface::metering::report::SavingsSnapshot;
 use ciproxy_store_interface::metering::store::MeteringStoreMock;
 use ciproxy_store_interface::metering::totals::{
@@ -82,9 +82,9 @@ fn refresh_applies_literal_deltas_and_reports_concurrent_writes() {
                 ));
                 Ok(false)
             })),
-        MeteringStoreMock::boat_accounting
+        MeteringStoreMock::overflow_accounting
             .some_call(matching!(_))
-            .returns(Ok(BoatAccounting::default())),
+            .returns(Ok(OverflowAccounting::default())),
         MeteringStoreMock::purge_daily_totals
             .some_call(matching!(_, _))
             .returns(Ok(3)),
@@ -135,9 +135,9 @@ fn refresh_skips_unchanged_completed_job_cursors() {
                 accounted_jobs: vec![current],
                 ..WorkspaceUsage::default()
             })),
-        MeteringStoreMock::boat_accounting
+        MeteringStoreMock::overflow_accounting
             .some_call(matching!(_))
-            .returns(Ok(BoatAccounting::default())),
+            .returns(Ok(OverflowAccounting::default())),
         MeteringStoreMock::purge_daily_totals
             .some_call(matching!(_, _))
             .returns(Ok(0)),
@@ -155,14 +155,14 @@ fn refresh_skips_unchanged_completed_job_cursors() {
 fn store_savings_use_retained_totals_after_job_details_disappear() {
     let retained = DailyTotal {
         day: day("2026-10-01"),
-        boat_usd: usd("1"),
+        overflow_usd: usd("1"),
         sizes: vec![SizeTotal {
             size: size(),
             machines: LocationTotals {
                 starts: 2,
                 minutes: usd("15"),
             },
-            boat: LocationTotals::default(),
+            overflow: LocationTotals::default(),
         }],
     };
     let mock = Unimock::new(

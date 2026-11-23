@@ -1,6 +1,6 @@
 # Overflow store
 
-This guide gives the PostgreSQL queries for Boat execution, its delivery
+This guide gives the PostgreSQL queries for overflow execution, its delivery
 authority, and its accounting reads. The [crate README](README.md) gives
 the rest of the store.
 
@@ -10,7 +10,7 @@ Overflow uses one dedicated advisory-lock connection per workspace.
 Its negative key range is separate from billing and scale-set locks.
 A blocking callback lease waits on that dedicated connection after the claim.
 The 5-second lock timeout of that connection limits its wait.
-Catalog observations and exact delivery records persist before Boat access.
+Catalog observations and exact delivery records persist before provider access.
 Reservation rechecks the active key, workspace settings, organization,
 label, and scale-set ownership under the workspace row lock.
 Pending acceptance saves demand, sealed input, and the saved fee together.
@@ -48,7 +48,7 @@ No query receives a plaintext key or runner registration.
 
 ## Runtime registration identities
 
-The runtime saves each Boat registration identity before its GitHub JIT
+The runtime saves each overflow registration identity before its GitHub JIT
 request. The insert holds the workspace row lock. It saves nothing and
 returns `Conflict` unless all of these facts hold:
 
@@ -57,13 +57,13 @@ returns `Conflict` unless all of these facts hold:
 - The current label allows Boat and matches the requested size.
 - The scale set of that organization and label is active.
 
-A row holds identities, sizes, the required root bytes, and the
+A row holds identities, the provider, sizes, the required root bytes, and the
 installation ID of its organization at the insert. It holds no JIT
 configuration or callback token. The saved GitHub runner ID also goes to
 the runner row of the delivery, when that row exists. The routing snapshot
 reads these rows with the account and delivery rows in one repeatable-read
 transaction. The separate durable snapshot read takes no overflow session.
-`save_boat_registration` saves the response's exact remote scale-set ID
+`save_overflow_registration` saves the response's exact remote scale-set ID
 with its runner ID. It updates the intent and an existing runner together.
 Sandbox materialization copies this captured ID from the saved intent.
 It never copies a later binding ID. Ordinary recovery and Busy writes
@@ -72,7 +72,7 @@ older unknown targets unknown.
 
 ### Registration ownership
 
-The `boat_registration_ownership` view gives three facts for each row.
+The `overflow_registration_ownership` view gives three facts for each row.
 Registration recovery, identity cleanup, and the organization purge use
 these facts.
 
@@ -113,7 +113,7 @@ Their upserts correct provider start times and every price field.
 Every overflow price row has a finite end from its measured interval.
 Later metering refreshes cannot extend an old reading.
 An unknown final interval publishes only the known measured billing prefix.
-Boat accounting remains available so the metering refresh can reach purge.
+Overflow accounting stays available so the metering refresh can reach purge.
 Relevant savings reads return `AccountingIncomplete` while both fee sources
 are missing or a required runtime interval remains unknown.
 The savings range excludes a lifecycle end at its first instant.

@@ -23,14 +23,14 @@ async fn ready_boat_supply_survives_starting_own_supply_and_an_older_missing_del
         .set_machine_draining(workspace, harness.fixture.machine, false)
         .unwrap();
     let label = store.labels(workspace).unwrap().remove(0);
-    let live = store.boat_runner_intents(workspace).unwrap().remove(0);
+    let live = store.overflow_runner_intents(workspace).unwrap().remove(0);
     let mut missing = live.clone();
     missing.runner_id = Uuid::new_v4();
     missing.delivery_id = Uuid::new_v4();
     missing.created_at = at() - Duration::seconds(10);
     missing.github_id = Some(99);
     store
-        .create_boat_runner_intent(workspace, &missing)
+        .create_overflow_runner_intent(workspace, &missing)
         .unwrap();
     store
         .create_own_runner(
@@ -68,10 +68,10 @@ async fn ready_boat_supply_survives_starting_own_supply_and_an_older_missing_del
     harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
     assert_eq!(
-        store.boat_runtime_snapshot(workspace).unwrap().starts[0].ends_at,
+        store.overflow_runtime_snapshot(workspace).unwrap().starts[0].ends_at,
         None
     );
-    assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 1);
+    assert_eq!(store.overflow_runner_intents(workspace).unwrap().len(), 1);
 }
 
 #[tokio::test]
@@ -101,7 +101,7 @@ async fn failed_completed_boat_cleanup_does_not_block_a_new_own_start() {
         harness
             .fixture
             .store
-            .boat_runtime_snapshot(harness.fixture.workspace)
+            .overflow_runtime_snapshot(harness.fixture.workspace)
             .unwrap()
             .starts[0]
             .ends_at,

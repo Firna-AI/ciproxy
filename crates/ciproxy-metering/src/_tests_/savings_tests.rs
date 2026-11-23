@@ -16,14 +16,14 @@ fn full_month_fixture_matches_hand_worked_costs_and_savings() {
     let days: Vec<_> = (0..30)
         .map(|offset| DailyTotal {
             day: day("2026-11-01") + Duration::days(offset),
-            boat_usd: usd("0"),
+            overflow_usd: usd("0"),
             sizes: vec![SizeTotal {
                 size: size(),
                 machines: LocationTotals {
                     starts: 1728,
                     minutes: usd("8640"),
                 },
-                boat: LocationTotals::default(),
+                overflow: LocationTotals::default(),
             }],
         })
         .collect();
@@ -80,14 +80,14 @@ fn full_month_fixture_matches_hand_worked_costs_and_savings() {
 fn negative_savings_keep_their_sign_and_unknown_comparison_hides_lead() {
     let days = vec![DailyTotal {
         day: day("2026-11-04"),
-        boat_usd: usd("100"),
+        overflow_usd: usd("100"),
         sizes: vec![SizeTotal {
             size: size(),
             machines: LocationTotals {
                 starts: 2,
                 minutes: usd("10"),
             },
-            boat: LocationTotals {
+            overflow: LocationTotals {
                 starts: 1,
                 minutes: usd("5"),
             },
@@ -137,14 +137,14 @@ fn negative_savings_keep_their_sign_and_unknown_comparison_hides_lead() {
 fn missing_machine_price_hides_both_savings_and_keeps_known_costs() {
     let days = vec![DailyTotal {
         day: day("2026-11-04"),
-        boat_usd: usd("2"),
+        overflow_usd: usd("2"),
         sizes: vec![SizeTotal {
             size: size(),
             machines: LocationTotals {
                 starts: 2,
                 minutes: usd("10"),
             },
-            boat: LocationTotals {
+            overflow: LocationTotals {
                 starts: 1,
                 minutes: usd("5"),
             },

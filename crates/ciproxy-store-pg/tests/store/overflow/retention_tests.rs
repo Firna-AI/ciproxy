@@ -67,7 +67,7 @@ fn unknown_boat_interval_preserves_known_costs_and_does_not_block_ninety_day_pur
     let outcome = service.refresh(workspace_id, at() + Duration::days(90));
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(outcome.unwrap().purged_rows, 1);
-    let bounded = database.store.boat_accounting(workspace_id).unwrap();
+    let bounded = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(bounded.costs[0].ends_at, Some(at() + Duration::seconds(90)));
     let from = at().date_naive();
     let until = from.succ_opt().unwrap();

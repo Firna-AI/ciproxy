@@ -6,7 +6,8 @@ use axum::http::StatusCode;
 use ciproxy_api::pages::PageServices;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::github::DemandPhase;
-use ciproxy_store_interface::metering::history::{BoatCost, MachineCost};
+use ciproxy_store_interface::metering::history::{MachineCost, OverflowCost};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use rust_decimal::Decimal;
 use serde_json::Value;
 use uuid::Uuid;
@@ -46,9 +47,10 @@ async fn m18_savings_keeps_exact_minutes_missing_costs_and_signed_display_roundi
         .fixture
         .database
         .store
-        .save_boat_cost(
+        .save_overflow_cost(
             pages.fixture.workspace,
-            &BoatCost {
+            &OverflowCost {
+                provider: OverflowProvider::Boat,
                 runner_id: boat.id,
                 starts_at: at("2026-11-06T11:58:30Z"),
                 ends_at: Some(at("2026-11-06T12:00:00Z")),

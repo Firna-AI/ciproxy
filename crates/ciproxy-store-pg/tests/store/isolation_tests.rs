@@ -4,7 +4,7 @@ use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::labels::WhenNothingFits;
 use ciproxy_store_interface::organizations::RepositoryAccess;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::settings::OverflowWait;
 use uuid::Uuid;
 
@@ -167,20 +167,25 @@ fn workspace_queries_share_machines_and_keep_organization_relationships() {
 
     let account = account();
     store
-        .connect_boat(
+        .connect_overflow_provider(
             owner.id,
             &account,
-            &EncryptedBoatKey::new(vec![9, 8, 7]),
+            &EncryptedOverflowKey::new(vec![9, 8, 7]),
             200_000_000,
         )
         .unwrap();
-    assert_eq!(store.boat_accounts(stranger.id).unwrap(), vec![]);
     assert_eq!(
-        store.encrypted_boat_key(stranger.id, account.id).unwrap(),
+        store.overflow_provider_accounts(stranger.id).unwrap(),
+        vec![]
+    );
+    assert_eq!(
+        store
+            .encrypted_overflow_key(stranger.id, account.id)
+            .unwrap(),
         None
     );
     assert!(matches!(
-        store.reject_boat_key(stranger.id, account.id, at()),
+        store.reject_overflow_key(stranger.id, account.id, at()),
         Err(Error::NotFound)
     ));
     let mut settings = store.settings(owner.id).unwrap();

@@ -61,7 +61,7 @@ async fn removed_app_retains_idle_and_running_boat_supply_to_the_full_or_trial_l
                 .count(),
             1
         );
-        let live = store.boat_runtime_snapshot(workspace).unwrap();
+        let live = store.overflow_runtime_snapshot(workspace).unwrap();
         assert_eq!(live.accounts.len(), 1);
         assert_eq!(live.accounts[0].account.retired_at, Some(at()));
         assert_eq!(
@@ -81,7 +81,7 @@ async fn removed_app_retains_idle_and_running_boat_supply_to_the_full_or_trial_l
             harness.service.cleanup(workspace).await,
             Err(Error::ProviderUnavailable)
         ));
-        let before = store.boat_runtime_snapshot(workspace).unwrap();
+        let before = store.overflow_runtime_snapshot(workspace).unwrap();
         assert_eq!(before.accounts.len(), 1);
         assert_eq!(
             before
@@ -93,7 +93,7 @@ async fn removed_app_retains_idle_and_running_boat_supply_to_the_full_or_trial_l
         );
         *harness.ports.now.lock().unwrap() = end;
         harness.service.cleanup(workspace).await.unwrap();
-        let expired = store.boat_runtime_snapshot(workspace).unwrap();
+        let expired = store.overflow_runtime_snapshot(workspace).unwrap();
         assert_eq!(expired.accounts.len(), 0);
         assert_eq!(
             expired
@@ -132,7 +132,7 @@ async fn app_removal_during_github_retirement_retains_the_launched_sandbox() {
         matches!(result, Err(Error::ProviderUnavailable)),
         "{result:?}"
     );
-    let retained = store.boat_runtime_snapshot(workspace).unwrap();
+    let retained = store.overflow_runtime_snapshot(workspace).unwrap();
     assert_eq!(retained.starts[0].phase, StartPhase::Running);
     assert_eq!(retained.starts[0].ends_at, None);
     assert_eq!(retained.accounts.len(), 1);

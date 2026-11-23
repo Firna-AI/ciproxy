@@ -21,7 +21,7 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
     harness.runtime.settled_tick().await.unwrap();
     let workspace = harness.fixture.workspace;
     let store = harness.fixture.store.clone();
-    let pending = store.boat_runtime_snapshot(workspace).unwrap();
+    let pending = store.overflow_runtime_snapshot(workspace).unwrap();
     assert_eq!(pending.starts.len(), 1);
     let original = &pending.starts[0];
     assert_eq!(original.phase, StartPhase::Creating);
@@ -31,7 +31,7 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
     let request = harness.ports.creates.lock().unwrap()[0].clone();
     assert_eq!(request.operation_id.as_uuid(), original.delivery_id);
     assert_eq!(request.sandbox_id.as_uuid(), original.runner_id);
-    let intents = store.boat_runner_intents(workspace).unwrap();
+    let intents = store.overflow_runner_intents(workspace).unwrap();
     assert_eq!(intents.len(), 1);
     assert_eq!(intents[0].delivery_id, original.delivery_id);
     assert_eq!(intents[0].runner_id, original.runner_id);
@@ -66,7 +66,7 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
 
     for _ in 0..2 {
         harness.runtime.settled_tick().await.unwrap();
-        let recovered = store.boat_runtime_snapshot(workspace).unwrap();
+        let recovered = store.overflow_runtime_snapshot(workspace).unwrap();
         assert_eq!(
             harness.ports.launches.load(Ordering::SeqCst),
             1,
@@ -89,7 +89,7 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
         assert_eq!(record.dispatch, original.dispatch);
         assert_eq!(record.starts_at, original.starts_at);
         assert_eq!(record.sandbox.as_ref().unwrap().id(), provider.as_str());
-        assert_eq!(store.boat_runner_intents(workspace).unwrap(), intents);
+        assert_eq!(store.overflow_runner_intents(workspace).unwrap(), intents);
         let runners: Vec<_> = store
             .runners(workspace, harness.fixture.organization)
             .unwrap()

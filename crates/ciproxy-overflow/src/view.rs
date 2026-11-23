@@ -4,10 +4,10 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use ciproxy_scaler::boat::{BoatAccount, MonthlySpend, Refusal};
-use ciproxy_store_interface::boat;
 use ciproxy_store_interface::overflow::account::AccountState;
 use ciproxy_store_interface::overflow::record::StartRecord;
 use ciproxy_store_interface::overflow::store::OverflowSnapshot;
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -50,7 +50,7 @@ impl Spend {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OverflowView {
     /// Current accepted or rejected account metadata. No ciphertext is exposed.
-    pub account: Option<boat::BoatAccount>,
+    pub account: Option<OverflowProviderAccount>,
     /// Current catalog and durable refusal facts.
     pub state: AccountState,
     /// Current UTC-month cost, including old keys and other organizations.

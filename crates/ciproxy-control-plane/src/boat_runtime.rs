@@ -54,7 +54,7 @@ impl MachineRuntime {
                 tracing::warn!(%error,"Boat refresh dispatch will retry");
             }
         }
-        for intent in &input.boat_intents {
+        for intent in &input.overflow_intents {
             if self
                 .task_scope()
                 .is_ok_and(|tasks| tasks.contains(Work::Create(intent.runner_id)))

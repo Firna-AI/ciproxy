@@ -8,7 +8,8 @@ use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_metering::usage::PaymentNotice;
 use ciproxy_store_interface::jobs::{JobResult, JobState};
 use ciproxy_store_interface::metering::facts::MachineRegistration;
-use ciproxy_store_interface::metering::history::{BoatCost, MachineCost, Period, PlanCost};
+use ciproxy_store_interface::metering::history::{MachineCost, OverflowCost, Period, PlanCost};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 use uuid::Uuid;
 
@@ -61,9 +62,10 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
             .unwrap();
         database
             .store
-            .save_boat_cost(
+            .save_overflow_cost(
                 organization.workspace_id,
-                &BoatCost {
+                &OverflowCost {
+                    provider: OverflowProvider::Boat,
                     runner_id: vm.id,
                     starts_at: at(),
                     ends_at: Some(at() + Duration::minutes(10)),
@@ -207,9 +209,9 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
     assert_eq!(
         (
             snapshot.days[0].day,
-            snapshot.days[0].sizes[0].boat.starts,
-            snapshot.days[0].sizes[0].boat.minutes,
-            snapshot.days[0].boat_usd
+            snapshot.days[0].sizes[0].overflow.starts,
+            snapshot.days[0].sizes[0].overflow.minutes,
+            snapshot.days[0].overflow_usd
         ),
         (at().date_naive(), 2, usd("10"), usd("0.6"))
     );
@@ -231,9 +233,9 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
     );
     assert_eq!(
         (
-            foreign.days[0].sizes[0].boat.starts,
-            foreign.days[0].sizes[0].boat.minutes,
-            foreign.days[0].boat_usd
+            foreign.days[0].sizes[0].overflow.starts,
+            foreign.days[0].sizes[0].overflow.minutes,
+            foreign.days[0].overflow_usd
         ),
         (1, usd("5"), usd("0.3"))
     );

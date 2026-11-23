@@ -42,7 +42,7 @@ pub(super) async fn withdraw(harness: &Harness, withdrawal: Withdrawal) {
         Withdrawal::Rejected => harness
             .database
             .store
-            .reject_boat_key(id(1), id(2), at())
+            .reject_overflow_key(id(1), id(2), at())
             .unwrap(),
     }
 }

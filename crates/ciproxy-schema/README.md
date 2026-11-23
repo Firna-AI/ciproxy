@@ -15,7 +15,7 @@ Keep database rows inside the store implementation.
 
 Embeds ordered forward and reverse SQL migrations.
 Defines workspaces as the customer tenant.
-Workspaces own labels, machines, tokens, settings, and Boat key versions.
+Workspaces own labels, machines, tokens, settings, and overflow provider keys.
 Each GitHub organization has at most one current workspace registration.
 Removed registrations keep their old workspace history during retention.
 It owns its installation, repository access, scale sets, runners, and jobs.
@@ -28,14 +28,14 @@ Its required `received_at` holds the receipt time of that report.
 The `202611062200_inventory_receipts` migration gives older rows the Unix
 epoch, so an older report can never prove that a VM is gone.
 
-The schema stores token hashes and encrypted Boat keys.
+The schema stores token hashes and encrypted overflow provider keys.
 It stores job metadata and references to immutable runner placements.
 Cache measurements and restored content origins remain independent.
 The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
 Metering tables hold trusted times and costs.
 Confirmed billing state supplies current billing-period boundaries.
-Anonymous aggregates hold daily VM-size totals and Boat costs.
+Anonymous aggregates hold daily VM-size totals and overflow costs.
 Anonymous timestamp counts preserve exact period starts.
 Job and runner accounting cursors cascade with their source records.
 Anonymous aggregates belong only to the workspace.
@@ -88,16 +88,22 @@ Last-App removal deletes the grant, and successful activation consumes it.
 Each delivery holds a callback digest and temporary encrypted runner input.
 Provider identity, phase, start-price quote, and per-month runtime facts
 survive a control-plane restart.
-Unfinished deliveries keep their Boat key reference during rotation.
+Unfinished deliveries keep their provider key reference during rotation.
 The overflow advisory-key sequence has its own reserved range.
 Delivery metadata has no cascading organization reference, so retention
 cannot discard live cleanup authority when one organization leaves.
 
-The `202611070000_boat_runner_intents` migration adds Boat registration
-identities. Each row keeps the runner, delivery, organization, label, and
+Each overflow runner intent keeps the runner, delivery, organization, label, and
 scale-set IDs, with the sizes and the required root bytes. It keeps the
 GitHub runner ID after the registration. It holds no JIT configuration or
 callback token. Workspace deletion removes its rows.
+
+The `202611231528_overflow_provider_records` migration renames the overflow
+tables in place. Existing keys, runner placements, and metering values
+keep their data. Saved accounts, cost rows, and cost cursors record `boat`
+as their provider. Account observations, deliveries, and runner intents
+carry the provider in JSON. Metering job cursor JSON names the provider
+for jobs that ran on overflow.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
@@ -189,8 +195,10 @@ Each migration has an up.sql and a down.sql.
 
 ### Key Code
 
-- [src/boat_runner_intents.rs](src/boat_runner_intents.rs) defines the Boat
-  registration identity table.
+- [src/overflow_provider_accounts.rs](src/overflow_provider_accounts.rs)
+  defines provider identity, account metadata, and encrypted key versions.
+- [src/overflow_runner_intents.rs](src/overflow_runner_intents.rs) defines
+  the overflow registration identity table.
 - [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.
 - [src/installation_links.rs](src/installation_links.rs) defines installation
   attempts, claims, offers, activation, and pending authorization results.

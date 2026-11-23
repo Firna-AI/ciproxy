@@ -6,7 +6,8 @@ use chrono::Duration;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_metering::usage::PaymentNotice;
 use ciproxy_store_interface::jobs::{JobResult, JobState};
-use ciproxy_store_interface::metering::history::{BoatCost, Period};
+use ciproxy_store_interface::metering::history::{OverflowCost, Period};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 
 use super::super::support::{Database, at, job, runner};
@@ -38,9 +39,10 @@ fn anonymous_totals_survive_organization_purge_and_expire_after_ninety_days() {
     database.store.insert_job(workspace.id, &taken).unwrap();
     database
         .store
-        .save_boat_cost(
+        .save_overflow_cost(
             workspace.id,
-            &BoatCost {
+            &OverflowCost {
+                provider: OverflowProvider::Boat,
                 runner_id: vm.id,
                 starts_at: at(),
                 ends_at: Some(at() + Duration::minutes(10)),
@@ -86,9 +88,9 @@ fn anonymous_totals_survive_organization_purge_and_expire_after_ninety_days() {
         .days;
     assert_eq!(
         (
-            totals[0].sizes[0].boat.starts,
-            totals[0].sizes[0].boat.minutes,
-            totals[0].boat_usd
+            totals[0].sizes[0].overflow.starts,
+            totals[0].sizes[0].overflow.minutes,
+            totals[0].overflow_usd
         ),
         (1, usd("5"), usd("0.3"))
     );

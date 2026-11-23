@@ -8,11 +8,12 @@ use std::env;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::jobs::{Job, JobState};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::machines::{Machine, MachineDisk};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::secrets::TokenHash;
@@ -32,27 +33,16 @@ pub(super) struct Database {
     _database: TestDatabase,
 }
 
-struct TestDatabase {
+pub(super) struct TestDatabase {
+    pub(super) url: String,
     maintenance: PgConnection,
     name: String,
 }
 
 impl Database {
     pub(super) fn new() -> Self {
-        let raw_url = env::var("DATABASE_URL")
-            .expect("DATABASE_URL is required for real PostgreSQL store tests");
-        let mut admin = PgConnection::establish(&raw_url).expect("connect test PostgreSQL");
-        let name = format!("ciproxy_test_{}", Uuid::new_v4().simple());
-        diesel::sql_query(format!("CREATE DATABASE {name} TEMPLATE template0"))
-            .execute(&mut admin)
-            .expect("create isolated test database");
-        let database = TestDatabase {
-            maintenance: admin,
-            name,
-        };
-        let mut url = Url::parse(&raw_url).expect("DATABASE_URL must be a PostgreSQL URL");
-        url.set_path(&database.name);
-        let url = url.to_string();
+        let database = TestDatabase::new();
+        let url = database.url.clone();
         let store: Arc<dyn Store> = PgStoreFactory.connect(&url).expect("open migrated store");
         let connection = PgConnection::establish(&url).expect("connect test database");
         Self {
@@ -156,6 +146,25 @@ impl Database {
     }
 }
 
+impl TestDatabase {
+    pub(super) fn new() -> Self {
+        let raw_url = env::var("DATABASE_URL")
+            .expect("DATABASE_URL is required for real PostgreSQL store tests");
+        let mut url = Url::parse(&raw_url).expect("DATABASE_URL must be a PostgreSQL URL");
+        let mut maintenance = PgConnection::establish(&raw_url).expect("connect test PostgreSQL");
+        let name = format!("ciproxy_test_{}", Uuid::new_v4().simple());
+        diesel::sql_query(format!("CREATE DATABASE {name} TEMPLATE template0"))
+            .execute(&mut maintenance)
+            .expect("create isolated test database");
+        url.set_path(&name);
+        Self {
+            url: url.to_string(),
+            maintenance,
+            name,
+        }
+    }
+}
+
 impl Drop for TestDatabase {
     fn drop(&mut self) {
         diesel::sql_query(format!("DROP DATABASE {} WITH (FORCE)", self.name))
@@ -191,8 +200,9 @@ pub(super) fn machine() -> Machine {
     }
 }
 
-pub(super) fn account() -> BoatAccount {
-    BoatAccount {
+pub(super) fn account() -> OverflowProviderAccount {
+    OverflowProviderAccount {
+        provider: OverflowProvider::Boat,
         id: Uuid::new_v4(),
         account_name: "Customer Boat".to_owned(),
         connected_at: at(),

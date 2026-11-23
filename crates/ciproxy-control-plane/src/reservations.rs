@@ -2,8 +2,8 @@
 
 use std::collections::BTreeSet;
 
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use uuid::Uuid;
@@ -27,7 +27,7 @@ pub(crate) fn retirement_results(
         })
         .collect();
     let intents = input
-        .boat_intents
+        .overflow_intents
         .iter()
         .filter(|intent| intent.organization_id == organization_id);
     let deliveries = input
@@ -35,18 +35,18 @@ pub(crate) fn retirement_results(
         .starts
         .iter()
         .filter(|record| record.organization_id == organization_id);
-    let boat_runners = runners
+    let overflow_runners = runners
         .iter()
         .filter(|runner| matches!(runner.place, RunnerPlace::Boat { .. }));
     let runner_ids: BTreeSet<_> = intents
         .map(|intent| intent.runner_id)
         .chain(deliveries.map(|record| record.runner_id))
-        .chain(boat_runners.map(|runner| runner.id))
+        .chain(overflow_runners.map(|runner| runner.id))
         .collect();
     for runner_id in runner_ids {
         results.push(boat_result(
             input
-                .boat_intents
+                .overflow_intents
                 .iter()
                 .find(|intent| intent.runner_id == runner_id),
             input
@@ -61,7 +61,7 @@ pub(crate) fn retirement_results(
 }
 
 fn boat_result(
-    intent: Option<&BoatRunnerIntent>,
+    intent: Option<&OverflowRunnerIntent>,
     delivery: Option<&StartRecord>,
     runner: Option<&Runner>,
 ) -> RunnerRetirement {

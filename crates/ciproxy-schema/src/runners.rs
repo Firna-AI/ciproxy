@@ -15,8 +15,8 @@ diesel::table! {
         disk_bytes -> Int8,
         machine_id -> Nullable<Uuid>,
         first_slot -> Nullable<Int4>,
-        boat_key_id -> Nullable<Uuid>,
+        overflow_key_id -> Nullable<Uuid>,
         sandbox_id -> Nullable<Text>,
-        boat_size_name -> Nullable<Text>,
+        overflow_size_name -> Nullable<Text>,
     }
 }

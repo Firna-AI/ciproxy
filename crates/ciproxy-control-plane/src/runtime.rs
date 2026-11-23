@@ -18,7 +18,7 @@ use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
-use ciproxy_store_interface::runtime_results::BoatRunnerGuard;
+use ciproxy_store_interface::runtime_results::OverflowRunnerGuard;
 use ciproxy_store_interface::store::Store;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -82,7 +82,7 @@ pub struct MachineRuntime {
     task_owner: Option<Arc<RuntimeTasks>>,
     pub(crate) boat_operations: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
     pub(crate) image_requests: Arc<Mutex<HashMap<(Uuid, Uuid), ImageRequest>>>,
-    pub(crate) boat_answers: Arc<Mutex<HashMap<Uuid, (u64, BoatRunnerGuard)>>>,
+    pub(crate) boat_answers: Arc<Mutex<HashMap<Uuid, (u64, OverflowRunnerGuard)>>>,
     pub(crate) takeout_checks: Arc<Mutex<HashMap<Uuid, TakeoutCheck>>>,
 }
 
@@ -179,7 +179,7 @@ impl MachineRuntime {
         let store = self.store.clone();
         let at = self.clock.now();
         tokio::task::spawn_blocking(move || {
-            store.purge_terminal_boat_runner_intents(workspace_id, at)
+            store.purge_terminal_overflow_runner_intents(workspace_id, at)
         })
         .await
         .internal()?

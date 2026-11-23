@@ -145,7 +145,7 @@ async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
         StatusCode::UNAUTHORIZED
     );
     assert_eq!(
-        store.boat_runtime_snapshot(other).unwrap().starts[0].ends_at,
+        store.overflow_runtime_snapshot(other).unwrap().starts[0].ends_at,
         None
     );
     assert_eq!(
@@ -153,7 +153,7 @@ async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
         StatusCode::NO_CONTENT
     );
     assert_eq!(
-        store.boat_runtime_snapshot(other).unwrap().starts[0].ends_at,
+        store.overflow_runtime_snapshot(other).unwrap().starts[0].ends_at,
         None
     );
     assert_eq!(
@@ -197,7 +197,7 @@ async fn callback_saves_exit_while_workspace_lock_remains_held() {
         StatusCode::NO_CONTENT
     );
     let claim = store
-        .boat_runtime_snapshot(workspace)
+        .overflow_runtime_snapshot(workspace)
         .unwrap()
         .starts
         .remove(0);
@@ -213,7 +213,7 @@ async fn callback_saves_exit_while_workspace_lock_remains_held() {
     assert!(matches!(cleanup.await, Err(Error::ProviderUnavailable)));
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
     assert_eq!(
-        store.boat_runtime_snapshot(workspace).unwrap().starts,
+        store.overflow_runtime_snapshot(workspace).unwrap().starts,
         vec![claim]
     );
 
@@ -221,7 +221,7 @@ async fn callback_saves_exit_while_workspace_lock_remains_held() {
     *harness.ports.now.lock().unwrap() = ended_at;
     harness.service.cleanup(workspace).await.unwrap();
     let ended = store
-        .boat_runtime_snapshot(workspace)
+        .overflow_runtime_snapshot(workspace)
         .unwrap()
         .starts
         .remove(0);
@@ -244,7 +244,7 @@ async fn callback_returns_503_for_claim_failure_and_204_for_delete_failure() {
     let runner = inputs[0]["configure"]["runner_id"].as_str().unwrap();
     let router = boat_callback::router(harness.service.clone());
     let reported_at = *harness.ports.now.lock().unwrap();
-    let before = store.boat_runtime_snapshot(workspace).unwrap().starts;
+    let before = store.overflow_runtime_snapshot(workspace).unwrap().starts;
 
     harness.fixture.reject_boat_exit_claims();
     assert_eq!(
@@ -253,7 +253,7 @@ async fn callback_returns_503_for_claim_failure_and_204_for_delete_failure() {
         "a failed durable claim must return HTTP 503"
     );
     assert_eq!(
-        store.boat_runtime_snapshot(workspace).unwrap().starts,
+        store.overflow_runtime_snapshot(workspace).unwrap().starts,
         before
     );
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
@@ -266,7 +266,7 @@ async fn callback_returns_503_for_claim_failure_and_204_for_delete_failure() {
         StatusCode::NO_CONTENT
     );
     let claim = store
-        .boat_runtime_snapshot(workspace)
+        .overflow_runtime_snapshot(workspace)
         .unwrap()
         .starts
         .remove(0);
@@ -282,7 +282,7 @@ async fn callback_returns_503_for_claim_failure_and_204_for_delete_failure() {
     harness.ports.delete_fail.store(false, Ordering::SeqCst);
     harness.service.cleanup(workspace).await.unwrap();
     let ended = store
-        .boat_runtime_snapshot(workspace)
+        .overflow_runtime_snapshot(workspace)
         .unwrap()
         .starts
         .remove(0);

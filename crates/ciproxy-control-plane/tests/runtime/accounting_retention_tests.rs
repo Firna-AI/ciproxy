@@ -77,7 +77,7 @@ async fn accounting_purges_due_organizations_and_workspaces_after_preserving_exa
     corrected.completed_at = Some(at() + Duration::minutes(6));
     store.update_job(fixture.workspace, &corrected).unwrap();
     store
-        .save_boat_cost(fixture.workspace, &cost(removed.runner.id, 11))
+        .save_overflow_cost(fixture.workspace, &cost(removed.runner.id, 11))
         .unwrap();
     assert_eq!(
         store
@@ -146,8 +146,8 @@ async fn accounting_purges_due_organizations_and_workspaces_after_preserving_exa
     assert_eq!(store.settings(fixture.workspace).unwrap(), settings);
     assert_eq!(store.machines(fixture.workspace).unwrap(), machines);
     let mut totals = expected_totals(&fixture, true);
-    totals[0].sizes[0].boat.minutes = 6.into();
-    totals[0].boat_usd = rust_decimal::Decimal::new(32, 2);
+    totals[0].sizes[0].overflow.minutes = 6.into();
+    totals[0].overflow_usd = rust_decimal::Decimal::new(32, 2);
     let day = at().date_naive();
     assert_eq!(
         store
@@ -290,7 +290,10 @@ async fn accounting_purges_due_organizations_and_workspaces_after_preserving_exa
         1
     );
     assert_eq!(
-        store.boat_accounting(fixture.workspace).unwrap().accounted,
+        store
+            .overflow_accounting(fixture.workspace)
+            .unwrap()
+            .accounted,
         vec![]
     );
 }

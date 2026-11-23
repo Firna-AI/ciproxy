@@ -35,7 +35,10 @@ fn runtime_splits_at_midnight_and_starts_stay_on_taken_day() {
         (0, usd("1"))
     );
     assert_eq!(
-        (days[1].sizes[0].boat.starts, days[1].sizes[0].boat.minutes),
+        (
+            days[1].sizes[0].overflow.starts,
+            days[1].sizes[0].overflow.minutes
+        ),
         (1, usd("2.25"))
     );
 }
@@ -89,7 +92,7 @@ fn refresh_does_not_reinsert_expired_days_from_retained_jobs() {
         current.observed_at,
     );
     assert_eq!(
-        (kept[0].day, kept[0].sizes[0].boat.minutes),
+        (kept[0].day, kept[0].sizes[0].overflow.minutes),
         (day("2026-08-06"), usd("2"))
     );
 }

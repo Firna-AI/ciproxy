@@ -5,9 +5,10 @@ use ciproxy_overflow::api::{StartOutcome, StartRequest};
 use ciproxy_protocol::identifiers::OrganizationId;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::StartRunner;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
-use ciproxy_store_interface::runtime_results::{BoatRunnerResult, BoatRunnerWrite};
+use ciproxy_store_interface::runtime_results::{OverflowRunnerResult, OverflowRunnerWrite};
 use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use secrecy::ExposeSecret;
 use uuid::Uuid;
@@ -47,7 +48,8 @@ impl MachineRuntime {
                     && set.github_id == action.target.github_id
             })
             .ok_or(Error::StateChanged)?;
-        let intent = BoatRunnerIntent {
+        let intent = OverflowRunnerIntent {
+            provider: OverflowProvider::Boat,
             registration_scale_set_id: None,
             delivery_id: self.clock.uuid(),
             runner_id: self.clock.uuid(),
@@ -66,14 +68,14 @@ impl MachineRuntime {
         };
         let saved = intent.clone();
         let store = self.store.clone();
-        tokio::task::spawn_blocking(move || store.create_boat_runner_intent(workspace, &saved))
+        tokio::task::spawn_blocking(move || store.create_overflow_runner_intent(workspace, &saved))
             .await
             .internal()?
             .internal()?;
         let store = self.store.clone();
         let runner_id = intent.runner_id;
         let expected =
-            tokio::task::spawn_blocking(move || store.boat_runner_guard(workspace, runner_id))
+            tokio::task::spawn_blocking(move || store.overflow_runner_guard(workspace, runner_id))
                 .await
                 .internal()?
                 .internal()?
@@ -96,16 +98,16 @@ impl MachineRuntime {
             let github_id = registration.runner_id;
             let store = runtime.store.clone();
             let accepted = tokio::task::spawn_blocking(move || {
-                store.apply_boat_runner_result(
+                store.apply_overflow_runner_result(
                     workspace,
                     &expected,
-                    BoatRunnerResult::Registered { target, github_id },
+                    OverflowRunnerResult::Registered { target, github_id },
                 )
             })
             .await
             .internal()?
             .internal()?;
-            if !matches!(accepted, BoatRunnerWrite::Applied(_)) {
+            if !matches!(accepted, OverflowRunnerWrite::Applied(_)) {
                 return runtime.cleanup_late_registration(workspace, runner_id, target, github_id);
             }
             let boat = runtime.boat_operation(workspace).await;
@@ -128,7 +130,7 @@ impl MachineRuntime {
             if let StartOutcome::Pending(_) | StartOutcome::Started(_) = outcome {
                 let store = runtime.store.clone();
                 tokio::task::spawn_blocking(move || {
-                    store.register_boat_runner(workspace, runner_id, github_id)
+                    store.register_overflow_runner(workspace, runner_id, github_id)
                 })
                 .await
                 .internal()?

@@ -3,7 +3,7 @@
 use chrono::Duration;
 use ciproxy_store_interface::jobs::{JobResult, JobState};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
-use ciproxy_store_interface::secrets::EncryptedBoatKey;
+use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::settings::OverflowWait;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use uuid::Uuid;
@@ -58,10 +58,10 @@ fn workspace_retention_restores_reinstalls_and_purges_only_the_expired_tenant() 
     store.save_settings(workspace.id, &settings).unwrap();
     let account = account();
     store
-        .connect_boat(
+        .connect_overflow_provider(
             workspace.id,
             &account,
-            &EncryptedBoatKey::new(vec![1, 2]),
+            &EncryptedOverflowKey::new(vec![1, 2]),
             40_000_000,
         )
         .unwrap();
@@ -105,7 +105,10 @@ fn workspace_retention_restores_reinstalls_and_purges_only_the_expired_tenant() 
     );
     assert_eq!(store.authenticate_token(&machine_hash, at()).unwrap(), None);
     assert_eq!(store.machines(workspace.id).unwrap(), vec![]);
-    assert_eq!(store.boat_accounts(workspace.id).unwrap(), vec![]);
+    assert_eq!(
+        store.overflow_provider_accounts(workspace.id).unwrap(),
+        vec![]
+    );
     assert!(
         !store
             .purge_expired_workspace(workspace.id, at() + Duration::days(31))

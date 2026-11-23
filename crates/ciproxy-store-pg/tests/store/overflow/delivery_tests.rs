@@ -59,10 +59,11 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
         assert_eq!(
             session.snapshot().unwrap().accounts,
             vec![ciproxy_store_interface::overflow::store::AccountRecord {
-                account: ciproxy_store_interface::boat::BoatAccount {
-                    retired_at: Some(at() + Duration::seconds(1)),
-                    ..account.account.clone()
-                },
+                account:
+                    ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount {
+                        retired_at: Some(at() + Duration::seconds(1)),
+                        ..account.account.clone()
+                    },
                 ..account.clone()
             }]
         );
@@ -74,7 +75,7 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
     assert_eq!(
         database
             .store
-            .encrypted_boat_key(workspace_id, account.account.id)
+            .encrypted_overflow_key(workspace_id, account.account.id)
             .unwrap(),
         Some(account.key)
     );
@@ -106,7 +107,7 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
     assert_eq!(
         database
             .store
-            .encrypted_boat_key(workspace_id, account.account.id)
+            .encrypted_overflow_key(workspace_id, account.account.id)
             .unwrap(),
         None
     );

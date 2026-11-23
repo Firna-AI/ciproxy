@@ -79,7 +79,7 @@ async fn unsent_create_ends_without_cost_or_authority_and_permits_a_new_delivery
         harness
             .database
             .store
-            .encrypted_boat_key(id(1), id(2))
+            .encrypted_overflow_key(id(1), id(2))
             .unwrap(),
         None
     );

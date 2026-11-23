@@ -3,8 +3,6 @@
 #![warn(unreachable_pub)]
 
 pub mod billing;
-pub mod boat;
-pub mod boat_runner_intents;
 pub mod dashboard;
 pub mod github;
 pub mod github_attempts;
@@ -16,6 +14,8 @@ pub mod metering;
 pub mod migrations;
 pub mod organizations;
 pub mod overflow;
+pub mod overflow_provider_accounts;
+pub mod overflow_runner_intents;
 pub mod own_runners;
 pub mod runners;
 pub mod scale_sets;

@@ -10,11 +10,12 @@ use ciproxy_metering::service::Metering;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
 use ciproxy_store_interface::jobs::{Job, JobResult, JobState};
 use ciproxy_store_interface::labels::Label;
-use ciproxy_store_interface::metering::history::BoatCost;
+use ciproxy_store_interface::metering::history::OverflowCost;
 use ciproxy_store_interface::metering::totals::{
     DailyTotal, LocationTotals, SizeTotal, StartTotal,
 };
 use ciproxy_store_interface::organizations::Organization;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::workspaces::Workspace;
@@ -125,7 +126,7 @@ pub(super) fn history(fixture: &Fixture, organization: Organization, boat: bool)
     store.insert_job(workspace, &job).unwrap();
     if boat {
         store
-            .save_boat_cost(workspace, &cost(runner.id, 10))
+            .save_overflow_cost(workspace, &cost(runner.id, 10))
             .unwrap();
     }
     History {
@@ -137,8 +138,9 @@ pub(super) fn history(fixture: &Fixture, organization: Organization, boat: bool)
     }
 }
 
-pub(super) fn cost(runner_id: Uuid, minutes: i64) -> BoatCost {
-    BoatCost {
+pub(super) fn cost(runner_id: Uuid, minutes: i64) -> OverflowCost {
+    OverflowCost {
+        provider: OverflowProvider::Boat,
         runner_id,
         starts_at: at(),
         ends_at: Some(at() + Duration::minutes(minutes)),
@@ -197,12 +199,12 @@ pub(super) fn expected_totals(fixture: &Fixture, machines: bool) -> Vec<DailyTot
             } else {
                 LocationTotals::default()
             },
-            boat: LocationTotals {
+            overflow: LocationTotals {
                 starts: 1,
                 minutes: Decimal::from(5),
             },
         }],
-        boat_usd: Decimal::new(3, 1),
+        overflow_usd: Decimal::new(3, 1),
     }]
 }
 

@@ -3,64 +3,19 @@
 use std::thread;
 
 use chrono::Duration;
-use ciproxy_schema::overflow::overflow_starts;
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
-use ciproxy_store_interface::overflow::known::KnownSandbox;
-use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
-use ciproxy_store_interface::overflow::store::OverflowSession;
+use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::runners::RunnerState;
-use ciproxy_store_interface::runtime_results::{BoatRunnerResult, BoatRunnerWrite};
+use ciproxy_store_interface::runtime_results::{OverflowRunnerResult, OverflowRunnerWrite};
 use ciproxy_store_interface::secrets::TokenHash;
 use ciproxy_store_interface::store::Store;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
-use rust_decimal::Decimal;
 use uuid::Uuid;
 
-use crate::store::metering::concurrent::support::{backend_pid, tagged_store, wait_for_blocker};
+use crate::store::metering::concurrent::support::{tagged_store, wait_for_blocker};
 
 use super::super::support::{Database, at};
-use super::support::{create_runner_intent, reserve, setup};
-
-fn save_running_delivery(
-    session: &mut dyn OverflowSession,
-    record: &mut StartRecord,
-    hash: &TokenHash,
-) {
-    assert_eq!(
-        reserve(
-            session,
-            record,
-            &EncryptedLaunch(vec![71]),
-            hash,
-            &ReservationBudget {
-                current_month_usd: Decimal::new(462, 3),
-                next_month_usd: None,
-            },
-        )
-        .unwrap(),
-        ReservationOutcome::Reserved
-    );
-    record.sandbox = Some(KnownSandbox::observed(
-        "bx_23456789".to_owned(),
-        record.starts_at,
-        record.dispatch.as_ref().unwrap().lifetime_seconds,
-    ));
-    record.phase = StartPhase::Running;
-    session.save_start(record).unwrap();
-}
-
-fn hold_delivery_row(connection: &mut PgConnection, delivery_id: Uuid) -> i32 {
-    let controller_pid = backend_pid(connection);
-    connection.batch_execute("BEGIN").unwrap();
-    overflow_starts::table
-        .find(delivery_id)
-        .select(overflow_starts::delivery_id)
-        .for_update()
-        .first::<Uuid>(connection)
-        .unwrap();
-    controller_pid
-}
+use super::support::{create_runner_intent, hold_delivery_row, save_running_delivery, setup};
 
 #[test]
 fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
@@ -83,14 +38,14 @@ fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
         )
         .unwrap();
     let guard = store
-        .boat_runner_guard(workspace_id, runner_id)
+        .overflow_runner_guard(workspace_id, runner_id)
         .unwrap()
         .unwrap();
     assert!(matches!(
         store
-            .apply_boat_runner_result(workspace_id, &guard, BoatRunnerResult::Checked)
+            .apply_overflow_runner_result(workspace_id, &guard, OverflowRunnerResult::Checked)
             .unwrap(),
-        BoatRunnerWrite::Applied(_)
+        OverflowRunnerWrite::Applied(_)
     ));
     assert_eq!(
         store.overflow_token_workspace(&hash).unwrap(),
@@ -149,7 +104,7 @@ fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
     );
 
     let claimed_guard = store
-        .boat_runner_guard(workspace_id, runner_id)
+        .overflow_runner_guard(workspace_id, runner_id)
         .unwrap()
         .unwrap();
     assert_eq!(guard.runner, claimed_guard.runner);
@@ -159,15 +114,19 @@ fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
     );
     assert!(matches!(
         store
-            .apply_boat_runner_result(workspace_id, &guard, BoatRunnerResult::Checked)
+            .apply_overflow_runner_result(workspace_id, &guard, OverflowRunnerResult::Checked)
             .unwrap(),
-        BoatRunnerWrite::Rejected
+        OverflowRunnerWrite::Rejected
     ));
     assert!(matches!(
         store
-            .apply_boat_runner_result(workspace_id, &claimed_guard, BoatRunnerResult::Checked)
+            .apply_overflow_runner_result(
+                workspace_id,
+                &claimed_guard,
+                OverflowRunnerResult::Checked
+            )
             .unwrap(),
-        BoatRunnerWrite::Applied(_)
+        OverflowRunnerWrite::Applied(_)
     ));
 
     session.save_start(&record).unwrap();

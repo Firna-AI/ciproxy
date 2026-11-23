@@ -24,11 +24,11 @@ impl fmt::Debug for TokenHash {
     }
 }
 
-/// A Boat key encrypted by the caller.
+/// An overflow provider key encrypted by the caller.
 #[derive(Clone, Eq, PartialEq)]
-pub struct EncryptedBoatKey(Vec<u8>);
+pub struct EncryptedOverflowKey(Vec<u8>);
 
-impl EncryptedBoatKey {
+impl EncryptedOverflowKey {
     /// Wrap ciphertext, including the caller's encryption envelope.
     pub fn new(bytes: Vec<u8>) -> Self {
         Self(bytes)
@@ -40,9 +40,9 @@ impl EncryptedBoatKey {
     }
 }
 
-impl fmt::Debug for EncryptedBoatKey {
+impl fmt::Debug for EncryptedOverflowKey {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("EncryptedBoatKey([redacted])")
+        formatter.write_str("EncryptedOverflowKey([redacted])")
     }
 }
 

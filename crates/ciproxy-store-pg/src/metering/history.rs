@@ -1,18 +1,23 @@
 //! Scoped cost-history upserts and repeatable-read snapshots.
 
 use chrono::{DateTime, Utc};
-use ciproxy_schema::metering::{metering_boat_costs, metering_machine_costs, metering_plan_costs};
+use ciproxy_schema::metering::{
+    metering_machine_costs, metering_overflow_costs, metering_plan_costs,
+};
 use ciproxy_schema::runners::runners;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
-use ciproxy_store_interface::metering::history::{BoatCost, CostHistory, MachineCost, PlanCost};
+use ciproxy_store_interface::metering::history::{
+    CostHistory, MachineCost, OverflowCost, PlanCost,
+};
 use diesel::prelude::*;
 use diesel::query_dsl::methods;
 use uuid::Uuid;
 
 use crate::error::{QueryResultExt, require_record};
+use crate::overflow_provider::DbOverflowProvider;
 
-use super::history_rows::{BoatCostRow, MachineCostRow, PlanCostRow};
+use super::history_rows::{MachineCostRow, OverflowCostRow, PlanCostRow};
 
 pub(super) fn save_machine(
     connection: &mut PgConnection,
@@ -65,10 +70,10 @@ pub(super) fn save_plan(
     require_record(count)
 }
 
-pub(super) fn save_boat(
+pub(super) fn save_overflow(
     connection: &mut PgConnection,
     workspace_id: Uuid,
-    cost: &BoatCost,
+    cost: &OverflowCost,
 ) -> Result<()> {
     let count = connection
         .transaction(|connection| {
@@ -85,20 +90,21 @@ pub(super) fn save_boat(
                 .for_key_share()
                 .first::<Uuid>(connection)?;
             let values = (
-                metering_boat_costs::runner_id.eq(cost.runner_id),
-                metering_boat_costs::workspace_id.eq(workspace_id),
-                metering_boat_costs::starts_at.eq(cost.starts_at),
-                metering_boat_costs::ends_at.eq(cost.ends_at),
-                metering_boat_costs::start_usd.eq(cost.start_usd),
-                metering_boat_costs::minute_usd.eq(cost.minute_usd),
+                metering_overflow_costs::runner_id.eq(cost.runner_id),
+                metering_overflow_costs::workspace_id.eq(workspace_id),
+                metering_overflow_costs::provider.eq(DbOverflowProvider(cost.provider)),
+                metering_overflow_costs::starts_at.eq(cost.starts_at),
+                metering_overflow_costs::ends_at.eq(cost.ends_at),
+                metering_overflow_costs::start_usd.eq(cost.start_usd),
+                metering_overflow_costs::minute_usd.eq(cost.minute_usd),
             );
             methods::FilterDsl::filter(
-                diesel::insert_into(metering_boat_costs::table)
+                diesel::insert_into(metering_overflow_costs::table)
                     .values(values)
-                    .on_conflict(metering_boat_costs::runner_id)
+                    .on_conflict(metering_overflow_costs::runner_id)
                     .do_update()
                     .set(values),
-                metering_boat_costs::workspace_id.eq(workspace_id),
+                metering_overflow_costs::workspace_id.eq(workspace_id),
             )
             .execute(connection)
         })
@@ -139,16 +145,16 @@ pub(super) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> QueryRe
     })
 }
 
-pub(super) fn load_boat(
+pub(super) fn load_overflow(
     connection: &mut PgConnection,
     workspace_id: Uuid,
-) -> QueryResult<Vec<BoatCost>> {
-    Ok(metering_boat_costs::table
-        .filter(metering_boat_costs::workspace_id.eq(workspace_id))
-        .order(metering_boat_costs::runner_id)
-        .select(BoatCostRow::as_select())
+) -> QueryResult<Vec<OverflowCost>> {
+    Ok(metering_overflow_costs::table
+        .filter(metering_overflow_costs::workspace_id.eq(workspace_id))
+        .order(metering_overflow_costs::runner_id)
+        .select(OverflowCostRow::as_select())
         .load(connection)?
         .into_iter()
-        .map(BoatCostRow::into_record)
+        .map(OverflowCostRow::into_record)
         .collect())
 }

@@ -25,7 +25,7 @@ pub trait WorkspaceStore: Send + Sync {
     /// Revoke execution access while preserving live sandbox cleanup access.
     ///
     /// Removing the last organization also performs these mutations.
-    /// Retired Boat keys and sandbox-end tokens stay until their runners end.
+    /// Retired provider keys and sandbox-end tokens stay until their runners end.
     /// This operation never deletes retained workspace configuration.
     fn revoke_workspace_execution_access(
         &self,

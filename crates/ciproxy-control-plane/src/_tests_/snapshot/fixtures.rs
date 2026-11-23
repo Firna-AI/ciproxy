@@ -26,8 +26,8 @@ pub(crate) fn input() -> RoutingSnapshot {
  })).unwrap();
     RoutingSnapshot {
         scale_sets: vec![binding(2), binding(6)],
-        boat_intents: Vec::new(),
-        boat_runners: Vec::new(),
+        overflow_intents: Vec::new(),
+        overflow_runners: Vec::new(),
         overflow: ciproxy_store_interface::overflow::store::OverflowSnapshot {
             accounts: Vec::new(),
             starts: Vec::new(),

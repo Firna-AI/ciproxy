@@ -5,7 +5,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::metering::totals::AccountedBoat;
+use crate::metering::totals::AccountedOverflow;
+use crate::overflow::provider::OverflowProvider;
 
 /// Half-open boundaries of one Free or Stripe billing period.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -44,12 +45,14 @@ pub struct PlanCost {
     pub monthly_usd: Decimal,
 }
 
-/// Start and runtime prices for one ciproxy-created Boat sandbox.
+/// Start and runtime prices for one ciproxy-created overflow sandbox.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BoatCost {
+pub struct OverflowCost {
     /// The runner whose sandbox ciproxy created.
     pub runner_id: Uuid,
-    /// When Boat started billing this sandbox.
+    /// The provider that bills for this sandbox.
+    pub provider: OverflowProvider,
+    /// When the provider started billing this sandbox.
     pub starts_at: DateTime<Utc>,
     /// End of this price interval. Overflow always supplies a finite measured end.
     pub ends_at: Option<DateTime<Utc>>,
@@ -72,9 +75,9 @@ pub struct CostHistory {
 
 /// Coherent source facts and cost cursors from one database snapshot.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct BoatAccounting {
-    /// Known ciproxy Boat price intervals, including bounded incomplete deliveries.
-    pub costs: Vec<BoatCost>,
+pub struct OverflowAccounting {
+    /// Known overflow price intervals, including bounded incomplete deliveries.
+    pub costs: Vec<OverflowCost>,
     /// Accounting cursors read from the same snapshot as the source costs.
-    pub accounted: Vec<AccountedBoat>,
+    pub accounted: Vec<AccountedOverflow>,
 }

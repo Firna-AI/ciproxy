@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::overflow::account::SizeOffer;
 use crate::overflow::billing::MeasuredBillingInterval;
 use crate::overflow::known::KnownSandbox;
+use crate::overflow::provider::OverflowProvider;
 
 /// Ciphertext for a runner registration and its scoped callback token.
 #[derive(Clone, Eq, PartialEq)]
@@ -59,6 +60,9 @@ pub struct ProviderParameters {
 /// Immutable pending demand, optional fixed provider parameters, and observed progress.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct StartRecord {
+    /// The provider of the saved delivery.
+    #[serde(default)]
+    pub provider: OverflowProvider,
     /// Stable idempotent delivery identifier supplied by the control plane.
     pub delivery_id: Uuid,
     /// Stable runner and consumer sandbox identifier.
@@ -79,8 +83,8 @@ pub struct StartRecord {
     pub image_root_bytes: u64,
     /// Complete root allocation computed by the agent's shared sizing rule.
     pub required_root_disk_bytes: u64,
-    /// Own-machine fit known by the scaler when it admitted this Boat demand.
-    /// Overflow does not refresh own-machine capacity while replanning the Boat account.
+    /// Own-machine fit known by the scaler when it admitted this overflow demand.
+    /// Overflow uses this saved fit when it replans the delivery.
     #[serde(default)]
     pub own_machine_fits: bool,
     /// Absent while unsent. Dispatch fixes these parameters before the first create.

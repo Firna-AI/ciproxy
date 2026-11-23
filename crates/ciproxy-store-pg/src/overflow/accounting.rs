@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::error::QueryResultExt;
 
-/// A linear BoatCost needs a counted fee and a fully measured runtime interval.
+/// A linear OverflowCost needs a counted fee and a fully measured runtime interval.
 pub(crate) fn require_complete(
     connection: &mut PgConnection,
     workspace_id: Uuid,
