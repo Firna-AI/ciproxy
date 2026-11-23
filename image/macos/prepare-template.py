@@ -94,7 +94,7 @@ AUTOLOGIN_STEP = '''provisioner "shell" {
 CLOSE_WINDOWS_STEP = '''
 
   provisioner "shell" {
-    inline = ["for i in $(seq 24); do osascript -e 'tell application \\"Finder\\" to close every window' && exit 0; sleep 5; done; exit 1"]
+    inline = ["ok=0; for i in $(seq 36); do n=$(osascript -e 'tell application \\"Finder\\" to close every window' -e 'tell application \\"Finder\\" to count windows' 2>/dev/null); if [ \\"$n\\" = 0 ]; then ok=$((ok + 1)); [ $ok -ge 4 ] && exit 0; else ok=0; fi; sleep 5; done; exit 1"]
   }'''
 
 
@@ -102,7 +102,9 @@ def close_finder_windows(text):
     """Close Finder's windows after each upstream restart. The Setup
     Assistant phase opened Finder's Utilities window, Finder restores it at
     each login, and the upstream configure-windows.sh fails on any open
-    window. The upstream TCC step has allowed osascript to reach Finder."""
+    window. Finder restores it some seconds after login, so the step waits
+    until Finder has no window at four checks in a row. The upstream TCC
+    step has allowed osascript to reach Finder."""
     marker = 'provisioner "shell" {'
     parts = text.split(marker)
     for index in range(1, len(parts)):
