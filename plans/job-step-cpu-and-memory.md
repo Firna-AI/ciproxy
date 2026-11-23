@@ -1,8 +1,9 @@
 # CPU and memory of each job step
 
 Status: Active. On branch `calummoore/action-cpu-and-memory-usage`, no pull
-request yet. The pull request that completes the work deletes this plan, as
-the `plans` skill says.
+request yet. The user approved this plan on 23 November 2026, in the words
+"impl the plan". The pull request that completes the work deletes this
+plan, as the `plans` skill says.
 
 No part of ciproxy measures the CPU or the memory that a job uses. A
 customer cannot see which step of a job needs the CPU or the memory, or
@@ -24,7 +25,7 @@ The change does not cover size hints, figures on the job list, figures
 while a job runs, figures for each process, alerts, or an export to the
 customer's own monitoring. A job that ran before the change has no figures.
 
-The user answered all four decisions by 23 November 2026, so no TODO waits
+The user answered all five decisions by 23 November 2026, so no TODO waits
 for an answer.
 
 Contract owners:
@@ -374,6 +375,36 @@ and the
   report is lost or refused.
 - **Action:** The user chose B and C together on 23 November 2026, in the
   words "4 = B + C".
+
+## Decision 5. Who reads the CPU and memory figures
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design. The user wrote on 23 November 2026 that the figures
+  are "only for internal use by the team".
+- **Category:** Docs or spec.
+- **Location:** Milestones 1, 2, 11, and 12 of this plan.
+- **Background:** The plan shows the figures on the job page, which every
+  person with a role in the workspace sees. "The team" could mean the team
+  of the customer or the team of ciproxy.
+- **Problem:** A wrong reading builds a customer page, its mockups, and a
+  docs page that nobody asked for.
+- **Impact if no action:** The plan can build the wrong scope.
+- **Root question:** Who reads the CPU and memory figures of each step?
+- **Options:**
+  - **A.** The customer's own team, on the job page. Effort: Small.
+  - **B.** Only the ciproxy team, through a query or an internal report.
+    Effort: Medium.
+  - **C.** Both, with an internal view across all workspaces. Effort:
+    Large.
+- **Left out:** None.
+- **Wider fix:** None. This is a scope question, not a defect.
+- **Previous examples:** None found.
+- **Recommendation:** A. It matches the job page of decision 1.
+- **Action:** The user chose A on 23 November 2026, in the words "5 = A".
+  The user also said that faked figures do not matter, because only the
+  jobs of a customer can change the figures of that customer. The size and
+  rate limits of the design stay, because they also protect the control
+  plane from a broken guest.
 
 ## Design
 
