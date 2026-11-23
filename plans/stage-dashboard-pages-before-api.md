@@ -1,8 +1,8 @@
 # Stage new dashboard pages before the API rollout
 
-Status: Active. On branch `conductor/ciproxy-deploy-order-pages-before-api`,
-no pull request yet. The pull request that completes the work deletes this
-plan, as the `plans` skill says.
+Status: Active. [PR #135](https://github.com/Firna-AI/ciproxy/pull/135) is
+open. The pull request that completes the work deletes this plan, as the
+`plans` skill says.
 
 A workload deploy in `deploy/scripts/deploy.py` rolls out the API, the Helm
 release of the chart `deploy/helm/ciproxy`, before it publishes the
@@ -48,12 +48,21 @@ Design calls, each an agent call of 23 November 2026:
 - **A create-only upload finds the new objects.** In `--new-only` mode,
   each upload carries the Cloud Storage precondition `ifGenerationMatch=0`.
   Cloud Storage answers HTTP 412 when the bucket holds a live object of
-  that name. The publisher then skips the object. Any other error stops
-  the publisher. The alternative was a list of the bucket before the
-  uploads. Reason: the precondition is atomic for each object, needs no
-  paging, and its cost does not grow with the old objects in the bucket.
-  Cost: the stage step sends the export once more. For the current
-  dashboard export, that is 83 requests and 4.6 MB.
+  that name. The alternative was a list of the bucket before the uploads.
+  Reason: the precondition is atomic for each object, needs no paging, and
+  its cost does not grow with the old objects in the bucket. Cost: the
+  stage step sends the export once more. For the current dashboard export,
+  that is 83 requests and 4.6 MB.
+- **A read of the bucket confirms each refused object.** After each HTTP
+  412, the publisher reads the metadata of that object. It skips the
+  object only when the read finds it. A 404 or any other error stops the
+  publisher. Agent call of 23 November 2026, after finding 1 of review
+  round 1. The first design skipped the object on every 412. But Cloud
+  Storage also answers 412 for other reasons, such as an organization
+  policy that refuses new objects. The alternative was to skip only a 412
+  with the reason `conditionNotMet`. Reason: the read proves presence
+  whatever the reason or the body of the 412. Cost: one small read for
+  each object that already exists, about 80 for each deploy today.
 - **The stage step covers every object of the export.** New hashed chunks
   arrive before the pages that load them. An existing page and the files
   that it loads stay unchanged until the full publication. A changed file
@@ -123,8 +132,8 @@ Depends on: 1, 2
 - [x] Delete `plans/follow-ups/deploy-order-pages-and-api.md`.
 - [x] Run the deploy tests, the early check, and the complete gate named
       in `AGENTS.md`.
-- [ ] Commit with Conventional Commits and push the branch.
-- [ ] Open a ready pull request against `main`, as the task asks.
+- [x] Commit with Conventional Commits and push the branch.
+- [x] Open a ready pull request against `main`, as the task asks.
 - [ ] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, re-review once,

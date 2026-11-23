@@ -9,10 +9,11 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from threading import Event
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from deploy.scripts import publish_static
 
@@ -90,7 +91,7 @@ class StaticPublishingTests(unittest.TestCase):
                     self.assertEqual(request.get_method(), "POST")
                     self.assertEqual(request.full_url, "https://storage.googleapis.com/upload/storage/v1/b/private-static-origin/o?uploadType=multipart")
 
-    def stage_export(self, names, upload):
+    def stage_export(self, names, open_url):
         scratch = Path(__file__).resolve().parents[2] / ".context/static-upload-tests"
         scratch.mkdir(parents=True, exist_ok=True)
         output = io.StringIO()
@@ -103,52 +104,98 @@ class StaticPublishingTests(unittest.TestCase):
             arguments = ["publish_static.py", f"--directory={directory}", "--bucket=app-bucket", "--new-only"]
             with (patch.object(sys, "argv", arguments), redirect_stdout(output),
                   patch.object(publish_static.subprocess, "check_output", return_value="synthetic-token"),
-                  patch.object(publish_static.urllib.request, "urlopen", side_effect=upload)):
+                  patch.object(publish_static.urllib.request, "urlopen", side_effect=open_url)):
                 publish_static.main()
         return output.getvalue()
 
     def test_new_only_creates_missing_assets_before_html_and_aliases(self):
-        existing = {"assets/old.js", "index.html"}
-        requests = []
+        existing = {"assets/old.js", "index.html", "jobs/"}
+        upload_requests = []
+        reads = []
         written = []
 
-        def upload(request, timeout):
+        def open_url(request, timeout):
+            url = urlsplit(request.full_url)
+            if request.get_method() == "GET":
+                name = unquote(url.path.partition("/o/")[2])
+                reads.append((request.full_url, request.get_header("Authorization")))
+                if name in existing:
+                    return io.BytesIO(json.dumps({"name": name}).encode())
+                raise HTTPError(request.full_url, 404, "Not Found", {}, io.BytesIO())
             name = request_name(request)
-            query = parse_qs(urlsplit(request.full_url).query)
-            requests.append((name, query))
+            query = parse_qs(url.query)
+            upload_requests.append((name, query))
             if name in existing and query.get("ifGenerationMatch") == ["0"]:
                 raise HTTPError(request.full_url, 412, "Precondition Failed", {}, io.BytesIO())
             written.append(name)
             return io.BytesIO(b"{}")
 
         output = self.stage_export(
-            ("index.html", "continue.html", "assets/old.js", "assets/new.js"), upload,
+            ("index.html", "continue.html", "jobs.html", "assets/old.js", "assets/new.js"), open_url,
         )
 
-        for name, query in requests:
+        for name, query in upload_requests:
             self.assertEqual(query, {"uploadType": ["multipart"], "ifGenerationMatch": ["0"]}, name)
-        names = [name for name, query in requests]
+        names = [name for name, query in upload_requests]
         self.assertCountEqual(names[:2], ["assets/new.js", "assets/old.js"])
-        self.assertCountEqual(names[2:], ["continue", "continue/", "continue.html", "index.html"])
-        self.assertCountEqual(written, ["assets/new.js", "continue", "continue/", "continue.html"])
-        self.assertEqual(output, "Staged 4 objects in gs://app-bucket; 2 already present.\n")
+        self.assertCountEqual(names[2:], [
+            "continue", "continue/", "continue.html", "index.html", "jobs", "jobs/", "jobs.html",
+        ])
+        self.assertCountEqual(written, [
+            "assets/new.js", "continue", "continue/", "continue.html", "jobs", "jobs.html",
+        ])
+        metadata_url = "https://storage.googleapis.com/storage/v1/b/app-bucket/o"
+        self.assertCountEqual(reads, [
+            (f"{metadata_url}/assets%2Fold.js?fields=name", "Bearer synthetic-token"),
+            (f"{metadata_url}/index.html?fields=name", "Bearer synthetic-token"),
+            (f"{metadata_url}/jobs%2F?fields=name", "Bearer synthetic-token"),
+        ])
+        self.assertEqual(output, "Staged 6 objects in gs://app-bucket; 3 already present.\n")
 
-    def test_new_only_propagates_forbidden_asset_error_before_html(self):
-        forbidden = HTTPError("https://example.invalid/upload", 403, "Forbidden", {}, io.BytesIO())
-        requested = []
+    def test_new_only_asset_refusal_stops_all_html_uploads(self):
+        upload_url = "https://example.invalid/upload"
+        forbidden = HTTPError(upload_url, 403, "Forbidden", {}, io.BytesIO())
+        policy_body = io.BytesIO(
+            b'{"error":{"code":412,"message":"Request violates an OrgPolicy constraint.",'
+            b'"errors":[{"domain":"global","reason":"orgPolicyConstraintFailed",'
+            b'"message":"Request violates an OrgPolicy constraint."}]}}'
+        )
+        policy_refusal = HTTPError(upload_url, 412, "Precondition Failed", {}, policy_body)
+        for refusal, expected_type, expected_message, expected_reads in (
+            (forbidden, HTTPError, "HTTP Error 403: Forbidden", []),
+            (policy_refusal, RuntimeError,
+             "Cloud Storage refused to create 'assets/blocked.js' in bucket 'app-bucket': the object does not exist.",
+             ["https://storage.googleapis.com/storage/v1/b/app-bucket/o/assets%2Fblocked.js?fields=name"]),
+        ):
+            with self.subTest(status=refusal.code):
+                html_started = Event()
+                requested = []
+                reads = []
+                missing_body = io.BytesIO()
 
-        def upload(request, timeout):
-            name = request_name(request)
-            requested.append(name)
-            if name == "assets/blocked.js":
-                raise forbidden
-            return io.BytesIO(b"{}")
+                def open_url(request, timeout):
+                    if request.get_method() == "GET":
+                        reads.append(request.full_url)
+                        raise HTTPError(request.full_url, 404, "Not Found", {}, missing_body)
+                    name = request_name(request)
+                    requested.append(name)
+                    if name == "index.html":
+                        html_started.set()
+                    if name == "assets/blocked.js":
+                        html_started.wait(0.5)
+                        raise refusal
+                    return io.BytesIO(b"{}")
 
-        with self.assertRaises(HTTPError) as raised:
-            self.stage_export(("index.html", "assets/blocked.js"), upload)
+                with self.assertRaises(expected_type) as raised:
+                    self.stage_export(("index.html", "assets/allowed.js", "assets/blocked.js"), open_url)
 
-        self.assertIs(raised.exception, forbidden)
-        self.assertEqual(requested, ["assets/blocked.js"])
+                self.assertEqual(type(raised.exception), expected_type)
+                self.assertEqual(str(raised.exception), expected_message)
+                self.assertEqual(raised.exception is refusal, expected_type is HTTPError)
+                self.assertCountEqual(requested, ["assets/allowed.js", "assets/blocked.js"])
+                self.assertEqual(reads, expected_reads)
+                self.assertEqual(refusal.fp.closed, bool(expected_reads))
+                self.assertEqual(missing_body.closed, bool(expected_reads))
 
 
 if __name__ == "__main__":

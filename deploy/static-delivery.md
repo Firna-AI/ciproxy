@@ -57,8 +57,10 @@ Each workload deploy runs these steps in this order:
 1. The stage step runs the publisher with `--new-only` on the dashboard
    export. It creates each object that the dashboard bucket lacks. It
    finishes all asset uploads before any HTML. Each upload carries a
-   create-only Cloud Storage precondition. So the step skips each name
-   that the bucket already holds. It replaces no object.
+   create-only Cloud Storage precondition. Cloud Storage refuses the
+   upload of a name that the bucket already holds. The step then reads
+   that object, and it skips the name only when the read finds it. Each
+   other error stops the step. It replaces no object.
 2. The deploy runs the Helm upgrades of the release server and of the
    control plane. The control plane serves the API.
 3. The publisher uploads the site export and the dashboard export in full.

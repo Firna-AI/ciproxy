@@ -45,6 +45,26 @@ def metadata(name, path):
     }
 
 
+def require_existing_object(bucket, name, token):
+    encoded_name = urllib.parse.quote(name, safe="")
+    request = urllib.request.Request(
+        f"https://storage.googleapis.com/storage/v1/b/{bucket}/o/{encoded_name}?fields=name",
+        headers={"Authorization": "Bearer " + token},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            response.read()
+    except urllib.error.HTTPError as error:
+        if error.code != 404:
+            raise
+        error.close()
+        raise RuntimeError(
+            f"Cloud Storage refused to create {name!r} in bucket {bucket!r}: "
+            "the object does not exist."
+        ) from None
+
+
 def upload(bucket, name, path, token, *, new_only=False):
     boundary = "ciproxy-" + uuid.uuid4().hex
     fields = metadata(name, path)
@@ -77,8 +97,11 @@ def upload(bucket, name, path, token, *, new_only=False):
         if not new_only or error.code != 412:
             raise
         error.close()
-        return False
-    return True
+    else:
+        return True
+
+    require_existing_object(bucket, name, token)
+    return False
 
 
 def main():
