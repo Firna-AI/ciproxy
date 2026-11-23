@@ -29,6 +29,10 @@ Decisions, 23 November 2026:
   answer. The prompt moves every job of the repository where a ciproxy label
   applies, not one job. It picks the label from the size of the current
   runner of each job.
+- **Self-hosted runners and other runner services.** The user decided that
+  the agent asks the user before it changes such a job, instead of keeping
+  it unchanged. Reason: the user may want to move these jobs to ciproxy
+  too, and only the user knows.
 
 Design calls, my calls, 23 November 2026:
 
@@ -47,10 +51,13 @@ Design calls, my calls, 23 November 2026:
   private repository. Reason: a smaller VM can make a job slow or fail, and
   a much larger one takes slots that other jobs need.
 - **Jobs that stay.** The agent keeps a job unchanged when no label is
-  large enough, when the size of its runner is unknown, or when it runs on
-  Windows, on Arm, on a self-hosted runner, or on another runner service.
-  The agent lists each kept job with its reason. Reason: a wrong move makes
-  a job fail or wait. The person can then decide.
+  large enough, or when it runs on Windows or on Arm. The agent lists each
+  kept job with its reason. Reason: ciproxy cannot run such a job, and a
+  wrong move makes it fail or wait.
+- **Ask when the size is unknown.** When the agent cannot find the size of
+  the current runner, it asks the user before it changes the job. Reason:
+  the user knows the size, and this matches the user's decision for
+  self-hosted runners below.
 - **Matrix and reusable workflows.** The agent changes `runs-on` values in a
   `matrix` and in reusable workflows of the same repository in the same
   way. Reason: these hold the runner of many jobs.
