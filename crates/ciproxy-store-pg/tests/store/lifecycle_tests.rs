@@ -2,6 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::organizations::{AppState, RepositoryAccess};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
@@ -60,7 +61,8 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
             50_000_000,
         )
         .unwrap();
-    let place = RunnerPlace::Boat {
+    let place = RunnerPlace::Overflow {
+        provider: OverflowProvider::Boat,
         key_id: Some(account.id),
         sandbox_id: "first-sandbox".to_owned(),
         size_name: "small".to_owned(),
@@ -69,7 +71,8 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
     let second_runner = runner(
         &label,
         &second_scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: Some(account.id),
             sandbox_id: "second-sandbox".to_owned(),
             size_name: "small".to_owned(),

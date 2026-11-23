@@ -12,9 +12,13 @@ use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::secret::Secret;
 use uuid::Uuid;
 
-/// Mount only the narrow token-authenticated exit callback.
+/// Path sealed into the launch input of each new delivery.
+pub const EXIT_PATH: &str = "/hooks/overflow/runner-exit";
+
+/// Mount both paths for the token-authenticated exit report.
 pub fn router(overflow: Arc<dyn Overflow>) -> Router {
     Router::new()
+        .route(EXIT_PATH, post(report))
         .route("/hooks/boat/runner-exit", post(report))
         .with_state(overflow)
 }

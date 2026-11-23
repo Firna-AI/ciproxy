@@ -55,9 +55,9 @@ Billing and PostgreSQL calls run on blocking workers.
 
 ## Image facts
 
-This one release is the Linux release of the process. The API's image disk
-size, the scaler fallback, and Boat sizes come from it. Each machine's
-selected local image still sizes the new roots of that machine.
+The Linux release supplies the API's image disk size and the scaler's
+own-machine fallback size. The registry uses the same root size for the
+Boat snapshot. Each machine's selected local image sizes its new roots.
 
 The runtime holds at most one release for each platform. It offers each
 machine the release of the machine's platform, and nothing when that

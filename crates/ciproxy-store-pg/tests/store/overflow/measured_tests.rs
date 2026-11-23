@@ -5,6 +5,7 @@ use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
 use ciproxy_store_interface::secrets::TokenHash;
 use rust_decimal::Decimal;
@@ -62,7 +63,10 @@ fn late_metering_refresh_prices_only_the_ninety_second_measured_prefix() {
         .store
         .savings_snapshot(workspace_id, day, day.succ_opt().unwrap())
         .unwrap();
-    assert_eq!(snapshot.days[0].overflow_usd, Decimal::new(318, 4));
+    assert_eq!(
+        snapshot.days[0].overflow_usd[&OverflowProvider::Boat],
+        Decimal::new(318, 4)
+    );
     assert_eq!(
         database
             .store

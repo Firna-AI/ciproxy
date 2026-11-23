@@ -29,8 +29,8 @@ pub(super) fn save(
     diesel::sql_query(
         "INSERT INTO runners (id, workspace_id, organization_id, label_id, scale_set_id,
             state, vcpus, memory_bytes, disk_bytes, overflow_key_id, sandbox_id, overflow_size_name,
-            registration_scale_set_id, github_id)
-         SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+            overflow_provider, registration_scale_set_id, github_id)
+         SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
             (SELECT (body->>'registration_scale_set_id')::bigint FROM overflow_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5),
             (SELECT (body->>'github_id')::bigint FROM overflow_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5)
          WHERE EXISTS (SELECT 1 FROM organizations WHERE id = $3 AND workspace_id = $2)
@@ -53,6 +53,7 @@ pub(super) fn save(
     .bind::<diesel::sql_types::Uuid, _>(record.key_id)
     .bind::<Text, _>(sandbox.id())
     .bind::<Text, _>(&parameters.size.name)
+    .bind::<Text, _>(record.provider.as_str())
     .execute(connection).store()?;
     if let (Some(start_usd), Some(interval)) = (record.counted_start_fee_usd(), record.billing) {
         diesel::sql_query(

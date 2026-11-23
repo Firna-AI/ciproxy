@@ -29,7 +29,7 @@ pub(super) fn seed(pages: &Pages) -> Uuid {
         .unwrap();
     let mut session = store.try_lock_overflow(workspace).unwrap().unwrap();
     let account = session.snapshot().unwrap().accounts.remove(0);
-    let sizing = pages.services.boat_root_sizing.unwrap();
+    let sizing = pages.services.provider_roots[&OverflowProvider::Boat];
     let starts = at("2026-11-06T10:00:00Z");
     let ends = at("2026-11-06T11:00:00Z");
     let mut record = StartRecord {

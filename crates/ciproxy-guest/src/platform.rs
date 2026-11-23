@@ -10,7 +10,7 @@ use crate::error::{Error, ErrorResultExt, Result};
 /// The operating system of the job image.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Platform {
-    /// A Firecracker VM or a Boat sandbox with Docker.
+    /// A Firecracker VM or a sandbox with Docker.
     Linux,
     /// A Virtualization.framework VM on an own Mac, with no Docker.
     MacOs,

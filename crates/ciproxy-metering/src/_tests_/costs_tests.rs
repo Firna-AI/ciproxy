@@ -47,7 +47,7 @@ fn registration_days_and_plan_price_history_count_the_full_range() {
         (
             costs.known_machines_usd,
             costs.known_plan_usd,
-            costs.boat_usd,
+            costs.overflow_usd,
             costs.total_usd
         ),
         (usd("4"), usd("8"), usd("3"), Some(usd("15")))
@@ -95,7 +95,7 @@ fn missing_machine_costs_keep_other_costs_visible() {
         usd("3"),
     );
     assert_eq!(
-        (costs.total_usd, costs.boat_usd, costs.known_plan_usd),
+        (costs.total_usd, costs.overflow_usd, costs.known_plan_usd),
         (None, usd("3"), usd("0"))
     );
     assert_eq!(
@@ -149,7 +149,7 @@ fn missing_plan_history_stays_incomplete() {
         usd("3"),
     );
     assert_eq!(
-        (costs.total_usd, costs.boat_usd, costs.missing),
+        (costs.total_usd, costs.overflow_usd, costs.missing),
         (None, usd("3"), vec![CostGap::PlanPrice(day("2026-11-04"))])
     );
 }

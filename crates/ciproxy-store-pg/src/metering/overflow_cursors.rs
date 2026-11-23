@@ -112,13 +112,13 @@ pub(super) fn apply(
             .values((
                 metering_daily_overflow_costs::workspace_id.eq(workspace_id),
                 metering_daily_overflow_costs::day.eq(delta.day),
-                metering_daily_overflow_costs::provider
-                    .eq(DbOverflowProvider(current.cost.provider)),
+                metering_daily_overflow_costs::provider.eq(DbOverflowProvider(delta.provider)),
                 metering_daily_overflow_costs::usd.eq(delta.usd),
             ))
             .on_conflict((
                 metering_daily_overflow_costs::workspace_id,
                 metering_daily_overflow_costs::day,
+                metering_daily_overflow_costs::provider,
             ))
             .do_update()
             .set(

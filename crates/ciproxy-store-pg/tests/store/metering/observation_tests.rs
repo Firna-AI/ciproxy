@@ -28,7 +28,11 @@ fn totals(store: &dyn Store, workspace_id: Uuid) -> (Decimal, Decimal) {
             .flat_map(|day| &day.sizes)
             .map(|size| size.machines.minutes)
             .sum(),
-        snapshot.days.iter().map(|day| day.overflow_usd).sum(),
+        snapshot
+            .days
+            .iter()
+            .filter_map(|day| day.overflow_usd.get(&OverflowProvider::Boat).copied())
+            .sum(),
     )
 }
 
@@ -52,7 +56,8 @@ fn older_refresh_preserves_next_day_cursor_and_corrects_every_affected_date() {
     let boat_vm = runner(
         &label,
         &scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: "midnight-cost".to_owned(),
             size_name: "small".to_owned(),

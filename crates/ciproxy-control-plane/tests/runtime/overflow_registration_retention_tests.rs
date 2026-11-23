@@ -94,7 +94,7 @@ async fn organization_expiry_forgets_only_terminal_owned_registrations() {
     report_end(&harness, live.runner_id).await;
     *harness.ports.now.lock().unwrap() = at() + Duration::days(31);
     harness.runtime.overflow = None;
-    harness.runtime.boat_retirement = None;
+    harness.runtime.overflow_retirement = None;
     harness.runtime.settled_tick().await.unwrap();
     assert_eq!(
         store.overflow_runner_intents(workspace).unwrap(),

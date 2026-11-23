@@ -8,4 +8,5 @@ mod history;
 mod history_rows;
 mod job_cursors;
 mod overflow_cursors;
+mod place;
 mod snapshot;

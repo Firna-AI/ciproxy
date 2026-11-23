@@ -176,7 +176,7 @@ impl MachineRuntime {
             }
         };
         if reset {
-            self.boat_answers
+            self.overflow_answers
                 .lock()
                 .await
                 .retain(|_, (_, guard)| guard.intent.organization_id != organization.id);
@@ -216,12 +216,12 @@ impl MachineRuntime {
             }
         }
         lease.check().await.internal()?;
-        if let Err(error) = self.cleanup_boat(workspace_id).await {
-            tracing::warn!(%error,"take-out Boat cleanup will retry from saved retirement");
+        if let Err(error) = self.cleanup_overflow(workspace_id).await {
+            tracing::warn!(%error,"take-out overflow cleanup will retry from saved retirement");
         }
         let current = self.load(workspace_id).await?;
         let results = self
-            .retire_boat_registrations(&current, organization.id, lease)
+            .retire_overflow_registrations(&current, organization.id, lease)
             .await?;
         if failed
             || results.iter().any(|result| {

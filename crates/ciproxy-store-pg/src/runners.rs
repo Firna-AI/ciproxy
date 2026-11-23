@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{InternalCause, QueryResultExt, require_record};
+use crate::overflow_provider::DbOverflowProvider;
 
 #[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = runners)]
@@ -30,28 +31,37 @@ pub(crate) struct RunnerRow {
     overflow_key_id: Option<Uuid>,
     sandbox_id: Option<String>,
     overflow_size_name: Option<String>,
+    overflow_provider: Option<DbOverflowProvider>,
 }
 
 impl RunnerRow {
     pub(crate) fn from_record(workspace_id: Uuid, runner: &Runner) -> Result<Self> {
-        let (machine_id, first_slot, overflow_key_id, sandbox_id, overflow_size_name) =
-            match &runner.place {
-                RunnerPlace::Machine {
-                    machine_id,
-                    first_slot,
-                } => (Some(*machine_id), Some(*first_slot), None, None, None),
-                RunnerPlace::Boat {
-                    key_id,
-                    sandbox_id,
-                    size_name,
-                } => (
-                    None,
-                    None,
-                    *key_id,
-                    Some(sandbox_id.clone()),
-                    Some(size_name.clone()),
-                ),
-            };
+        let (
+            machine_id,
+            first_slot,
+            overflow_key_id,
+            sandbox_id,
+            overflow_size_name,
+            overflow_provider,
+        ) = match &runner.place {
+            RunnerPlace::Machine {
+                machine_id,
+                first_slot,
+            } => (Some(*machine_id), Some(*first_slot), None, None, None, None),
+            RunnerPlace::Overflow {
+                provider,
+                key_id,
+                sandbox_id,
+                size_name,
+            } => (
+                None,
+                None,
+                *key_id,
+                Some(sandbox_id.clone()),
+                Some(size_name.clone()),
+                Some(DbOverflowProvider(*provider)),
+            ),
+        };
         let state: &str = runner.state.into();
         Ok(Self {
             id: runner.id,
@@ -70,6 +80,7 @@ impl RunnerRow {
             overflow_key_id,
             sandbox_id,
             overflow_size_name,
+            overflow_provider,
         })
     }
 
@@ -79,12 +90,14 @@ impl RunnerRow {
             self.first_slot,
             self.sandbox_id,
             self.overflow_size_name,
+            self.overflow_provider,
         ) {
-            (Some(machine_id), Some(first_slot), None, None) => RunnerPlace::Machine {
+            (Some(machine_id), Some(first_slot), None, None, None) => RunnerPlace::Machine {
                 machine_id,
                 first_slot,
             },
-            (None, None, Some(sandbox_id), Some(size_name)) => RunnerPlace::Boat {
+            (None, None, Some(sandbox_id), Some(size_name), provider) => RunnerPlace::Overflow {
+                provider: provider.map(|provider| provider.0).unwrap_or_default(),
                 key_id: self.overflow_key_id,
                 sandbox_id,
                 size_name,

@@ -59,7 +59,7 @@ pub trait Runner: Send {
     async fn prepare(&mut self, job_id: JobId, decision: JobDecision) -> Result<JobPreparation>;
 }
 
-/// Power off an own-machine VM, or finish a Boat guest namespace.
+/// Power off an own-machine VM, or finish a sandbox guest.
 #[cfg_attr(test, unimock::unimock(api = PowerMock))]
 #[async_trait]
 pub trait Power: Send {

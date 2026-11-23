@@ -76,7 +76,7 @@ impl OwnMachines for MachineRuntime {
         };
         lease.check().await.internal()?;
         let input = self.load(workspace_id).await?;
-        self.route_boat_job(&input, &job).await?;
+        self.route_overflow_job(&input, &job).await?;
         self.route_job(&input, &job).await
     }
 

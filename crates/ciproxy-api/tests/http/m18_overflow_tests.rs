@@ -67,14 +67,14 @@ async fn m18_live_exposes_saved_provider_refusals_without_keys_or_starting_sandb
         OverflowDependencies {
             store: pages.fixture.database.store.clone(),
             cipher: Arc::new(Unimock::new(())),
-            providers: ProviderRegistry::default().with_provider(
+            providers: Arc::new(ProviderRegistry::default().with_provider(
                 OverflowProvider::Boat,
                 Arc::new(Unimock::new(())),
                 ImageSource {
                     reference: "test-image".into(),
                     root_sizing: Default::default(),
                 },
-            ),
+            )),
             runners: Arc::new(Unimock::new(())),
             tokens: Arc::new(Unimock::new(())),
             clock: Arc::new(Unimock::new(
@@ -85,7 +85,7 @@ async fn m18_live_exposes_saved_provider_refusals_without_keys_or_starting_sandb
         },
     );
     pages.services = Arc::new(PageServices {
-        boat_root_sizing: None,
+        provider_roots: Default::default(),
         billing: pages.services.billing.clone(),
         metering: pages.services.metering.clone(),
         price_lists: pages.services.price_lists.clone(),

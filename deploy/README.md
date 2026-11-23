@@ -5,7 +5,8 @@ and production share one network, NAT, GKE Autopilot cluster, and Artifact
 Registry repository. Spike machines stay in `internal-498318`.
 
 Each environment has separate Cloud SQL instances, databases, IAM users,
-Boat KMS keys, secrets, buckets, DNS zones, and HTTPS edges. Each environment
+overflow KMS keys, secrets, buckets, DNS zones, and HTTPS edges. Each
+environment
 has its own Kubernetes namespace and two Helm releases. Both namespaces
 enforce, audit, and warn at the Baseline PodSecurity level. Only the
 operator Namespace manifest manages these labels. Central Terraform
@@ -16,6 +17,8 @@ supplies its image, settings, and secret versions. The release server and
 static exports can deploy independently.
 The optional [Boat snapshot](runtime.md#boat-shared-snapshot) follows the
 release-token delivery path and needs no secret version while Boat is off.
+The chart sets `OVERFLOW_KMS_KEY` from `controlPlane.kmsKey`. That value
+names the existing `boat-account-keys` key for the environment.
 The optional R2 read key of the [macOS images](runtime.md#macos-images)
 follows the same path and needs no version while macOS images are off.
 

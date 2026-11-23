@@ -2,7 +2,7 @@
 
 use std::thread;
 
-use ciproxy_metering::report::boat::boat_cost_deltas;
+use ciproxy_metering::report::overflow::overflow_cost_deltas;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_schema::runners::runners;
@@ -30,7 +30,8 @@ fn coherent_boat_snapshot_cannot_restore_a_competing_completed_cost() {
     let vm = runner(
         &label,
         &scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: "competing-cost".to_owned(),
             size_name: "small".to_owned(),
@@ -69,7 +70,7 @@ fn coherent_boat_snapshot_cannot_restore_a_competing_completed_cost() {
         from: time("2026-11-04T00:00:00Z").date_naive(),
         until: time("2026-11-05T00:00:00Z").date_naive(),
     };
-    let deltas = boat_cost_deltas(Some(&old), &completed, range);
+    let deltas = overflow_cost_deltas(Some(&old), &completed, range);
     let writer = tagged_store(&database.url);
     let reader = tagged_store(&database.url);
     let mut observer = PgConnection::establish(&database.url).unwrap();
@@ -108,7 +109,7 @@ fn coherent_boat_snapshot_cannot_restore_a_competing_completed_cost() {
         snapshot
             .days
             .iter()
-            .map(|day| day.overflow_usd)
+            .filter_map(|day| day.overflow_usd.get(&OverflowProvider::Boat).copied())
             .sum::<Decimal>(),
         usd("0.10")
     );

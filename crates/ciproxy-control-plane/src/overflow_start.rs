@@ -1,11 +1,10 @@
-//! Wire pure Boat actions to the existing durable overflow executor.
+//! Execute a provider start after saving its GitHub registration intent.
 
 use ciproxy_github::registrations::RegistrationRequest;
 use ciproxy_overflow::api::{StartOutcome, StartRequest};
 use ciproxy_protocol::identifiers::OrganizationId;
 use ciproxy_protocol::secret::Secret;
-use ciproxy_scaler::actions::StartRunner;
-use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_scaler::actions::{Destination, StartRunner};
 use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runtime_results::{OverflowRunnerResult, OverflowRunnerWrite};
@@ -16,14 +15,20 @@ use uuid::Uuid;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
+use crate::snapshot::overflow_provider;
 
 impl MachineRuntime {
-    pub(crate) async fn start_boat(
+    pub(crate) async fn start_overflow(
         &self,
         input: &RoutingSnapshot,
         mut action: StartRunner,
     ) -> Result<()> {
         let overflow = self.overflow.as_ref().ok_or(Error::StateChanged)?;
+        let Destination::Provider { provider: id, .. } = &action.destination else {
+            return Err(Error::StateChanged);
+        };
+        let provider = overflow_provider(*id).ok_or(Error::StateChanged)?;
+        let image = &self.providers.get(provider).internal()?.image;
         let organization: Uuid = action.target.organization_id.0.parse().internal()?;
         let github_organization = input
             .organizations
@@ -49,7 +54,7 @@ impl MachineRuntime {
             })
             .ok_or(Error::StateChanged)?;
         let intent = OverflowRunnerIntent {
-            provider: OverflowProvider::Boat,
+            provider,
             registration_scale_set_id: None,
             delivery_id: self.clock.uuid(),
             runner_id: self.clock.uuid(),
@@ -59,8 +64,8 @@ impl MachineRuntime {
             scale_set_id: set.id,
             requested_size: action.requested_size,
             size: action.size,
-            required_root_disk_bytes: self
-                .root_sizing()
+            required_root_disk_bytes: image
+                .root_sizing
                 .root_bytes(action.requested_size.disk_bytes)
                 .ok_or(Error::StateChanged)?,
             github_id: None,
@@ -110,8 +115,8 @@ impl MachineRuntime {
             if !matches!(accepted, OverflowRunnerWrite::Applied(_)) {
                 return runtime.cleanup_late_registration(workspace, runner_id, target, github_id);
             }
-            let boat = runtime.boat_operation(workspace).await;
-            let _boat = boat.lock().await;
+            let operation = runtime.overflow_operation(workspace).await;
+            let _operation = operation.lock().await;
             let outcome = overflow
                 .start(
                     workspace,

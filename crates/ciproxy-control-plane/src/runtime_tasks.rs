@@ -20,10 +20,10 @@ pub(crate) enum Work {
     Create(Uuid),
     Retire(Uuid),
     Preparation(Uuid),
-    BoatRefresh(Uuid),
-    BoatCleanup(Uuid),
-    BoatRecovery(Uuid),
-    BoatRetire(Uuid),
+    OverflowRefresh(Uuid),
+    OverflowCleanup(Uuid),
+    OverflowRecovery(Uuid),
+    OverflowRetire(Uuid),
     Takeout(Uuid),
 }
 

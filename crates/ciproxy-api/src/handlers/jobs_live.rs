@@ -9,6 +9,7 @@ use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::jobs::JobState;
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::settings::OverflowWait;
 use uuid::Uuid;
@@ -120,10 +121,18 @@ pub(super) async fn page(
                 RunnerPlace::Machine { machine_id, .. } => Some(machine_id.to_string()),
                 _ => None,
             },
-            boat: matches!(runner.place, RunnerPlace::Boat { .. }),
+            boat: matches!(
+                runner.place,
+                RunnerPlace::Overflow {
+                    provider: OverflowProvider::Boat,
+                    ..
+                }
+            ),
         })
         .collect();
-    let sizing = pages.as_ref().and_then(|pages| pages.boat_root_sizing);
+    let sizing = pages
+        .as_ref()
+        .and_then(|pages| pages.provider_roots.get(&OverflowProvider::Boat).copied());
     let overflow_view = match pages.and_then(|pages| pages.overflow.clone()) {
         Some(service) => overflow_views::current_boat(service.as_ref(), workspace).await,
         None => None,

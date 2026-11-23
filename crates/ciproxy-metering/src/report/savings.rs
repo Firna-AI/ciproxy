@@ -1,9 +1,12 @@
 //! Complete workspace savings reports from anonymous daily totals and histories.
 
+use std::collections::BTreeMap;
+
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::metering::facts::MachineRegistration;
 use ciproxy_store_interface::metering::history::CostHistory;
 use ciproxy_store_interface::metering::totals::{DailyTotal, LocationTotals};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use rust_decimal::Decimal;
 
 use crate::report::catalog::{Alternative, Comparison, PriceList, compare};
@@ -20,7 +23,7 @@ pub struct ReportInput<'a> {
     pub days: &'a [DailyTotal],
     /// Current and removed own-machine registration facts.
     pub machines: &'a [MachineRegistration],
-    /// Customer, billing, and Boat cost histories.
+    /// Own-machine and plan cost histories.
     pub costs: &'a CostHistory,
     /// The dated Blacksmith and GitHub price lists.
     pub price_lists: &'a [PriceList; 2],
@@ -42,8 +45,8 @@ pub struct SavingsReport {
     pub range: DateRange,
     /// Starts and elapsed minutes on own machines.
     pub machines: LocationTotals,
-    /// Starts and elapsed minutes on Boat.
-    pub boat: LocationTotals,
+    /// Starts, minutes, and sandbox cost for each provider used in the range.
+    pub providers: BTreeMap<OverflowProvider, ProviderTotals>,
     /// Daily per-size totals retained independently of job details.
     pub days: Vec<DailyTotal>,
     /// Ciproxy cost components and any missing monthly costs.
@@ -54,6 +57,15 @@ pub struct SavingsReport {
     pub savings: [Saving; 2],
     /// The cheaper alternative, only when both comparison totals are known.
     pub lead: Option<Alternative>,
+}
+
+/// One provider's usage and cost in the savings report.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ProviderTotals {
+    /// Starts and elapsed job minutes.
+    pub usage: LocationTotals,
+    /// Sandbox costs, including sandboxes that took no job.
+    pub usd: Decimal,
 }
 
 /// Compute savings across the entire workspace without any IO or clock reads.
@@ -69,15 +81,28 @@ pub fn savings_report(input: ReportInput<'_>) -> SavingsReport {
         .cloned()
         .collect();
     let mut machines = LocationTotals::default();
-    let mut boat = LocationTotals::default();
+    let mut providers = BTreeMap::<_, ProviderTotals>::new();
     for size in days.iter().flat_map(|day| &day.sizes) {
         machines.starts += size.machines.starts;
         machines.minutes += size.machines.minutes;
-        boat.starts += size.overflow.starts;
-        boat.minutes += size.overflow.minutes;
+        for (&provider, usage) in &size.overflow {
+            let total = &mut providers.entry(provider).or_default().usage;
+            total.starts += usage.starts;
+            total.minutes += usage.minutes;
+        }
     }
-    let boat_usd = days.iter().map(|day| day.overflow_usd).sum();
-    let costs = calculate_costs(input.machines, input.costs, input.range, input.at, boat_usd);
+    for (&provider, &usd) in days.iter().flat_map(|day| &day.overflow_usd) {
+        providers.entry(provider).or_default().usd += usd;
+    }
+    providers.retain(|_, total| *total != ProviderTotals::default());
+    let overflow_usd = providers.values().map(|total| total.usd).sum();
+    let costs = calculate_costs(
+        input.machines,
+        input.costs,
+        input.range,
+        input.at,
+        overflow_usd,
+    );
     let comparisons = input
         .price_lists
         .each_ref()
@@ -102,7 +127,7 @@ pub fn savings_report(input: ReportInput<'_>) -> SavingsReport {
     SavingsReport {
         range: input.range,
         machines,
-        boat,
+        providers,
         days,
         costs,
         comparisons,

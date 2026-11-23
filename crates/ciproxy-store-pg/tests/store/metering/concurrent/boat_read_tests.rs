@@ -26,7 +26,8 @@ fn boat_read_snapshot_preserves_completed_cost_and_cursor_after_price_change() {
     let vm = runner(
         &label,
         &scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: "price-change".to_owned(),
             size_name: "small".to_owned(),
@@ -99,7 +100,7 @@ fn boat_read_snapshot_preserves_completed_cost_and_cursor_after_price_change() {
         snapshot
             .days
             .iter()
-            .map(|day| day.overflow_usd)
+            .filter_map(|day| day.overflow_usd.get(&OverflowProvider::Boat).copied())
             .sum::<Decimal>(),
         usd("0.15")
     );

@@ -96,7 +96,7 @@ pub(crate) async fn compose(config: &Config, store: Arc<dyn Store>) -> Result<Ap
         hosted.overflow.clone(),
         PageConfig {
             price_lists: config.comparison_prices.clone(),
-            boat_root_sizing: hosted.boat_root_sizing,
+            provider_roots: hosted.provider_roots.clone(),
         },
     );
     let router = hosted.router(state.clone(), pages.services);

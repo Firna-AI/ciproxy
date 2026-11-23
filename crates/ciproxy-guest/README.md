@@ -1,7 +1,7 @@
 # ciproxy-guest
 
 Run one GitHub Actions runner in a fresh ciproxy job image.
-The binary runs inside the Linux job VM, the macOS job VM, or the Boat
+The binary runs inside a Linux job VM, a macOS job VM, or an overflow
 sandbox. It builds for `x86_64-unknown-linux-gnu` and
 `aarch64-apple-darwin`.
 The own-machine agent uses `ciproxy-protocol` to configure it.
@@ -67,7 +67,7 @@ Runner stdout supplies readiness and is then discarded.
 Runner stderr goes to `/dev/null`.
 Neither pipe can block the child because the guest stopped reading it.
 
-In `boat` mode, consume a private registration file.
+In `sandbox` mode, consume a private registration file.
 The guest does not follow a symbolic link to the file.
 The file must belong to the guest's user, with no group or other access.
 Remove the file before starting the runner.
@@ -75,15 +75,14 @@ POST only the existing `GuestToAgent::RunnerExited` value.
 Use the file's HTTPS URL and its sandbox-scoped bearer token.
 Disable HTTP redirects to keep that token at its intended endpoint.
 The control plane must validate the token and delete the sandbox.
-If the report fails, the Boat lifetime remains the backstop.
+If the report fails, the provider ends the sandbox at its saved lifetime.
 A missing file ends the guest with exit code 1 and the error
 `registration file is missing`. The error names no path.
 The guest then starts no runner and sends no report.
 In a Boat sandbox, the guest runs as a service of Boat's own systemd.
 The [Boat launcher](../../image/boat.md#boat-launch) starts that service
 after it refreshes the restored services.
-The guest leaves the end of the sandbox to the control plane and the Boat
-lifetime.
+The control plane and the provider end the sandbox.
 
 Before the runner can take its one job, the guest measures the proxy URL on
 Docker's actual bridge and the preloaded Docker bytes.
@@ -144,13 +143,14 @@ A macOS image starts the same interface from the launchd daemon
 `dev.ciproxy.guest`, with `--runner-account`. The
 [macOS guest guide](../../image/macos/guest/README.md) gives its install
 steps.
-The Boat snapshot starts its guest with this interface:
+A sandbox image starts its guest with this interface:
 
 ```sh
-ciproxy-guest --image-id IMAGE_ID boat \
+ciproxy-guest --image-id IMAGE_ID sandbox \
   --registration-file /run/ciproxy/registration.json
 ```
 
+Earlier Boat snapshots use the accepted `boat` alias.
 The [image guide](../../image/README.md) gives the build and publication
 commands. The [Boat smoke guide](../../image/boat-smoke.md) gives the Boat
 file format and the live smoke commands.
@@ -181,7 +181,8 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
   interfaces.
 - [src/service.rs](src/service.rs) supervises the single runner lifecycle.
 - [src/vsock.rs](src/vsock.rs) carries cancellation-safe JSON lines.
-- [src/boat.rs](src/boat.rs) consumes the private file and sends exit reports.
+- [src/sandbox.rs](src/sandbox.rs) consumes the private file and sends exit
+  reports.
 - [src/assignment.rs](src/assignment.rs) owns the cancellation-safe handoff.
 - [src/guest_setup.rs](src/guest_setup.rs) measures the preloaded Docker
   facts before the runner can take its job.
@@ -193,7 +194,7 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [src/process.rs](src/process.rs) starts the listener as the runner
   account, drains its output, and controls its group.
 - [src/power.rs](src/power.rs) requests the Firecracker reset or the macOS
-  power-off, or leaves the end of a Boat sandbox to the control plane.
+  power-off, or leaves sandbox cleanup to the control plane.
 - [src/platform.rs](src/platform.rs) holds the paths and commands that
   differ between Linux and macOS.
 - [src/cli.rs](src/cli.rs) composes the runtime of the build platform.
@@ -201,8 +202,8 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
   lifecycle requirements.
 - [tests/assignment_socket.rs](tests/assignment_socket.rs)
   checks the source-hook wire contract through the production socket path.
-- [tests/boat_registration.rs](tests/boat_registration.rs) checks the safe
-  error of the built binary when no Boat registration arrived.
+- [tests/sandbox_registration.rs](tests/sandbox_registration.rs) checks the
+  safe error for a missing registration in both accepted command forms.
 
 ### Related Docs
 

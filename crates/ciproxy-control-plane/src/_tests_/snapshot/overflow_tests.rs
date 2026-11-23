@@ -54,7 +54,8 @@ fn boat_job_evidence_takes_priority_over_saved_busy_state() {
         github_id: intent.github_id,
         state: runners::RunnerState::Busy,
         size: intent.size,
-        place: runners::RunnerPlace::Boat {
+        place: runners::RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: intent.runner_id.to_string(),
             size_name: "retained".to_owned(),

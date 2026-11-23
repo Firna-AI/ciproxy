@@ -50,7 +50,8 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
         let vm = runner(
             &label,
             &scale,
-            RunnerPlace::Boat {
+            RunnerPlace::Overflow {
+                provider: OverflowProvider::Boat,
                 key_id: None,
                 sandbox_id: Uuid::new_v4().to_string(),
                 size_name: "actual".to_owned(),
@@ -209,9 +210,9 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
     assert_eq!(
         (
             snapshot.days[0].day,
-            snapshot.days[0].sizes[0].overflow.starts,
-            snapshot.days[0].sizes[0].overflow.minutes,
-            snapshot.days[0].overflow_usd
+            snapshot.days[0].sizes[0].overflow[&OverflowProvider::Boat].starts,
+            snapshot.days[0].sizes[0].overflow[&OverflowProvider::Boat].minutes,
+            snapshot.days[0].overflow_usd[&OverflowProvider::Boat]
         ),
         (at().date_naive(), 2, usd("10"), usd("0.6"))
     );
@@ -233,9 +234,9 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
     );
     assert_eq!(
         (
-            foreign.days[0].sizes[0].overflow.starts,
-            foreign.days[0].sizes[0].overflow.minutes,
-            foreign.days[0].overflow_usd
+            foreign.days[0].sizes[0].overflow[&OverflowProvider::Boat].starts,
+            foreign.days[0].sizes[0].overflow[&OverflowProvider::Boat].minutes,
+            foreign.days[0].overflow_usd[&OverflowProvider::Boat]
         ),
         (1, usd("5"), usd("0.3"))
     );

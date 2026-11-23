@@ -10,7 +10,7 @@ use ciproxy_store_interface::runners::RunnerPlace;
 use rust_decimal::Decimal;
 use sandbox_interface::{BackendSandbox, ProviderRef, SandboxState};
 
-use super::overflow_service::{authority, service};
+use super::overflow_service::attach;
 use super::overflow_support::Harness;
 use super::settled::Settled;
 
@@ -51,19 +51,22 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
         state: SandboxState::Ready,
     });
     let registrations = harness.runtime.registrations.clone();
-    harness.service = service(&harness.fixture, &harness.ports, registrations.clone());
     let mut restarted = MachineRuntime::new(
         store.clone(),
         harness.runtime.gateway.clone(),
-        registrations.clone(),
+        registrations,
         harness.runtime.assignments.clone(),
         harness.ports.clone(),
         None,
         harness.runtime.installations.clone(),
     );
     restarted.images = harness.runtime.images.clone();
-    restarted.overflow = Some(harness.service.clone());
-    restarted.boat_retirement = Some(authority(&harness.fixture, &harness.ports, registrations));
+    harness.service = attach(
+        &mut restarted,
+        &harness.fixture,
+        &harness.ports,
+        Default::default(),
+    );
     harness.runtime = restarted;
 
     for _ in 0..2 {
@@ -96,14 +99,15 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
             .runners(workspace, harness.fixture.organization)
             .unwrap()
             .into_iter()
-            .filter(|runner| matches!(runner.place, RunnerPlace::Boat { .. }))
+            .filter(|runner| matches!(runner.place, RunnerPlace::Overflow { .. }))
             .collect();
         assert_eq!(runners.len(), 1);
         assert_eq!(runners[0].id, original.runner_id);
         assert_eq!(runners[0].github_id, intents[0].github_id);
         assert_eq!(
             runners[0].place,
-            RunnerPlace::Boat {
+            RunnerPlace::Overflow {
+                provider: OverflowProvider::Boat,
                 key_id: Some(original.key_id),
                 sandbox_id: provider.as_str().to_owned(),
                 size_name: "large".to_owned(),

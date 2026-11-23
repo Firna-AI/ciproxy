@@ -1,8 +1,7 @@
-# Boat overflow in the hosted runtime
+# Overflow in the hosted runtime
 
-This guide gives how the hosted runtime runs jobs on Boat when the own
-machines are busy. It gives the configuration, the runtime guarantees, and
-the sandbox exit callback, and it links the live smoke checks. The
+The hosted runtime runs jobs on the machines and providers of each label's
+order. This guide covers provider configuration and the exit callback. The
 [crate README](README.md) gives the rest of the control plane.
 [ciproxy-overflow](../ciproxy-overflow/README.md) owns sandbox delivery,
 encrypted keys, costs, and cleanup. The
@@ -20,44 +19,44 @@ Use the snapshot of the same image release as `JOB_IMAGE_MANIFEST_PATH`.
 The root bytes of that manifest size each new Boat root. The process does
 not compare the two settings. Change them together.
 
-An absent or empty value turns the Boat service off. Own machines still run
-jobs. The dashboard API then reports `available: false`. Boat connection
-changes then return HTTP 503, and the exit callback route is absent.
+An absent or empty value leaves Boat out of the provider registry. Own
+machines still run jobs. The dashboard API reports `available: false`, and
+Boat connection changes return HTTP 503. The runtime serves the callback
+when the registry has a configured provider.
 
-With a value, startup also builds the Cloud KMS client. `BOAT_KMS_KEY` must
-then have the form `projects/P/locations/L/keyRings/R/cryptoKeys/K`.
-Otherwise startup stops. The process gets KMS access tokens from the GKE
-metadata server, so a key connection needs that server.
+When a provider is configured, startup builds the Cloud KMS client.
+`OVERFLOW_KMS_KEY` must have the form
+`projects/P/locations/L/keyRings/R/cryptoKeys/K`. The chart points it at
+the existing `boat-account-keys` key. The process gets KMS access tokens
+from the GKE metadata server.
 
 The runtime derives the sandbox mark and the callback URL from `PUBLIC_URL`.
-It removes a trailing slash first. Boat sandboxes must reach
-`PUBLIC_URL/hooks/boat/runner-exit` over HTTPS.
+It removes trailing slashes first. New deliveries get
+`PUBLIC_URL/hooks/overflow/runner-exit` as their HTTPS callback URL.
 
 Keep the value set while a Boat sandbox can exist. Without it, the runtime
-does no sandbox cleanup and serves no exit callback. Boat then ends each
-sandbox only at its lifetime. That is six hours, or two hours on a free
-trial. The deployment reads the optional value from its Kubernetes Secret.
+cannot clean up Boat sandboxes. Boat then ends each sandbox at its
+lifetime. That is six hours, or two hours on a free trial. The deployment
+reads the optional value from its Kubernetes Secret.
 [Boat setup](../../deploy/runtime.md#boat-shared-snapshot) gives the steps.
 [Runtime setup](../../deploy/runtime.md#turn-on-the-runtime) gives the other
 settings.
 
 ## Runtime guarantees
 
-The routing snapshot of a workspace also holds the saved Boat account,
-deliveries, registration identities, and runner states. The common snapshot
-builder turns these records into Boat supply, if a Boat service is
-configured. So the pure scaler sees all accepted Boat supply, also while
-Boat is unavailable. The
+The routing snapshot holds the workspace's provider accounts, deliveries,
+registration identities, and runner states. The scaler sees saved supply
+even while a provider refresh fails. The
 [ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline)
 and the [scaler rules](../ciproxy-scaler/README.md#what-this-crate-does) say
 when the scaler starts another runner for demand that this supply covers.
-The scaler applies own machines first, the
-[overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait), and
-the Boat size rules. The runtime executes each Boat start through the
-overflow service. Each Boat request runs in its own task, as the
-[remote request rules](runners.md#remote-requests) say. An ordinary pass
-starts no new Boat runner. After each successful Boat refresh, one more
-pass applies only Boat actions, with no new refresh.
+The scaler walks the saved order of each label and applies the
+[overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait) when
+leaving own machines. The shared service uses the chosen provider's image
+and factory. Provider requests run in supervised tasks, as the
+[remote request rules](runners.md#remote-requests) say. New provider starts
+wait for that provider's refresh. An own-machine start also waits for the
+refresh when a connected provider precedes own machines in its label.
 
 - The runtime saves a registration identity before it asks GitHub for a JIT
   registration. The identity holds the runner, delivery, organization,
@@ -86,7 +85,7 @@ pass applies only Boat actions, with no new refresh.
   deadline on each identity with a saved installation ID that is not
   terminal yet. Identity cleanup
   keeps an identity without a saved installation ID. It runs each pass with
-  no GitHub call, also while the Boat service is off. It deletes no
+  no GitHub call, also while overflow is off. It deletes no
   delivery, runner, or job history. The
   [store guide](../ciproxy-store-pg/overflow.md#registration-ownership)
   gives the exact rule.
@@ -94,7 +93,7 @@ pass applies only Boat actions, with no new refresh.
   bytes, also after a new image release.
 - A dispatched delivery keeps its fixed provider size. An unsent delivery
   can still select the current catalog size.
-- A trusted GitHub job start marks the Boat runner busy. A completed job
+- A trusted GitHub job start marks the overflow runner busy. A completed job
   marks it exited, so it cannot take a second job while deletion waits.
   Without such a job fact, a saved `Busy` state also marks the runner busy.
   Each runner takes one job, so a busy runner covers no new waiting job.
@@ -105,7 +104,7 @@ pass applies only Boat actions, with no new refresh.
   answer keeps the sandbox.
 - Waiting demand does not keep a saved `Busy` runner without a started job.
   Each cleanup pass asks GitHub to remove it. A busy answer keeps it.
-- Take-out retires idle Boat supply before the API removes GitHub access.
+- Take-out retires idle overflow supply before the API removes GitHub access.
   It waits for saved retirement or a current busy answer for every saved
   reservation. A saved provider deletion can finish after acceptance.
 - After an owner removes the App, launched sandboxes stay until their
@@ -113,30 +112,33 @@ pass applies only Boat actions, with no new refresh.
   that a sandbox is idle. The runtime checks for ended GitHub access before
   and after GitHub retirement. A successful GitHub response does not permit
   early sandbox deletion after removal.
-- App removal stops new Boat starts. The last organization removal retires
-  the Boat key and holds it until the unfinished sandboxes end. Exit
-  reports still delete their sandbox, as [Exit callback](#exit-callback)
+- App removal stops new overflow starts. The last organization removal
+  retires each provider key and holds it until its unfinished sandboxes end.
+  Exit reports still delete their sandbox, as [Exit callback](#exit-callback)
   says. App removal is rare, and the lifetime and spend limit bound its
   cost, as
   [Removing the App](../../docs/protocol/app-removal.md#removing-the-app)
   explains.
 - A new installation clears saved owner removal. Old idle sandboxes can
-  then retire through their retained key before Boat connects again.
+  then retire through their retained key before the provider connects again.
   Running jobs keep their old delivery and key after a new connection.
 - Old idle supply cannot cover a replacement label with the same name.
   Retired labels and removed bindings cannot start an undispatched delivery.
-- When Boat or its cost data fails, accepted Boat supply stays reserved and
-  new Boat starts wait. Own-machine routing continues.
+- When a provider or its cost data fails, accepted supply stays reserved.
+  New starts can go to another place in the label's order.
 
 ## Exit callback
 
-`POST /hooks/boat/runner-exit` takes the runner-exit report of a sandbox.
+`POST /hooks/overflow/runner-exit` takes the runner-exit report of a sandbox.
+`POST /hooks/boat/runner-exit` accepts the same report. Keep that route
+until all deliveries saved before the rollout have ended. An unsent
+delivery can still hold the old URL in its encrypted launch input.
 The route uses no browser session. The guest sends
 `GuestToAgent::RunnerExited` as JSON with `Authorization: Bearer TOKEN`.
 Each sandbox has its own token, which works only for its own runner.
 
 The route first saves the report as a one-use claim. The claim needs no
-workspace lock, so other Boat work of the workspace cannot drop it. The
+workspace lock, so other overflow work of the workspace cannot drop it. The
 route then waits up to 5 seconds for that lock and deletes the sandbox in
 the request. When the wait ends first, or a step after the claim fails,
 the route still answers 204, and a later cleanup pass deletes the sandbox.
@@ -155,7 +157,7 @@ gives the requirements.
 and
 [After an App removal](../../docs/protocol/overflow-sandbox-end.md#after-an-app-removal)
 say what happens to the sandbox of a launched runner with no report and no
-job. Boat ends each sandbox at its lifetime at the latest.
+job. The provider ends each sandbox at its lifetime at the latest.
 
 ## Live smoke checks
 

@@ -1,4 +1,4 @@
-//! Persist registration retirement after a Boat delivery can no longer launch.
+//! Persist registration retirement after a overflow delivery can no longer launch.
 
 use ciproxy_github::persistence::lease::Lease;
 use ciproxy_overflow::api::Retirement;
@@ -14,8 +14,8 @@ use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
 
 impl MachineRuntime {
-    /// Collect current Busy or durable retirement for every scoped Boat intent.
-    pub(crate) async fn retire_boat_registrations(
+    /// Collect current Busy or durable retirement for every scoped overflow intent.
+    pub(crate) async fn retire_overflow_registrations(
         &self,
         input: &RoutingSnapshot,
         organization_id: Uuid,
@@ -34,20 +34,20 @@ impl MachineRuntime {
                 .find(|record| record.delivery_id == intent.delivery_id);
             lease.check().await.internal()?;
             if self
-                .current_boat_busy(input.workspace_id, intent.runner_id)
+                .current_overflow_busy(input.workspace_id, intent.runner_id)
                 .await?
             {
                 results.push(RunnerRetirement::Busy);
                 continue;
             }
             match self
-                .retire_boat_registration(input.workspace_id, intent, delivery)
+                .retire_overflow_registration(input.workspace_id, intent, delivery)
                 .await
             {
                 Ok(result) => results.push(result),
                 Err(error) => {
                     results.push(RunnerRetirement::Pending);
-                    tracing::warn!(runner=%intent.runner_id,%error,"Boat registration retirement will retry");
+                    tracing::warn!(runner=%intent.runner_id,%error,"Overflow registration retirement will retry");
                 }
             }
         }
@@ -55,7 +55,7 @@ impl MachineRuntime {
     }
 
     /// Save registration retirement or Busy proof without releasing a live delivery.
-    pub(crate) async fn retire_boat_registration(
+    pub(crate) async fn retire_overflow_registration(
         &self,
         workspace: Uuid,
         intent: &OverflowRunnerIntent,
@@ -79,7 +79,7 @@ impl MachineRuntime {
         if !withdrawn && !running {
             return Ok(RunnerRetirement::Pending);
         }
-        let Some(authority) = &self.boat_retirement else {
+        let Some(authority) = &self.overflow_retirement else {
             return Ok(RunnerRetirement::Pending);
         };
         if self.task_scope()?.contains(Work::Create(intent.runner_id)) {
@@ -104,11 +104,11 @@ impl MachineRuntime {
             .get(&intent.organization_id)
             .map(|check| check.generation);
         let runtime = self.worker();
-        self.dispatch(Work::BoatRetire(runner), async move {
+        self.dispatch(Work::OverflowRetire(runner), async move {
             let answer = match authority.remove(workspace, &intent).await {
                 Ok(answer) => answer,
                 Err(error) => {
-                    tracing::warn!(%error,"Boat registration retirement remains pending");
+                    tracing::warn!(%error,"Overflow registration retirement remains pending");
                     if let Some(check) = runtime
                         .takeout_checks
                         .lock()
@@ -145,7 +145,7 @@ impl MachineRuntime {
                             .map(|check| check.generation);
                         if current == Some(generation) {
                             runtime
-                                .boat_answers
+                                .overflow_answers
                                 .lock()
                                 .await
                                 .insert(runner, (generation, answer.guard));

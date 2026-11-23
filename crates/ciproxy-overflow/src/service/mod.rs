@@ -32,7 +32,7 @@ pub struct OverflowDependencies {
     /// Real Cloud KMS encryption in production.
     pub cipher: Arc<dyn KeyCipher>,
     /// Configured provider factories and the images they use for new starts.
-    pub providers: ProviderRegistry,
+    pub providers: Arc<ProviderRegistry>,
     /// Current queue and GitHub registration authority.
     pub runners: Arc<dyn RunnerAuthority>,
     /// UTC clock with a deterministic unit-test mock.

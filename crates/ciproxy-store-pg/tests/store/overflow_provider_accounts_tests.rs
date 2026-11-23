@@ -35,7 +35,8 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
     let live = runner(
         &label,
         &scale_set,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: Some(old.id),
             sandbox_id: "sandbox-live".to_owned(),
             size_name: "default".to_owned(),
@@ -47,7 +48,8 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
     let second_live = runner(
         &label,
         &second_scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: Some(old.id),
             sandbox_id: "second-sandbox".to_owned(),
             size_name: "default".to_owned(),
@@ -129,7 +131,8 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
     );
     let mut stopped = live;
     stopped.state = RunnerState::Stopped;
-    stopped.place = RunnerPlace::Boat {
+    stopped.place = RunnerPlace::Overflow {
+        provider: OverflowProvider::Boat,
         key_id: None,
         sandbox_id: "sandbox-live".to_owned(),
         size_name: "default".to_owned(),

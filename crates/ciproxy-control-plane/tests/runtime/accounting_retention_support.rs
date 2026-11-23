@@ -92,7 +92,8 @@ pub(super) fn history(fixture: &Fixture, organization: Organization, boat: bool)
         state: RunnerState::Stopped,
         size: fixture.intent.runner.size,
         place: if boat {
-            RunnerPlace::Boat {
+            RunnerPlace::Overflow {
+                provider: OverflowProvider::Boat,
                 key_id: None,
                 sandbox_id: format!("retention-{}", organization.github_id),
                 size_name: "2cpu".to_owned(),
@@ -186,7 +187,12 @@ pub(super) fn accounting(
     (worker, now)
 }
 
-pub(super) fn expected_totals(fixture: &Fixture, machines: bool) -> Vec<DailyTotal> {
+pub(super) fn expected_totals(
+    fixture: &Fixture,
+    machines: bool,
+    overflow_minutes: u32,
+    overflow_cents: i64,
+) -> Vec<DailyTotal> {
     vec![DailyTotal {
         day: at().date_naive(),
         sizes: vec![SizeTotal {
@@ -199,12 +205,16 @@ pub(super) fn expected_totals(fixture: &Fixture, machines: bool) -> Vec<DailyTot
             } else {
                 LocationTotals::default()
             },
-            overflow: LocationTotals {
-                starts: 1,
-                minutes: Decimal::from(5),
-            },
+            overflow: [(
+                OverflowProvider::Boat,
+                LocationTotals {
+                    starts: 1,
+                    minutes: Decimal::from(overflow_minutes),
+                },
+            )]
+            .into(),
         }],
-        overflow_usd: Decimal::new(3, 1),
+        overflow_usd: [(OverflowProvider::Boat, Decimal::new(overflow_cents, 2))].into(),
     }]
 }
 

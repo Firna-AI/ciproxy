@@ -69,17 +69,19 @@ pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn ProviderAc
                     .each_call(matching!())
                     .answers(&|_, _, _| Ok(SecretBytes::new(b"offline-fit-test".to_vec()))),
             )),
-            providers: ProviderRegistry::default().with_provider(
-                OverflowProvider::Boat,
-                Arc::new(Unimock::new(
-                    ProviderFactoryMock::capabilities
-                        .each_call(matching!())
-                        .answers_arc(Arc::new(move |_, _, _| Ok(capabilities.clone()))),
-                )),
-                ImageSource {
-                    reference: "test-image".into(),
-                    root_sizing: sizing,
-                },
+            providers: Arc::new(
+                ProviderRegistry::default().with_provider(
+                    OverflowProvider::Boat,
+                    Arc::new(Unimock::new(
+                        ProviderFactoryMock::capabilities
+                            .each_call(matching!())
+                            .answers_arc(Arc::new(move |_, _, _| Ok(capabilities.clone()))),
+                    )),
+                    ImageSource {
+                        reference: "test-image".into(),
+                        root_sizing: sizing,
+                    },
+                ),
             ),
             runners: Arc::new(Unimock::new(())),
             tokens: Arc::new(Unimock::new(())),
@@ -96,7 +98,7 @@ pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn ProviderAc
         price_lists: pages.services.price_lists.clone(),
         paid_review: None,
         overflow: Some(Arc::new(overflow)),
-        boat_root_sizing: Some(sizing),
+        provider_roots: [(OverflowProvider::Boat, sizing)].into(),
     });
 }
 
@@ -140,8 +142,14 @@ pub(super) fn sizing(pages: &mut Pages, known: bool) {
         price_lists: pages.services.price_lists.clone(),
         paid_review: None,
         overflow: pages.services.overflow.clone(),
-        boat_root_sizing: known.then_some(RootSizing {
-            image_root_bytes: 58_300_000_000,
-        }),
+        provider_roots: known
+            .then_some((
+                OverflowProvider::Boat,
+                RootSizing {
+                    image_root_bytes: 58_300_000_000,
+                },
+            ))
+            .into_iter()
+            .collect(),
     });
 }

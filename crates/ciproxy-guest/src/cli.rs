@@ -6,13 +6,13 @@ use async_trait::async_trait;
 use ciproxy_protocol::identifiers::ImageId;
 use clap::{Parser, Subcommand};
 
-use crate::boat::BoatChannel;
 use crate::boundary::{Channel, Power};
 use crate::error::Result;
 use crate::guest_setup::{GuestSetup, LinuxGuestSetup, MacGuestSetup};
 use crate::platform::{Account, Platform};
-use crate::power::{BoatPower, SystemShutdownCommand, VmPower};
+use crate::power::{SandboxPower, SystemShutdownCommand, VmPower};
 use crate::process::StockRunner;
+use crate::sandbox::SandboxChannel;
 use crate::service::{Guest, Supervisor};
 use crate::vsock::VsockChannel;
 
@@ -43,7 +43,8 @@ enum Mode {
         port: u32,
     },
     /// Consume one private launch file and POST the runner exit over HTTPS.
-    Boat {
+    #[command(alias = "boat")]
+    Sandbox {
         /// Root-owned mode 0600 file in a private runtime directory.
         #[arg(long)]
         registration_file: PathBuf,
@@ -73,9 +74,9 @@ impl Application for GuestApplication {
                     command: Box::new(SystemShutdownCommand),
                 }),
             ),
-            Mode::Boat { registration_file } => (
-                Box::new(BoatChannel::from_file(&registration_file)?),
-                Box::new(BoatPower),
+            Mode::Sandbox { registration_file } => (
+                Box::new(SandboxChannel::from_file(&registration_file)?),
+                Box::new(SandboxPower),
             ),
         };
         let account = Account::lookup(&cli.runner_account)?;

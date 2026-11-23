@@ -12,6 +12,7 @@ use ciproxy_github::installation_state::InstallationApi;
 use ciproxy_github::registrations::RunnerRegistrations;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_overflow::api::Overflow;
+use ciproxy_overflow::registry::ProviderRegistry;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::platform::Platform;
@@ -23,9 +24,9 @@ use ciproxy_store_interface::store::Store;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::boat_authority::BoatRegistrationRetirement;
 use crate::error::{Error, ErrorResultExt, Result};
 pub use crate::image_offers::{ImageOffer, ImageOffers};
+use crate::overflow_authority::OverflowRegistrationRetirement;
 use crate::runtime_tasks::RuntimeTasks;
 use crate::takeout::TakeoutCheck;
 
@@ -59,10 +60,12 @@ pub trait OwnMachines: Send + Sync {
 
 /// Dependencies assembled once at the hosted composition root.
 pub struct MachineRuntime {
-    /// GitHub-first recovery of interrupted Boat registrations.
-    pub boat_retirement: Option<Arc<dyn BoatRegistrationRetirement>>,
-    /// Shared optional Boat service, configured only with the deployed image snapshot.
+    /// GitHub-first recovery of interrupted overflow registrations.
+    pub overflow_retirement: Option<Arc<dyn OverflowRegistrationRetirement>>,
+    /// Shared overflow service when the deployment configures a provider.
     pub overflow: Option<Arc<dyn Overflow>>,
+    /// The configured providers and images shared with the overflow service.
+    pub providers: Arc<ProviderRegistry>,
     /// Tenant-scoped durable persistence.
     pub store: Arc<dyn Store>,
     /// The shared owner of machine WebSockets and command routing.
@@ -80,9 +83,9 @@ pub struct MachineRuntime {
     pub(crate) operation: Arc<Mutex<()>>,
     pub(crate) tasks: Weak<RuntimeTasks>,
     task_owner: Option<Arc<RuntimeTasks>>,
-    pub(crate) boat_operations: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
+    pub(crate) overflow_operations: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
     pub(crate) image_requests: Arc<Mutex<HashMap<(Uuid, Uuid), ImageRequest>>>,
-    pub(crate) boat_answers: Arc<Mutex<HashMap<Uuid, (u64, OverflowRunnerGuard)>>>,
+    pub(crate) overflow_answers: Arc<Mutex<HashMap<Uuid, (u64, OverflowRunnerGuard)>>>,
     pub(crate) takeout_checks: Arc<Mutex<HashMap<Uuid, TakeoutCheck>>>,
 }
 
@@ -105,8 +108,9 @@ impl MachineRuntime {
     ) -> Self {
         let tasks = RuntimeTasks::new();
         Self {
-            boat_retirement: None,
+            overflow_retirement: None,
             overflow: None,
+            providers: Arc::default(),
             store,
             gateway,
             registrations,
@@ -117,10 +121,10 @@ impl MachineRuntime {
             operation: Arc::new(Mutex::new(())),
             tasks: Arc::downgrade(&tasks),
             task_owner: Some(tasks),
-            boat_operations: Arc::new(Mutex::new(HashMap::new())),
+            overflow_operations: Arc::new(Mutex::new(HashMap::new())),
             image_requests: Arc::new(Mutex::new(HashMap::new())),
             takeout_checks: Arc::new(Mutex::new(HashMap::new())),
-            boat_answers: Arc::new(Mutex::new(HashMap::new())),
+            overflow_answers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
     /// Wait until queued events and all remote tasks finish, returning a joined error.
@@ -134,8 +138,9 @@ impl MachineRuntime {
 
     pub(crate) fn worker(&self) -> Self {
         Self {
-            boat_retirement: self.boat_retirement.clone(),
+            overflow_retirement: self.overflow_retirement.clone(),
             overflow: self.overflow.clone(),
+            providers: self.providers.clone(),
             store: self.store.clone(),
             gateway: self.gateway.clone(),
             registrations: self.registrations.clone(),
@@ -146,10 +151,10 @@ impl MachineRuntime {
             operation: self.operation.clone(),
             image_requests: self.image_requests.clone(),
             takeout_checks: self.takeout_checks.clone(),
-            boat_answers: self.boat_answers.clone(),
+            overflow_answers: self.overflow_answers.clone(),
             tasks: self.tasks.clone(),
             task_owner: None,
-            boat_operations: self.boat_operations.clone(),
+            overflow_operations: self.overflow_operations.clone(),
         }
     }
 
@@ -158,7 +163,7 @@ impl MachineRuntime {
         self.images.get(platform)
     }
 
-    /// Root sizing of Linux job VMs and Boat sandboxes, from the Linux release.
+    /// Root sizing of own-machine Linux job VMs, from the Linux release.
     pub(crate) fn root_sizing(&self) -> RootSizing {
         self.offer(Platform::LinuxX64)
             .map_or_else(RootSizing::default, |offer| RootSizing {
@@ -175,7 +180,10 @@ impl MachineRuntime {
     }
 
     /// Keep required local cleanup independent of optional provider work.
-    pub(crate) async fn purge_boat_registration_metadata(&self, workspace_id: Uuid) -> Result<()> {
+    pub(crate) async fn purge_overflow_registration_metadata(
+        &self,
+        workspace_id: Uuid,
+    ) -> Result<()> {
         let store = self.store.clone();
         let at = self.clock.now();
         tokio::task::spawn_blocking(move || {

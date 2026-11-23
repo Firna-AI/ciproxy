@@ -2,6 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
@@ -107,7 +108,8 @@ fn reusable_install_tokens_expire_and_scoped_credentials_revoke() {
     let boat_runner = runner(
         &label,
         &scale_set,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: "sandbox-token".to_owned(),
             size_name: "small".to_owned(),

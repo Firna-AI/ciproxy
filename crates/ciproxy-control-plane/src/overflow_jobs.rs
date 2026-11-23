@@ -1,4 +1,4 @@
-//! Record trusted GitHub job assignment on the actual Boat runner placement.
+//! Record trusted GitHub job assignment on the actual overflow runner placement.
 
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
@@ -8,7 +8,7 @@ use crate::error::{ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 
 impl MachineRuntime {
-    pub(crate) async fn route_boat_job(
+    pub(crate) async fn route_overflow_job(
         &self,
         input: &RoutingSnapshot,
         job: &GithubJob,
@@ -43,9 +43,9 @@ impl MachineRuntime {
             .internal()?;
         }
         if job.phase == DemandPhase::Completed
-            && let Err(error) = self.cleanup_boat(input.workspace_id).await
+            && let Err(error) = self.cleanup_overflow(input.workspace_id).await
         {
-            tracing::warn!(%error,"Boat completion cleanup will retry");
+            tracing::warn!(%error,"Overflow completion cleanup will retry");
         }
         Ok(())
     }

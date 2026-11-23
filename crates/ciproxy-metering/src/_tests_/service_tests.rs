@@ -10,6 +10,7 @@ use ciproxy_store_interface::metering::store::MeteringStoreMock;
 use ciproxy_store_interface::metering::totals::{
     AccountedJob, DailyTotal, LocationTotals, SizeTotal,
 };
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
@@ -107,11 +108,7 @@ fn refresh_applies_literal_deltas_and_reports_concurrent_writes() {
     assert_eq!(before, None);
     assert_eq!(current.observed_at, at("2026-11-04T12:02:00Z"));
     assert_eq!(
-        (
-            changes[0].machine_starts,
-            changes[0].machine_minutes,
-            starts[0].starts
-        ),
+        (changes[0].starts, changes[0].minutes, starts[0].starts),
         (1, usd("1"), 1)
     );
 }
@@ -123,7 +120,9 @@ fn refresh_skips_unchanged_completed_job_cursors() {
             1,
             "2026-11-04T12:00:00Z",
             Some("2026-11-04T12:01:00Z"),
-            JobPlace::Boat,
+            JobPlace::Overflow {
+                provider: OverflowProvider::Boat,
+            },
         ),
         observed_at: at("2026-11-04T12:02:00Z"),
     };
@@ -155,14 +154,14 @@ fn refresh_skips_unchanged_completed_job_cursors() {
 fn store_savings_use_retained_totals_after_job_details_disappear() {
     let retained = DailyTotal {
         day: day("2026-10-01"),
-        overflow_usd: usd("1"),
+        overflow_usd: [(OverflowProvider::Boat, usd("1"))].into(),
         sizes: vec![SizeTotal {
             size: size(),
             machines: LocationTotals {
                 starts: 2,
                 minutes: usd("15"),
             },
-            overflow: LocationTotals::default(),
+            overflow: Default::default(),
         }],
     };
     let mock = Unimock::new(

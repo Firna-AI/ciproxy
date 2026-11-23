@@ -4,6 +4,7 @@ use chrono::Duration;
 use ciproxy_store_interface::metering::facts::MachineRegistration;
 use ciproxy_store_interface::metering::history::MachineCost;
 use ciproxy_store_interface::metering::totals::{DailyTotal, LocationTotals, SizeTotal};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use uuid::Uuid;
 
 use crate::report::catalog::{Alternative, Comparison};
@@ -16,14 +17,14 @@ fn full_month_fixture_matches_hand_worked_costs_and_savings() {
     let days: Vec<_> = (0..30)
         .map(|offset| DailyTotal {
             day: day("2026-11-01") + Duration::days(offset),
-            overflow_usd: usd("0"),
+            overflow_usd: Default::default(),
             sizes: vec![SizeTotal {
                 size: size(),
                 machines: LocationTotals {
                     starts: 1728,
                     minutes: usd("8640"),
                 },
-                overflow: LocationTotals::default(),
+                overflow: Default::default(),
             }],
         })
         .collect();
@@ -80,17 +81,21 @@ fn full_month_fixture_matches_hand_worked_costs_and_savings() {
 fn negative_savings_keep_their_sign_and_unknown_comparison_hides_lead() {
     let days = vec![DailyTotal {
         day: day("2026-11-04"),
-        overflow_usd: usd("100"),
+        overflow_usd: [(OverflowProvider::Boat, usd("100"))].into(),
         sizes: vec![SizeTotal {
             size: size(),
             machines: LocationTotals {
                 starts: 2,
                 minutes: usd("10"),
             },
-            overflow: LocationTotals {
-                starts: 1,
-                minutes: usd("5"),
-            },
+            overflow: [(
+                OverflowProvider::Boat,
+                LocationTotals {
+                    starts: 1,
+                    minutes: usd("5"),
+                },
+            )]
+            .into(),
         }],
     }];
     let costs = free_history();
@@ -114,8 +119,8 @@ fn negative_savings_keep_their_sign_and_unknown_comparison_hides_lead() {
     assert_eq!(
         (
             report.machines.starts,
-            report.boat.starts,
-            report.boat.minutes
+            report.providers[&OverflowProvider::Boat].usage.starts,
+            report.providers[&OverflowProvider::Boat].usage.minutes
         ),
         (2, 1, usd("5"))
     );
@@ -137,17 +142,21 @@ fn negative_savings_keep_their_sign_and_unknown_comparison_hides_lead() {
 fn missing_machine_price_hides_both_savings_and_keeps_known_costs() {
     let days = vec![DailyTotal {
         day: day("2026-11-04"),
-        overflow_usd: usd("2"),
+        overflow_usd: [(OverflowProvider::Boat, usd("2"))].into(),
         sizes: vec![SizeTotal {
             size: size(),
             machines: LocationTotals {
                 starts: 2,
                 minutes: usd("10"),
             },
-            overflow: LocationTotals {
-                starts: 1,
-                minutes: usd("5"),
-            },
+            overflow: [(
+                OverflowProvider::Boat,
+                LocationTotals {
+                    starts: 1,
+                    minutes: usd("5"),
+                },
+            )]
+            .into(),
         }],
     }];
     let machine = MachineRegistration {
@@ -186,7 +195,7 @@ fn missing_machine_price_hides_both_savings_and_keeps_known_costs() {
         report.costs,
         Costs {
             known_machines_usd: usd("0"),
-            boat_usd: usd("2"),
+            overflow_usd: usd("2"),
             known_plan_usd: usd("3"),
             total_usd: None,
             missing: vec![CostGap::MachinePrice {

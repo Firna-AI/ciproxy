@@ -36,14 +36,14 @@ overflow wait.
 4. Connect exactly one own machine. Set its warm runners to zero.
 5. Create two labels with the same vCPUs, memory, and disk. Choose a size
    so that the machine fits only one job at a time.
-   - The hold label allows own machines only.
-   - The overflow label allows own machines and Boat.
+   - Set the hold label order to own machines only.
+   - Set the overflow label order to own machines, then Boat.
 6. Copy the [smoke workflow](scripts/overflow-smoke-workflow.yml) to
    `.github/workflows/ciproxy-overflow-smoke.yml` on the default branch of
    the test repository. It needs no repository secret. Its run name is
    `ciproxy-smoke-<marker>`. Its one job holds a runner for `hold_seconds`.
-7. Run the test control plane with `BOAT_SHARED_SNAPSHOT` and the matching
-   `JOB_IMAGE_MANIFEST_PATH`, as
+7. Run the test control plane with `BOAT_SHARED_SNAPSHOT`, the matching
+   `JOB_IMAGE_MANIFEST_PATH`, and `OVERFLOW_KMS_KEY`, as
    [Configuration](overflow.md#configuration) says.
 8. Connect Boat in Setup or in Settings under Overflow, with a positive
    spend limit.

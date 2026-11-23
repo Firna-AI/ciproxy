@@ -1,11 +1,14 @@
 //! Workspace UTC daily totals kept for ninety days on every tier.
 
+use std::collections::BTreeMap;
+
 use chrono::{DateTime, NaiveDate, Utc};
+use ciproxy_protocol::resources::VmSize;
 use rust_decimal::Decimal;
 
-use crate::metering::facts::UsageJob;
+use crate::metering::facts::{JobPlace, UsageJob};
 use crate::metering::history::OverflowCost;
-use ciproxy_protocol::resources::VmSize;
+use crate::overflow::provider::OverflowProvider;
 
 /// The starts and elapsed runtime of one execution location.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -23,8 +26,27 @@ pub struct SizeTotal {
     pub size: VmSize,
     /// Jobs on the workspace's own machines.
     pub machines: LocationTotals,
-    /// Jobs on ciproxy-created overflow runners.
-    pub overflow: LocationTotals,
+    /// Jobs on ciproxy-created runners of each overflow provider.
+    pub overflow: BTreeMap<OverflowProvider, LocationTotals>,
+}
+
+impl SizeTotal {
+    /// Start with zero usage for this size.
+    pub fn new(size: VmSize) -> Self {
+        Self {
+            size,
+            machines: LocationTotals::default(),
+            overflow: BTreeMap::new(),
+        }
+    }
+
+    /// Get the usage of one place, creating an empty total when needed.
+    pub fn usage_mut(&mut self, place: JobPlace) -> &mut LocationTotals {
+        match place {
+            JobPlace::Machine => &mut self.machines,
+            JobPlace::Overflow { provider } => self.overflow.entry(provider).or_default(),
+        }
+    }
 }
 
 /// Daily execution totals for every organization of a workspace.
@@ -34,8 +56,19 @@ pub struct DailyTotal {
     pub day: NaiveDate,
     /// Totals for each actual VM size used that day.
     pub sizes: Vec<SizeTotal>,
-    /// Cost of all ciproxy overflow sandboxes, including those with no job.
-    pub overflow_usd: Decimal,
+    /// Cost of each provider's sandboxes, including those with no job.
+    pub overflow_usd: BTreeMap<OverflowProvider, Decimal>,
+}
+
+impl DailyTotal {
+    /// Start with zero usage and cost for this day.
+    pub fn new(day: NaiveDate) -> Self {
+        Self {
+            day,
+            sizes: Vec::new(),
+            overflow_usd: BTreeMap::new(),
+        }
+    }
 }
 
 /// The previous job facts and observation time used for incremental accounting.
@@ -56,14 +89,12 @@ pub struct DailyDelta {
     pub day: NaiveDate,
     /// The actual VM resources of this aggregate.
     pub size: VmSize,
-    /// The change to own-machine starts.
-    pub machine_starts: i64,
-    /// The change to own-machine elapsed minutes.
-    pub machine_minutes: Decimal,
-    /// The change to overflow starts.
-    pub overflow_starts: i64,
-    /// The change to overflow elapsed minutes.
-    pub overflow_minutes: Decimal,
+    /// The place that ran these jobs.
+    pub place: JobPlace,
+    /// The change to starts at this place.
+    pub starts: i64,
+    /// The change to elapsed minutes at this place.
+    pub minutes: Decimal,
 }
 
 /// The overflow facts and observation time used by the previous cost calculation.
@@ -75,11 +106,13 @@ pub struct AccountedOverflow {
     pub observed_at: DateTime<Utc>,
 }
 
-/// An anonymous USD correction for one UTC date.
+/// An anonymous USD correction for one provider and UTC date.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DailyOverflowCost {
     /// The UTC date to update.
     pub day: NaiveDate,
+    /// The provider that bills the sandbox.
+    pub provider: OverflowProvider,
     /// The signed change in ciproxy overflow costs.
     pub usd: Decimal,
 }

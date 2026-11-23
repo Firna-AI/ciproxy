@@ -8,6 +8,7 @@ use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::jobs::{Job, JobResult, JobState};
 use ciproxy_store_interface::metering::history::PlanCost;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 use serde_json::json;
@@ -93,20 +94,29 @@ async fn measured_production_start_uses_saved_fee_in_the_public_savings_report()
         "ordinary measured Boat use needs savings: {report:?}"
     );
     let report = report.unwrap();
-    assert_eq!(report.costs.boat_usd, Decimal::new(82, 3));
+    assert_eq!(report.costs.overflow_usd, Decimal::new(82, 3));
     assert_eq!(report.costs.known_machines_usd, Decimal::ZERO);
     assert_eq!(report.costs.known_plan_usd, Decimal::ZERO);
     assert_eq!(report.costs.total_usd, Some(Decimal::new(82, 3)));
     assert_eq!(report.costs.missing, []);
     assert_eq!(refreshed.updated_jobs, 1);
     assert_eq!(refreshed.updated_sandboxes, 1);
-    assert_eq!(report.boat.starts, 1);
-    assert_eq!(report.boat.minutes, Decimal::from(10));
+    assert_eq!(report.providers[&OverflowProvider::Boat].usage.starts, 1);
+    assert_eq!(
+        report.providers[&OverflowProvider::Boat].usage.minutes,
+        Decimal::from(10)
+    );
     assert_eq!(report.machines.starts, 0);
     assert_eq!(report.machines.minutes, Decimal::ZERO);
     assert_eq!(report.days.len(), 1);
-    assert_eq!(report.days[0].sizes[0].overflow.starts, 1);
-    assert_eq!(report.days[0].sizes[0].overflow.minutes, Decimal::from(10));
+    assert_eq!(
+        report.days[0].sizes[0].overflow[&OverflowProvider::Boat].starts,
+        1
+    );
+    assert_eq!(
+        report.days[0].sizes[0].overflow[&OverflowProvider::Boat].minutes,
+        Decimal::from(10)
+    );
     assert_eq!(report.comparisons[0].usd, Some(Decimal::new(16, 2)));
     assert_eq!(report.comparisons[1].usd, Some(Decimal::new(32, 2)));
     assert_eq!(report.savings[0].usd, Some(Decimal::new(78, 3)));

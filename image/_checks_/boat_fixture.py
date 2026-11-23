@@ -53,9 +53,10 @@ def prepare_root(root, guest):
     (root / "dev/null").touch()
     shutil.copyfile(image / "boat-run.sh", root / "image/boat-run.sh")
     shutil.copyfile(image / "measure.py", root / MEASURE_PATH.lstrip("/"))
-    startup = image / "ciproxy-boat-start.service"
-    service = configparser.ConfigParser(interpolation=None)
-    service.read(startup)
+    startup = configparser.ConfigParser(interpolation=None)
+    startup.read(image / "ciproxy-boat-start.service")
+    guest_unit = configparser.ConfigParser(interpolation=None)
+    guest_unit.read(image / "ciproxy-boat-guest.service")
     shutil.copyfile(image / "boat-start.sh", root / "opt/ciproxy-image/boat-start.sh")
     (root / "opt/ciproxy-image/boat-start.sh").chmod(0o755)
     (root / "etc/ciproxy/boat-restart-services").write_text(
@@ -77,13 +78,14 @@ if [[ "$*" == 'start ciproxy-boat-guest.service' ]]; then
     if [[ -e /run/ciproxy/registration.json ]]; then
         cp -p /run/ciproxy/registration.json /state/delivered-registration.json
     else
-        /usr/local/bin/ciproxy-guest --image-id fixture-image boat \\
-            --registration-file /run/ciproxy/registration.json > /state/guest.log 2>&1
+        IMAGE_ID=fixture-image
+        @GUEST_COMMAND@ > /state/guest.log 2>&1
         printf '%s' "$?" > /state/guest-exit
     fi
 fi
 exit 0
-'''.replace("@START_COMMAND@", service["Service"]["ExecStart"]))
+'''.replace("@START_COMMAND@", startup["Service"]["ExecStart"])
+       .replace("@GUEST_COMMAND@", guest_unit["Service"]["ExecStart"]))
     systemctl.chmod(0o755)
     du = root / "usr/bin/du"
     du.write_text('''#!/usr/bin/bash

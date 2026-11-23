@@ -10,6 +10,7 @@ use ciproxy_github::timing::{JobTiming, RepairTiming};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::github_timing::JobTimes;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::{RegistrationTarget, ScaleSet};
 use ciproxy_store_interface::store::Store;
@@ -33,7 +34,8 @@ fn running(store: &dyn Store, binding: &ScaleSet, runner_id: i64) -> GithubJob {
             memory_bytes: 8_000_000_000,
             disk_bytes: 80_000_000_000,
         },
-        place: RunnerPlace::Boat {
+        place: RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: format!("runner-{runner_id}"),
             size_name: "small".to_owned(),

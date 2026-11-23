@@ -17,14 +17,15 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::store::Store;
 
-use crate::boat_authority::{BoatRegistrationRetirement, BoatRunnerAuthority};
 use crate::config::Config;
 use crate::error::{ErrorResultExt, Result};
+use crate::overflow_authority::{OverflowRegistrationRetirement, OverflowRunnerAuthority};
+use crate::overflow_callback::EXIT_PATH;
 
 pub(crate) struct OverflowRuntime {
     pub(crate) service: Arc<dyn Overflow>,
-    pub(crate) retirement: Arc<dyn BoatRegistrationRetirement>,
-    pub(crate) root_sizing: RootSizing,
+    pub(crate) retirement: Arc<dyn OverflowRegistrationRetirement>,
+    pub(crate) providers: Arc<ProviderRegistry>,
 }
 
 pub(crate) fn compose(
@@ -32,44 +33,48 @@ pub(crate) fn compose(
     store: Arc<dyn Store>,
     registrations: Arc<dyn RunnerRegistrations>,
 ) -> Result<Option<OverflowRuntime>> {
-    let Some(snapshot) = &config.boat_shared_snapshot else {
-        return Ok(None);
-    };
     let root_sizing = RootSizing {
         image_root_bytes: config.image_disk_bytes,
     };
+    let mut providers = ProviderRegistry::default();
+    if let Some(snapshot) = &config.boat_shared_snapshot {
+        providers = providers.with_provider(
+            OverflowProvider::Boat,
+            Arc::new(BoatFactory::new()),
+            ImageSource {
+                reference: snapshot.clone(),
+                root_sizing,
+            },
+        );
+    }
+    if providers.is_empty() {
+        return Ok(None);
+    }
+    let providers = Arc::new(providers);
     let transport = Arc::new(
         CloudKmsRest::new(
-            config.boat_kms_key.clone(),
+            config.overflow_kms_key.clone(),
             Arc::new(MetadataAccessTokens::new().internal()?),
         )
         .internal()?,
     );
-    let retirement = Arc::new(BoatRunnerAuthority {
+    let retirement = Arc::new(OverflowRunnerAuthority {
         store: store.clone(),
         registrations,
         root_sizing,
+        providers: providers.clone(),
         clock: Arc::new(SystemRuntime),
     });
+    let deployment = config.public_url.trim_end_matches('/').to_owned();
     let service = Arc::new(OverflowService::new(
         OverflowConfig {
-            deployment: config.public_url.trim_end_matches('/').to_owned(),
-            exit_report_url: Secret::new(format!(
-                "{}/hooks/boat/runner-exit",
-                config.public_url.trim_end_matches('/')
-            )),
+            exit_report_url: Secret::new(format!("{deployment}{EXIT_PATH}")),
+            deployment,
         },
         OverflowDependencies {
-            store: store.clone(),
+            store,
             cipher: Arc::new(CloudKmsCipher::new(transport)),
-            providers: ProviderRegistry::default().with_provider(
-                OverflowProvider::Boat,
-                Arc::new(BoatFactory::new()),
-                ImageSource {
-                    reference: snapshot.clone(),
-                    root_sizing,
-                },
-            ),
+            providers: providers.clone(),
             runners: retirement.clone(),
             clock: Arc::new(SystemClock),
             tokens: Arc::new(RandomTokens),
@@ -78,6 +83,6 @@ pub(crate) fn compose(
     Ok(Some(OverflowRuntime {
         service,
         retirement,
-        root_sizing,
+        providers,
     }))
 }

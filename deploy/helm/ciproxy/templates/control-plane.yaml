@@ -56,7 +56,7 @@ spec:
               value: {{ .Values.controlPlane.publicUrl | quote }}
             - name: IMAGE_URL_PREFIX
               value: {{ .Values.controlPlane.imageUrlPrefix | quote }}
-            - name: BOAT_KMS_KEY
+            - name: OVERFLOW_KMS_KEY
               value: {{ .Values.controlPlane.kmsKey | quote }}
             - name: BOAT_SHARED_SNAPSHOT
               valueFrom:

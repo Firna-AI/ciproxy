@@ -5,7 +5,7 @@ use internal_error::InternalError;
 /// Failure at the guest lifecycle boundary.
 #[derive(Debug, thiserror::Error, internal_error::ErrorContract)]
 pub enum Error {
-    /// No private runner input was delivered to this Boat sandbox.
+    /// No private runner input was delivered to this sandbox.
     #[error("[ciproxy-guest] registration file is missing")]
     MissingRegistrationFile,
     /// The runner registration file can be read by another user.

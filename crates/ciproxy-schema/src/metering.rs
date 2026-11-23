@@ -31,20 +31,19 @@ diesel::table! {
     }
 }
 diesel::table! {
-    metering_daily_sizes (workspace_id, day, vcpus, memory_bytes, disk_bytes) {
+    metering_daily_sizes (workspace_id, day, vcpus, memory_bytes, disk_bytes, place) {
         workspace_id -> Uuid,
         day -> Date,
         vcpus -> Int4,
         memory_bytes -> Int8,
         disk_bytes -> Int8,
-        machine_starts -> Int8,
-        machine_minutes -> Numeric,
-        overflow_starts -> Int8,
-        overflow_minutes -> Numeric,
+        place -> Text,
+        starts -> Int8,
+        minutes -> Numeric,
     }
 }
 diesel::table! {
-    metering_daily_overflow_costs (workspace_id, day) {
+    metering_daily_overflow_costs (workspace_id, day, provider) {
         workspace_id -> Uuid,
         day -> Date,
         usd -> Numeric,

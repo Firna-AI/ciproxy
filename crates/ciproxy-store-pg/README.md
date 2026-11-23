@@ -61,9 +61,9 @@ Savings registrations, range totals, and monthly costs share one
 repeatable-read read-only snapshot.
 The savings read includes removed registrations without loading retained
 jobs, start counts, or accounting cursors.
-Daily aggregates keep VM sizes and overflow costs without job identifiers.
-Cost rows and cost cursors keep the provider. Saved Boat job cursors record
-an overflow place with the Boat provider.
+Daily usage aggregates keep VM sizes and job places without job identifiers.
+Daily costs, cost cursors, and overflow runner placements keep the provider.
+The runner keeps its provider after the store erases its key.
 Timestamp aggregates keep exact starts without organization identifiers.
 Cursor writes apply caller-supplied signed corrections atomically.
 They return false for a stale cursor or a deleted source record.

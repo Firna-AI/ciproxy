@@ -11,8 +11,8 @@ use ciproxy_store_interface::metering::store::MeteringStore;
 use ciproxy_store_interface::metering::totals::{AccountedJob, AccountedOverflow};
 use uuid::Uuid;
 
-use crate::report::boat::boat_cost_deltas;
 use crate::report::catalog::PriceList;
+use crate::report::overflow::overflow_cost_deltas;
 use crate::report::range::{DateRange, retention_start};
 use crate::report::runtime::{accounting_deltas, removal_deltas, start_deltas};
 use crate::report::savings::{ReportInput, SavingsReport, savings_report};
@@ -25,9 +25,9 @@ pub struct Refresh {
     pub updated_jobs: usize,
     /// Jobs changed or deleted concurrently, which callers can refresh again.
     pub stale_jobs: usize,
-    /// Boat sandboxes whose cost cursors and corrections were stored.
+    /// Overflow sandboxes whose cost cursors and corrections were stored.
     pub updated_sandboxes: usize,
-    /// Boat cost cursors changed or deleted concurrently.
+    /// Overflow cost cursors changed or deleted concurrently.
     pub stale_sandboxes: usize,
     /// Expired anonymous daily rows deleted by this refresh.
     pub purged_rows: usize,
@@ -138,13 +138,13 @@ impl Metering for StoredMetering {
                 outcome.stale_jobs += 1;
             }
         }
-        let boat = self.store.overflow_accounting(workspace_id)?;
-        let previous: BTreeMap<_, _> = boat
+        let overflow = self.store.overflow_accounting(workspace_id)?;
+        let previous: BTreeMap<_, _> = overflow
             .accounted
             .into_iter()
             .map(|cost| (cost.cost.runner_id, cost))
             .collect();
-        for cost in boat.costs {
+        for cost in overflow.costs {
             let before = previous.get(&cost.runner_id);
             let current = AccountedOverflow {
                 cost,
@@ -153,7 +153,7 @@ impl Metering for StoredMetering {
             let Some(until) = current.observed_at.date_naive().succ_opt() else {
                 continue;
             };
-            let changes = boat_cost_deltas(before, &current, DateRange { from, until });
+            let changes = overflow_cost_deltas(before, &current, DateRange { from, until });
             if changes.is_empty() && before.is_some() {
                 continue;
             }

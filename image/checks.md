@@ -122,7 +122,7 @@ sudo python3 image/check-runner-environment.py \
   --work-dir .context/image-checks/runner-environment
 ```
 
-It starts the guest in Boat mode in a chroot, with the real `runuser` and
+It starts the guest in `sandbox` mode in a chroot with the real `runuser` and
 `runner-entry.sh`. A fixture listener records its environment.
 The check needs Bash, GNU coreutils, `runuser`, PAM, `ldd`, and `chroot`.
 It needs root to make a private account database in the chroot.
@@ -131,7 +131,7 @@ The listener must get `HOME`, `USER`, `LOGNAME`, and `SHELL` from the
 runner account. Its `PATH` must keep the image tools and add the account's
 own entries. The values of `/etc/environment` and the account's `.profile`
 must arrive. The JIT registration must arrive unchanged.
-The assignment socket value must arrive, empty in Boat mode.
+The assignment socket value must arrive empty in `sandbox` mode.
 No value of the root service environment can reach the listener.
 
 ### Docker disk attachment
@@ -182,8 +182,9 @@ start Docker and its socket, and then the guest unit.
 The delivered file must arrive at `/run/ciproxy/registration.json` with
 mode 0600 and root as its owner. The source file must be gone, and the
 output must not show its contents.
-Without a registration, the launch must take the same steps. The real
-guest must then end with exit code 1 and its missing-registration error.
+Without a registration, the launch must take the same steps. The check
+runs the guest unit's command. The guest must end with exit code 1 and
+its missing-registration error.
 The fixture root holds the real Python, the real `measure.py`, and a `du`
 that records each call and fails.
 With a registration, the start must not call `du`. A fixed `statvfs`

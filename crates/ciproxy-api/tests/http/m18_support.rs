@@ -67,7 +67,7 @@ impl Pages {
             },
         ));
         let services = Arc::new(PageServices {
-            boat_root_sizing: None,
+            provider_roots: Default::default(),
             billing,
             metering: Arc::new(StoredMetering::new(fixture.database.store.clone())),
             price_lists: Some(catalogs()),

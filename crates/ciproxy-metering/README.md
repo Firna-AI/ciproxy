@@ -36,7 +36,8 @@ Stored monthly prices supply machine and tier costs.
 The last monthly price on each UTC date applies to the full date.
 Each date uses the day count of its calendar month for both monthly costs.
 Stored overflow rates supply start charges and elapsed sandbox costs.
-A Boat sandbox can cost money without taking a job.
+A sandbox can cost money without taking a job. The savings report gives
+usage and cost for each provider.
 Each savings report reads registrations, range totals, and monthly costs
 from one coherent store snapshot.
 The report read loads no retained jobs, start counts, or accounting cursors.
@@ -55,7 +56,8 @@ It applies no invoice, minute, or display rounding.
 Missing monthly price history produces a CostGap.
 Other known costs remain visible when a gap prevents a savings figure.
 
-Anonymous daily totals retain byte-precise actual VM sizes and overflow costs.
+Anonymous daily totals retain byte-precise VM sizes and job places.
+Daily sandbox costs keep the provider.
 The same protocol resource type serves runner facts, cursors, and totals.
 No integer-GB conversion rounds an actual root allocation.
 Anonymous timestamp counts preserve exact billing-period boundaries.
@@ -93,7 +95,7 @@ Trusted fact producers must supply these inputs:
    Existing remove_machine calls preserve the registration's end time.
 3. Supply assigned runners and taken-at times through JobStore.
    Update completed-at times when trusted GitHub facts arrive.
-4. Persist Boat execution through OverflowStore.
+4. Persist sandbox execution through OverflowStore.
    The metering queries read its durable start fee and runtime prices.
    `save_overflow_cost` remains available for trusted standalone cost facts.
 5. Confirm billing through BillingSession::commit.
@@ -142,7 +144,8 @@ snapshots through the production adapter.
 - [src/pricing.rs](src/pricing.rs) finds paid offers from the shared catalog.
 - [src/service.rs](src/service.rs) implements Metering over a dyn store.
 - [src/report/runtime.rs](src/report/runtime.rs) computes daily corrections.
-- [src/report/boat.rs](src/report/boat.rs) accounts for idle sandbox costs.
+- [src/report/overflow.rs](src/report/overflow.rs) accounts for idle
+  sandbox costs by provider.
 - [src/report/catalog.rs](src/report/catalog.rs) matches dated vendor prices.
 - [src/report/costs.rs](src/report/costs.rs) computes monthly cost portions.
 - [src/report/savings.rs](src/report/savings.rs) builds the savings report.
@@ -154,6 +157,6 @@ snapshots through the production adapter.
 - [Data retention](../../docs/protocol/security-data.md#data-retention)
   defines retention.
 - [Workspaces](../../docs/protocol/workspaces.md) defines shared counts.
-- [Overflow](../../docs/protocol/overflow.md#spend-limit) defines Boat costs.
+- [Overflow spend](../../docs/protocol/overflow-spend.md) defines sandbox costs.
 - [Architecture](../../docs/architecture.md) describes hosted boundaries.
 - [Store interface](../ciproxy-store-interface/README.md) owns persistence.

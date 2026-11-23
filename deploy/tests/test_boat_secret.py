@@ -15,6 +15,14 @@ class BoatSecretTests(OptionalSecretCase):
     def snapshots(self):
         return self.secrets("boat-shared-snapshot")
 
+    def test_overflow_kms_setting_uses_the_deployed_key(self):
+        result = self.cli("deploy.py", "main-preview")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.variable("OVERFLOW_KMS_KEY"), {
+            "name": "OVERFLOW_KMS_KEY", "value": "test-key",
+        })
+        self.assertIsNone(self.variable("BOAT_KMS_KEY"))
+
     def test_version_is_synced_and_rotation_restarts_the_pod(self):
         first = self.cli("deploy.py", "main-preview")
         self.assertEqual(first.returncode, 0, first.stderr)

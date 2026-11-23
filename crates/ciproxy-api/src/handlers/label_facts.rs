@@ -4,6 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_overflow::view::ProviderView;
 use ciproxy_store_interface::job_views::DashboardJob;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -34,7 +35,7 @@ impl Facts {
             None => None,
         };
         let sizing = pages
-            .and_then(|pages| pages.boat_root_sizing)
+            .and_then(|pages| pages.provider_roots.get(&OverflowProvider::Boat).copied())
             .unwrap_or(RootSizing {
                 image_root_bytes: state.config.image_disk_bytes,
             });

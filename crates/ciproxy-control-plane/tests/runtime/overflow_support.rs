@@ -25,7 +25,7 @@ use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
 use super::overflow_ports::Ports;
-use super::overflow_service::{authority, service};
+use super::overflow_service::attach;
 use super::support::{Fixture, at};
 
 pub(super) struct Harness {
@@ -124,18 +124,6 @@ impl Harness {
             ))
             .no_verify_in_drop(),
         );
-        let service = service(&fixture, &ports, registrations.clone());
-        service
-            .connect(
-                fixture.workspace,
-                OverflowProvider::Boat,
-                Uuid::new_v4(),
-                Secret::new("fake-boat-key"),
-                "personal".to_owned(),
-                200_000_000,
-            )
-            .await
-            .unwrap();
         let own_starts = Arc::new(AtomicUsize::new(0));
         let starts = own_starts.clone();
         let gateway = Arc::new(
@@ -154,14 +142,24 @@ impl Harness {
         let mut runtime = MachineRuntime::new(
             fixture.store.clone(),
             gateway,
-            registrations.clone(),
+            registrations,
             Arc::new(Unimock::new(())),
             ports.clone(),
             None,
             Arc::new(Unimock::new(())),
         );
-        runtime.overflow = Some(service.clone());
-        runtime.boat_retirement = Some(authority(&fixture, &ports, registrations));
+        let service = attach(&mut runtime, &fixture, &ports, Default::default());
+        service
+            .connect(
+                fixture.workspace,
+                OverflowProvider::Boat,
+                Uuid::new_v4(),
+                Secret::new("fake-boat-key"),
+                "personal".to_owned(),
+                200_000_000,
+            )
+            .await
+            .unwrap();
         Self {
             fixture,
             ports,
@@ -174,11 +172,13 @@ impl Harness {
     }
 
     pub(super) fn use_registrations(&mut self, registrations: Arc<dyn RunnerRegistrations>) {
-        self.service = service(&self.fixture, &self.ports, registrations.clone());
-        self.runtime.overflow = Some(self.service.clone());
-        self.runtime.boat_retirement =
-            Some(authority(&self.fixture, &self.ports, registrations.clone()));
         self.runtime.registrations = registrations;
+        self.service = attach(
+            &mut self.runtime,
+            &self.fixture,
+            &self.ports,
+            Default::default(),
+        );
     }
 
     pub(super) fn queued(&self) -> GithubJob {

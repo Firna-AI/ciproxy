@@ -1,4 +1,4 @@
-//! Private Boat launch files and sandbox-scoped runner-exit callbacks.
+//! Private sandbox launch files and sandbox-scoped runner-exit callbacks.
 
 use std::future::pending;
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
@@ -24,14 +24,14 @@ struct Registration {
     exit_report_token: Secret,
 }
 
-pub(crate) struct BoatChannel {
+pub(crate) struct SandboxChannel {
     configure: Option<AgentToGuest>,
     report_url: Secret,
     token: Secret,
     client: Client,
 }
 
-impl BoatChannel {
+impl SandboxChannel {
     pub(crate) fn from_file(path: &Path) -> Result<Self> {
         let opened = fs::OpenOptions::new()
             .read(true)
@@ -68,7 +68,7 @@ impl BoatChannel {
 }
 
 #[async_trait]
-impl Channel for BoatChannel {
+impl Channel for SandboxChannel {
     fn receive(&mut self) -> CommandFuture<'_> {
         Box::pin(async move {
             match self.configure.take() {

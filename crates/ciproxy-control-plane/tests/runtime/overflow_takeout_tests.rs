@@ -16,7 +16,7 @@ use super::support::at;
 use super::takeout_support::{Answer, Call, Remote};
 
 #[tokio::test]
-async fn takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers() {
+async fn takeout_waits_for_overflow_retirement_and_saves_idle_and_busy_answers() {
     let mut harness = Harness::new(false, false).await;
     let mut idle = harness.queued();
     let mut running = harness.queued();

@@ -155,7 +155,7 @@ impl MachineRuntime {
                     .internal()?
                     .internal()?;
             let store = runtime.store.clone();
-            let boat =
+            let overflow =
                 tokio::task::spawn_blocking(move || store.overflow_runner_guard(workspace, runner))
                     .await
                     .internal()?
@@ -191,7 +191,7 @@ impl MachineRuntime {
                     }
                 }
                 RegistrationRetirement::Removed { .. } | RegistrationRetirement::Absent => {
-                    if let Some(expected) = boat {
+                    if let Some(expected) = overflow {
                         let store = runtime.store.clone();
                         tokio::task::spawn_blocking(move || {
                             store.apply_overflow_runner_result(

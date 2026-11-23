@@ -5,6 +5,7 @@ use ciproxy_metering::report::range::DateRange;
 use ciproxy_metering::report::runtime::{accounting_deltas, start_deltas};
 use ciproxy_store_interface::jobs::JobState;
 use ciproxy_store_interface::metering::totals::AccountedJob;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 
 use super::super::support::{Database, at, job, runner};
@@ -19,7 +20,8 @@ fn stale_accounting_snapshot_cannot_apply_the_same_delta_twice() {
     let vm = runner(
         &label,
         &scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: "cursor".to_owned(),
             size_name: "2cpu".to_owned(),
@@ -61,8 +63,8 @@ fn stale_accounting_snapshot_cannot_apply_the_same_delta_twice() {
         .days;
     assert_eq!(
         (
-            totals[0].sizes[0].overflow.starts,
-            totals[0].sizes[0].overflow.minutes
+            totals[0].sizes[0].overflow[&OverflowProvider::Boat].starts,
+            totals[0].sizes[0].overflow[&OverflowProvider::Boat].minutes
         ),
         (1, usd("1"))
     );

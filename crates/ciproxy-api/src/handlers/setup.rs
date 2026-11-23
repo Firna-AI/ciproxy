@@ -5,6 +5,7 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 
 use crate::access::Principal;
@@ -55,7 +56,10 @@ pub(crate) async fn setup(
                         })
                         .map(|runner| match runner.place {
                             RunnerPlace::Machine { .. } => SetupPlace::Machine,
-                            RunnerPlace::Boat { .. } => SetupPlace::Boat,
+                            RunnerPlace::Overflow {
+                                provider: OverflowProvider::Boat,
+                                ..
+                            } => SetupPlace::Boat,
                         })
                 } else {
                     None

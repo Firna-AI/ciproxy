@@ -32,6 +32,11 @@ pub struct ProviderRegistry {
 }
 
 impl ProviderRegistry {
+    /// Whether the deployment has no provider configurations.
+    pub fn is_empty(&self) -> bool {
+        self.providers.is_empty()
+    }
+
     /// Register or replace the configuration of one available provider.
     pub fn with_provider(
         mut self,

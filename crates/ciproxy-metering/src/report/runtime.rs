@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_store_interface::metering::facts::{Completion, JobPlace, UsageJob};
 use ciproxy_store_interface::metering::totals::{
@@ -11,6 +11,9 @@ use ciproxy_store_interface::metering::totals::{
 use rust_decimal::Decimal;
 
 use crate::report::range::{DateRange, midnight};
+
+type SizeKey = (u32, u64, u64);
+type DailyChanges = BTreeMap<(NaiveDate, SizeKey, JobPlace), DailyDelta>;
 
 /// Compute per-size totals from job facts, clipping runtime to UTC date overlap.
 ///
@@ -25,7 +28,7 @@ pub fn daily_totals(jobs: &[UsageJob], range: DateRange, at: DateTime<Utc>) -> V
         };
         let from = midnight(day);
         let until = midnight(next).min(at);
-        let mut sizes: BTreeMap<(u32, u64, u64), SizeTotal> = BTreeMap::new();
+        let mut sizes: BTreeMap<SizeKey, SizeTotal> = BTreeMap::new();
         let mut seen = BTreeSet::new();
         for job in jobs {
             if !seen.insert(job.key()) || job.started_at > at {
@@ -44,22 +47,15 @@ pub fn daily_totals(jobs: &[UsageJob], range: DateRange, at: DateTime<Utc>) -> V
             }
             let total = sizes
                 .entry(size_key(job.size))
-                .or_insert_with(|| SizeTotal {
-                    size: job.size,
-                    machines: LocationTotals::default(),
-                    overflow: LocationTotals::default(),
-                });
-            let location = match job.place {
-                JobPlace::Machine => &mut total.machines,
-                JobPlace::Boat => &mut total.overflow,
-            };
+                .or_insert_with(|| SizeTotal::new(job.size));
+            let location = total.usage_mut(job.place);
             location.starts += starts;
             location.minutes += minutes;
         }
         days.push(DailyTotal {
             day,
             sizes: sizes.into_values().collect(),
-            overflow_usd: Decimal::ZERO,
+            overflow_usd: BTreeMap::new(),
         });
         day = next;
     }
@@ -74,7 +70,7 @@ pub fn accounting_deltas(
     current: &AccountedJob,
     range: DateRange,
 ) -> Vec<DailyDelta> {
-    let mut changes: BTreeMap<_, DailyDelta> = BTreeMap::new();
+    let mut changes = DailyChanges::new();
     if let Some(previous) = previous {
         for total in daily_totals(
             std::slice::from_ref(&previous.job),
@@ -93,12 +89,7 @@ pub fn accounting_deltas(
     }
     changes
         .into_values()
-        .filter(|change| {
-            change.machine_starts != 0
-                || change.overflow_starts != 0
-                || change.machine_minutes != Decimal::ZERO
-                || change.overflow_minutes != Decimal::ZERO
-        })
+        .filter(|change| change.starts != 0 || change.minutes != Decimal::ZERO)
         .collect()
 }
 
@@ -165,30 +156,30 @@ pub fn elapsed_minutes(from: DateTime<Utc>, until: DateTime<Utc>) -> Decimal {
         / Decimal::from(60)
 }
 
-fn add_changes(
-    changes: &mut BTreeMap<(chrono::NaiveDate, (u32, u64, u64)), DailyDelta>,
-    total: DailyTotal,
-    direction: i64,
-) {
+fn add_changes(changes: &mut DailyChanges, total: DailyTotal, direction: i64) {
     for size in total.sizes {
-        let delta = changes
-            .entry((total.day, size_key(size.size)))
-            .or_insert(DailyDelta {
-                day: total.day,
-                size: size.size,
-                machine_starts: 0,
-                machine_minutes: Decimal::ZERO,
-                overflow_starts: 0,
-                overflow_minutes: Decimal::ZERO,
-            });
-        delta.machine_starts += direction * size.machines.starts as i64;
-        delta.machine_minutes += Decimal::from(direction) * size.machines.minutes;
-        delta.overflow_starts += direction * size.overflow.starts as i64;
-        delta.overflow_minutes += Decimal::from(direction) * size.overflow.minutes;
+        let places = std::iter::once((JobPlace::Machine, size.machines)).chain(
+            size.overflow
+                .into_iter()
+                .map(|(provider, usage)| (JobPlace::Overflow { provider }, usage)),
+        );
+        for (place, usage) in places.filter(|(_, usage)| *usage != LocationTotals::default()) {
+            let delta = changes
+                .entry((total.day, size_key(size.size), place))
+                .or_insert(DailyDelta {
+                    day: total.day,
+                    size: size.size,
+                    place,
+                    starts: 0,
+                    minutes: Decimal::ZERO,
+                });
+            delta.starts += direction * usage.starts as i64;
+            delta.minutes += Decimal::from(direction) * usage.minutes;
+        }
     }
 }
 
-fn size_key(size: VmSize) -> (u32, u64, u64) {
+fn size_key(size: VmSize) -> SizeKey {
     (size.vcpu, size.memory_bytes, size.disk_bytes)
 }
 

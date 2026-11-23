@@ -1,5 +1,6 @@
 //! Shared dashboard composition for hosted routes and durable billing recovery.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use ciproxy_agent::root_sizing::RootSizing;
@@ -13,6 +14,7 @@ use ciproxy_metering::report::catalog::PriceList;
 use ciproxy_metering::service::Metering;
 use ciproxy_overflow::api::Overflow;
 use ciproxy_store_interface::billing::store::BillingStore;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use secrecy::{ExposeSecret, SecretString};
 
 use crate::billing::{BillingCancellations, BillingMaintenance};
@@ -34,8 +36,8 @@ pub struct StripeSettings {
 pub struct PageConfig {
     /// Dated vendor lists used by the savings report.
     pub price_lists: [PriceList; 2],
-    /// The exact value moved into the configured overflow service.
-    pub boat_root_sizing: Option<RootSizing>,
+    /// Root sizing shared with the configured provider images.
+    pub provider_roots: BTreeMap<OverflowProvider, RootSizing>,
 }
 
 /// The process shares billing and metering between pages and runtime workers.
@@ -92,7 +94,7 @@ impl PageComposition {
                 metering,
                 overflow,
                 price_lists: Some(config.price_lists),
-                boat_root_sizing: config.boat_root_sizing,
+                provider_roots: config.provider_roots,
             }),
         }
     }

@@ -16,6 +16,7 @@ use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::dashboard::records::Membership;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::{RegistrationTarget, ScaleSet};
 use ciproxy_store_interface::store::Store;
@@ -150,7 +151,8 @@ pub(super) async fn register_runner(
             memory_bytes: 8_000_000_000,
             disk_bytes: 80_000_000_000,
         },
-        place: RunnerPlace::Boat {
+        place: RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: format!("runner-{runner_id}"),
             size_name: "small".to_owned(),

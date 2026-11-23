@@ -24,7 +24,7 @@ use ciproxy_store_interface::runners::{self, RunnerPlace};
 use ciproxy_store_interface::settings::OverflowWait;
 use uuid::Uuid;
 
-use crate::boat_snapshot;
+use crate::overflow_snapshot;
 use crate::warm::allocate;
 
 pub(crate) fn build(
@@ -127,7 +127,7 @@ pub(crate) fn build(
             .collect(),
         overflow_enabled: input.settings.overflow_enabled,
         providers: Vec::new(),
-        sandboxes: boat_snapshot::project(input, &input.overflow.starts),
+        sandboxes: overflow_snapshot::project(input, &input.overflow.starts),
         overflow_wait: Duration::from_secs(match input.settings.overflow_wait {
             OverflowWait::AtOnce => 0,
             OverflowWait::Seconds15 => 15,
@@ -147,6 +147,10 @@ pub(crate) fn label_order(order: &[LabelPlace]) -> impl Iterator<Item = Place> +
 
 pub(crate) const fn provider_id(provider: OverflowProvider) -> ProviderId {
     ProviderId::new(provider.as_str())
+}
+
+pub(crate) fn overflow_provider(id: ProviderId) -> Option<OverflowProvider> {
+    OverflowProvider::all().find(|provider| provider_id(*provider) == id)
 }
 
 fn machine_input(

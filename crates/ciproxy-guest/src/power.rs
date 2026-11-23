@@ -1,4 +1,4 @@
-//! End an own-machine VM or leave Boat cleanup to its provider.
+//! End an own-machine VM or leave sandbox cleanup to its provider.
 
 use async_trait::async_trait;
 use tokio::process::Command;
@@ -44,10 +44,10 @@ impl Power for VmPower {
     }
 }
 
-pub(crate) struct BoatPower;
+pub(crate) struct SandboxPower;
 
 #[async_trait]
-impl Power for BoatPower {
+impl Power for SandboxPower {
     async fn shutdown(&mut self) -> Result<()> {
         Ok(())
     }

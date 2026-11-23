@@ -3,6 +3,7 @@
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::organizations::{AppState, RepositoryAccess};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::RunnerPlace;
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use uuid::Uuid;
@@ -36,7 +37,8 @@ fn reinstall_into_another_workspace_keeps_old_history_with_its_tenant() {
     let old_runner = runner(
         &old_label,
         &old_scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: Some(old_account.id),
             sandbox_id: "retained-sandbox".to_owned(),
             size_name: "small".to_owned(),

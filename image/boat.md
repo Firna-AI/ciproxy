@@ -183,8 +183,9 @@ A failure of the service refresh stops the start before the guest starts.
 Without a registration, the guest ends with its missing-registration error
 and starts no runner.
 
-The guest unit runs the guest in its Boat mode. It has no restart and no
-reboot at exit. The guest is a normal service of Boat's systemd.
+The guest unit runs the guest in `sandbox` mode. It has no restart and no
+reboot at exit. The guest is a normal service of Boat's systemd. Earlier
+snapshots use the accepted `boat` alias.
 The launch uses no `chroot`, no private namespace, and no second Docker
 daemon. A job uses the system's Docker service, so
 `sudo systemctl restart docker` works as on a machine.

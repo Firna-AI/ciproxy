@@ -4,6 +4,7 @@ use ciproxy_protocol::resources::VmSize;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::overflow::provider::OverflowProvider;
 use crate::scale_sets::RegistrationTarget;
 
 /// The stored lifecycle state of a runner.
@@ -32,13 +33,15 @@ pub enum RunnerPlace {
         /// The first slot assigned to the VM.
         first_slot: i32,
     },
-    /// A sandbox in the workspace's Boat account.
-    Boat {
+    /// A sandbox in the workspace's overflow provider account.
+    Overflow {
+        /// The provider that owns the sandbox.
+        provider: OverflowProvider,
         /// The retained key version, absent after the key is erased.
         key_id: Option<Uuid>,
-        /// The Boat sandbox identifier.
+        /// The provider's sandbox identifier.
         sandbox_id: String,
-        /// The actual Boat VM size name.
+        /// The actual provider VM size name.
         size_name: String,
     },
 }

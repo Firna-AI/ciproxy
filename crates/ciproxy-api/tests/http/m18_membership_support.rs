@@ -2,6 +2,7 @@
 
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_store_interface::organizations::Organization;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use diesel::prelude::*;
@@ -78,7 +79,8 @@ pub(super) fn runner(pages: &Pages, organization: &Organization, github: i64) ->
             memory_bytes: 8_000_000_000,
             disk_bytes: 60_000_000_000,
         },
-        place: RunnerPlace::Boat {
+        place: RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: format!("retained-{github}"),
             size_name: "retained-size".into(),

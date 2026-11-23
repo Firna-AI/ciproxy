@@ -1,7 +1,7 @@
 //! Trusted metering facts use provider times and reject unknown final intervals.
 
 use chrono::Duration;
-use ciproxy_metering::report::boat::daily_boat_costs;
+use ciproxy_metering::report::overflow::daily_overflow_costs;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
@@ -79,7 +79,7 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     );
     let from = at().date_naive();
     let until = from.succ_opt().unwrap();
-    let totals = daily_boat_costs(
+    let totals = daily_overflow_costs(
         &complete.costs,
         DateRange { from, until },
         at() + Duration::days(1),

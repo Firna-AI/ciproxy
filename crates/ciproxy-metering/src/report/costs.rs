@@ -1,4 +1,4 @@
-//! Registered-day monthly costs and elapsed Boat sandbox costs.
+//! Registered-day monthly costs and elapsed overflow sandbox costs.
 
 use std::collections::BTreeMap;
 
@@ -33,8 +33,8 @@ pub enum CostGap {
 pub struct Costs {
     /// The sum of the known own-machine registered-day costs.
     pub known_machines_usd: Decimal,
-    /// Boat start charges and elapsed runtime costs, including idle sandboxes.
-    pub boat_usd: Decimal,
+    /// All provider start charges and elapsed runtime costs, including idle sandboxes.
+    pub overflow_usd: Decimal,
     /// The sum of the known tier and add-on day costs.
     pub known_plan_usd: Decimal,
     /// The full ciproxy cost only when every required monthly cost is known.
@@ -43,7 +43,7 @@ pub struct Costs {
     pub missing: Vec<CostGap>,
 }
 
-/// Allocate monthly costs to registration days and sum ciproxy Boat costs.
+/// Allocate monthly costs to registration days and include overflow costs.
 ///
 /// Each registration day counts once, including partial registration days.
 /// The last monthly price on a UTC date applies to that whole date.
@@ -53,7 +53,7 @@ pub fn calculate_costs(
     history: &CostHistory,
     range: DateRange,
     at: DateTime<Utc>,
-    boat_usd: Decimal,
+    overflow_usd: Decimal,
 ) -> Costs {
     let mut machine_rates: BTreeMap<(Decimal, u32), u32> = BTreeMap::new();
     let mut plan_rates: BTreeMap<(Decimal, u32), u32> = BTreeMap::new();
@@ -127,11 +127,11 @@ pub fn calculate_costs(
     let known_plan_usd = monthly_total(plan_rates);
     Costs {
         known_machines_usd,
-        boat_usd,
+        overflow_usd,
         known_plan_usd,
         total_usd: missing
             .is_empty()
-            .then_some(known_machines_usd + known_plan_usd + boat_usd),
+            .then_some(known_machines_usd + known_plan_usd + overflow_usd),
         missing,
     }
 }

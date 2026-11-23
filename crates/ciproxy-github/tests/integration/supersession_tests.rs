@@ -91,7 +91,8 @@ fn credentials(store: &Arc<dyn Store>) -> (TokenHash, TokenHash, TokenHash) {
                     memory_bytes: label.size.memory_gb as u64 * 1_000_000_000,
                     disk_bytes: label.size.disk_gb as u64 * 1_000_000_000,
                 },
-                place: RunnerPlace::Boat {
+                place: RunnerPlace::Overflow {
+                    provider: OverflowProvider::Boat,
                     key_id: Some(account.id),
                     sandbox_id: "live-job".to_owned(),
                     size_name: "small".to_owned(),

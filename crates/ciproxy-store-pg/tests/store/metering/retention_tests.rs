@@ -23,7 +23,8 @@ fn anonymous_totals_survive_organization_purge_and_expire_after_ninety_days() {
     let vm = runner(
         &label,
         &scale,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: None,
             sandbox_id: "completed".to_owned(),
             size_name: "2cpu".to_owned(),
@@ -88,9 +89,9 @@ fn anonymous_totals_survive_organization_purge_and_expire_after_ninety_days() {
         .days;
     assert_eq!(
         (
-            totals[0].sizes[0].overflow.starts,
-            totals[0].sizes[0].overflow.minutes,
-            totals[0].overflow_usd
+            totals[0].sizes[0].overflow[&OverflowProvider::Boat].starts,
+            totals[0].sizes[0].overflow[&OverflowProvider::Boat].minutes,
+            totals[0].overflow_usd[&OverflowProvider::Boat]
         ),
         (1, usd("5"), usd("0.3"))
     );

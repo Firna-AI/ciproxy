@@ -226,7 +226,7 @@ pub(super) async fn composition(
         Arc::new(StoredMetering::new(fixture.database.store.clone())),
         None,
         PageConfig {
-            boat_root_sizing: None,
+            provider_roots: Default::default(),
             price_lists: [Alternative::Blacksmith, Alternative::Github].map(|alternative| {
                 PriceList {
                     alternative,

@@ -1,9 +1,9 @@
 # ciproxy-control-plane
 
 The hosted ciproxy runtime connects GitHub scale sets to customer machines.
-When those machines are busy, it starts runners on Boat.
+It also starts runners on configured overflow providers.
 Its executable serves the dashboard API, the machine gateway, GitHub
-webhooks, and Boat exit reports on one HTTP host. It also runs the scaler
+webhooks, and sandbox exit reports on one HTTP host. It also runs the scaler
 and the GitHub workers. This crate has no open licence.
 
 ## Responsibilities
@@ -12,9 +12,8 @@ Own the executable and the single HTTP host.
 Keep GitHub App credentials in the hosted process.
 Persist runner reservations before one-use registrations leave the process.
 Preserve running jobs across busy races, offline machines, and restarts.
-Keep a slow GitHub or Boat request from delaying other machines, jobs, and
-workspaces.
-Compose the Boat overflow service and keep accepted Boat supply across
+Keep slow GitHub and provider requests from delaying other workspaces.
+Compose the provider registry and keep accepted overflow supply across
 restarts.
 
 ## What This Crate Does
@@ -35,22 +34,23 @@ facts of the process.
 
 ### Routes
 
-| Route                       | Use                                                       |
-| --------------------------- | --------------------------------------------------------- |
-| `/agent/`                   | The agent WebSocket.                                      |
-| `/agent/cache-metadata`     | Cache entry metadata for a job on the calling machine.    |
-| `/hooks/github`             | GitHub App webhooks, up to GitHub's 25 MiB payload limit. |
-| `/hooks/stripe`             | Raw signed Stripe billing webhooks.                       |
-| `/hooks/boat/runner-exit`   | Boat sandbox exit reports, while Boat is configured.      |
-| `/api`                      | The dashboard API.                                        |
-| `/api/auth/github/callback` | The GitHub sign-in callback.                              |
-| `/api/github/setup`         | The GitHub App setup URL.                                 |
-| `/api/health/live`          | HTTP 200 while the process serves.                        |
-| `/api/health/ready`         | HTTP 200 after the first reconciliation pass, else 503.   |
+| Route                         | Use                                                       |
+| ----------------------------- | --------------------------------------------------------- |
+| `/agent/`                     | The agent WebSocket.                                      |
+| `/agent/cache-metadata`       | Cache entry metadata for a job on the calling machine.    |
+| `/hooks/github`               | GitHub App webhooks, up to GitHub's 25 MiB payload limit. |
+| `/hooks/stripe`               | Raw signed Stripe billing webhooks.                       |
+| `/hooks/overflow/runner-exit` | Sandbox exit reports while overflow is configured.        |
+| `/api`                        | The dashboard API.                                        |
+| `/api/auth/github/callback`   | The GitHub sign-in callback.                              |
+| `/api/github/setup`           | The GitHub App setup URL.                                 |
+| `/api/health/live`            | HTTP 200 while the process serves.                        |
+| `/api/health/ready`           | HTTP 200 after the first reconciliation pass, else 503.   |
 
 Register `PUBLIC_URL/hooks/github` as the App webhook URL.
 [The API guide](../ciproxy-api/README.md#quick-start) gives the other App
-registration settings. No route has an alias.
+registration settings. The [exit callback](overflow.md#exit-callback)
+also serves deliveries that saved the previous path.
 The API owns sign-in, membership, setup, and workspace management.
 It also serves Jobs, Savings, Plan and usage, Plans, Checkout, and the shared
 page banner. Stripe deliveries use the host root and need no browser cookie.
@@ -70,23 +70,23 @@ finish. Other runtime work then gets up to five more seconds.
 The [runner guide](runners.md) gives routing, reservations, the agent event
 queue, job ID binding and preparation, remote requests, report confirmation,
 stop replay, retirement authority, and the removal and take-out policies.
-Take-out checks saved retirement for both own-machine and Boat reservations
+Take-out checks saved retirement for both own-machine and overflow reservations
 before the API removes GitHub access.
 Routing reads `MachineSnapshot::state` from the store interface. Only `Ready`
 sets a machine's scaler connection flag. Resource and drain checks still
 control admission after that flag.
 
-### Boat overflow
+### Overflow providers
 
-The optional `BOAT_SHARED_SNAPSHOT` setting turns on the Boat service.
+The optional `BOAT_SHARED_SNAPSHOT` setting adds Boat to the registry.
 Without it, own machines still run jobs, and Boat stays off.
 The runtime, the dashboard API, and the exit callback share one overflow
 service. The [overflow guide](overflow.md) gives the configuration, the
 runtime guarantees, and the exit callback. The
 [live smoke guide](overflow-smoke.md) gives the live smoke checks.
 After an owner removes the App, launched sandboxes run until their runner
-exits or their saved lifetime ends. The runtime holds the Boat key for
-their cleanup, also after the last organization leaves.
+exits or their saved lifetime ends. The runtime holds each provider key for
+its sandbox cleanup, also after the last organization leaves.
 
 ### GitHub workers
 
@@ -123,7 +123,7 @@ settings below. Without them, it exits with status 1 and logs
 `missing setting DATABASE_URL`.
 
 The chart sets `HTTP_BIND`, `DATABASE_URL`, `PUBLIC_URL`,
-`IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, `CDN_SIGNING_KEY_NAME`, and
+`IMAGE_URL_PREFIX`, `OVERFLOW_KMS_KEY`, `CDN_SIGNING_KEY_NAME`, and
 `SECRETS_DIRECTORY`.
 Deploy fills `controlPlane.env` with `GITHUB_APP_ID`,
 `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_APP_SLUG`, and the immutable
@@ -209,7 +209,7 @@ GitHub, and database access, so they stay operator work.
   constructs the Stripe client outside the async runtime worker, and supplies
   `HostedBillingAlerts`.
 - [src/pages.rs](src/pages.rs) shares billing, paid previews, metering,
-  overflow, and the overflow runtime's exact Boat root sizing.
+  overflow, and image sizing for the current dashboard API.
 - [src/billing.rs](src/billing.rs) retries durable App-removal cancellations
   and pending payment work.
 - [src/comparison_prices.rs](src/comparison_prices.rs) holds the dated USD
@@ -233,13 +233,13 @@ GitHub, and database access, so they stay operator work.
 - [src/runtime_entrypoints.rs](src/runtime_entrypoints.rs) runs the tick, job,
   agent, and lifecycle entry points as short saved-state steps.
 - [src/runtime_reconciliation.rs](src/runtime_reconciliation.rs) runs the
-  short leased workspace pass, and the Boat-only pass after a Boat refresh.
+  short leased workspace pass and the pass after a provider refresh.
 - [src/runtime_inbox.rs](src/runtime_inbox.rs) converts agent observations
   to compact values and handles them with machine removals in arrival order.
 - [src/runtime_payloads.rs](src/runtime_payloads.rs) retains exact Worker
   IDs under the shared byte budget, including events still being handled.
 - [src/runtime_tasks.rs](src/runtime_tasks.rs) owns and joins one GitHub or
-  Boat task for each key. `OwnMachines::shutdown` stops them.
+  overflow task for each key. `OwnMachines::shutdown` stops them.
 - [src/remote_results.rs](src/remote_results.rs) saves remote results through
   the guarded store writes.
 - [src/hosted_events.rs](src/hosted_events.rs) defines `Relay`. Its gateway
@@ -259,8 +259,8 @@ GitHub, and database access, so they stay operator work.
 - [src/lifecycle_completion.rs](src/lifecycle_completion.rs) defines
   `takeout_accepted`, which the callback and `quiesce_lifecycle` share.
 - [src/reservations.rs](src/reservations.rs) gives one saved retirement
-  result for machine commands, Boat registrations, deliveries, and runners.
-- [src/boat_retirement.rs](src/boat_retirement.rs) shares durable Boat
+  result for machine commands, overflow registrations, and deliveries.
+- [src/overflow_retirement.rs](src/overflow_retirement.rs) shares overflow
   registration cleanup between take-out and ordinary recovery.
 - [src/accounting.rs](src/accounting.rs) runs coalesced accounting passes
   outside runner operations.
@@ -277,29 +277,29 @@ GitHub, and database access, so they stay operator work.
   credential, the workspace, and the saved Worker job binding, then lists
   the job's GitHub cache entries.
 - [src/snapshot.rs](src/snapshot.rs) builds the pure scaler's inputs,
-  including shared machine state and saved Boat supply. It derives the
-  scaler's machine and Boat switches from the stored label order.
+  including shared machine state, saved overflow supply, and each label's
+  order of places.
 - [src/docker_budget.rs](src/docker_budget.rs) budgets for labels that list
   own machines and for runner disk allocations.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.
 - [src/slots.rs](src/slots.rs) selects exact logical slot sets.
 - [src/http.rs](src/http.rs) mounts shared HTTP routes and health checks.
 - [src/overflow_composition.rs](src/overflow_composition.rs) builds the
-  Boat service and its registration authority when Boat is configured.
-- [src/boat_runtime.rs](src/boat_runtime.rs) dispatches the Boat cleanup,
-  refresh, and recovery tasks of each pass.
-- [src/boat_start.rs](src/boat_start.rs) starts a Boat delivery after its
-  GitHub registration, in a supervised task.
-- [src/boat_snapshot.rs](src/boat_snapshot.rs) turns saved Boat deliveries,
-  registrations, runner states, and launch times into scaler supply.
-- [src/boat_authority.rs](src/boat_authority.rs) defines
-  `BoatRunnerAuthority`. It retires Boat registrations GitHub-first for the
+  provider registry, shared overflow service, and registration authority.
+- [src/overflow_runtime.rs](src/overflow_runtime.rs) dispatches cleanup,
+  refresh, and recovery for overflow.
+- [src/overflow_start.rs](src/overflow_start.rs) runs a provider start after
+  GitHub registration.
+- [src/overflow_snapshot.rs](src/overflow_snapshot.rs) projects provider
+  accounts and saved sandbox supply into the scaler snapshot.
+- [src/overflow_authority.rs](src/overflow_authority.rs) defines
+  `OverflowRunnerAuthority`. It retires registrations GitHub-first for the
   overflow service and for runtime recovery. It asks GitHub again about a
   saved `Busy` runner without a started job. It preserves the launched
   sandboxes of an organization whose owner removed the App.
-- [src/boat_jobs.rs](src/boat_jobs.rs) binds trusted GitHub job facts to
-  Boat runners.
-- [src/boat_callback.rs](src/boat_callback.rs) mounts the sandbox exit
+- [src/overflow_jobs.rs](src/overflow_jobs.rs) binds trusted GitHub job facts to
+  overflow runners.
+- [src/overflow_callback.rs](src/overflow_callback.rs) mounts the sandbox exit
   callback.
 - [scripts/overflow-smoke.py](scripts/overflow-smoke.py) runs the live Boat
   checks.
@@ -309,11 +309,11 @@ GitHub, and database access, so they stay operator work.
 
 ### Related Docs
 
-- [Architecture](../../docs/architecture.md) describes the own-machine and
-  Boat flows.
-- [Overflow](../../docs/protocol/overflow.md) defines Boat runners, cleanup,
-  and the spend limit.
-- [ciproxy-overflow](../ciproxy-overflow/README.md) executes Boat deliveries.
+- [Architecture](../../docs/architecture.md) describes own-machine and
+  overflow flows.
+- [Overflow](../../docs/protocol/overflow.md) defines provider accounts and
+  overflow runners.
+- [ciproxy-overflow](../ciproxy-overflow/README.md) executes provider deliveries.
 - [Agent](../../docs/protocol/agent.md) defines machine and VM lifecycle.
 - [Routing](../../docs/protocol/job-routing.md) defines fit and warm runners.
 - [Cache](../../docs/protocol/cache.md) defines cache trust and restore order.

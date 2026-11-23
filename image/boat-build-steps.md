@@ -162,7 +162,7 @@ unchanged. The build does not fail on that warning.
 
 ## The runner stderr of a Boat job
 
-The guest drops the stderr of the runner process. So in Boat mode, the
+The guest drops the stderr of the runner process. In `sandbox` mode, the
 runner entry first sends its stderr to a journal helper:
 
 - [boat-runner-entry.sh](boat-runner-entry.sh) starts

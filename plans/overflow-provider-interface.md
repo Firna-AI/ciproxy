@@ -250,6 +250,13 @@ My calls, 23 November 2026:
   saved before the deploy is unfinished. Reason: the route already serves
   one sandbox and needs no provider. A delivery seals its callback URL into
   its launch input, and an unsent delivery can start long after the deploy.
+- New deliveries get the neutral exit path at once, and the old path stays
+  served. During a rolling deploy, a guest that reports to a control-plane
+  copy that is still old gets a 404 and does not retry. Its sandbox then
+  ends through the regular cleanup, as for any lost exit report. Reason:
+  the deploy runs one copy, its overlap is short, a guest boots minutes
+  after its delivery is saved, and the cleanup already covers a lost
+  report.
 - The workspace switch, the new-label order, the offered mark, and the
   largest-size rule keep today's behaviour for a workspace with Boat only.
   Reason: the risk rule below, and no user decision changes them.
@@ -618,35 +625,37 @@ Depends on: 7
 The control plane composes the provider registry. The guest and metering use
 provider-neutral names.
 
-- [ ] Rename the `boat_*` modules of `ciproxy-control-plane` to `overflow_*`
+- [x] Rename the `boat_*` modules of `ciproxy-control-plane` to `overflow_*`
       names that do not clash with the existing `overflow_composition`.
       Compose the provider registry at the composition root.
-- [ ] Build the scaler snapshot with every provider account of a workspace
+- [x] Build the scaler snapshot with every provider account of a workspace
       and each label order. Move `snapshot.rs` and `docker_budget.rs` to the
       order.
-- [ ] Replace `BOAT_KMS_KEY` with a neutral setting that names the same KMS
+- [x] Replace `BOAT_KMS_KEY` with a neutral setting that names the same KMS
       key, in `src/config.rs`, its startup test, and the Helm template
       `control-plane.yaml`. Keep `BOAT_SHARED_SNAPSHOT` as the Boat image
       setting.
-- [ ] Move the exit callback to a neutral path. Keep the old path while a
+- [x] Move the exit callback to a neutral path. Keep the old path while a
       delivery saved before the deploy is unfinished, and add a follow-up
       item that removes it.
-- [ ] Rename the Boat mode of `ciproxy-guest` to a sandbox mode. Keep the
+- [x] Rename the Boat mode of `ciproxy-guest` to a sandbox mode. Keep the
       private launch file and the exit callback. Update
       `image/ciproxy-boat-guest.service`,
       `image/check-runner-environment.py`, and the other image checks.
-- [ ] Change `JobPlace::Boat` and `RunnerPlace::Boat` of metering to one
+- [x] Change `JobPlace::Boat` and `RunnerPlace::Boat` of metering to one
       overflow place with the provider. Give the daily costs and the savings
       report a row for each provider.
-- [ ] Repoint the `overflow.md#spend-limit` link of
+- [x] Repoint the `overflow.md#spend-limit` link of
       `crates/ciproxy-metering/README.md` to `overflow-spend.md`.
-- [ ] Update `crates/ciproxy-control-plane/overflow.md`,
+- [x] Update `crates/ciproxy-control-plane/overflow.md`,
       `crates/ciproxy-control-plane/overflow-smoke.md`, and the READMEs of
       the control plane, the guest, metering, and deploy.
-- [ ] Delete the Milestone 6 adapters in
+- [x] Delete the Milestone 6 adapters in
       `crates/ciproxy-control-plane/src/boat_snapshot.rs`,
       `boat_runtime.rs`, and `actions.rs` that supply only Boat and send
       every provider start to the Boat executor.
+
+Evidence: `.context/providers-interface/m8/`.
 
 ## Milestone 9: Dashboard API: provider-neutral wire
 

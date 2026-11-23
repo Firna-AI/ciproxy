@@ -94,7 +94,8 @@ MeteringStore reads coherent workspace facts across all organizations.
 Workspace creation and machine registration save their trusted times.
 MeteringStore stores machine, plan, and overflow cost histories.
 BillingState supplies the current Free or Stripe billing period.
-Anonymous daily aggregates keep actual VM sizes and overflow costs.
+Anonymous daily aggregates keep actual VM sizes and job places. Overflow
+runner placements, job cursors, and daily costs keep the provider.
 Anonymous timestamp counts preserve exact period boundaries.
 Job and runner cursors support atomic signed aggregate corrections.
 `OverflowAccounting` holds source costs and cursors from one snapshot.

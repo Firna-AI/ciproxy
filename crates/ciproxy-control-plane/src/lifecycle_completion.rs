@@ -37,8 +37,12 @@ impl MachineRuntime {
         self.takeout_accepted(organization).await
     }
 
-    pub(crate) async fn current_boat_busy(&self, workspace: Uuid, runner: Uuid) -> Result<bool> {
-        let expected = self.boat_answers.lock().await.get(&runner).cloned();
+    pub(crate) async fn current_overflow_busy(
+        &self,
+        workspace: Uuid,
+        runner: Uuid,
+    ) -> Result<bool> {
+        let expected = self.overflow_answers.lock().await.get(&runner).cloned();
         let Some((generation, expected)) = expected else {
             return Ok(false);
         };
@@ -52,7 +56,7 @@ impl MachineRuntime {
         if current_generation != Some(generation) {
             return Ok(false);
         }
-        if self.task_scope()?.contains(Work::BoatRetire(runner)) {
+        if self.task_scope()?.contains(Work::OverflowRetire(runner)) {
             return Ok(false);
         }
         let store = self.store.clone();
@@ -124,7 +128,10 @@ impl MachineRuntime {
             .iter()
             .filter(|intent| intent.organization_id == organization_id)
         {
-            if !self.current_boat_busy(workspace, intent.runner_id).await? {
+            if !self
+                .current_overflow_busy(workspace, intent.runner_id)
+                .await?
+            {
                 return Err(Error::StateChanged);
             }
         }

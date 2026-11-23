@@ -50,7 +50,7 @@ async fn m18_paid_review_requires_authoritative_quote_and_uses_its_anchor_day() 
     assert_eq!(fixture_io::json(absent).await["code"], "unavailable");
     let workspace = pages.fixture.workspace;
     pages.services = Arc::new(PageServices {
-        boat_root_sizing: None,
+        provider_roots: Default::default(),
         billing: pages.services.billing.clone(),
         metering: pages.services.metering.clone(),
         price_lists: pages.services.price_lists.clone(),

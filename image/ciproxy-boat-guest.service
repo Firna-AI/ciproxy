@@ -7,7 +7,7 @@ Wants=network-online.target docker.service containerd.service
 [Service]
 Type=exec
 EnvironmentFile=/etc/ciproxy/guest.env
-ExecStart=/usr/local/bin/ciproxy-guest --image-id ${IMAGE_ID} boat --registration-file /run/ciproxy/registration.json
+ExecStart=/usr/local/bin/ciproxy-guest --image-id ${IMAGE_ID} sandbox --registration-file /run/ciproxy/registration.json
 Restart=no
 KillMode=control-group
 

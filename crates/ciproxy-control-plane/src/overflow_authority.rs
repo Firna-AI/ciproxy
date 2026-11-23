@@ -9,12 +9,12 @@ use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrations}
 use ciproxy_github::runtime::Runtime;
 use ciproxy_overflow::api::{Retirement, RunnerAuthority};
 use ciproxy_overflow::error::{Error, Result};
+use ciproxy_overflow::registry::ProviderRegistry;
 use ciproxy_overflow::view::OverflowView;
 use ciproxy_scaler::actions::Action;
 use ciproxy_scaler::decision::decide;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::organizations::AppState;
-use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::runtime_results::{
@@ -23,13 +23,15 @@ use ciproxy_store_interface::runtime_results::{
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
-use crate::boat_snapshot;
+use crate::overflow_snapshot;
 use crate::snapshot::build;
 
 /// Shared registration authority used by overflow cleanup and runtime recovery.
-pub struct BoatRunnerAuthority {
-    /// Current released Boat image requirement.
+pub struct OverflowRunnerAuthority {
+    /// Current released own-machine image requirement.
     pub root_sizing: RootSizing,
+    /// The deployed image and factory of each available provider.
+    pub providers: Arc<ProviderRegistry>,
     /// Shared runtime clock.
     pub clock: Arc<dyn Runtime>,
     /// Current workspace and installation facts.
@@ -39,7 +41,7 @@ pub struct BoatRunnerAuthority {
 }
 
 /// A live retirement result tied to the saved authority that accepted it.
-pub struct BoatRemoval {
+pub struct OverflowRemoval {
     /// GitHub's current retirement decision.
     pub retirement: Retirement,
     /// Exact saved authority after the conditional result write.
@@ -48,17 +50,17 @@ pub struct BoatRemoval {
 
 /// GitHub retirement shared by startup recovery, take-out, and overflow maintenance.
 #[async_trait]
-pub trait BoatRegistrationRetirement: Send + Sync {
+pub trait OverflowRegistrationRetirement: Send + Sync {
     /// Obtain live GitHub removal or Busy proof. Callers enforce delivery safety.
     async fn remove(
         &self,
         workspace_id: Uuid,
         intent: &OverflowRunnerIntent,
-    ) -> Result<BoatRemoval>;
+    ) -> Result<OverflowRemoval>;
 }
 
 #[async_trait]
-impl RunnerAuthority for BoatRunnerAuthority {
+impl RunnerAuthority for OverflowRunnerAuthority {
     async fn retire(
         &self,
         workspace_id: Uuid,
@@ -115,14 +117,16 @@ impl RunnerAuthority for BoatRunnerAuthority {
         });
         if !takeout && !busy {
             let view = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())?;
-            let boat = view
-                .provider(OverflowProvider::Boat)
-                .ok_or(Error::ProviderUnavailable)?;
             let mut snapshot = build(&input, &runnable, self.clock.now(), self.root_sizing);
-            snapshot.providers.push(boat_snapshot::account(
-                self.root_sizing,
-                boat.retained_scaler_account()?,
-            ));
+            for (provider, account) in overflow_snapshot::accounts(&view, &self.providers, &[]) {
+                match account {
+                    Ok(account) => snapshot.providers.push(account),
+                    Err(error) if provider == intent.provider => return Err(error),
+                    Err(error) => {
+                        tracing::warn!(provider = provider.as_str(), %error, "Provider catalog unavailable")
+                    }
+                }
+            }
             let sandbox = snapshot.sandboxes.iter().find(|sandbox| {
                 sandbox
                     .runner
@@ -152,12 +156,12 @@ impl RunnerAuthority for BoatRunnerAuthority {
 }
 
 #[async_trait]
-impl BoatRegistrationRetirement for BoatRunnerAuthority {
+impl OverflowRegistrationRetirement for OverflowRunnerAuthority {
     async fn remove(
         &self,
         workspace_id: Uuid,
         intent: &OverflowRunnerIntent,
-    ) -> Result<BoatRemoval> {
+    ) -> Result<OverflowRemoval> {
         if self
             .registration_access_ended(workspace_id, intent.runner_id)
             .await?
@@ -198,7 +202,7 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
                 })
                 .await
                 {
-                    Ok(Ok(OverflowRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
+                    Ok(Ok(OverflowRunnerWrite::Applied(saved))) => Ok(OverflowRemoval {
                         retirement: Retirement::RunningJob,
                         guard: *saved,
                     }),
@@ -219,7 +223,7 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
                 })
                 .await
                 {
-                    Ok(Ok(OverflowRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
+                    Ok(Ok(OverflowRunnerWrite::Applied(saved))) => Ok(OverflowRemoval {
                         retirement: Retirement::Removed,
                         guard: *saved,
                     }),
@@ -234,7 +238,7 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
     }
 }
 
-impl BoatRunnerAuthority {
+impl OverflowRunnerAuthority {
     async fn registration_access_ended(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<bool> {
         let store = self.store.clone();
         match tokio::task::spawn_blocking(move || {

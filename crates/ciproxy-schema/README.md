@@ -112,6 +112,11 @@ every existing workspace. `label_places` stores the order of each label.
 The migration keeps all four switch combinations and renames the fallback
 to `largest_overflow`. Rollback restores the switches from order membership.
 
+The `202611231835_metering_by_provider` migration saves the provider on
+each overflow runner. It assigns Boat to existing sandbox runners. It
+splits saved daily usage by job place and keys each daily sandbox cost by
+provider. The existing job cursor JSON keeps its format.
+
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
 A separate token-free continuation stores exact claim IDs under the existing

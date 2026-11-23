@@ -1,9 +1,12 @@
-//! Preserve each accepted Boat delivery in the common scaler snapshot.
+//! Project provider accounts and accepted deliveries into the scaler snapshot.
 
-use ciproxy_agent::root_sizing::RootSizing;
+use chrono::DateTime;
+use ciproxy_overflow::error::Result;
+use ciproxy_overflow::registry::ProviderRegistry;
+use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::identifiers::{JobId, LabelName, OrganizationId, RunnerId};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
-use ciproxy_scaler::provider::{AccountFacts, ProviderAccount, ProviderRunner, Sandbox, SandboxId};
+use ciproxy_scaler::provider::{ProviderAccount, ProviderRunner, Sandbox, SandboxId};
 use ciproxy_scaler::snapshot::{Runner, RunnerState};
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
@@ -13,13 +16,32 @@ use ciproxy_store_interface::runners;
 
 use crate::snapshot::{instant, provider_id, registration_target};
 
-pub(crate) fn account(root_sizing: RootSizing, facts: AccountFacts) -> ProviderAccount {
-    ProviderAccount {
-        id: provider_id(OverflowProvider::Boat),
-        available: true,
-        root_sizing,
-        facts,
-    }
+pub(crate) fn accounts<'a>(
+    view: &'a OverflowView,
+    registry: &'a ProviderRegistry,
+    refreshed: &'a [OverflowProvider],
+) -> impl Iterator<Item = (OverflowProvider, Result<ProviderAccount>)> + 'a {
+    view.providers.iter().map(|view| {
+        let provider = view.provider;
+        let configured = registry.get(provider).ok();
+        let available = configured.is_some();
+        let facts = if available && refreshed.contains(&provider) {
+            view.scaler_account(DateTime::UNIX_EPOCH)
+        } else {
+            view.retained_scaler_account()
+        };
+        (
+            provider,
+            facts.map(|facts| ProviderAccount {
+                id: provider_id(provider),
+                available,
+                root_sizing: configured
+                    .map(|entry| entry.image.root_sizing)
+                    .unwrap_or_default(),
+                facts,
+            }),
+        )
+    })
 }
 
 pub(crate) fn project(input: &RoutingSnapshot, records: &[StartRecord]) -> Vec<Sandbox> {

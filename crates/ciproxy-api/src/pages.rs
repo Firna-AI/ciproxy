@@ -1,5 +1,6 @@
 //! Optional hosted metering and billing composition without changing ApiState.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::{Extension, Router};
@@ -9,6 +10,7 @@ use ciproxy_billing::service::paid_review::PaidReview;
 use ciproxy_metering::report::catalog::PriceList;
 use ciproxy_metering::service::Metering;
 use ciproxy_overflow::api::Overflow;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 
 use crate::router::router;
 use crate::state::ApiState;
@@ -25,8 +27,8 @@ pub struct PageServices {
     pub paid_review: Option<Arc<dyn PaidReview>>,
     /// Existing overflow service for live queue refusal and spend observations.
     pub overflow: Option<Arc<dyn Overflow>>,
-    /// The exact trusted sizing shared with OverflowConfig for the Boat image.
-    pub boat_root_sizing: Option<RootSizing>,
+    /// Root sizing from the registry of deployed overflow images.
+    pub provider_roots: BTreeMap<OverflowProvider, RootSizing>,
 }
 
 /// Build the dashboard router with billing and metering. Mount under `/api`.

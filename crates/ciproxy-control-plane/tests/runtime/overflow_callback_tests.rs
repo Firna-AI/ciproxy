@@ -3,10 +3,9 @@
 use std::sync::atomic::Ordering;
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
+use axum::http::StatusCode;
 use chrono::Duration;
-use ciproxy_control_plane::boat_callback;
+use ciproxy_control_plane::overflow_callback;
 use ciproxy_github::registrations::RegistrationRetirement;
 use ciproxy_overflow::api::StartRequest;
 use ciproxy_overflow::error::Error;
@@ -22,26 +21,16 @@ use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::workspaces::Workspace;
-use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::held_remote::HeldRemote;
+use super::overflow_service::post_exit_at;
 use super::overflow_support::Harness;
 use super::settled::Settled;
 use super::support::at;
 
 async fn post_exit(router: &Router, token: &str, runner: &str) -> StatusCode {
-    let request = Request::builder()
-        .method("POST")
-        .uri("/hooks/boat/runner-exit")
-        .header("authorization", format!("Bearer {token}"))
-        .header("content-type", "application/json")
-        .body(Body::from(
-            serde_json::json!({"type":"runner_exited","runner_id":runner,"exit":{"code":0}})
-                .to_string(),
-        ))
-        .unwrap();
-    router.clone().oneshot(request).await.unwrap().status()
+    post_exit_at(router, "/hooks/boat/runner-exit", token, runner).await
 }
 
 #[tokio::test]
@@ -136,7 +125,7 @@ async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
     let first_token = inputs[0]["exit_report_token"].as_str().unwrap();
     let other_token = inputs[1]["exit_report_token"].as_str().unwrap();
     let first_runner = inputs[0]["configure"]["runner_id"].as_str().unwrap();
-    let router = boat_callback::router(harness.service.clone());
+    let router = overflow_callback::router(harness.service.clone());
     assert_eq!(
         post_exit(&router, first_token, "not-a-uuid").await,
         StatusCode::BAD_REQUEST
@@ -188,7 +177,7 @@ async fn callback_saves_exit_while_workspace_lock_remains_held() {
     let inputs = harness.ports.inputs.lock().unwrap().clone();
     let token = inputs[0]["exit_report_token"].as_str().unwrap();
     let runner = inputs[0]["configure"]["runner_id"].as_str().unwrap();
-    let router = boat_callback::router(harness.service.clone());
+    let router = overflow_callback::router(harness.service.clone());
     let reported_at = *harness.ports.now.lock().unwrap();
     let cleanup = harness.service.cleanup(workspace);
     tokio::pin!(cleanup);
@@ -247,7 +236,7 @@ async fn callback_returns_503_for_claim_failure_and_204_for_delete_failure() {
     let inputs = harness.ports.inputs.lock().unwrap().clone();
     let token = inputs[0]["exit_report_token"].as_str().unwrap();
     let runner = inputs[0]["configure"]["runner_id"].as_str().unwrap();
-    let router = boat_callback::router(harness.service.clone());
+    let router = overflow_callback::router(harness.service.clone());
     let reported_at = *harness.ports.now.lock().unwrap();
     let before = store.overflow_runtime_snapshot(workspace).unwrap().starts;
 

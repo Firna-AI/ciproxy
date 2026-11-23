@@ -25,7 +25,7 @@ fn overlapping_prices_keep_prior_known_costs_and_exact_gaps() {
         (
             costs.known_machines_usd,
             costs.known_plan_usd,
-            costs.boat_usd,
+            costs.overflow_usd,
             costs.total_usd,
             costs.missing,
         ),
@@ -68,7 +68,7 @@ fn same_date_price_gaps_use_the_last_price_for_the_full_date() {
         (
             costs.known_machines_usd,
             costs.known_plan_usd,
-            costs.boat_usd,
+            costs.overflow_usd,
             costs.total_usd,
             costs.missing,
         ),
@@ -111,7 +111,7 @@ fn empty_prices_do_not_change_the_real_successor_in_either_input_order() {
             (
                 costs.known_machines_usd,
                 costs.known_plan_usd,
-                costs.boat_usd,
+                costs.overflow_usd,
                 costs.total_usd,
                 costs.missing,
             ),

@@ -4,6 +4,7 @@ use ciproxy_api::runtime::Runtime;
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::jobs::{Job, JobState};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use uuid::Uuid;
 
@@ -30,7 +31,8 @@ pub(super) fn runner(pages: &Pages, machine: Option<Uuid>, github: i64) -> Runne
             disk_bytes: 58_300_000_001,
         },
         place: machine.map_or_else(
-            || RunnerPlace::Boat {
+            || RunnerPlace::Overflow {
+                provider: OverflowProvider::Boat,
                 key_id: None,
                 sandbox_id: format!("sandbox-{github}"),
                 size_name: "actual-medium".into(),

@@ -9,13 +9,13 @@ mod replay;
 mod runner_assignment;
 pub mod service;
 
-mod boat;
 mod cli;
 mod platform;
 mod power;
 mod preparation;
 mod process;
 mod proxy;
+mod sandbox;
 mod vsock;
 
 /// Construct the guest application at the binary composition root.

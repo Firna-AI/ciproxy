@@ -44,7 +44,7 @@ fn attach(fixture: &mut Fixture, ports: Arc<Ports>, factory: Arc<dyn ProviderFac
         OverflowDependencies {
             store: fixture.database.store.clone(),
             cipher: ports.clone(),
-            providers: ProviderRegistry::default().with_provider(
+            providers: Arc::new(ProviderRegistry::default().with_provider(
                 OverflowProvider::Boat,
                 factory,
                 ImageSource {
@@ -53,7 +53,7 @@ fn attach(fixture: &mut Fixture, ports: Arc<Ports>, factory: Arc<dyn ProviderFac
                         image_root_bytes: fixture.state.config.image_disk_bytes,
                     },
                 },
-            ),
+            )),
             runners: Arc::new(Unimock::new(())),
             clock: ports.clone(),
             tokens: ports.clone(),

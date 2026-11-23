@@ -18,5 +18,6 @@ diesel::table! {
         overflow_key_id -> Nullable<Uuid>,
         sandbox_id -> Nullable<Text>,
         overflow_size_name -> Nullable<Text>,
+        overflow_provider -> Nullable<Text>,
     }
 }

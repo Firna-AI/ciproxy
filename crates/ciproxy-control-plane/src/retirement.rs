@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 
-/// Saved authority shared by own-machine and Boat retirement acceptance.
+/// Saved authority shared by own-machine and overflow retirement acceptance.
 pub(crate) enum RunnerRetirement {
     /// Durable retirement needs no further registration access.
     Retired,

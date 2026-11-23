@@ -1,7 +1,7 @@
 //! Measured billing ends before later lifecycle reconciliation.
 
 use chrono::{DateTime, Duration, Utc};
-use ciproxy_metering::report::boat::daily_boat_costs;
+use ciproxy_metering::report::overflow::daily_overflow_costs;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
@@ -63,7 +63,7 @@ fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
     let read = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(read.costs[0].ends_at, Some(start + Duration::hours(6)));
     assert_eq!(
-        daily_boat_costs(&read.costs, range, start + Duration::hours(7))[0].usd,
+        daily_overflow_costs(&read.costs, range, start + Duration::hours(7))[0].usd,
         Decimal::new(462, 3)
     );
     record.phase = StartPhase::Ended;
@@ -72,7 +72,7 @@ fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
     let read = database.store.overflow_accounting(workspace_id).unwrap();
     assert_eq!(read.costs[0].ends_at, Some(start + Duration::hours(6)));
     assert_eq!(
-        daily_boat_costs(&read.costs, range, start + Duration::hours(7))[0].usd,
+        daily_overflow_costs(&read.costs, range, start + Duration::hours(7))[0].usd,
         Decimal::new(462, 3)
     );
 }

@@ -1,5 +1,6 @@
 //! Construct hosted adapters without exposing secrets to agents or API clients.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
@@ -28,6 +29,7 @@ use ciproxy_github::scale_sets::{ScaleSetFactory, sdk::AppScaleSetFactory};
 use ciproxy_github::timing::RepairTiming;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_overflow::api::Overflow;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::store::Store;
 use reqwest::{Client, Url, redirect};
 use secrecy::ExposeSecret;
@@ -45,10 +47,10 @@ use crate::runtime::{MachineRuntime, OwnMachines};
 
 /// The process's shared gateway, GitHub App, and runtime service boundaries.
 pub struct Hosted {
-    /// Shared Boat executor for runtime, callback, and dashboard routes.
+    /// Shared overflow executor for runtime, callback, and dashboard routes.
     pub overflow: Option<Arc<dyn Overflow>>,
-    /// The exact image sizing passed into the shared overflow executor.
-    pub boat_root_sizing: Option<RootSizing>,
+    /// Root sizing of each provider's deployed image.
+    pub provider_roots: BTreeMap<OverflowProvider, RootSizing>,
     /// Shared store-backed metering for accounting and dashboard reports.
     pub metering: Arc<dyn Metering>,
     /// Gateway used by the dashboard and its WebSocket transport.
@@ -155,10 +157,17 @@ impl Hosted {
             offers,
             installations.clone(),
         );
-        machine_runtime.overflow = overflow.as_ref().map(|overflow| overflow.service.clone());
-        machine_runtime.boat_retirement = overflow
-            .as_ref()
-            .map(|overflow| overflow.retirement.clone());
+        if let Some(overflow) = &overflow {
+            machine_runtime.overflow = Some(overflow.service.clone());
+            machine_runtime.overflow_retirement = Some(overflow.retirement.clone());
+            machine_runtime.providers = overflow.providers.clone();
+        }
+        let provider_roots = OverflowProvider::all()
+            .filter_map(|provider| {
+                let configured = machine_runtime.providers.get(provider).ok()?;
+                Some((provider, configured.image.root_sizing))
+            })
+            .collect();
         let metering: Arc<dyn Metering> = Arc::new(StoredMetering::new(store.clone()));
         let accounting = Arc::new(AccountingWorker::new(
             store.clone(),
@@ -196,7 +205,7 @@ impl Hosted {
             app: app.clone(),
         });
         Ok(Self {
-            boat_root_sizing: overflow.as_ref().map(|overflow| overflow.root_sizing),
+            provider_roots,
             overflow: overflow.map(|overflow| overflow.service),
             metering,
             accounting,
@@ -234,7 +243,7 @@ impl Hosted {
         );
         let router = router.merge(transport::router(self.metadata.clone()));
         if let Some(overflow) = &self.overflow {
-            router.merge(crate::boat_callback::router(overflow.clone()))
+            router.merge(crate::overflow_callback::router(overflow.clone()))
         } else {
             router
         }

@@ -1,4 +1,4 @@
-//! One saved retirement answer for every machine or Boat reservation.
+//! One saved retirement answer for every machine or overflow reservation.
 
 use std::collections::BTreeSet;
 
@@ -37,14 +37,14 @@ pub(crate) fn retirement_results(
         .filter(|record| record.organization_id == organization_id);
     let overflow_runners = runners
         .iter()
-        .filter(|runner| matches!(runner.place, RunnerPlace::Boat { .. }));
+        .filter(|runner| matches!(runner.place, RunnerPlace::Overflow { .. }));
     let runner_ids: BTreeSet<_> = intents
         .map(|intent| intent.runner_id)
         .chain(deliveries.map(|record| record.runner_id))
         .chain(overflow_runners.map(|runner| runner.id))
         .collect();
     for runner_id in runner_ids {
-        results.push(boat_result(
+        results.push(overflow_result(
             input
                 .overflow_intents
                 .iter()
@@ -60,7 +60,7 @@ pub(crate) fn retirement_results(
     results
 }
 
-fn boat_result(
+fn overflow_result(
     intent: Option<&OverflowRunnerIntent>,
     delivery: Option<&StartRecord>,
     runner: Option<&Runner>,

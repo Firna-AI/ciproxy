@@ -77,8 +77,8 @@ fn savings_snapshot_cannot_omit_a_concurrently_registered_machine_cost() {
     diesel::sql_query(
         "INSERT INTO metering_daily_sizes (
              workspace_id, day, vcpus, memory_bytes, disk_bytes,
-             machine_starts, machine_minutes, overflow_starts, overflow_minutes
-         ) VALUES ($1, $2, 2, 8000000000, 60000000000, 1, 2, 0, 0)",
+             place, starts, minutes
+         ) VALUES ($1, $2, 2, 8000000000, 60000000000, 'machine', 1, 2)",
     )
     .bind::<sql_types::Uuid, _>(workspace.id)
     .bind::<sql_types::Date, _>(range.from)

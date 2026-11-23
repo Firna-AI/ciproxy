@@ -87,7 +87,8 @@ fn migrates_boat_accounts_and_metering_facts_with_their_data() {
     );
     assert_eq!(
         store.runners(workspace, organization).unwrap()[0].place,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: Some(key),
             sandbox_id: "saved-sandbox".to_owned(),
             size_name: "saved-size".to_owned(),
@@ -121,12 +122,16 @@ fn migrates_boat_accounts_and_metering_facts_with_their_data() {
             sizes: vec![SizeTotal {
                 size,
                 machines: LocationTotals::default(),
-                overflow: LocationTotals {
-                    starts: 1,
-                    minutes: Decimal::new(75, 1),
-                },
+                overflow: [(
+                    OverflowProvider::Boat,
+                    LocationTotals {
+                        starts: 1,
+                        minutes: Decimal::new(75, 1),
+                    }
+                )]
+                .into(),
             }],
-            overflow_usd: Decimal::new(27, 2),
+            overflow_usd: [(OverflowProvider::Boat, Decimal::new(27, 2))].into(),
         }]
     );
     let cursor_json: Value = metering_job_cursors::table
@@ -147,7 +152,9 @@ fn migrates_boat_accounts_and_metering_facts_with_their_data() {
                 started_at: at(),
                 completion: Completion::Running,
                 size,
-                place: JobPlace::Boat,
+                place: JobPlace::Overflow {
+                    provider: OverflowProvider::Boat
+                },
             },
             observed_at: at() + Duration::seconds(450),
         }]

@@ -13,10 +13,10 @@ pub(crate) struct DbOverflowProvider(pub(crate) OverflowProvider);
 
 impl FromSql<Text, Pg> for DbOverflowProvider {
     fn from_sql(value: PgValue<'_>) -> deserialize::Result<Self> {
-        match value.as_bytes() {
-            b"boat" => Ok(Self(OverflowProvider::Boat)),
-            _ => Err("unknown overflow provider".into()),
-        }
+        OverflowProvider::all()
+            .find(|provider| provider.as_str().as_bytes() == value.as_bytes())
+            .map(Self)
+            .ok_or_else(|| "unknown overflow provider".into())
     }
 }
 

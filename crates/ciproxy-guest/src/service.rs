@@ -12,7 +12,7 @@ use tracing::warn;
 use crate::boundary::{Channel, Power, Runner, RunnerEvent};
 use crate::error::Result;
 
-/// One fresh VM or Boat namespace lifecycle.
+/// One fresh VM or sandbox lifecycle.
 #[async_trait]
 pub trait Guest: Send {
     /// Run at most one runner and finish the guest on every local exit.
@@ -23,7 +23,7 @@ pub trait Guest: Send {
 pub struct Supervisor {
     /// Identity of the installed image, never a credential.
     pub image_id: ImageId,
-    /// Agent vsock stream or Boat configuration and exit callback.
+    /// Agent vsock stream or private sandbox configuration and exit callback.
     pub channel: Box<dyn Channel>,
     /// One stock GitHub runner process.
     pub runner: Box<dyn Runner>,

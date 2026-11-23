@@ -4,6 +4,7 @@ use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::metering::facts::{JobPlace, MachineRegistration, WorkspaceUsage};
 use ciproxy_store_interface::metering::history::Period;
 use ciproxy_store_interface::metering::totals::{AccountedJob, StartTotal};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use uuid::Uuid;
 
 use crate::test_support::{at, day, job, plan, usd};
@@ -29,7 +30,14 @@ fn jobs(count: u128) -> WorkspaceUsage {
 #[test]
 fn exact_period_counts_preserve_removed_organization_starts() {
     let first = job(1, "2026-11-04T11:59:59Z", None, JobPlace::Machine);
-    let mut taken = job(2, "2026-11-04T12:00:00Z", None, JobPlace::Boat);
+    let mut taken = job(
+        2,
+        "2026-11-04T12:00:00Z",
+        None,
+        JobPlace::Overflow {
+            provider: OverflowProvider::Boat,
+        },
+    );
     taken.organization_id = Uuid::from_u128(200);
     let facts = WorkspaceUsage {
         aliases: Vec::new(),

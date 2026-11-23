@@ -145,16 +145,13 @@ async fn accounting_purges_due_organizations_and_workspaces_after_preserving_exa
     );
     assert_eq!(store.settings(fixture.workspace).unwrap(), settings);
     assert_eq!(store.machines(fixture.workspace).unwrap(), machines);
-    let mut totals = expected_totals(&fixture, true);
-    totals[0].sizes[0].overflow.minutes = 6.into();
-    totals[0].overflow_usd = rust_decimal::Decimal::new(32, 2);
     let day = at().date_naive();
     assert_eq!(
         store
             .savings_snapshot(fixture.workspace, day, day.succ_opt().unwrap())
             .unwrap()
             .days,
-        totals
+        expected_totals(&fixture, true, 6, 32)
     );
     assert_eq!(
         store.workspace_usage(fixture.workspace).unwrap().starts,
@@ -265,7 +262,7 @@ async fn accounting_purges_due_organizations_and_workspaces_after_preserving_exa
             )
             .unwrap()
             .days,
-        expected_totals(&fixture, false)
+        expected_totals(&fixture, false, 5, 30)
     );
     assert_eq!(
         store
@@ -279,7 +276,7 @@ async fn accounting_purges_due_organizations_and_workspaces_after_preserving_exa
             .savings_snapshot(fixture.workspace, day, day.succ_opt().unwrap())
             .unwrap()
             .days,
-        totals
+        expected_totals(&fixture, true, 6, 32)
     );
     assert_eq!(
         store

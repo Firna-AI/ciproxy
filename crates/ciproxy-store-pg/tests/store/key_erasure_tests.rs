@@ -75,7 +75,8 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
     let pending = runner(
         &label,
         &scale_set,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: Some(key.id),
             sandbox_id: sandbox_id.to_owned(),
             size_name: size_name.to_owned(),

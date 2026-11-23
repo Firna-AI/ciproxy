@@ -134,7 +134,7 @@ impl Harness {
                     capture: state.clone(),
                 }),
                 cipher: runtime.clone(),
-                providers,
+                providers: Arc::new(providers),
                 runners: runtime.clone(),
                 clock: runtime.clone(),
                 tokens: runtime,

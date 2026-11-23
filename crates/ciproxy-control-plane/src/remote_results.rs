@@ -15,8 +15,8 @@ use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
 
 impl MachineRuntime {
-    pub(crate) async fn boat_operation(&self, workspace: Uuid) -> Arc<Mutex<()>> {
-        self.boat_operations
+    pub(crate) async fn overflow_operation(&self, workspace: Uuid) -> Arc<Mutex<()>> {
+        self.overflow_operations
             .lock()
             .await
             .entry(workspace)

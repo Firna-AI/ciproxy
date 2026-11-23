@@ -11,8 +11,10 @@ use ciproxy_store_interface::metering::facts::{
 };
 use ciproxy_store_interface::metering::totals::StartTotal;
 use diesel::prelude::*;
-use diesel::sql_types::{Integer, Nullable, Timestamptz};
+use diesel::sql_types::{Integer, Nullable, Text, Timestamptz};
 use uuid::Uuid;
+
+use crate::overflow_provider::DbOverflowProvider;
 
 use super::job_cursors;
 
@@ -40,6 +42,8 @@ struct UsageRow {
     disk_bytes: i64,
     #[diesel(sql_type = Nullable<diesel::sql_types::Uuid>)]
     machine_id: Option<Uuid>,
+    #[diesel(sql_type = Nullable<Text>)]
+    overflow_provider: Option<DbOverflowProvider>,
 }
 
 pub(super) fn load(
@@ -48,14 +52,16 @@ pub(super) fn load(
 ) -> QueryResult<WorkspaceUsage> {
     let rows = diesel::sql_query(
         "SELECT 'actions'::text AS source, j.id, j.organization_id, j.started_at, j.completed_at,
-                r.vcpus, r.memory_bytes, r.disk_bytes, r.machine_id, NULL::jsonb AS body, (j.state = 'completed') AS terminal
+                r.vcpus, r.memory_bytes, r.disk_bytes, r.machine_id, r.overflow_provider,
+                NULL::jsonb AS body, (j.state = 'completed') AS terminal
          FROM jobs j JOIN runners r ON r.id = j.runner_id
            AND r.workspace_id = j.workspace_id AND r.organization_id = j.organization_id
          WHERE j.workspace_id = $1 AND j.started_at IS NOT NULL
          UNION ALL
          SELECT 'scale_set'::text AS source, g.id, g.organization_id,
                 NULL::timestamptz AS started_at, NULL::timestamptz AS completed_at,
-                r.vcpus, r.memory_bytes, r.disk_bytes, r.machine_id, g.body AS body, (g.phase = 2) AS terminal
+                r.vcpus, r.memory_bytes, r.disk_bytes, r.machine_id, r.overflow_provider,
+                g.body AS body, (g.phase = 2) AS terminal
          FROM github_job_attempts g JOIN runners r ON r.workspace_id = g.workspace_id
            AND r.organization_id = g.organization_id AND r.scale_set_id = (g.body->>'scale_set_id')::uuid
            AND r.github_id = (g.body->>'runner_github_id')::bigint
@@ -111,7 +117,12 @@ pub(super) fn load(
                 place: if row.machine_id.is_some() {
                     JobPlace::Machine
                 } else {
-                    JobPlace::Boat
+                    JobPlace::Overflow {
+                        provider: row
+                            .overflow_provider
+                            .map(|provider| provider.0)
+                            .unwrap_or_default(),
+                    }
                 },
             })
         })

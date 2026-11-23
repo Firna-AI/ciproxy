@@ -31,7 +31,7 @@ pub struct Config {
     /// Signed-image URL prefix.
     pub image_url_prefix: String,
     /// Cloud KMS key used by the overflow composition.
-    pub boat_kms_key: String,
+    pub overflow_kms_key: String,
     /// Selected CDN signing-key name.
     pub cdn_signing_key_name: String,
     /// Mounted runtime secret directory.
@@ -70,7 +70,7 @@ impl Config {
             database_url: required("DATABASE_URL")?.into(),
             public_url: required("PUBLIC_URL")?,
             image_url_prefix: required("IMAGE_URL_PREFIX")?,
-            boat_kms_key: required("BOAT_KMS_KEY")?,
+            overflow_kms_key: required("OVERFLOW_KMS_KEY")?,
             cdn_signing_key_name: required("CDN_SIGNING_KEY_NAME")?,
             secrets_directory: env::var_os("SECRETS_DIRECTORY")
                 .map_or_else(|| PathBuf::from("/var/run/secrets/ciproxy"), PathBuf::from),

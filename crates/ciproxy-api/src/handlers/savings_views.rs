@@ -4,6 +4,7 @@ use ciproxy_metering::report::catalog::{Alternative, PriceMatch};
 use ciproxy_metering::report::costs::CostGap;
 use ciproxy_metering::report::savings::SavingsReport;
 use ciproxy_store_interface::metering::totals::LocationTotals;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 
 use crate::wire::jobs::JobVmSize;
 use crate::wire::savings::{
@@ -14,7 +15,7 @@ use crate::wire::savings::{
 use super::billing_views::cents;
 
 pub(super) fn report(
-    report: SavingsReport,
+    mut report: SavingsReport,
     range: SavingsRange,
     refresh_complete: bool,
 ) -> SavingsPage {
@@ -31,8 +32,10 @@ pub(super) fn report(
         {
             machines.starts += size.machines.starts;
             machines.minutes += size.machines.minutes;
-            boat.starts += size.overflow.starts;
-            boat.minutes += size.overflow.minutes;
+            if let Some(usage) = size.overflow.get(&OverflowProvider::Boat) {
+                boat.starts += usage.starts;
+                boat.minutes += usage.minutes;
+            }
         }
         days.push(SavingsDay {
             day,
@@ -70,15 +73,19 @@ pub(super) fn report(
                 .collect(),
         })
         .collect();
+    let boat = report
+        .providers
+        .remove(&OverflowProvider::Boat)
+        .unwrap_or_default();
     SavingsPage {
         range,
         from: report.range.from,
         until: report.range.until,
         machines: runtime(report.machines),
-        boat: runtime(report.boat),
+        boat: runtime(boat.usage),
         days,
         known_machine_cents: cents(report.costs.known_machines_usd),
-        boat_cents: cents(report.costs.boat_usd),
+        boat_cents: cents(boat.usd),
         known_plan_cents: cents(report.costs.known_plan_usd),
         total_cents: report.costs.total_usd.map(cents),
         missing_costs: report

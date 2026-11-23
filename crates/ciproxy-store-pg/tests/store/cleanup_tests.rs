@@ -1,6 +1,7 @@
 //! App removal preserves only the authority needed to finish sandbox cleanup.
 
 use chrono::Duration;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
@@ -53,7 +54,8 @@ fn last_app_removal_retires_keys_and_keeps_live_sandbox_reports() {
     let live = runner(
         &label,
         &scale_set,
-        RunnerPlace::Boat {
+        RunnerPlace::Overflow {
+            provider: OverflowProvider::Boat,
             key_id: Some(active.id),
             sandbox_id: "cleanup-sandbox".to_owned(),
             size_name: "small".to_owned(),

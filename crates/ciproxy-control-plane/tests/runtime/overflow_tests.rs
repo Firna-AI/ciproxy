@@ -5,7 +5,7 @@ use std::sync::atomic::Ordering;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use chrono::Duration;
-use ciproxy_control_plane::boat_callback;
+use ciproxy_control_plane::overflow_callback;
 use ciproxy_control_plane::runtime::ImageOffer;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
@@ -173,7 +173,7 @@ async fn callback_checks_runner_scope_and_consumes_its_token_before_deletion() {
     let input = harness.ports.inputs.lock().unwrap()[0].clone();
     let token = input["exit_report_token"].as_str().unwrap();
     let runner = input["configure"]["runner_id"].as_str().unwrap();
-    let router = boat_callback::router(harness.service.clone());
+    let router = overflow_callback::router(harness.service.clone());
     let request = |runner: &str, kind: &str| {
         Request::builder()
             .method("POST")

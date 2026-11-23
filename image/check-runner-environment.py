@@ -107,7 +107,7 @@ def check_environment(workspace, guest):
                    "CIPROXY_ROOT_ONLY_FIXTURE": "must-not-reach-runner"}
     result = subprocess.run(
         [shutil.which("chroot"), str(root), "/usr/local/bin/ciproxy-guest",
-         "--image-id", "fixture-image", "boat", "--registration-file", "/registration.json"],
+         "--image-id", "fixture-image", "sandbox", "--registration-file", "/registration.json"],
         env=environment, capture_output=True, text=True, timeout=30)
     (root / "guest.log").write_text(result.stdout + result.stderr)
     print("Fixture evidence: " + str(root), flush=True)

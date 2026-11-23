@@ -7,7 +7,18 @@ use strum::IntoEnumIterator;
 
 /// The provider that owns an overflow account, sandbox, or cost.
 #[derive(
-    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize, strum::EnumIter,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    strum::EnumIter,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum OverflowProvider {

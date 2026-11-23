@@ -68,7 +68,7 @@ supplies this interface:
 | HTTP              | Listen on `HTTP_BIND`, which is `0.0.0.0:8080`.                                                                                                                                                                                                                                                                                                                                               |
 | Health            | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the dashboard host.                                                                                                                                                                                                                                           |
 | Database          | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password.                                                                                                                                                                                                                                                                                  |
-| Settings          | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`.                                                                                                                                                                                                                                      |
+| Settings          | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `OVERFLOW_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`.                                                                                                                                                                                                                                      |
 | Boat snapshot     | Read the optional `BOAT_SHARED_SNAPSHOT` pod variable from a Kubernetes Secret. See [Boat setup](#boat-shared-snapshot).                                                                                                                                                                                                                                                                      |
 | macOS images      | Read the optional `MACOS_IMAGE_URL_PREFIX` and `MACOS_IMAGE_MANIFEST_PATH` pod variables from this environment's GitHub variables, and the optional `R2_IMAGES_KEY` pod variable from a Kubernetes Secret. See [macOS images](#macos-images).                                                                                                                                                 |
 | GitHub App        | Read the pod variables `GITHUB_APP_ID`, `GITHUB_OAUTH_CLIENT_ID`, and `GITHUB_APP_SLUG`. Deploy maps them from this environment's `CIPROXY_APP_ID`, `CIPROXY_APP_CLIENT_ID`, and `CIPROXY_APP_SLUG` GitHub variables. Build the installation URL from the slug. The OAuth secret stays in `github-oauth-secret`.                                                                              |
@@ -178,7 +178,8 @@ versions, and apply failures stop the deploy with no payload in the log.
 Keep a usable version while Boat sandboxes can exist. Without the value,
 the runtime stops Boat cleanup and removes the exit callback.
 
-`BOAT_KMS_KEY` already uses the full resource path:
+The chart passes the full resource path to `OVERFLOW_KMS_KEY`. The key
+keeps its existing name.
 
 ```text
 projects/ciproxy/locations/us-central1/keyRings/ciproxy-<env>/cryptoKeys/boat-account-keys
