@@ -1,12 +1,17 @@
 ---
 // The top bar of the public site, after the site header of the mockups.
-// Marketing pages: the wordmark, Pricing and Docs, then the Sign in link and
-// the Start free button. On a phone, the menu button opens the links that do
-// not fit. Docs: the wordmark with "Docs", the search box that the Starlight
-// header passes in, and the same actions. Every button that opens sign-in
+// Marketing pages: the wordmark, Pricing and Docs, then the GitHub mark, the
+// Sign in link, and the Start free button. On a phone, the menu button opens
+// the links that do not fit. Docs: the wordmark with "Docs", the search box
+// that the Starlight header passes in, Pricing, and the same actions. Every button that opens sign-in
 // says Start free; the link serves people who already use ciproxy.
 
-import { signInUrl, sitePages, type SiteSection } from "../../data/site.ts";
+import {
+  githubUrl,
+  signInUrl,
+  sitePages,
+  type SiteSection,
+} from "../../data/site.ts";
 import Brand from "../Brand.astro";
 import Icon from "../icon/Icon.astro";
 import LinkButton from "../LinkButton.astro";
@@ -72,6 +77,14 @@ const Bar = docs ? "div" : "header";
           Pricing
         </a>
       )}
+      <a
+        href={githubUrl}
+        class="site-github"
+        aria-label="ciproxy on GitHub"
+        title="ciproxy on GitHub"
+      >
+        <Icon name="github" size={18} strokeWidth={1.75} />
+      </a>
       <a href={signInUrl} class="site-nav-link site-sign-in">
         Sign in
       </a>
@@ -101,6 +114,9 @@ const Bar = docs ? "div" : "header";
           {link.label}
         </a>
       ))}
+      <a href={githubUrl} class="site-menu-link">
+        GitHub
+      </a>
       <a href={signInUrl} class="site-menu-link">
         Sign in
       </a>

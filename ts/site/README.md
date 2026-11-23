@@ -28,9 +28,12 @@ The pages follow the marketing and docs mockups under
 The look is Graphite:
 
 - One top bar serves both parts. The marketing pages show the wordmark,
-  Pricing, Docs, Sign in, and Start free. On a phone, a menu holds the links.
-  The docs show the wordmark with "Docs", the Starlight search, and the same
-  actions.
+  Pricing, Docs, the GitHub mark, Sign in, and Start free. On a phone, a menu
+  holds the links, with GitHub. The docs show the wordmark with "Docs", the
+  Starlight search, Pricing, and the same actions. A narrow docs window hides
+  Pricing, the GitHub mark, and Sign in.
+- The GitHub mark opens the public repository of ciproxy,
+  `https://github.com/Firna-AI/ciproxy`.
 - Every marketing page ends with the footer.
 - The docs use a Graphite theme of Starlight. Black is the one accent, and
   Geist and Geist Mono are the faces. Code is in the ink, because colour
@@ -65,8 +68,7 @@ Rules for work on the site:
   link open the dashboard at `https://app.ciproxy.dev/sign-in`.
 - Add a link only when its page exists. A marketing page links to a docs
   page through `docsLinks`, which shows the link only once the page exists.
-  The GitHub link of the mockups waits for the public repository of the
-  agent.
+  The GitHub mark of the footer mockup is not on the site yet.
 - The picture of the product in the hero is a static illustration with
   fixed values, and its caption says so. The site shows no customer logos,
   quotes, or press.

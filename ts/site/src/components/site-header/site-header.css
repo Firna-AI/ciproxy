@@ -82,6 +82,18 @@ header.site-header {
   margin-left: auto;
 }
 
+/* The GitHub mark: an icon link in the colour of the other links. */
+
+.site-github {
+  display: inline-flex;
+  margin-right: 6px;
+  color: var(--c-ink2);
+}
+
+.site-github:hover {
+  color: var(--c-ink);
+}
+
 /* The menu of a phone: a plain icon button, and the links in a panel under
    the bar. The panel is a popover, so it opens and closes without a script,
    and a tap outside it or Escape closes it. */
@@ -168,6 +180,7 @@ header.site-header {
 
 @media (width <= 1000px) {
   .site-docs-pricing,
+  .is-docs .site-github,
   .is-docs .site-sign-in {
     display: none;
   }
@@ -215,6 +228,7 @@ header.site-header {
   }
 
   .site-nav,
+  .site-github,
   .site-sign-in,
   .is-docs .site-start {
     display: none;
