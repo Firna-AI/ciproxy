@@ -737,6 +737,11 @@ Design calls, my calls, 22 November 2026:
   because the clocks of the VM and the control plane can differ. It keeps
   the exit, and its log holds no figure. Reason: job code has passwordless
   sudo in its VM, so a job can send any figures.
+- **Usage decode:** on 23 November 2026, after review round 1, the `usage`
+  field never fails the message that carries it. Usage whose points do not
+  decode is dropped, and usage whose steps do not decode keeps its points,
+  under the drop rules of the checks. Reason: a strict decode refused a
+  whole Boat exit report for one bad step.
 - **Trust:** nothing bills, routes, or sizes jobs by the figures. Reason:
   the same as for the checks.
 - **Step figures:** a point belongs to the step that holds the middle of
@@ -766,6 +771,14 @@ Design calls, my calls, 22 November 2026:
 - **Tiers and retention:** every tier gets the figures. They follow the job
   metadata: ciproxy keeps them 90 days, and each tier shows its job
   history window. Reason: every tier includes the dashboard.
+- **Usage cleanup:** on 23 November 2026, after review round 1, the
+  cleanup of job usage checks the runners of each delete statement as one
+  set, on indexed runner keys, and the unmatched sweep uses the same
+  check. Reason: a check for each deleted row made the 90-day purge time
+  out at 90,000 history rows.
+- **One store path:** on 23 November 2026, after review round 1, `Store`
+  includes `JobUsageStore`, and the store opens in one way. Reason: a
+  second connection method gave the same store twice.
 - **Open-source boundary:** the guest, protocol, and agent changes stay in
   their Apache-2.0 crates and use no hosted crate. The store, control
   plane, API, and app changes stay in closed crates.
@@ -925,7 +938,10 @@ Design calls, my calls, 23 November 2026, from Milestone 9:
 - **Log pages:** the guest notes the Worker log pages that exist before
   the listener starts, and it follows only newer pages, from the last
   complete line. Reason: stale logs never count, and a rotated page is not
-  read twice.
+  read twice. On 23 November 2026, after review round 1, the guest keeps
+  each step of the newer pages, also a step that ended before the first
+  sample. Reason: the page, not the sample time, says which steps belong
+  to the job.
 - **No invented times:** a step keeps a missing start or end unset.
   Reason: the guest must not guess when an interrupted step ended.
 - **Oversized steps:** when the steps would push an exit report over the
@@ -954,8 +970,19 @@ Design calls, my calls, 23 November 2026, from Milestone 11:
 - **Unknown step time:** a step that is not skipped and has no time reads
   "Unknown" in grey and shows no figures. Reason: the app shows "Unknown"
   for each value that the API leaves out.
-- **Step table:** the app uses the Firna `Table`, with its header and cell
-  style. Reason: the other tables of the app look the same.
+- **Step table:** the app draws the steps table with the look of
+  `createTableStyles` of `@firna/ui/table`, and it adds the table, row,
+  column header, and cell roles. Reason: the Firna `Table` gives a screen
+  reader none of these roles, and the look stays that of the other tables.
+  This replaces the call to use the Firna `Table`, on 23 November 2026,
+  after review round 1. `plans/follow-ups/firna-ui-table-roles.md` adds
+  the roles to the Firna `Table`.
+- **Step link:** a script step name uses the underlined look of the shared
+  `TextLink`, which has the one underline of the mockup's `.text-link`.
+  Reason: one link part keeps the focus, hover, and new-tab behaviour, and
+  the mockup is the spec. Recorded on 23 November 2026, after review round
+  1. The old step link also drew the browser's default underline, so it
+  showed two lines.
 - **Running for:** the Details panel of a running job says "Running for",
   as the mockups of Milestone 1 show. Reason: the app matches its mockups.
 

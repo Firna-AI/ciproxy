@@ -30,8 +30,11 @@ each main flow of data across the
    steps of the job from the log of the runner, as
    [Job usage](../protocol/job-usage.md) says.
 7. When the runner exits, the guest sends the samples and the steps to the
-   agent. The agent forwards them to the control plane, which stores them
-   with the job. Then the agent ends the job VM and reports it.
+   agent. The agent ends the job VM first. Then its exit report tells the
+   control plane that the runner exited, and the same report carries the
+   samples and the steps, as
+   [How the figures reach the control plane](../protocol/job-usage.md#how-the-figures-reach-the-control-plane)
+   says. The control plane stores them with the job.
 
 ## A job on Boat
 
