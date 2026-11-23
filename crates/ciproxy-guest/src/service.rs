@@ -70,6 +70,9 @@ impl Supervisor {
                         runner_id: runner_id.clone(),
                     })
                     .await;
+                    if let Some(usage) = &mut self.usage {
+                        usage.prepare_runner();
+                    }
                     if let Err(error) = self.runner.start(registration).await {
                         self.report_exit(&runner_id, RunnerExit { code: None })
                             .await;

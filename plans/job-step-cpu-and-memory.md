@@ -777,6 +777,19 @@ Design calls, my calls, 23 November 2026, from Milestone 8:
   of the last one, and 503 a store failure. The exit report keeps its own
   answers. Reason: a guest can tell a closed sandbox from a fault.
 
+Design calls, my calls, 23 November 2026, from Milestone 9:
+
+- **Log pages:** the guest notes the Worker log pages that exist before
+  the listener starts, and it follows only newer pages, from the last
+  complete line. Reason: stale logs never count, and a rotated page is not
+  read twice.
+- **No invented times:** a step keeps a missing start or end unset.
+  Reason: the guest must not guess when an interrupted step ended.
+- **Oversized steps:** when the steps would push an exit report over the
+  1 MiB line limit of the agent's guest reader, the guest sends the report
+  without its steps. Reason: the agent would otherwise refuse the whole
+  report.
+
 Contract sketch, for the protocol crate:
 
 - Times in the agent protocol are whole milliseconds since the Unix epoch,
@@ -1003,16 +1016,16 @@ Depends on: 5
 The guest program reads the steps of its job from the Worker log and sends
 them with the samples.
 
-- [ ] Add a Worker log reader to `ciproxy-guest`, as the Worker log steps
+- [x] Add a Worker log reader to `ciproxy-guest`, as the Worker log steps
       design call says. Test it with a Worker log fixture of the pinned
       runner, with a skipped step, and with a log that ends before a step
       result.
-- [ ] Add the steps to the samples of each report, with the step limits of
+- [x] Add the steps to the samples of each report, with the step limits of
       the design. Test the limits.
-- [ ] Add the image check of the log format check design call, and list it
+- [x] Add the image check of the log format check design call, and list it
       in `image/checks.md` among the checks that each runner pin update
       reruns.
-- [ ] Update the READMEs of `ciproxy-guest` and `image`.
+- [x] Update the READMEs of `ciproxy-guest` and `image`.
 
 ## Milestone 10: Dashboard API
 

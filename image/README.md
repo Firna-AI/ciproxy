@@ -225,6 +225,9 @@ critical security update.
 The release check prints version data. A live smoke job proves acceptance.
 Repeat the machine build, publication, the Boat build and snapshot, and
 both smoke jobs when the pins change.
+For each runner pin update, run the
+[Worker log fixture and live check](checks.md#runner-pin-updates).
+The guest uses the runner's Worker log to add step times to its samples.
 
 ## Boat shared snapshot
 

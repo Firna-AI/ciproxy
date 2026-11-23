@@ -87,6 +87,12 @@ the exit report, not after a sample report.
 If the exit report fails, the Boat lifetime remains the backstop.
 A missing file ends the guest with exit code 1 and the error
 `registration file is missing`. The error names no path.
+The guest then starts no runner and sends no report.
+In a Boat sandbox, the guest runs as a service of Boat's own systemd.
+The [Boat launcher](../../image/boat.md#boat-launch) starts that service
+after it refreshes the restored services.
+The guest leaves the end of the sandbox to the control plane and the Boat
+lifetime.
 
 ### Linux job usage
 
@@ -105,12 +111,26 @@ read gap, the guest keeps the longest series of consecutive samples.
 A failed read or sample post logs a warning without figures. The runner
 and its exit report do not depend on a sample or a sample post.
 See [Job usage](../../docs/protocol/job-usage.md).
-The guest then starts no runner and sends no report.
-In a Boat sandbox, the guest runs as a service of Boat's own systemd.
-The [Boat launcher](../../image/boat.md#boat-launch) starts that service
-after it refreshes the restored services.
-The guest leaves the end of the sandbox to the control plane and the Boat
-lifetime.
+
+### Worker log steps
+
+Both images run the listener once and write Worker logs in
+`/opt/actions-runner/_diag`. The step reader excludes files that exist
+before the listener starts. It follows new pages in name order and reads
+only new complete lines at each Boat sample report and at runner exit.
+It keeps a step that crosses the sample start. It includes events in the
+same UTC second and drops steps that ended before that second.
+
+The guest keeps the first 1,000 steps and the first 256 characters of each
+name. It sends names as the runner writes them. A skipped step has no times.
+A step that did not finish can have a start but no end. A missing or broken
+log does not change the samples or the runner exit. The guest drops the
+steps if they would make a vsock exit report exceed the agent's line
+limit. The step reader does not log names or figures. The
+[image checks][worker-log-check] verify the format when the runner pin
+changes.
+
+[worker-log-check]: ../../image/checks.md#runner-pin-updates
 
 Before the runner can take its one job, the guest measures the proxy URL on
 Docker's actual bridge and the preloaded Docker bytes.
@@ -215,6 +235,8 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
   the Boat worker.
 - [src/usage/series.rs](src/usage/series.rs) bounds the series by merging
   points.
+- [src/usage/worker_log/mod.rs](src/usage/worker_log/mod.rs) follows the
+  Worker log pages and adds step observations to reports.
 - [src/assignment.rs](src/assignment.rs) owns the cancellation-safe handoff.
 - [src/guest_setup.rs](src/guest_setup.rs) measures the preloaded Docker
   facts before the runner can take its job.

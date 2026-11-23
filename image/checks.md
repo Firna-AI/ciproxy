@@ -232,6 +232,55 @@ It runs `boat.py delete` for two sandbox IDs with a stub HTTP opener.
 Each `DELETE` request must name its sandbox and send the same ID in the
 `X-Ascii-Confirm-Delete` header. The check needs no Boat key or network.
 
+## Runner pin updates
+
+Run the guest fixture and the live Worker steps check for each runner pin
+update. The log format is not a runner contract.
+
+```sh
+cargo test --package ciproxy-guest pinned_worker_log_keeps_job_steps
+```
+
+Compare the fixture with the pinned runner's `StepsRunner.cs` and
+`HostTraceListener.cs` when the pin changes.
+
+### Live Worker steps
+
+Use a disposable Linux VM or Boat sandbox from the new image. Disable
+automatic guest startup before boot or restore. The check starts the
+installed guest and runner once. Do not stop the own-machine guest
+service on a running VM: its stop hook reboots the VM.
+
+Copy [workflow.yml](worker-steps-smoke/workflow.yml) to
+`.github/workflows/worker-steps-smoke.yml` in a private smoke repository.
+Copy [action.yml](worker-steps-smoke/action.yml) to
+`.github/actions/worker-steps-smoke/action.yml` in the same repository.
+Queue the workflow with an account that can dispatch it. Make sure that
+only the smoke runner can take a job with `ciproxy-worker-steps-smoke`.
+
+Use the [JIT registration guide](boat-smoke.md#github-job-smoke) on the
+host with `--label ciproxy-worker-steps-smoke`. Put
+`https://127.0.0.1:8443/worker-steps` in its callback URL file. Use a
+fresh token for this local callback. Copy the mode 0600 registration
+file to a private directory in the image, with root as its owner.
+Trust a test CA in the image. Use a server certificate from that CA
+with `IP:127.0.0.1` in its subject alternative name.
+
+Run from a copy of the repository in that image:
+
+```sh
+sudo python3 image/check-worker-steps.py \
+  --registration-file /root/worker-steps/registration.json \
+  --tls-cert /root/worker-steps/server.pem \
+  --tls-key /root/worker-steps/server.key
+```
+
+The loopback collector checks the guest's actual exit report. It requires
+samples, the workflow's steps in order, an explicit skip, and the checkout
+post step. It checks the time fields and rejects extra embedded steps.
+It prints no report data. Confirm that the job also succeeded on GitHub.
+Dispose of the image instance and its test CA after the check.
+
 ## Retained userspace export
 
 To export a retained, complete release tree without software provisioning:

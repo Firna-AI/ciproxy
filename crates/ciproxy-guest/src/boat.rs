@@ -95,8 +95,7 @@ impl BoatChannel {
         })
     }
 
-    /// Share the callback with the Linux sampler, without borrowing the channel.
-    #[cfg(target_os = "linux")]
+    /// Share the callback with the job sampler, without borrowing the channel.
     pub(crate) fn usage_reporter(&self) -> Arc<dyn Reporter> {
         self.callback.clone()
     }

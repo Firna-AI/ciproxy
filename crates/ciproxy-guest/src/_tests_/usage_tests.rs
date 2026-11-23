@@ -19,9 +19,14 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundary::{RunnerEvent, RunnerMock};
 use crate::error::Error;
 use crate::service::Guest;
+use crate::usage::worker_log::LogPagesMock;
 use crate::usage::{Reading, ReporterMock, SourceMock, Usage};
 
+use self::usage_steps::{BOAT_LOG, boat_steps, worker_pages};
 use super::support::{Observation, Trace, channel, configure, configured, hello, supervisor};
+
+#[path = "usage_steps_tests.rs"]
+mod usage_steps;
 
 const EPOCH_MS: i64 = 1_700_000_000_000;
 
@@ -60,6 +65,11 @@ async fn handoff_starts_sampling_once_and_a_failed_read_keeps_the_exit_report() 
     guest.usage = Some(Usage::new(
         Box::new(source(clock, &reads, Some(12), None)),
         None,
+        Box::new(Unimock::new(
+            LogPagesMock::list
+                .each_call(matching!())
+                .answers(&|_| Ok(Vec::new())),
+        )),
     ));
 
     guest.run().await.unwrap();
@@ -119,11 +129,21 @@ async fn boat_posts_whole_series_and_reports_exit_despite_failed_and_pending_pos
     guest.usage = Some(Usage::new(
         Box::new(source(clock, &reads, None, Some(5))),
         Some(Arc::new(reporter)),
+        Box::new(worker_pages(clock, |second| {
+            let end = if second < 40 {
+                BOAT_LOG.find("[2023-11-14 22:14:00Z").unwrap()
+            } else {
+                BOAT_LOG.len()
+            };
+            Some(&BOAT_LOG[..end])
+        })),
     ));
 
     guest.run().await.unwrap();
 
     assert_eq!(*reads.lock().unwrap(), (5..=75).collect::<Vec<_>>());
+    let mut final_usage = usage(5_000, (134..=203).collect(), kills(70));
+    final_usage.steps = boat_steps(Some(1_700_000_040_000));
     assert_eq!(
         *trace.lock().unwrap(),
         [
@@ -134,9 +154,9 @@ async fn boat_posts_whole_series_and_reports_exit_despite_failed_and_pending_pos
             Observation::Message(GuestToAgent::RunnerReady {
                 runner_id: RunnerId("runner-7".into())
             }),
-            samples_with(163, 30),
-            samples_with(193, 60),
-            exit_with(9, usage(5_000, (134..=203).collect(), kills(70))),
+            samples_with(163, 30, None),
+            samples_with(193, 60, Some(1_700_000_040_000)),
+            exit_with(9, final_usage),
             Observation::Poweroff,
         ]
     );
@@ -220,10 +240,12 @@ fn kills(points: usize) -> Vec<u32> {
     kills
 }
 
-fn samples_with(last_memory: u32, points: usize) -> Observation {
+fn samples_with(last_memory: u32, points: usize, ended_at_ms: Option<i64>) -> Observation {
+    let mut usage = usage(5_000, (134..=last_memory).collect(), kills(points));
+    usage.steps = boat_steps(ended_at_ms);
     Observation::Message(GuestToAgent::UsageSamples {
         runner_id: RunnerId("runner-7".into()),
-        usage: usage(5_000, (134..=last_memory).collect(), kills(points)),
+        usage,
     })
 }
 

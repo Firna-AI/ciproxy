@@ -4,6 +4,7 @@
 pub(crate) mod linux;
 mod series;
 mod window;
+pub(crate) mod worker_log;
 
 use std::future::{Future, pending};
 use std::io;
@@ -23,6 +24,7 @@ use crate::error::Result;
 
 pub(crate) use self::window::Reading;
 use self::window::Window;
+use self::worker_log::{LogPages, WorkerLog};
 
 const SAMPLE_INTERVAL: Duration = Duration::from_secs(1);
 const REPORT_INTERVAL: Duration = Duration::from_secs(30);
@@ -50,17 +52,32 @@ pub(crate) trait Reporter: Send + Sync {
 pub(crate) struct Usage {
     source: Option<Box<dyn Source>>,
     reporter: Option<Arc<dyn Reporter>>,
+    log: Option<WorkerLog>,
     task: Option<Sampling>,
 }
 
 impl Usage {
     /// Use the worker start signal only when the transport is Boat.
-    #[cfg(target_os = "linux")]
-    pub(crate) fn new(source: Box<dyn Source>, reporter: Option<Arc<dyn Reporter>>) -> Self {
+    pub(crate) fn new(
+        source: Box<dyn Source>,
+        reporter: Option<Arc<dyn Reporter>>,
+        pages: Box<dyn LogPages>,
+    ) -> Self {
         Self {
             source: Some(source),
             reporter,
+            log: Some(WorkerLog::new(pages)),
             task: None,
+        }
+    }
+
+    /// Exclude logs left by earlier workers before the listener can start.
+    pub(crate) fn prepare_runner(&mut self) {
+        if let Some(log) = &mut self.log
+            && log.exclude_existing_pages().is_err()
+        {
+            warn!("runner step log unavailable");
+            self.log = None;
         }
     }
 
@@ -72,6 +89,7 @@ impl Usage {
         {
             self.task = Some(Sampling::start(
                 source,
+                self.log.take(),
                 Some(BoatJob {
                     runner_pid,
                     runner_id: runner_id.clone(),
@@ -86,7 +104,7 @@ impl Usage {
         if self.reporter.is_none()
             && let Some(source) = self.source.take()
         {
-            self.task = Some(Sampling::start(source, None));
+            self.task = Some(Sampling::start(source, self.log.take(), None));
         }
     }
 
@@ -108,11 +126,11 @@ struct Sampling {
 }
 
 impl Sampling {
-    fn start(source: Box<dyn Source>, boat: Option<BoatJob>) -> Self {
+    fn start(source: Box<dyn Source>, log: Option<WorkerLog>, boat: Option<BoatJob>) -> Self {
         let (stop, stopped) = oneshot::channel();
         Self {
             stop: Some(stop),
-            task: tokio::spawn(collect(source, boat, stopped)),
+            task: tokio::spawn(collect(source, log, boat, stopped)),
         }
     }
 
@@ -140,6 +158,7 @@ type Post = Pin<Box<dyn Future<Output = ()> + Send>>;
 
 async fn collect(
     source: Box<dyn Source>,
+    mut log: Option<WorkerLog>,
     boat: Option<BoatJob>,
     mut stop: oneshot::Receiver<()>,
 ) -> Option<JobUsage> {
@@ -167,12 +186,12 @@ async fn collect(
     loop {
         tokio::select! {
             biased;
-            _ = &mut stop => return window.report(),
+            _ = &mut stop => return report(&window, &mut log),
             _ = ticks.tick() => window.capture(&*source),
             () = wait_for_post(&mut posting) => posting = None,
             _ = reports.tick(), if boat.is_some() => {
                 if let Some(job) = &boat
-                    && let Some(usage) = window.report()
+                    && let Some(usage) = report(&window, &mut log)
                 {
                     if posting.is_some() {
                         warn!("job usage sample report could not be delivered");
@@ -188,6 +207,22 @@ async fn collect(
             }
         }
     }
+}
+
+fn report(window: &Window, log: &mut Option<WorkerLog>) -> Option<JobUsage> {
+    let mut usage = window.report()?;
+    if let Some(started_at_ms) = window.started_at_ms()
+        && let Some(worker_log) = log
+    {
+        match worker_log.report(started_at_ms) {
+            Ok(steps) => usage.steps = steps,
+            Err(_) => {
+                warn!("runner step log unavailable");
+                *log = None;
+            }
+        }
+    }
+    Some(usage)
 }
 
 fn interval(first: Instant, period: Duration) -> Interval {

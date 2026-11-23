@@ -9,6 +9,8 @@ use crate::boundary::{Channel, CommandFuture};
 use crate::error::{ErrorResultExt, Result};
 use crate::replay::Observations;
 
+const MAX_AGENT_LINE_BYTES: usize = 1_048_576;
+
 struct Connection {
     reader: Lines<BufReader<ReadHalf<VsockStream>>>,
     writer: WriteHalf<VsockStream>,
@@ -60,8 +62,7 @@ impl VsockChannel {
     }
 
     async fn write(&mut self, message: GuestToAgent) -> Result<()> {
-        let mut bytes = serde_json::to_vec(&message).context("encode guest observation")?;
-        bytes.push(b'\n');
+        let bytes = encode(message)?;
         if let Some(connection) = &mut self.connection
             && let Err(error) = connection.writer.write_all(&bytes).await
         {
@@ -72,9 +73,29 @@ impl VsockChannel {
     }
 }
 
+fn encode(mut message: GuestToAgent) -> Result<Vec<u8>> {
+    let mut bytes = serde_json::to_vec(&message).context("encode guest observation")?;
+    if bytes.len() >= MAX_AGENT_LINE_BYTES
+        && let GuestToAgent::RunnerExited {
+            usage: Some(usage), ..
+        } = &mut message
+        && !usage.steps.is_empty()
+    {
+        usage.steps.clear();
+        tracing::warn!("runner steps exceed guest message capacity");
+        bytes = serde_json::to_vec(&message).context("encode guest observation")?;
+    }
+    bytes.push(b'\n');
+    Ok(bytes)
+}
+
 fn bind(port: u32) -> Result<VsockListener> {
     VsockListener::bind(VsockAddr::new(VMADDR_CID_ANY, port)).context("bind guest vsock")
 }
+
+#[cfg(test)]
+#[path = "_tests_/vsock_tests.rs"]
+mod vsock_tests;
 
 #[async_trait]
 impl Channel for VsockChannel {

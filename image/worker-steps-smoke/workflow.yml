@@ -1,0 +1,21 @@
+name: ciproxy Worker steps smoke
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  worker-steps:
+    runs-on: ciproxy-worker-steps-smoke
+    steps:
+      - name: Check out smoke repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Run marker
+        run: printf '%s\n' smoke
+      - name: Skip marker
+        if: ${{ false }}
+        run: exit 1
+      - name: Composite wrapper
+        uses: ./.github/actions/worker-steps-smoke
+      - name: Last marker
+        run: printf '%s\n' done

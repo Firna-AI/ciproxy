@@ -15,7 +15,8 @@ use crate::power::{BoatPower, SystemShutdownCommand, VmPower};
 use crate::process::StockRunner;
 use crate::service::{Guest, Supervisor};
 #[cfg(target_os = "linux")]
-use crate::usage::{Usage, linux::Proc};
+use crate::usage::linux::Proc;
+use crate::usage::{Source, Usage, worker_log::DiagDirectory};
 use crate::vsock::VsockChannel;
 
 /// Options for one fresh guest. Registrations never use command-line flags.
@@ -67,7 +68,6 @@ impl Application for GuestApplication {
     async fn run(&self, cli: Cli) -> Result<()> {
         let platform = Platform::current();
         let own_machine = matches!(cli.mode, Mode::Vsock { .. });
-        #[cfg(target_os = "linux")]
         let mut usage_reporter = None;
         let (channel, power): (Box<dyn Channel>, Box<dyn Power>) = match cli.mode {
             Mode::Vsock { port } => (
@@ -79,10 +79,7 @@ impl Application for GuestApplication {
             ),
             Mode::Boat { registration_file } => {
                 let boat = BoatChannel::from_file(&registration_file)?;
-                #[cfg(target_os = "linux")]
-                {
-                    usage_reporter = Some(boat.usage_reporter());
-                }
+                usage_reporter = Some(boat.usage_reporter());
                 (Box::new(boat), Box::new(BoatPower))
             }
         };
@@ -91,6 +88,10 @@ impl Application for GuestApplication {
             Platform::Linux => Box::new(LinuxGuestSetup),
             Platform::MacOs => Box::new(MacGuestSetup),
         };
+        #[cfg(target_os = "linux")]
+        let source: Option<Box<dyn Source>> = Some(Box::new(Proc::new()));
+        #[cfg(not(target_os = "linux"))]
+        let source: Option<Box<dyn Source>> = None;
         let mut guest: Box<dyn Guest> = Box::new(Supervisor {
             image_id: ImageId(cli.image_id),
             channel,
@@ -102,10 +103,7 @@ impl Application for GuestApplication {
                 setup,
             )),
             power,
-            #[cfg(target_os = "linux")]
-            usage: Some(Usage::new(Box::new(Proc::new()), usage_reporter)),
-            #[cfg(not(target_os = "linux"))]
-            usage: None,
+            usage: source.map(|source| Usage::new(source, usage_reporter, Box::new(DiagDirectory))),
         });
         guest.run().await
     }

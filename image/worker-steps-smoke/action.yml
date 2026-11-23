@@ -1,0 +1,12 @@
+name: ciproxy Worker steps smoke composite
+description: Check that embedded steps do not appear in the job step list.
+runs:
+  using: composite
+  steps:
+    - name: Embedded skip
+      if: ${{ false }}
+      run: exit 1
+      shell: bash
+    - name: Embedded run
+      run: printf '%s\n' embedded
+      shell: bash
