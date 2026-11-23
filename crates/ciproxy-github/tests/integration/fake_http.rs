@@ -232,8 +232,5 @@ async fn handle(
         return Json(json!({"repositories":[{"id":23,"full_name":"customer/private","private":true,"default_branch":"trunk"},
             {"id":29,"full_name":"customer/public","private":false,"default_branch":"main"}]})).into_response();
     }
-    if path.ends_with("/runner-groups") && method == Method::GET {
-        return Json(json!({"runner_groups":[]})).into_response();
-    }
     StatusCode::NOT_FOUND.into_response()
 }

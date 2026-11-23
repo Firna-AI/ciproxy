@@ -16,7 +16,7 @@ use ciproxy_api::state::{ApiConfig, ApiState};
 use ciproxy_gateway::boundary::SystemEntropy;
 use ciproxy_gateway::connections::LocalConnections;
 use ciproxy_gateway::gateway::{Gateway, MachineGateway};
-use ciproxy_github::app::{AppService, GitHubApp};
+use ciproxy_github::app::{AppId, AppService, GitHubApp};
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_store_interface::dashboard::records::{Membership, Role};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
@@ -94,6 +94,7 @@ impl Fixture {
         let factory = Arc::new(Factory(remote.clone()));
         let persistence = Arc::new(StoreAdapter::new(database.store.clone(), runtime.clone()));
         let app: Arc<dyn GitHubApp> = Arc::new(AppService {
+            app_id: AppId::new("3571".to_owned()),
             leases: persistence.clone(),
             installations: remote.clone(),
             store: persistence.clone(),

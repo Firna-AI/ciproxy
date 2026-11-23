@@ -85,7 +85,7 @@ impl Hosted {
         let pem = config.secret("github-app-private-key")?;
         let signer = Arc::new(
             RsaAppJwt::from_pem(
-                config.github_app_id.clone(),
+                config.github_app_id.as_str().to_owned(),
                 pem.expose_secret().as_bytes(),
                 clock.clone(),
             )
@@ -173,6 +173,7 @@ impl Hosted {
         let machines: Arc<dyn OwnMachines> = Arc::new(machine_runtime);
         relay.bind(&machines)?;
         let app: Arc<dyn GitHubApp> = Arc::new(AppService {
+            app_id: config.github_app_id.clone(),
             leases: persistence.clone(),
             installations,
             store: persistence.clone(),

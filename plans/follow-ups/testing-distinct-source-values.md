@@ -7,7 +7,9 @@
   review round 1, the blocked wider fix F of finding 2. Review round 2 added
   finding 7 as a second case and raised this item as finding 10. Option B
   holds the widened rule D of the check of finding 7. Option C matches
-  option E of that check.
+  option E of that check. On 2026-11-23, review round 1 of pull request
+  #142 (`conductor/ciproxy-runner-group-per-environment`) added a third
+  case, its finding 3.
 - **Location:** `skills/testing/SKILL.md` in the repository
   `futex-ai/skills`, sections "Prove that each test can fail" and "Write one
   test". For option C in this repository: the test clocks at
@@ -64,6 +66,15 @@
     correct code reads the clock only once, after the call. So the wrong
     value exists only in the broken code, and the author finds no second
     value to give its own literal.
+  - On 2026-11-23, review round 1 of pull request #142 found a third case.
+    The runner-group name `ciproxy-<app id>-<organization id>` takes the
+    App ID from the configuration. Every test gave the App service the App
+    ID `3571`. So code that used the literal `3571` in place of the
+    configured App ID passed every test.
+  - The fix added a second App ID, `2718`, to the unit test
+    `requester_creates_named_workspace_with_atomic_defaults_and_private_group`
+    in `crates/ciproxy-github/src/_tests_/app_tests.rs`. A constant `3571`
+    now fails it.
 - **Problem:** When a test gives two values of the same type one literal,
   code that uses the wrong value still passes. The failure proofs of the
   `testing` skill do not swap one source for the other, so they miss this.
@@ -76,13 +87,16 @@
   several values of the same type?
 - **Options:**
   - **A.** Change nothing. Each review finds the case again. Effort: Small.
-  - **B.** Add a rule with two clauses to the `testing` skill:
+  - **B.** Add a rule with three clauses to the `testing` skill:
     - When the code picks one of several values of the same type, such as
       two times or two IDs, the test gives each value a different literal.
       The failure proof swaps the source.
     - When the code must read a value after an awaited call, the test
       changes that value inside the test double of the call. The failure
       proof moves the read before the call.
+    - When a result depends on a configured value, such as an App ID, the
+      tests pass two different values through the entry point. The failure
+      proof replaces the configured value with a constant.
 
     The rule guides the authors of every repository, but it enforces
     nothing. The change goes through the `writing-skills` skill of

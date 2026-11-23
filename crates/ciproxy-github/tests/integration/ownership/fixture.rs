@@ -4,8 +4,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use chrono::{DateTime, Utc};
-use ciproxy_github::app::AppService;
 use ciproxy_github::app::webhook::{Actor, Installation, InstallationAction, InstallationEvent};
+use ciproxy_github::app::{AppId, AppService};
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::registrations::{
     RegistrationRequest, RegistrationService, RunnerRegistrations,
@@ -45,6 +45,7 @@ pub(super) fn app(store: Arc<dyn Store>, fixture: &Fixture, origin: &str) -> App
         Arc::new(Inputs(AtomicU64::new(1000))),
     ));
     AppService {
+        app_id: AppId::new("3571".to_owned()),
         leases: adapter.clone(),
         installations: fixture.state.clone(),
         store: adapter.clone(),

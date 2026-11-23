@@ -74,3 +74,7 @@
 - **Related:** `production-deny-policy.md` is an open decision on a guard
   for production data. Decide it before the first production apply.
   `production-smoke-test.md` follows this task.
+  `shared-saved-runner-group.md` and
+  `environments-share-organization-jobs.md` hold choices for the first
+  time that production serves an organization that the main preview
+  already serves, such as `Firna-AI`.

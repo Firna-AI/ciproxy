@@ -8,7 +8,7 @@ This crate has no open licence.
 ## Responsibilities
 
 Keep App keys and installation tokens in the control plane.
-Maintain one private runner group for each organization.
+Maintain one private runner group for each organization and environment.
 Maintain one scale set for each organization and workspace label.
 Hold a database session lock while each GitHub message session runs.
 Save job updates before acknowledging their messages.

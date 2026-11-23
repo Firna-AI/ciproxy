@@ -12,10 +12,10 @@ use ciproxy_store_interface::vm_size::VmSize;
 use unimock::Unimock;
 use uuid::Uuid;
 
-use crate::app::AppService;
 use crate::app::webhook::{
     Account, AccountKind, Actor, Installation, InstallationAction, InstallationEvent,
 };
+use crate::app::{AppId, AppService};
 use crate::persistence::session::{ListenerContext, ListenerTarget};
 
 pub(super) fn at() -> DateTime<Utc> {
@@ -116,6 +116,7 @@ pub(super) fn facts() -> RunFacts {
 pub(super) fn app(mock: Unimock) -> AppService {
     let mock = Arc::new(mock);
     AppService {
+        app_id: AppId::new("3571".to_owned()),
         leases: mock.clone(),
         installations: mock.clone(),
         store: mock.clone(),

@@ -1,6 +1,7 @@
 //! GitHub App installation, requester linkage, and lifecycle orchestration.
 
 mod admission;
+mod app_id;
 mod bindings;
 mod coordination;
 mod delivery;
@@ -28,6 +29,7 @@ use crate::rest::GitHubRest;
 use crate::runtime::Runtime;
 use crate::scale_sets::ScaleSetFactory;
 
+pub use self::app_id::AppId;
 use self::webhook::InstallationEvent;
 
 /// Exact association decision before allocating a workspace or runner resources.
@@ -121,6 +123,8 @@ pub trait GitHubApp: Send + Sync {
 
 /// The App service, consumed through dyn GitHubApp at the composition root.
 pub struct AppService {
+    /// GitHub App ID of this environment, used to keep runner groups separate.
+    pub app_id: AppId,
     /// Waiting cross-process mutation authority for GitHub organizations.
     pub leases: Arc<dyn OrganizationMutations>,
     /// App-authenticated current installation identity and suspension state.
