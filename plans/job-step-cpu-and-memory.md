@@ -715,6 +715,17 @@ Design calls, my calls, 23 November 2026, from the docs of Milestone 2:
   artifacts of a job. Reason: a step name from the VM can reach the
   control plane before the name rule replaces it.
 
+Design calls, my calls, 23 November 2026, from milestone 2a:
+
+- **Privacy mockup:** the privacy mockup shows placeholder lines for its
+  sections, so it gets the new title and a new retention row, but no
+  paragraph about stored data. Milestone 12 writes the script names rule
+  into the privacy draft. Reason: the user writes and approves the legal
+  text, and the mockup holds only its frame.
+- **Boat key in the privacy draft:** the stored Boat key moves out of the
+  section "What ciproxy never stores or logs". Reason: a stored fact under
+  that heading contradicts it.
+
 Contract sketch, for the protocol crate:
 
 - Times in the agent protocol are whole milliseconds since the Unix epoch,
@@ -803,7 +814,7 @@ Depends on: 2
 
 The docs of Milestone 2 found two mockup gaps.
 
-- [ ] Change the title "What ciproxy never receives" in
+- [x] Change the title "What ciproxy never receives" in
       `docs/mockups/src/fixtures/legal.ts` to the rule words, and add the
       samples and the steps to the data that the privacy mockup stores.
 - [ ] Add the state of figures that end before the job ended to the
@@ -1003,9 +1014,11 @@ The public docs explain the figures.
 - [ ] Add a docs page about the CPU and memory panel: what each figure
       means, and how to use the figures to choose a label size.
 - [ ] Update the privacy policy draft in `ts/site/src/data/legal-privacy.ts`:
-      add the samples and the steps to the job metadata, and use the rule
-      words. The legal pages stay drafts until the user approves them, as
-      `plans/follow-ups/legal-pages-approval.md` says.
+      add the samples and the steps to the job metadata with the script
+      names rule, and use the rule words in the heading "What ciproxy never
+      stores or logs". Keep the stored Boat key fact only under "What
+      ciproxy stores". The legal pages stay drafts until the user approves
+      them, as `plans/follow-ups/legal-pages-approval.md` says.
 - [ ] Build the site with `npm --prefix ts run site:build`.
 
 ## Milestone 13: Verification, commit, review, and pull request

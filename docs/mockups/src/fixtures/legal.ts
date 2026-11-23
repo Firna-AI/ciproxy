@@ -38,7 +38,7 @@ export const legalPages: Readonly<
     sections: [
       { id: "who", title: "Who we are" },
       { id: "stored", title: "What ciproxy stores" },
-      { id: "never", title: "What ciproxy never receives" },
+      { id: "never", title: "What ciproxy never stores or logs" },
       { id: "use", title: "How ciproxy uses data" },
       { id: "processors", title: "Who processes data for ciproxy" },
       { id: "retention", title: "Data retention" },
@@ -60,7 +60,7 @@ export type RetentionRow = { data: string; kept: string };
 
 export const retentionRows: readonly RetentionRow[] = [
   {
-    data: "The details of each finished job",
+    data: "The details of each finished job, with its CPU and memory samples and its steps",
     kept: `${keep.jobDays} days, on every plan`,
   },
   {
