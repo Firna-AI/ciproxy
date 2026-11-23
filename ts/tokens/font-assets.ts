@@ -3,7 +3,7 @@ import geistMono from "@fontsource-variable/geist-mono/files/geist-mono-latin-wg
 
 import { fontNames } from "./index.ts";
 
-/** Bundler asset IDs for Expo's font loader, from the same Geist packages. */
+/** Bundler asset IDs of the Geist faces, keyed by family name. */
 export const fontAssets = {
   [fontNames.sans]: geist,
   [fontNames.mono]: geistMono,

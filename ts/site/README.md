@@ -216,6 +216,10 @@ This keeps it separate from the Markdown lint tool's YAML version.
 - [src/components/site-header/SiteHeader.astro](src/components/site-header/SiteHeader.astro)
   is the top bar. Its `section` prop selects the page that it marks, and the
   docs form.
+- [src/data/brand.ts](src/data/brand.ts) holds the paths of the brand mark.
+  [src/components/Brand.astro](src/components/Brand.astro) draws the mark and
+  the wordmark, and [src/pages/favicon.svg.ts](src/pages/favicon.svg.ts)
+  serves `/favicon.svg`, the mark in the ink.
 - [src/components/LinkButton.astro](src/components/LinkButton.astro) is a
   link with the look of a button, and
   [src/components/icon/Icon.astro](src/components/icon/Icon.astro) an icon.
