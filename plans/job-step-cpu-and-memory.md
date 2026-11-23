@@ -494,21 +494,25 @@ and the
 
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation. The docs work of Milestone 2 found it on
-  23 November 2026.
+  23 November 2026. The options check of the same day added D, E, and F,
+  and it moved the recommendation from A to D.
 - **Category:** Docs or spec.
 - **Location:** `docs/protocol/job-usage.md`, "How the figures reach the
-  control plane".
-- **Background:** On Boat, the guest sends sample reports every 30 seconds,
-  and the final figures in the exit report. When the exit report is lost or
-  refused, the job page shows the newest sample report. That report can
-  miss up to the last 30 seconds of the job.
-- **Problem:** The page then shows partial figures as if they covered the
-  whole job. For example, "None" out-of-memory kills can hide a kill in the
-  last seconds.
+  control plane" and "Steps".
+- **Background:**
+  - On Boat, the guest sends sample reports every 30 seconds, and the final
+    figures in the exit report.
+  - When the exit report is lost or refused, the job page shows the newest
+    sample report. It can miss up to the last 30 seconds of the job.
+  - The step that runs at the end of such a series has a start and no end.
+    A step without an end shows no figures today, so that step, often the
+    one that failed, shows none.
+- **Problem:** The page shows partial figures as if they covered the whole
+  job, and it shows no figures for the step that ran at the end.
 - **Impact if no action:** A reader can trust figures that miss the end of
-  the job, often the step that failed.
-- **Root question:** How does the job page show figures that miss the end
-  of a Boat job?
+  the job. A kill in the last seconds can show on no step row.
+- **Root question:** How does a reader of the job page know which part of a
+  job its figures cover, for the job and for each step?
 - **Options:**
   - **A.** Show the figures with a note, such as "These figures end at
     6:31, before the job ended." The API marks figures that come from a
@@ -518,13 +522,29 @@ and the
     loses the figures that did arrive. Effort: Small.
   - **C.** Show the figures as they are. Cost: partial figures look
     complete. Effort: Small.
-- **Left out:** None.
-- **Wider fix:** None.
+  - **D.** Do A, and also: only an accepted exit report marks figures as
+    final. A last step with a start and no end runs to the end of the
+    samples and shows its figures so far, with no "Complete job" row after
+    it. Cost: a store mark, a step rule with its tests, and one more state
+    of a step row. Effort: Medium.
+  - **E.** Do B, and drop the sample reports of decision 4. Cost: it
+    reverses the user's choice of C in decision 4, and each Boat job whose
+    delete comes first shows no figures. Effort: Small.
+  - **F.** Do D, and give the length of the missing end, such as "These
+    figures miss the last 25 seconds of the job". The control plane
+    measures it with its own clock, and the note shows only past a few
+    seconds. Cost: a threshold for the note. Effort: Medium.
+- **Left out:** A note on every Boat job, because the reader still cannot
+  tell which job misses its end.
+- **Wider fix:** D, because its final mark is a correct default for each
+  series that no exit report finished.
 - **Previous examples:** None found.
-- **Related:** Decision 6. With its option A, this case becomes rare.
-- **Recommendation:** A. It keeps the figures that arrived, and it tells
-  the reader what they miss.
-- **Action:** ask the user, because A adds a state to the job page that no
+- **Related:** Decision 6. With its option A, this case becomes rare. With
+  its option D or E, the gap is a second or two, and F fits better.
+- **Recommendation:** D. The first recommendation was A. D keeps the
+  partial figures that the sample reports exist to save, and it gives the
+  step that ran at the end its figures.
+- **Action:** ask the user, because D adds a state to the job page that no
   requirement covers.
 
 ## Design
@@ -726,6 +746,16 @@ Design calls, my calls, 23 November 2026, from milestone 2a:
   section "What ciproxy never stores or logs". Reason: a stored fact under
   that heading contradicts it.
 
+Design calls, my calls, 23 November 2026, from the options check of
+decision 7:
+
+- **Final series stays:** no sample report replaces the samples and steps
+  of an accepted exit report, also when it arrives after that report.
+  Reason: the exit report holds the final series.
+- **Failed exit samples:** when the samples of an exit report fail a check,
+  the control plane keeps the samples of the newest sample report. Reason:
+  those samples passed the checks.
+
 Contract sketch, for the protocol crate:
 
 - Times in the agent protocol are whole milliseconds since the Unix epoch,
@@ -817,8 +847,9 @@ The docs of Milestone 2 found two mockup gaps.
 - [x] Change the title "What ciproxy never receives" in
       `docs/mockups/src/fixtures/legal.ts` to the rule words, and add the
       samples and the steps to the data that the privacy mockup stores.
-- [ ] Add the state of figures that end before the job ended to the
-      `cpu-memory` sub-page, if decision 7 chooses A. Waits for decision 7.
+- [ ] Add the state of figures that end before the job ended, if decision 7
+      chooses A, D, or F. The `cpu-memory` sub-page already has five
+      screens, so add a nested sub-page for it. Waits for decision 7.
 - [ ] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
       pages in the mobile and the desktop variants.
 

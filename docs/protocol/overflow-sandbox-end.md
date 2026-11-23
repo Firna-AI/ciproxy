@@ -73,6 +73,8 @@ samples and the steps that the reports of a sandbox carry.
 - Each accepted sample report replaces the samples and the steps that the
   control plane kept for the job.
 - The exit report replaces them with the final samples and steps.
+- No sample report replaces the final samples and steps of an accepted exit
+  report, also when it arrives after that report.
 - A sample report is not an exit report, so the control plane still accepts
   only one exit report for each sandbox.
 - These limits apply because job code can read the token of the sandbox, as

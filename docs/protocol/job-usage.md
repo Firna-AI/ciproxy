@@ -158,6 +158,8 @@ what the job page shows.
   characters.
 - The control plane drops only the steps of a report that passes a step
   limit. It keeps the samples of that report.
+- When the samples of an exit report fail a check, the control plane keeps
+  the samples of the newest sample report.
 - A drop never changes how the control plane handles the exit.
 - The control plane logs a drop without the dropped figures.
 
