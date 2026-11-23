@@ -21,7 +21,11 @@
     first.
   - After a change to only a CSS file of a screen, the build failed four
     times with this text:
-    `[mokly/export-invalid] Inputs changed during the build: …/job-path-figure.css. Build again.`
+
+    ```text
+    [mokly/export-invalid] Inputs changed during the build: …/job-path-figure.css. Build again.
+    ```
+
   - No other process changed the file during the build.
   - Deleting `~/.cache/mokly/<hash>/bundles` made the next build pass. A
     second CSS-only change made the failure come back.
