@@ -138,6 +138,8 @@ Preview also receives the four image identity variables described in
 | `CIPROXY_APP_CLIENT_ID`        | This environment's public GitHub App OAuth client ID. Its secret stays in the mounted `github-oauth-secret` file.                                               |
 | `CIPROXY_APP_SLUG`             | This environment's GitHub App URL slug. The runtime uses it to build the installation URL.                                                                      |
 | `JOB_IMAGE_MANIFEST_PATH`      | One immutable release path relative to `IMAGE_URL_PREFIX`, such as `<release>/manifest.json`. The manifest and sibling `downloads.json` supply all image facts. |
+| `MACOS_IMAGE_URL_PREFIX`       | Empty until [macOS image setup](runtime.md#macos-images). Then the R2 endpoint and bucket of the macOS images.                                                  |
+| `MACOS_IMAGE_MANIFEST_PATH`    | Empty until the first macOS publish. Then `releases/<image_id>/manifest.json`, relative to `MACOS_IMAGE_URL_PREFIX`.                                            |
 
 These four runtime settings are public variables in each GitHub environment.
 Deploy maps `CIPROXY_APP_ID` to the pod variable `GITHUB_APP_ID`.

@@ -135,6 +135,7 @@ pub(super) fn record(phase: StartPhase) -> StartRecord {
             21600,
         )),
         starts_at: at(),
+        launched_at: None,
         ends_at: None,
         billing: None,
         start_fee_bound_usd: Some(Decimal::new(3, 2)),

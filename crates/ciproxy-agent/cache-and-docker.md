@@ -230,7 +230,7 @@ Live KVM proof remains required.
 - [Cache](../../docs/protocol/cache.md) defines the cache rules and the
   job ID pair. [Cache handoff](../../docs/protocol/cache-handoff.md) defines
   the cache handoff.
-- [Security](../../docs/protocol/security.md) defines job isolation.
+- [Isolation](../../docs/protocol/security-isolation.md) defines job isolation.
 - [Cache sidecar](../ciproxy-cache-sidecar/README.md) gives the admin
   listener routes and the restore result without entry facts.
 - [Smoke checks](smoke-checks.md) give the live cache and Docker checks.

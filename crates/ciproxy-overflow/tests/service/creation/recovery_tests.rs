@@ -75,9 +75,14 @@ async fn launch_recovery_keeps_the_consumed_registration_and_same_delivery() {
     )));
     let harness = Harness::new(backend, (), Runtime::Recover);
     harness.seed(record(StartPhase::Launching));
+    *harness.now.lock().unwrap() = at() + Duration::minutes(3);
     let outcome = harness.service.resume(id(1), id(11)).await.unwrap();
     assert!(matches!(outcome, StartOutcome::Started(_)), "{outcome:?}");
     assert_eq!(harness.state.lock().unwrap().phases, [StartPhase::Running]);
+    assert_eq!(
+        harness.start(id(11)).launched_at,
+        Some("2026-11-05T12:03:00Z".parse().unwrap())
+    );
 }
 
 #[tokio::test]

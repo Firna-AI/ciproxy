@@ -49,19 +49,32 @@ export function LinkAction({
   );
 }
 
-/** An inline text link to another screen, or to a section of it. */
+/**
+ * An inline text link to another screen, or to a section of it. A link out
+ * of a screen with work in progress, such as an open dialog or a review,
+ * opens a new tab, so the screen keeps its place.
+ */
 export function TextLink({
   to,
   fragment,
+  newTab = false,
   children,
 }: {
   to: CataloguePath;
   /** The id of the section that the link opens. */
   fragment?: string;
+  /** Open the link in a new tab, so this screen keeps its place. */
+  newTab?: boolean;
   children: ReactNode;
 }) {
   return (
-    <MockLink to={to} fragment={fragment} className="text-link">
+    <MockLink
+      to={to}
+      fragment={fragment}
+      className="text-link"
+      target={newTab ? "_blank" : undefined}
+      rel={newTab ? "noopener noreferrer" : undefined}
+    >
       {children}
     </MockLink>
   );

@@ -15,6 +15,7 @@ use ciproxy_store_interface::store::{Store, StoreFactory};
 use ciproxy_store_interface::vm_size::VmSize;
 use ciproxy_store_interface::workspaces::Workspace;
 use ciproxy_store_pg::factory::PgStoreFactory;
+use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 use diesel::sql_types;
 use reqwest::Url;
@@ -177,6 +178,11 @@ impl Fixture {
         }
     }
     pub(super) fn add_machine(&mut self) -> Uuid {
+        self.add_machine_on(Platform::LinuxX64)
+    }
+
+    /// Add a connected machine of this platform with no runners and no images.
+    pub(super) fn add_machine_on(&mut self, platform: Platform) -> Uuid {
         let source = self
             .store
             .machine_snapshots(self.workspace)
@@ -186,9 +192,15 @@ impl Fixture {
         machine.id = Uuid::new_v4();
         machine.draining = false;
         machine.warm_runners = 1;
+        machine.platform = platform;
         self.store.create_machine(self.workspace, &machine).unwrap();
         let mut report = source.report.unwrap().report;
         report.runners.clear();
+        report.hardware.platform = platform;
+        if platform != Platform::LinuxX64 {
+            report.images.available.clear();
+            report.images.newest = None;
+        }
         diesel::sql_query("INSERT INTO machine_reports (workspace_id, machine_id, session_id, report, received_at) VALUES ($1,$2,$3,$4,$5)")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(machine.id).bind::<sql_types::Uuid,_>(Uuid::new_v4())
             .bind::<sql_types::Jsonb,_>(serde_json::to_value(report).unwrap()).bind::<sql_types::Timestamptz,_>(at()).execute(&mut self.connection).unwrap();
@@ -218,6 +230,30 @@ impl Fixture {
         diesel::sql_query("UPDATE boat_runner_intents SET body=body-'registration_scale_set_id' WHERE workspace_id=$1 AND runner_id=$2")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(runner)
             .execute(&mut self.connection).unwrap();
+    }
+
+    /// Fail the SQL write that saves a new Boat exit claim.
+    pub(super) fn reject_boat_exit_claims(&mut self) {
+        self.connection
+            .batch_execute(
+                "CREATE FUNCTION reject_boat_exit_claim() RETURNS trigger LANGUAGE plpgsql AS $$
+                 BEGIN RAISE EXCEPTION 'synthetic Boat exit claim failure'; END;
+                 $$;
+                 CREATE TRIGGER reject_boat_exit_claim BEFORE UPDATE OF reported_at ON overflow_starts
+                 FOR EACH ROW WHEN (OLD.reported_at IS NULL AND NEW.reported_at IS NOT NULL)
+                 EXECUTE FUNCTION reject_boat_exit_claim();",
+            )
+            .unwrap();
+    }
+
+    /// Remove the Boat exit claim fault from this test database.
+    pub(super) fn allow_boat_exit_claims(&mut self) {
+        self.connection
+            .batch_execute(
+                "DROP TRIGGER reject_boat_exit_claim ON overflow_starts;
+                 DROP FUNCTION reject_boat_exit_claim();",
+            )
+            .unwrap();
     }
 
     /// Remove source proof to model conservative legacy registration recovery.

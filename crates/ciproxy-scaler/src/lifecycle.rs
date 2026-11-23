@@ -1,9 +1,13 @@
 //! Retire obsolete idle registrations while preserving every running job.
 
+use std::time::Duration;
+
 use crate::actions::StopReason;
 use crate::size_policy::allows_boat_runner;
 use crate::snapshot::{Runner, RunnerState, Snapshot, WaitingJob};
 use crate::state::{Plan, idle, label_for, warm_candidate};
+
+const BOAT_READY_DEADLINE: Duration = Duration::from_secs(600);
 
 pub(crate) fn retire_obsolete(snapshot: &Snapshot, plan: &mut Plan) {
     for machine in &snapshot.machines {
@@ -18,11 +22,17 @@ pub(crate) fn retire_obsolete(snapshot: &Snapshot, plan: &mut Plan) {
     }
     for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
         let reason = match &sandbox.runner {
-            Some(retained) => obsolete(snapshot, &retained.runner, false).or_else(|| {
-                let label = label_for(snapshot, &retained.runner)?;
-                (idle(&retained.runner) && !allows_boat_runner(snapshot, label, retained))
-                    .then_some(StopReason::SizeNoLongerAllowed)
-            }),
+            Some(retained) => obsolete(snapshot, &retained.runner, false)
+                .or_else(|| {
+                    let label = label_for(snapshot, &retained.runner)?;
+                    (idle(&retained.runner) && !allows_boat_runner(snapshot, label, retained))
+                        .then_some(StopReason::SizeNoLongerAllowed)
+                })
+                .or_else(|| {
+                    let deadline = retained.launched_at?.saturating_add(BOAT_READY_DEADLINE);
+                    (idle(&retained.runner) && snapshot.now >= deadline)
+                        .then_some(StopReason::ReadyDeadlinePassed)
+                }),
             None => Some(StopReason::OrphanSandbox),
         };
         if let Some(reason) = reason {

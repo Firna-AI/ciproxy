@@ -3,7 +3,7 @@
 use super::clock::clock;
 use super::settled::Settled;
 use super::support::{Fixture, at};
-use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_control_plane::runtime::{ImageOffer, MachineRuntime};
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -79,7 +79,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        Some(image.clone()),
+        Some(ImageOffer::unsigned(image.clone())),
         Arc::new(Unimock::new(())),
     );
     runtime.settled_tick().await.unwrap();

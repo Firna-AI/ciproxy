@@ -1,12 +1,12 @@
 # Deployment operations
 
 This page gives the work after the [setup](setup.md) of an environment of
-the [deployment](README.md): the job images, the database, the
-control-plane runtime, the rotations, the zones, and later changes. Run
-every command from the repository root, with the shell variables of the
-setup. Set `NAMESPACE="ciproxy-$DEPLOY_ENV"` before these commands. The operator
-does each step with local credentials and the roles of
-[Identities and permissions](identities.md#operator-permissions).
+the [deployment](README.md): the job images, the database, the email of a
+new version of the terms, the control-plane runtime, the rotations, the
+zones, and later changes. Run every command from the repository root, with
+the shell variables of the setup. Set `NAMESPACE="ciproxy-$DEPLOY_ENV"`
+before these commands. The operator does each step with local credentials and
+the roles of [Identities and permissions](identities.md#operator-permissions).
 
 Most steps here use the cluster. Get its credentials first:
 
@@ -64,6 +64,30 @@ Storage URL must each fail.
 ## Prepare the database
 
 Use [database setup](runtime.md#prepare-the-database) after the first deploy.
+
+## Delete manual database backups
+
+Cloud SQL keeps the 14 most recent automatic backups of each database. An
+on-demand backup, such as one taken before a rollback, stays until an
+operator deletes it. Delete each on-demand backup within 14 days, because
+the privacy policy on the site promises that limit.
+[Data retention](../docs/protocol/security-data.md#data-retention) states
+it as a requirement.
+
+## Announce a new version of the terms
+
+A new version of the terms on the site binds the customer of each paid
+workspace 30 days after it goes live, as
+[New versions](../docs/protocol/terms-acceptance.md#new-versions) says. On
+the day that it goes live:
+
+1. In the Stripe Dashboard of the environment, list the billing email of
+   each customer whose subscription is active or past due.
+2. Email each address from `legal@ciproxy.dev`. Name the effective date,
+   the day 30 days later when the version binds the customer, the address
+   of the terms, `https://ciproxy.dev/terms/`, what changed, and that the
+   customer can stop at any time.
+3. Keep a copy of each sent email.
 
 ## Turn on the runtime
 

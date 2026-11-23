@@ -6,11 +6,11 @@ import json
 import os
 from pathlib import Path
 
-from boat_secret import sync_boat_secret
 from deploy_support import (
     helm_values, neg_zones, run, runtime_configuration,
     sync_release_secret, terraform_init,
 )
+from optional_secret import BOAT_SHARED_SNAPSHOT, R2_IMAGES, sync_optional_secret
 from terraform_roots import ENVIRONMENTS, backend
 from workload_snapshot import save as save_workload_inputs
 
@@ -55,10 +55,12 @@ def main():
         if os.environ.get("CONTROL_PLANE_RUNTIME_READY") != "false":
             raise ValueError("A running control plane requires true or explicit false readiness.")
     sync_release_secret(config)
-    boat_revision = sync_boat_secret(config)
+    boat_revision = sync_optional_secret(config, BOAT_SHARED_SNAPSHOT)
+    r2_images_revision = sync_optional_secret(config, R2_IMAGES)
 
     release, ciproxy = helm_values(config, digest, runtime_enabled, control_image, environment)
     ciproxy["controlPlane"]["boatSharedSnapshotRevision"] = boat_revision
+    ciproxy["controlPlane"]["r2ImagesRevision"] = r2_images_revision
     ciproxy["controlPlane"]["cdnSigningKeyName"] = os.environ.get("CDN_SIGNING_KEY_NAME", "")
     ciproxy["controlPlane"]["env"] = [
         {"name": name, "value": os.environ.get(source, "")}
@@ -67,6 +69,8 @@ def main():
             ("GITHUB_OAUTH_CLIENT_ID", "CIPROXY_APP_CLIENT_ID"),
             ("GITHUB_APP_SLUG", "CIPROXY_APP_SLUG"),
             ("JOB_IMAGE_MANIFEST_PATH", "JOB_IMAGE_MANIFEST_PATH"),
+            ("MACOS_IMAGE_URL_PREFIX", "MACOS_IMAGE_URL_PREFIX"),
+            ("MACOS_IMAGE_MANIFEST_PATH", "MACOS_IMAGE_MANIFEST_PATH"),
         )
     ] + [
         {"name": "DOWNLOAD_URL", "value": "https://" + config["hosts"]["releases"]},

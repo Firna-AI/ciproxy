@@ -167,7 +167,10 @@ test("link poll failures stay visible and a later moving claim resumes polling",
 
 test("link recovery and inactive actions come only from the server state", () => {
   const entry = {
-    link: link({ state: "reauthorization_required" }),
+    link: link({
+      state: "reauthorization_required",
+      reauthorization_url: "/continue?proof=link",
+    }),
     picked: otherWorkspaceId,
     choosing: false,
     failure: null,
@@ -176,7 +179,7 @@ test("link recovery and inactive actions come only from the server state", () =>
   assert.equal(recovery.choices, null);
   assert.equal(
     recovery.actions[0]?.kind === "leave" ? recovery.actions[0].href : null,
-    "/api/auth/github?fixture=claim-reauthorize",
+    "/continue?proof=link",
   );
   const inactive = linkSection(session(), {
     ...entry,

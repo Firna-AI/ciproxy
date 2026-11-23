@@ -1,18 +1,33 @@
 // The dashboard routes that this milestone uses, each with its reader. Paths
 // follow the generated contract; IDs are encoded as path segments.
 
-import type { paths } from "../../../api/index.ts";
+import type { operations, paths } from "../../../api/index.ts";
 import { apiPrefix, type ApiClient } from "./client.ts";
 import { parseInstallLink, parseLink, parseLinks } from "./parse-links.ts";
 import { parseInstallCommand, parseMachines } from "./parse-machines.ts";
 import { parseSession, parseSuccess } from "./parse-session.ts";
 import { parseSetup } from "./parse-setup.ts";
+import { withQuery } from "./route-path.ts";
 import type { WorkspaceChoice } from "./schema.ts";
 
 const authBegin: keyof paths = "/auth/github";
 
+/** The query of GET auth/github, as the generated operation names it. */
+type AuthBeginQuery = NonNullable<
+  operations["auth_begin"]["parameters"]["query"]
+>;
+
 /** The top-level navigation that starts a GitHub sign-in. */
 export const githubSignInHref = apiPrefix + authBegin;
+
+/**
+ * The top-level navigation of the terms step. It resumes the setup that the
+ * API keeps from the return of an install on GitHub, and starts a plain
+ * sign-in when no setup waits.
+ */
+export const githubResumeHref = withQuery(githubSignInHref, {
+  resume: "setup",
+} satisfies AuthBeginQuery);
 
 function segment(id: string): string {
   return encodeURIComponent(id);

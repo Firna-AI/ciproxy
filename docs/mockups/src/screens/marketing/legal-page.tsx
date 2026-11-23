@@ -3,7 +3,7 @@
 // page" on desktop, and the section headings. The user writes or approves the
 // text of each section before the launch, so grey lines hold its place. Only
 // the data retention of the privacy policy has text: the limits that
-// security.md decides.
+// security-data.md decides.
 
 import { MockLink, type Viewport } from "@mokly/mokly";
 

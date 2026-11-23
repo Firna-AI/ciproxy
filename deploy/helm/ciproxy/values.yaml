@@ -16,6 +16,8 @@ controlPlane:
   kmsKey: ""
   # Public Kubernetes Secret revision. The share code never enters Helm values.
   boatSharedSnapshotRevision: ""
+  # Public Kubernetes Secret revision. The R2 read key never enters Helm values.
+  r2ImagesRevision: ""
   publicUrl: https://br-main.preview.app.ciproxy.dev
   imageUrlPrefix: https://br-main.preview.app.ciproxy.dev/images/
   # Registration prints <prefix>-images-v<N>. N pins the mounted key version.

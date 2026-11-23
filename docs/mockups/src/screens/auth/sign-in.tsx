@@ -1,16 +1,18 @@
 // Sign-in with GitHub, the return after GitHub sign-in did not finish, and
 // the page after a sign-in ended. A sign-in lasts 30 days, as design call 35
-// says, and the same button signs in again.
+// says, and the same button signs in again. The footer shows the terms
+// notice that the terms step shares.
 
 import { Github } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
-import { LinkAction, TextLink } from "../../components/actions.tsx";
+import { LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { paths } from "../../components/paths.ts";
 import { signIn } from "../../fixtures/access.ts";
 import { unbroken } from "../../fixtures/format.ts";
 import { AuthShell } from "./auth-shell.tsx";
+import { TermsNotice } from "./terms-notice.tsx";
 
 export type SignInState = "ready" | "failed" | "expired";
 
@@ -46,13 +48,7 @@ export function SignInScreen({
     <AuthShell
       viewport={viewport}
       brandTo={paths.landing}
-      footer={
-        <>
-          By signing in, you agree to the ciproxy{" "}
-          <TextLink to={paths.terms}>Terms</TextLink> and{" "}
-          <TextLink to={paths.privacy}>Privacy policy</TextLink>.
-        </>
-      }
+      footer={<TermsNotice />}
     >
       <div className="stack-tight">
         <h1 className="auth-title">Run GitHub Actions on your own machines</h1>

@@ -6,7 +6,7 @@ import { relatedMvp } from "../../components/related-docs.ts";
 export const firstGreenJob = defineUseCase({
   title: "From sign-in to the first green job",
   description:
-    "Cal Moore signs in on 1 September 2026, installs the GitHub App on mokly-ai, adds one Hetzner machine with one command, waits while it gets its job image, connects Boat, and sees the first job pass on the own machine.",
+    "Cal Moore signs in on 1 September 2026, installs the GitHub App on mokly-ai, continues with GitHub on the terms step, adds one Hetzner machine with one command, waits while it gets its job image, connects Boat, and sees the first job pass on the own machine.",
   relatedDocs: relatedMvp(
     "workspaces",
     "security",
@@ -26,7 +26,13 @@ export const firstGreenJob = defineUseCase({
       screenPath: paths.installApp,
       title: "Install the GitHub App",
       description:
-        "GitHub asks for the organization and its repositories, then returns to ciproxy setup.",
+        "GitHub asks for the organization and its repositories, then returns to ciproxy.",
+    },
+    {
+      screenPath: paths.termsStep,
+      title: "Continue with GitHub",
+      description:
+        "The return opens the terms step, which shows the terms notice of sign-in. Continue with GitHub signs Cal in with GitHub again, and Setup opens.",
     },
     {
       screenPath: paths.onboarding,

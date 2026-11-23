@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import {
   billingHref,
   checkoutHref,
@@ -6,10 +8,32 @@ import {
 } from "../src/view/billing-routes.ts";
 import { workspaceHref } from "../src/routing/pages.ts";
 import { askPayer } from "../src/view/billing-format.ts";
+import { siteLinks } from "../src/view/page-model.ts";
+import type { Page } from "./browser-driver.ts";
+import { visible } from "./browser-fixture.ts";
 import { baseSelection } from "./fixtures-billing.ts";
 import { fixtureCheckoutId } from "./fixtures-billing-payment.ts";
 import { workspaceId } from "./fixtures-core.ts";
 import { screenRuns, type PageScreen } from "./browser-pages-screens.ts";
+
+/**
+ * A review with a pay button says that paid plans are for business use only.
+ * Its Terms link opens the public site in a new tab, so the review keeps its
+ * place. Each review with a pay button shows the same summary, so one review
+ * checks the line.
+ */
+async function businessUseLine(page: Page): Promise<void> {
+  const line = page
+    .getByRole("region", { name: "Summary", exact: true })
+    .getByText(
+      "Paid plans are for business use only, as the ciproxy Terms say.",
+      { exact: true },
+    );
+  await visible(line);
+  const terms = line.getByRole("link", { name: "Terms", exact: true });
+  assert.equal(await terms.getAttribute("href"), siteLinks.terms);
+  assert.equal(await terms.getAttribute("target"), "_blank");
+}
 
 export function billingScreenRuns(origin: string) {
   const path = billingHref(workspaceId);
@@ -95,6 +119,7 @@ export function billingScreenRuns(origin: string) {
       scenario: "m21-review-free",
       path: freeReview,
       role: { role: "button", name: "Continue to payment" },
+      check: businessUseLine,
     },
     {
       name: "review-paid",

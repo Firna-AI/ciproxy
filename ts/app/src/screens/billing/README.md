@@ -44,6 +44,9 @@ show the plan and its use, and take each payment through Stripe.
 
 - The review shows the charge that the API gives. When the API cannot price a
   change, the review says so, and no payment starts.
+- A review with a pay button says that paid plans are for business use only,
+  with a link to the Terms. This holds for a move from Free and for a move
+  between paid plans. A review that cannot pay shows no such line.
 - Every payment request goes through one module. It sends the reviewed or
   quoted choice, never the quantities that the person still edits. A move
   between paid plans sends only the ID of the quote of its review. Free

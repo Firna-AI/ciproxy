@@ -10,11 +10,11 @@
 - **Source:** Review.
 - **Category:** Product bug.
 - **Location:** `ts/app/src/routing/landing.ts`, the removed-App and
-  ended-access steps of `landingDecision`, `ts/app/src/view/access.ts:142`,
-  `appRemovedPage`, and `:176`, `accessEndedPage`,
+  ended-access steps of `landingDecision`, `ts/app/src/view/access.ts:165`,
+  `appRemovedPage`, and `:201`, `accessEndedPage`,
   `crates/ciproxy-api/src/handlers/link_views.rs:55`, the claim view of a
   browser-only sign-in, `docs/mockups/src/screens/auth/app-removed.tsx:18`,
-  and `docs/mockups/src/screens/auth/no-role.tsx:67`, `LeftBody`.
+  and `docs/mockups/src/screens/auth/no-role.tsx:70`, `LeftBody`.
 - **Reason:** The state needs a lost access and a waiting add at once, and
   its fix needs a new mockup state first, then an API change.
 
@@ -91,9 +91,11 @@
     show no claim.
   - `appRemovedPage` offers only Install on GitHub. It has no Check again.
   - `accessEndedPage` offers Check again and Install on another
-    organization. Its Check again opens a new GitHub sign-in through the
-    `reauthorization_url` of the session, in `checkAgainTarget` of
-    `access.ts`. That sign-in runs the claim check again.
+    organization. Its Check again opens the `reauthorization_url` of the
+    session, in `checkAgainTarget` of `access.ts`. Since 22 November 2026,
+    that URL is the terms step at `/continue`, so Check again opens the
+    terms step first. Its "Continue with GitHub" button then starts a new
+    GitHub sign-in, which runs the claim check again.
   - `ts/app/src/routing/continuation.ts` trusts a claim of a browser-only
     sign-in only when this tab started its install. Its comment says that
     these claims show old completed installs as open.

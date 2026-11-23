@@ -1,5 +1,7 @@
 //! Public store fixtures for encrypted account and sandbox delivery records.
 
+use ciproxy_protocol::resources::VmSize;
+use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use ciproxy_store_interface::overflow::admission::{
@@ -72,6 +74,7 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
         phase: StartPhase::Creating,
         sandbox: None,
         starts_at: at(),
+        launched_at: None,
         ends_at: None,
         billing: None,
         start_fee_bound_usd: Some(Decimal::new(3, 2)),
@@ -83,6 +86,43 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
         runtime_complete: false,
     };
     (workspace.id, account, record)
+}
+
+pub(super) fn create_runner_intent(database: &Database, workspace: Uuid, record: &StartRecord) {
+    let label = database.store.labels(workspace).unwrap().remove(0);
+    let binding = database
+        .store
+        .scale_sets(workspace, record.organization_id)
+        .unwrap()
+        .remove(0);
+    database
+        .store
+        .create_boat_runner_intent(
+            workspace,
+            &BoatRunnerIntent {
+                registration_scale_set_id: Some(binding.github_id),
+                delivery_id: record.delivery_id,
+                runner_id: record.runner_id,
+                organization_id: record.organization_id,
+                label_id: record.label_id,
+                label_name: label.name,
+                scale_set_id: record.scale_set_id,
+                requested_size: VmSize {
+                    vcpu: 2,
+                    memory_bytes: 8_000_000_000,
+                    disk_bytes: 60_000_000_000,
+                },
+                size: VmSize {
+                    vcpu: 8,
+                    memory_bytes: 16_000_000_000,
+                    disk_bytes: 111_000_000_000,
+                },
+                required_root_disk_bytes: record.required_root_disk_bytes,
+                github_id: Some(84),
+                created_at: record.starts_at,
+            },
+        )
+        .unwrap();
 }
 
 /// Seed a fixed provider operation through pending acceptance and atomic dispatch.

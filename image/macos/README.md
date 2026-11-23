@@ -37,6 +37,21 @@ Homebrew packages of the recipe resolve at build time, as upstream. The
 build keeps the generated software report next to the reference inventory.
 Compare them before each release.
 
+## Variants
+
+`IMAGE_VARIANT` selects the software set. `image_variant.py` holds the
+changes, and each change fails when the upstream text that it changes is not
+there.
+
+- `full`, the default: the software of the GitHub image, with Xcode 26.6
+  and all its simulator runtimes. Image ID `IMAGE_ID`.
+- `standard`: the same, but with the iOS simulator runtime only, and without
+  the Android SDK, its tests, and its report section. Image ID
+  `STANDARD_IMAGE_ID`. It fits a Mac with 256 GB of storage.
+
+The manifest names the variant in `variant`. The `provision` phase extracts
+a fresh upstream tree each time, because the variant changes files in it.
+
 ## The build
 
 The build runs on an Apple Silicon Mac with the host macOS at the guest's
@@ -95,23 +110,41 @@ limit in the upstream scripts. The token stays out of the image.
 7. `prepare-template.py` copies the upstream template and keeps every
    upstream provisioner. It removes the Anka plugin and its source, selects
    the upstream `null` builder over SSH, and writes the trimmed toolset.
-   Packer logs in with the build's SSH key, not the password. Each upstream
-   shell step that expects no restart retries twice, because a step lost its
-   SSH session twice in a row while `softwareupdate` ran, for no cause found.
-   It appends three ciproxy steps: `install-runner.sh` puts the runner in
-   `/opt/actions-runner`, the guest's `install.sh` adds the guest and its
-   launchd service, and `clean-image.sh` removes the build state. The host
-   serves the Xcode archive on its loopback address, in place of upstream's
-   storage account. A reverse SSH tunnel, which the host opens again after
-   each guest restart, brings it to the guest's `127.0.0.1`. So the agent's
-   pf rules, which block guests from the host, do not stop the build. Set
-   `GITHUB_API_PAT` to a token without rights for a higher GitHub API rate
-   limit, or put it in `secrets/github-api-pat` of the work folder. It
-   reaches Packer through the environment, not the command line.
-   The upstream tests and software report run as upstream.
-8. `guest-facts.sh` reads the macOS version, the used and free bytes of the
-   data volume, SIP, and Xcode. Then the guest turns off, and the build
-   packages it.
+   Packer logs in with the build's SSH key, not the password, and gets the
+   build ID in upstream's form, such as `macos-26-arm64_20261117.0516`, so
+   the software report shows GitHub's image version. The template also
+   changes these points, because the upstream recipe expects GitHub's base
+   image:
+   - Each upstream shell step that expects no restart retries twice.
+   - Before each upstream restart, a step writes the auto-login user again,
+     because the setting was lost once. After each restart, a step closes
+     Finder's windows, because upstream's window check fails on the
+     Utilities window that the Setup Assistant phase opened.
+   - Before Packer starts, the build creates `/usr/local/bin` and
+     `/usr/local/share` for the job user, and sets the sshd setting
+     `StrictModes no`, because upstream's `configure-ssh.sh` makes `~/.ssh`
+     writable for everyone. `clean-image.sh` removes that setting.
+
+   The template appends two ciproxy steps: `install-runner.sh` puts the
+   runner in `/opt/actions-runner`, and the guest's `install.sh` adds the
+   guest and its launchd service. The host serves the Xcode archive on its
+   loopback address, in place of upstream's storage account. One SSH
+   connection from Apple's `ssh`, which the host opens again after each
+   guest restart, carries two tunnels. It brings the archive to the guest's
+   `127.0.0.1`, so the agent's pf rules, which block guests from the host,
+   do not stop the build. It also brings the guest's SSH to the host's
+   `127.0.0.1:2222`, where Packer connects. macOS Local Network privacy cut
+   Packer off from the VM network a few minutes after the session that
+   started the build ended. Loopback is not covered. Set `GITHUB_API_PAT` to
+   a token without rights for a higher GitHub API rate limit, or put it in
+   `secrets/github-api-pat` of the work folder. It reaches Packer through
+   the environment, not the command line. The upstream tests and software
+   report run as upstream.
+8. The `facts` phase runs `guest-facts.sh`, which reads the macOS version,
+   the used and free bytes of the data volume, SIP, and Xcode. Then it runs
+   `clean-image.sh`, which removes the build state and the build's SSH key,
+   and the guest turns off. Copy the VM folder first to run this phase
+   again. The `package` phase then packages the guest.
 
 The shipped image has no SSH key and accepts no SSH password. The auto-login
 file holds the password in a reversible form.
@@ -246,8 +279,8 @@ repository. Never print a file, and do not source one in a shell with
 
 ## Checks
 
-`python3 image/macos/check-template.py` checks the template and toolset
-preparation offline. `python3 image/macos/check-archive.py` checks the
+`python3 image/macos/check-template.py` checks the template, toolset, and
+variant preparation offline. `python3 image/macos/check-archive.py` checks the
 archive writer and checker against the agent's member list.
 `python3 image/macos/check-r2.py` runs `publish.sh` and the Xcode download
 of `fetch.sh` against a fake `aws` on `PATH`. It checks the upload order,

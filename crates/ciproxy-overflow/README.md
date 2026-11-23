@@ -17,7 +17,8 @@ Each delivery keeps its organization, label, and scale-set identity.
 The control plane owns Admin authorization, GitHub registrations, the queue,
 and the HTTPS callback route.
 It supplies `RunnerAuthority` for idle registration removal.
-That operation must confirm that no job or waiting demand needs the runner.
+It must keep a runner with a job, and one that waiting demand needs until its
+[ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline).
 The control plane must keep own-machine routing available when Boat fails.
 
 ## What This Crate Does
@@ -118,13 +119,15 @@ The service records `Writing` before any file transfer.
 An unconfirmed or interrupted write enters deletion before any replacement.
 
 An end report derives workspace authority from its token digest.
-The store accepts it once for its one live runner.
+The store accepts it once for its one live runner, before the delivery ends.
+It saves that claim without the workspace lock, so busy work cannot drop it.
 There is no independent token timeout before the sandbox ends.
+`report_end` succeeds after the claim, also when its lock wait or delete fails.
 The service persists deletion before calling Boat.
 The pinned adapter confirms each deletion with the ID of its target sandbox.
 Cleanup retries failed deletion and inspects known IDs omitted from inventory.
 An absent or archived sandbox gets one final usage read before lifecycle end.
-It preserves running jobs and needed idle runners.
+It preserves running jobs and the idle runners that `RunnerAuthority` keeps.
 It only deletes identities proven by its durable create records.
 Unrecognized inventory entries stay unchanged.
 Listed or recovered sandboxes with a proven ended state enter cleanup
@@ -169,7 +172,7 @@ their use of the shared key.
 A retired delivery uses a read-only launch-marker check before cleanup.
 A confirmed launch keeps its runner, including after a lost launch response.
 An unavailable check keeps the delivery and its recovery key for another pass.
-Successful guest launch clears its sealed registration.
+A launch save sets `launched_at` to its time and clears the sealed registration.
 Finished delivery metadata stays for 90 days.
 Diagnostics and live commands omit credentials, registrations, and bodies.
 
@@ -208,9 +211,8 @@ Call the public boundary in this order:
 6. Obtain the GitHub registration for the action's organization and scale set.
 7. Call `start` with the action and those identities.
 8. Include accepted pending deliveries in the next scaler snapshot.
-   For a retained runner, supply `BoatRunner { runner,
-   required_root_disk_bytes: record.required_root_disk_bytes }`.
-   Use that delivery's saved `StartRecord`, including after an image update.
+   Set `required_root_disk_bytes` and `launched_at` of a retained `BoatRunner`
+   from its saved `StartRecord`, also after an image update.
 9. Call `resume` after a restart or an uncertain result.
 10. Pass authenticated guest exit reports to `report_end`.
 11. Call `cleanup` during regular reconciliation and after an outage.
@@ -286,6 +288,7 @@ These commands contact Boat or Cloud KMS and can incur charges.
 ### Related Docs
 
 - [Overflow](../../docs/protocol/overflow.md) defines the required behavior.
+- [Sandbox end](../../docs/protocol/overflow-sandbox-end.md) defines cleanup.
 - [Labels](../../docs/protocol/labels.md) defines size policy.
 - [Job routing](../../docs/protocol/job-routing.md) defines runner placement.
 - [Security](../../docs/protocol/security.md#key-custody) defines key custody.

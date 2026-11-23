@@ -5,13 +5,17 @@
 The upstream template builds with Anka or with Packer's null builder over SSH.
 This copy keeps every upstream provisioner, removes the Anka plugin and its
 source, selects the null builder, keeps the pinned Xcode set in a toolset copy,
-and appends the ciproxy steps: the runner, the guest, and the cleanup.
+and appends the ciproxy steps: the runner and the guest. The facts phase of
+build.sh removes the build state afterwards, because the build still needs
+SSH for the facts.
 """
 
 import argparse
 import json
 import pathlib
 import re
+
+import image_variant
 
 TEMPLATE_NAME = "ciproxy-macos-26-arm64.pkr.hcl"
 TOOLSET_NAME = "toolset-26-ciproxy.json"
@@ -47,16 +51,15 @@ CIPROXY_STEPS = '''
   provisioner "file" {
     destination = "/tmp/ciproxy/"
     sources     = ["${var.ciproxy_inputs}/runner.tar.gz", "${var.ciproxy_inputs}/guest",
-                   "${var.ciproxy_definition}/install-runner.sh",
-                   "${var.ciproxy_definition}/clean-image.sh"]
+                   "${var.ciproxy_definition}/install-runner.sh"]
   }
 
   provisioner "shell" {
     environment_vars = ["RUNNER_SHA256=${var.ciproxy_runner_sha256}"]
     execute_command  = "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}"
     inline           = ["bash /tmp/ciproxy/install-runner.sh /tmp/ciproxy/runner.tar.gz",
-                        "cd /tmp/ciproxy/guest && ./install.sh ${var.build_id}",
-                        "bash /tmp/ciproxy/clean-image.sh"]
+                        "cd /tmp/ciproxy/guest && ./install.sh ${var.ciproxy_image_id}",
+                        "defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser -string ${var.vm_username}"]
   }
 }
 '''
@@ -70,6 +73,10 @@ variable "ciproxy_definition" {
   type = string
 }
 
+variable "ciproxy_image_id" {
+  type = string
+}
+
 variable "ciproxy_ssh_key" {
   type = string
 }
@@ -78,6 +85,54 @@ variable "ciproxy_runner_sha256" {
   type = string
 }
 '''
+
+
+AUTOLOGIN_STEP = '''provisioner "shell" {
+    environment_vars = ["USERNAME=${var.vm_username}"]
+    execute_command  = "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}"
+    inline           = ["defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser -string \\"$USERNAME\\"",
+                        "test -s /etc/kcpassword"]
+  }
+
+  '''
+
+
+CLOSE_WINDOWS_STEP = '''
+
+  provisioner "shell" {
+    pause_before = "30s"
+    inline = ["ok=0; for i in $(seq 36); do n=$(osascript -e 'tell application \\"Finder\\" to close every window' -e 'tell application \\"Finder\\" to count windows' 2>/dev/null || true); if [ \\"$n\\" = 0 ]; then ok=$((ok + 1)); [ $ok -ge 4 ] && exit 0; else ok=0; fi; sleep 5; done; exit 1"]
+  }'''
+
+
+def close_finder_windows(text):
+    """Close Finder's windows after each upstream restart. The Setup
+    Assistant phase opened Finder's Utilities window, Finder restores it at
+    each login, and the upstream configure-windows.sh fails on any open
+    window. Finder restores it some seconds after login, so the step waits
+    until Finder has no window at four checks in a row. Packer runs inline
+    steps with "sh -e", so a failed osascript call must not end the loop.
+    The upstream TCC step has allowed osascript to reach Finder."""
+    marker = 'provisioner "shell" {'
+    parts = text.split(marker)
+    for index in range(1, len(parts)):
+        end = parts[index].find("\n  }")
+        if "shutdown -r now" in parts[index][:end]:
+            end += len("\n  }")
+            parts[index] = parts[index][:end] + CLOSE_WINDOWS_STEP + parts[index][end:]
+    return marker.join(parts)
+
+
+def keep_autologin(text):
+    """Write the auto-login user again before each upstream restart. The
+    setting of configure-autologin.sh was lost once before the first
+    restart, and the guest then had no desktop session for the UI steps."""
+    marker = 'provisioner "shell" {'
+    parts = text.split(marker)
+    for index in range(1, len(parts)):
+        if "shutdown -r now" in parts[index][:parts[index].find("\n  }")]:
+            parts[index - 1] += AUTOLOGIN_STEP
+    return marker.join(parts)
 
 
 def add_retries(text):
@@ -104,7 +159,7 @@ def prepare_template(source):
     # the password through their environment variables.
     text = replace_once(text, 'ssh_password = "${var.vm_password}"',
                         'ssh_private_key_file = "${var.ciproxy_ssh_key}"', "the SSH password")
-    text = add_retries(text)
+    text = close_finder_windows(keep_autologin(add_retries(text)))
     text = text.rstrip()
     if not text.endswith("}"):
         raise SystemExit("the upstream template changed: the end of the build block")
@@ -144,14 +199,19 @@ def main():
     parser.add_argument("--xcode-links", required=True, help="comma-separated Xcode links")
     parser.add_argument("--xcode-xip", required=True)
     parser.add_argument("--xcode-sha256", required=True)
+    parser.add_argument("--variant", default="full", choices=image_variant.VARIANTS,
+                        help="the image variant; see image_variant.py")
     args = parser.parse_args()
     macos = args.upstream / "images/macos"
     source = (args.upstream / args.template).read_text()
     links = [link for link in re.split(r"[,\s]+", args.xcode_links) if link]
-    toolset = prepare_toolset((macos / "toolsets/toolset-26.json").read_text(), links)
+    toolset = image_variant.toolset(
+        prepare_toolset((macos / "toolsets/toolset-26.json").read_text(), links), args.variant)
     check_xcode_pin(toolset, args.xcode_xip, args.xcode_sha256)
     (macos / "toolsets" / TOOLSET_NAME).write_text(toolset)
-    (macos / "templates" / TEMPLATE_NAME).write_text(prepare_template(source))
+    image_variant.tree(macos, args.variant)
+    (macos / "templates" / TEMPLATE_NAME).write_text(
+        prepare_template(image_variant.template(source, args.variant)))
     print(macos / "templates" / TEMPLATE_NAME)
 
 

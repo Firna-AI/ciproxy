@@ -275,5 +275,6 @@ runs on own machines.
   failures.
 - [Overflow](overflow.md): the Boat sandboxes, which use the same image.
 - [Cache](cache.md): the machine cache and the Docker disks.
-- [Security](security.md): key custody and job isolation.
+- [Security](security.md): key custody.
+- [Isolation](security-isolation.md#job-isolation): job isolation.
 - [Metering](metering.md): the machine count of a tier.

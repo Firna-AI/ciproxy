@@ -6,6 +6,7 @@ import type {
   SessionView,
   WorkspaceView,
 } from "../src/api/schema.ts";
+import { pages } from "../src/routing/pages.ts";
 
 export const fixtureTime = "2026-11-06T12:00:00Z";
 export const workspaceId = "10000000-0000-4000-8000-000000000001";
@@ -63,7 +64,7 @@ export function link(
     organization: "northstar-labs",
     organization_id: null,
     reauthorization_required: false,
-    reauthorization_url: "/api/auth/github?fixture=claim-reauthorize",
+    reauthorization_url: pages.termsStep,
     state: "choose_workspace",
     workspace_id: null,
     workspaces: offers(),

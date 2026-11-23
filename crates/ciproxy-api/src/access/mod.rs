@@ -16,7 +16,7 @@ pub mod workspace;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use ciproxy_github::app::GitHubApp;
 use ciproxy_github::installation_state::InstalledApp;
 use ciproxy_store_interface::dashboard::records::{Session, User};
@@ -33,6 +33,9 @@ use crate::error::Result;
 use crate::identity::UserIdentity;
 use crate::runtime::Runtime;
 use crate::wire::access::{RemovedOrganization, SetupOutcome};
+
+/// Lifetime of the OAuth cookie, login state, and pending setup.
+pub(crate) const OAUTH_BINDING_LIFETIME: Duration = Duration::minutes(10);
 
 /// A protected OAuth attempt to be returned only to its browser.
 pub struct LoginAttempt {
@@ -119,16 +122,19 @@ impl Principal {
 /// Dashboard identity operations consumed by the HTTP router through dyn.
 #[async_trait]
 pub trait DashboardAccess: Send + Sync {
-    /// Start a one-use browser-bound GitHub App authorization attempt.
-    async fn begin_login(&self, previous: Option<&str>) -> Result<LoginAttempt>;
-    /// Start setup proof for an installation read through the configured App.
-    async fn begin_setup(
+    /// Start GitHub authorization, resuming setup only with a valid pending cookie.
+    async fn begin_login(
+        &self,
+        previous: Option<&str>,
+        pending_setup: Option<&str>,
+    ) -> Result<LoginAttempt>;
+    /// Seal setup for the terms page without starting GitHub authorization.
+    async fn hold_setup(
         &self,
         installation: Option<InstalledApp>,
         install_state: Option<String>,
         request_only: bool,
-        previous: Option<&str>,
-    ) -> Result<LoginAttempt>;
+    ) -> Result<SecretString>;
     /// Finish only the matching browser's unconsumed OAuth attempt.
     async fn finish_login(
         &self,

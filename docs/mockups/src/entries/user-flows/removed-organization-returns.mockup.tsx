@@ -16,10 +16,16 @@ export const removedOrganizationReturns = defineUseCase({
         "mokly-labs shows as removed, with the day before which a new install keeps its job history. mokly-ai is the last linked organization, so it has no Take out.",
     },
     {
+      screenPath: paths.termsStep,
+      title: "Continue with GitHub",
+      description:
+        "Install again opens GitHub, which returns to the terms step with the terms notice of sign-in. Continue with GitHub signs Cal in again, so that ciproxy can check the install with his account.",
+    },
+    {
       screenPath: paths.organizations,
       title: "Installed again",
       description:
-        "Install again opens GitHub. Cal is an Admin of one workspace, so the return links mokly-labs to mokly-ai at once, with its job history.",
+        "Cal is an Admin of one workspace, so mokly-labs joined mokly-ai again at once, with its job history.",
     },
   ],
 });

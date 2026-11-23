@@ -9,7 +9,7 @@ ssh_key="$secrets/id_ed25519"
 guest_user=runner
 
 ssh_options=(-i "$ssh_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-    -o LogLevel=ERROR -o ConnectTimeout=5 -o ServerAliveInterval=15)
+    -o LogLevel=ERROR -o ConnectTimeout=5 -o ServerAliveInterval=15 -o BatchMode=yes)
 
 make_secrets() {
     mkdir -p "$secrets"
@@ -146,15 +146,19 @@ bundle_artifacts() {
 }
 
 
-# Keep a reverse tunnel from the guest's 127.0.0.1:PORT to the host's. The
-# upstream recipe restarts the guest, so the tunnel opens again after each
-# restart.
-xcode_tunnel() {
-    local port=$1
+# Keep one SSH connection to the guest with two tunnels, and open it again
+# after each guest restart. Packer reaches the guest's SSH through the host's
+# 127.0.0.1:SSH_PORT, and the guest reaches the host's Xcode server through
+# its own 127.0.0.1:XCODE_PORT. macOS Local Network privacy can stop a
+# third-party program, such as Packer, from reaching the VM network after its
+# launching session ends. Apple's ssh is exempt, and loopback is not covered.
+guest_tunnel() {
+    local ssh_port=$1 xcode_port=$2
     while true; do
         ssh "${ssh_options[@]}" -N -o ExitOnForwardFailure=yes \
-            -R "$port:127.0.0.1:$port" "$guest_user@$(guest_ip 5 || true)" 2>/dev/null || true
-        sleep 5
+            -L "127.0.0.1:$ssh_port:127.0.0.1:22" -R "$xcode_port:127.0.0.1:$xcode_port" \
+            "$guest_user@$(guest_ip 5 || true)" 2>/dev/null || true
+        sleep 2
     done
 }
 

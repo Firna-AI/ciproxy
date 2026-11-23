@@ -1,5 +1,6 @@
 //! Lost launch responses and running guests keep only recovery authority.
 
+use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, Retirement, RunnerAuthorityMock, StartOutcome};
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::maintenance::LaunchState;
@@ -9,7 +10,7 @@ use unimock::{MockFn, matching};
 
 use super::authority_actions::{Entry, Withdrawal, reconcile, withdraw};
 use super::authority_support::{DisableAt, Provider};
-use super::fixtures::{id, record, request};
+use super::fixtures::{at, id, record, request};
 use super::harness::{Harness, Runtime};
 
 #[tokio::test]
@@ -78,9 +79,15 @@ async fn retired_launching_delivery_inspects_the_marker_and_preserves_a_started_
         harness.seed(record(StartPhase::Launching));
         withdraw(&harness, withdrawal).await;
         harness.state.lock().unwrap().active_backends = 0;
+        *harness.now.lock().unwrap() = at() + Duration::minutes(3);
         for entry in [Entry::Resume, Entry::Duplicate, Entry::Cleanup] {
             reconcile(&harness, entry).await;
-            assert_eq!(harness.start(id(11)).phase, StartPhase::Running);
+            let saved = harness.start(id(11));
+            assert_eq!(saved.phase, StartPhase::Running);
+            assert_eq!(
+                saved.launched_at,
+                Some("2026-11-05T12:03:00Z".parse().unwrap())
+            );
             let counts = provider.counts.lock().unwrap();
             assert_eq!(counts.inputs, 0);
             assert_eq!(counts.launches, 0);

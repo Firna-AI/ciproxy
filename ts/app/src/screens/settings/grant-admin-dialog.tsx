@@ -2,18 +2,23 @@
 // alone adds machines and connects Boat, which run the jobs and their
 // secrets of every organization of the workspace. So the dialog shows the
 // trust notice of the API, and says that an organization whose runners other
-// people should control uses a workspace of its own.
+// people should control uses a workspace of its own. It also names the power
+// of each Admin to accept new versions of the terms for the customer that
+// holds the workspace. The dialog opens on Cancel, the safe action, and not on
+// the Terms link before it.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import type { ApiResult } from "../../api/client.ts";
 import type { Success } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
 import { FeatureDialog } from "../../components/feature-parts.tsx";
+import { InlineLink } from "../../components/inline-link.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { text } from "../../components/text.ts";
 import type { FailureCopy } from "../../view/claim.ts";
+import { siteLinks } from "../../view/page-model.ts";
 import {
   memberFailure,
   type MemberAction,
@@ -36,6 +41,7 @@ export function GrantAdminDialog({
 }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureCopy | null>(null);
+  const cancel = useRef<View>(null);
   const press = async () => {
     setBusy(true);
     setFailure(null);
@@ -50,12 +56,14 @@ export function GrantAdminDialog({
       visible
       busy={busy}
       onClose={onClose}
+      initialFocusRef={cancel}
       footer={
         <View style={styles.footer}>
           <ActionButton
             label="Cancel"
             tone="ghost"
             disabled={busy}
+            buttonRef={cancel}
             onPress={onClose}
           />
           <ActionButton
@@ -83,6 +91,11 @@ export function GrantAdminDialog({
         <Text style={text.small}>
           If other people should control the runners of an organization, give it
           a workspace of its own.
+        </Text>
+        <Text style={text.small}>
+          An Admin also accepts new versions of the ciproxy{" "}
+          <InlineLink label="Terms" href={siteLinks.terms} newTab /> for the
+          customer that holds this workspace.
         </Text>
       </View>
     </FeatureDialog>

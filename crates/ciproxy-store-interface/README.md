@@ -290,7 +290,9 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 ### Related Docs
 
 - [Architecture](../../docs/architecture.md) gives the service boundaries.
-- [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Security](../../docs/protocol/security.md) defines key custody.
+- [Isolation](../../docs/protocol/security-isolation.md#tenant-isolation)
+  defines tenant isolation.
 - [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [Agent](../../docs/protocol/agent.md) defines credentials and removal.
 - [Overflow](../../docs/protocol/overflow.md) defines Boat key rotation.

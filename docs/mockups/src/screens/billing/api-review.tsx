@@ -8,7 +8,7 @@
 // payment cannot start, the summary says why and offers what recovers it: a
 // Plan and usage read that failed, a read that still runs, a payment that
 // waits, or a person who cannot pay. None of these states has a button that
-// pays.
+// pays. A priced summary says that paid plans are for business use only.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
@@ -20,6 +20,7 @@ import { paths, type CataloguePath } from "../../components/paths.ts";
 import { formatMoney, monthly } from "../../fixtures/format.ts";
 import type { Tier } from "../../fixtures/tiers.ts";
 import { teamPeriodEnd } from "../../fixtures/usage.ts";
+import { BusinessUseNote } from "./business-use-note.tsx";
 
 /**
  * A review as the current API gives it: priced for Checkout from Free,
@@ -55,11 +56,14 @@ function PricedPay({
   if (!paid) {
     return (
       <>
-        <p className="caption">
-          Stripe charges {formatMoney(tier.price)} today, then on the 4th of
-          each month. You pay by card on Stripe, and ciproxy never sees your
-          card.
-        </p>
+        <div className="stack-tight">
+          <p className="caption">
+            Stripe charges {formatMoney(tier.price)} today, then on the 4th of
+            each month. You pay by card on Stripe, and ciproxy never sees your
+            card.
+          </p>
+          <BusinessUseNote />
+        </div>
         <LinkAction
           to={paths.checkoutStripe}
           tone="primary"
@@ -73,12 +77,15 @@ function PricedPay({
   }
   return (
     <>
-      <p className="caption">
-        {tier.name} starts now. Stripe charges the card on file{" "}
-        {formatMoney(today)} for the rest of this period, which ends on{" "}
-        {teamPeriodEnd}, then {formatMoney(tier.price)} on the 4th of each
-        month. The starts of this period count toward {tier.name}.
-      </p>
+      <div className="stack-tight">
+        <p className="caption">
+          {tier.name} starts now. Stripe charges the card on file{" "}
+          {formatMoney(today)} for the rest of this period, which ends on{" "}
+          {teamPeriodEnd}, then {formatMoney(tier.price)} on the 4th of each
+          month. The starts of this period count toward {tier.name}.
+        </p>
+        <BusinessUseNote />
+      </div>
       {payOff ? (
         <Action tone="primary" block disabled>
           {`Move to ${tier.name}`}

@@ -20,8 +20,8 @@
     of the terms of service and the privacy policy.
   - A shared draft note at the top of each page says that the text is a
     draft.
-  - The privacy policy states the data retention limits of
-    `docs/protocol/security.md`. The limits come from
+  - The privacy policy states the data retention limits of "Data retention"
+    in `docs/protocol/security-data.md`. The limits come from
     `ts/site/src/data/legal.ts`.
   - The site rules forbid a guess or the current date in place of a
     placeholder.

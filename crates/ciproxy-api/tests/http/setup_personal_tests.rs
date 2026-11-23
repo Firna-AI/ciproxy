@@ -9,7 +9,7 @@ use super::adapter_server::Server;
 use super::fixture::Fixture;
 use super::fixture_io::{CallbackOutcome, json};
 use super::link_support;
-use super::setup_support::{browser, configure, finish};
+use super::setup_support::{browser, complete_setup, configure};
 
 #[tokio::test]
 async fn fresh_personal_setup_records_only_verified_token_free_metadata() {
@@ -19,16 +19,10 @@ async fn fresh_personal_setup_records_only_verified_token_free_metadata() {
     let admin = fixture.login(7, Some(Role::Admin)).await;
     let state = link_support::begin(&fixture, &admin).await;
     server.control.memberships.store(false, Ordering::SeqCst);
-    let response = finish(
+    let response = complete_setup(
         &fixture,
-        fixture
-            .request(
-                None,
-                "GET",
-                &format!("/github/setup?installation_id=700&state={state}"),
-                None,
-            )
-            .await,
+        None,
+        &format!("?installation_id=700&state={state}"),
         CallbackOutcome::Accepted,
     )
     .await;

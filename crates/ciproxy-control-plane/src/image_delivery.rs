@@ -1,4 +1,4 @@
-//! Coalesce release downloads by authenticated machine connection.
+//! Offer each machine the release of its platform, once per connection.
 
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::CommandId;
@@ -9,16 +9,14 @@ use crate::runtime::{ImageRequest, MachineRuntime};
 
 impl MachineRuntime {
     pub(crate) async fn ensure_image(&self, input: &RoutingSnapshot) -> Result<()> {
-        let Some(image) = &self.image else {
-            return Ok(());
-        };
         for machine in &input.machines {
             let Some(report) = &machine.report else {
                 continue;
             };
-            if machine.machine.platform != image.platform {
+            let Some(offer) = self.offer(machine.machine.platform) else {
                 continue;
-            }
+            };
+            let image = &offer.download;
             if report.report.images.newest.as_ref() == Some(&image.image_id) {
                 self.image_requests
                     .lock()
@@ -51,7 +49,7 @@ impl MachineRuntime {
             }
             let command_id = self.clock.uuid();
             let mut download = image.clone();
-            if let Some(signing) = &self.image_signing {
+            if let Some(signing) = &offer.signing {
                 download.download_url =
                     signing.sign(image.download_url.expose_secret(), self.clock.now())?;
             }

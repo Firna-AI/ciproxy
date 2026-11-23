@@ -120,7 +120,7 @@
   - A new backend guard, because backend admission already stops these
     starts.
   - A default bound or a serde alias for an old record, because it
-    overrides the hold of `docs/protocol/overflow.md:218`, which commit
+    overrides the hold of `docs/protocol/overflow.md:177`, which commit
     `6450c3e` applied on 5 November 2026. It also leaves the billing and
     retry holds.
   - Absent spend shown as a hold, because absent spend often comes from
@@ -185,18 +185,18 @@
 when Boat takes jobs. D shows that status, and it adds no requirement.
 Keep these rules:
 
-- `overflow.md:218`: when a start has no safe bound, new starts wait until
-  that cost resolves. At `:199`, new starts also wait when no source
+- `overflow.md:177`: when a start has no safe bound, new starts wait until
+  that cost resolves. At `:158`, new starts also wait when no source
   supplies a start fee.
-- `overflow.md:192-193`: the limit counts confirmed costs and the pending
+- `overflow.md:151-152`: the limit counts confirmed costs and the pending
   bound of each start that Boat has not confirmed.
-- `overflow.md:226-228`: at the limit, ciproxy starts no new Boat runner,
+- `overflow.md:185-187`: at the limit, ciproxy starts no new Boat runner,
   and jobs run on own machines only.
-- `overflow.md:51-52` and `:245-246`: after Boat rejects the key, jobs run
+- `overflow.md:51-52` and `:204-205`: after Boat rejects the key, jobs run
   on own machines only until the customer connects a new key.
-- `overflow.md:239-243`: when Boat refuses a sandbox, the job keeps
+- `overflow.md:198-202`: when Boat refuses a sandbox, the job keeps
   waiting, and ciproxy tries again.
-- `overflow.md:219-220`: Settings under Overflow and the Machines page
+- `overflow.md:178-179`: Settings under Overflow and the Machines page
   show the confirmed spend and the pending amount apart.
 - `job-routing.md:152-159`: a Boat runner starts only when overflow is on,
   the label allows Boat, and Boat is available. While Boat cannot take a

@@ -5,13 +5,16 @@
 // the page offers Claim the Admin role. The page reads only that offer, as
 // the dashboard reads the claim of the session. A person who left every
 // organization of the workspace lost the role at the membership check of
-// each hour.
+// each hour. That sign-in has no workspace, so its Check again needs a new
+// GitHub sign-in and opens the terms step. A person who waits for an Admin
+// has a request, so Check again reads again.
 
 import { Avatar } from "@firna/ui/avatar";
 import type { Viewport } from "@mokly/mokly";
 
-import { Action } from "../../components/actions.tsx";
+import { Action, LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
+import { paths } from "../../components/paths.ts";
 import { leaver } from "../../fixtures/access.ts";
 import {
   members,
@@ -76,9 +79,9 @@ function LeftBody() {
         </p>
       </div>
       <div className="auth-actions">
-        <Action tone="primary" size="lg" block>
+        <LinkAction to={paths.termsStep} tone="primary" size="lg" block>
           Check again
-        </Action>
+        </LinkAction>
         <Action tone="secondary" size="lg" block>
           Install on another organization
         </Action>

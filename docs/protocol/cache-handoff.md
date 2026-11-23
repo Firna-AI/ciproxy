@@ -36,4 +36,4 @@ other cache rules and defines the [cache terms](cache.md#terms).
 - [Cache](cache.md): the cache scopes, the restore order, trusted
   write-back, and the fallback to the GitHub cache.
 - [Agent](agent.md#job-vms): the job VMs of own machines.
-- [Security](security.md#job-isolation): what a job VM can reach.
+- [Isolation](security-isolation.md#job-isolation): what a job VM can reach.

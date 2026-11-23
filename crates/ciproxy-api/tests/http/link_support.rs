@@ -20,7 +20,7 @@ use uuid::Uuid;
 use super::adapter_server::Server;
 use super::fixture::{Browser, Fixture};
 use super::fixture_io::{CallbackOutcome, json};
-use super::setup_support::{browser, configure, finish};
+use super::setup_support::{browser, complete_setup, configure};
 
 pub(super) async fn scenario() -> (Fixture, Server, Browser, Organization) {
     let server = Server::new().await;
@@ -112,15 +112,13 @@ pub(super) async fn return_install(
     installation: i64,
     expected: CallbackOutcome,
 ) -> Option<Browser> {
-    let begin = fixture
-        .request(
-            None,
-            "GET",
-            &format!("/github/setup?installation_id={installation}&state={state}"),
-            None,
-        )
-        .await;
-    let response = finish(fixture, begin, expected).await;
+    let response = complete_setup(
+        fixture,
+        None,
+        &format!("?installation_id={installation}&state={state}"),
+        expected,
+    )
+    .await;
     match expected {
         CallbackOutcome::Accepted => Some(browser(&response)),
         CallbackOutcome::Refused => None,

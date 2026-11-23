@@ -1,4 +1,5 @@
 import type { SessionView, WorkspaceRole } from "../src/api/schema.ts";
+import { pages } from "../src/routing/pages.ts";
 import {
   activation,
   link,
@@ -79,12 +80,12 @@ export function removedWithOldClaim(): SessionView {
       login: "northstar-labs",
       delete_after: "2026-12-06T12:00:00Z",
     },
-    reauthorization_url: "/api/auth/github",
+    reauthorization_url: pages.termsStep,
     organization_links: [
       link({
         state: "reauthorization_required",
         reauthorization_required: true,
-        reauthorization_url: "/api/auth/github",
+        reauthorization_url: pages.termsStep,
         workspaces: [],
         workspace_id: null,
         organization_id: null,

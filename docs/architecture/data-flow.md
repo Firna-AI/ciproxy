@@ -37,8 +37,8 @@ each main flow of data across the
    image in the customer's Boat account.
 3. GitHub gives a waiting job of the label to the new runner. Metering
    counts one start.
-   [Overflow runners](../protocol/overflow.md#overflow-runners) says what a
-   Boat runner without a job does.
+   [Idle runners](../protocol/overflow-sandbox-end.md#idle-runners) says
+   what a Boat runner without a job does.
 4. When the job ends, the backend client deletes the sandbox. It adds the
    cost of the sandbox to the Boat spend of the month.
 

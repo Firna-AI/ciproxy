@@ -7,7 +7,8 @@
   `calummoore/ci-proxy-load-balancer`, the user's answer on taxes.
 - **Location:** `docs/protocol/billing.md`, "Tiers".
 - **Reason:** On 4 November 2026 the user chose no tax at launch "for now",
-  so the choice of a tax method waits until after the launch.
+  and an agent call of 22 November 2026 kept that decision in force, so the
+  tax method waits until a later sale needs one.
 
 - **Terms:**
   - **Stripe Tax:** a Stripe feature that adds sales tax or VAT at checkout
@@ -22,9 +23,25 @@
     Business at $299 a month. Stripe Checkout takes every payment.
   - On 4 November 2026 the user decided that ciproxy collects no tax at
     launch, "for now".
+  - On 22 November 2026, the user left the decisions of the open legal
+    items to the agent. Under that delegation, an agent call kept the
+    decision of 4 November 2026 in "Tiers" of `docs/protocol/billing.md` in
+    force: ciproxy collects no tax for now. This item stays open. It waits
+    until a later sale needs a tax method.
+  - Under the same delegation, an agent call of 22 November 2026 made the
+    paid plans for business use only. "Checkout" in
+    `docs/protocol/billing.md` and the terms of service say so, and each
+    checkout review with a pay button says so too. The consumer clause of
+    the terms stays as a fallback. So a merchant of record is no longer
+    needed for the consumer rules of a sale.
   - Many countries and US states make a seller of software collect tax from
     local customers. The duty depends on where the seller is registered and
     on its sales in each place.
+  - The seller is Firna Ltd, a company registered in England and Wales.
+    The terms of service on the site give its UK VAT number, GB191373695.
+    A VAT-registered UK seller usually charges UK VAT on its sales to
+    customers in the UK. The terms of service also say that prices exclude
+    tax and that ciproxy collects no tax.
 - **Problem:** The payments carry no tax, although some customers' places
   can make the seller owe tax on them.
 - **Impact if no action:** The company can owe tax that it did not
