@@ -29,7 +29,9 @@ A link inside a sentence, such as Terms, comes from
 [src/components/inline-link.tsx](src/components/inline-link.tsx). It stays
 underlined. In a dialog or a review, it opens a new tab.
 Colours, fonts, and radii come from the [token package](../tokens/README.md).
-The icons and the brand mark are inline SVG elements.
+The icons and the brand mark are inline SVG elements. The favicon is the
+brand mark in the ink, as a data URL from
+[src/components/brand.tsx](src/components/brand.tsx).
 
 ## Pages
 
