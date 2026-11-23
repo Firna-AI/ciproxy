@@ -2888,6 +2888,9 @@ regressions. Keep the rare failed-callback drain case as a follow-up.
 - [ ] Pass the actual large job, callback, PostgreSQL and Docker steps,
       job-log locale check, overflow smoke and complete spend-limit smoke.
       Turn overflow off in both workspaces and delete every task sandbox.
+      23 November 2026: the overflow and complete spend-limit smokes passed
+      under acceptance F. Evidence: `callback-resume/resume-015-2026-11-22/`
+      in `.context/ciproxy-mvp/live-2026-11-20/boat-runner-start-2026-11-21/`.
 - [x] Restore the main machine in Firna-AI with agent/cache 0.1.4.
 - [x] Run the complete gate with DATABASE_URL set, commit and push.
 - [x] Review the diff against the primary branch with implementation-review

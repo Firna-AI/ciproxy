@@ -5,15 +5,13 @@
 - **Kind:** Post-merge task.
 - **Added:** 2026-11-21, from `conductor/boat-callback-diagnosis`, item 2
   of the read-only code and contract trace of the failed Boat `large` live
-  check. A fresh options check on the same day added options E, F, and G,
-  and changed the recommendation from B to F. Two reviews then corrected
-  options B to G.
+  check. The same day, a fresh options check added E, F, and G and moved the
+  recommendation from B to F. Two reviews then corrected B to G.
 - **Source:** Review.
 - **Category:** Test.
 - **Location:** `plans/ciproxy-mvp.md:2827-2830`, `:2888-2890`, and
-  `:2910-2913`.
-- **Reason:** Main has merged. F's live runs are approved and remain pending.
-  They do not wait for this PR to merge. No result is recorded yet.
+  `:2913-2916`.
+- **Reason:** F is done, and the end state holds. The user asked to keep it.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
@@ -43,7 +41,7 @@
     (`:2888-2890`).
   - The user's answer of 21 November 2026 says to merge into `main` now
     and to run the remaining Boat smokes in parallel. It lists "the Boat
-    exit callback" among the checks that remain (`:2910-2913`).
+    exit callback" among the checks that remain (`:2913-2916`).
   - The protocol requires that "ciproxy stops and deletes each sandbox when
     its job ends" (`docs/protocol/overflow.md:114`). It also requires that
     the guest report its runner exit, and that the control plane then
@@ -118,20 +116,21 @@
       crates of `main` at `3bdc4777`. They ran the same guest, release
       0.1.4 at `b751ef5f`, on an older snapshot with the same report path.
     - Both cases failed their checks for other causes. Those FAILs stay.
-  - Four of the six paid sandbox slots that the orchestrator allowed are
-    used, and each of the four sandboxes now returns 404. The last two are
-    for the overflow smoke and the complete spend-limit smoke, once each,
-    with no retry. At the end, every task sandbox must be deleted, and
-    overflow must be off in both workspaces. The main machine in Firna-AI
-    must be Ready again on agent 0.1.4.
+  - Before the smokes, four of the six paid slots that the orchestrator
+    allowed were used, and those sandboxes return 404. The last two were for
+    the overflow and complete spend-limit smokes, once each. At the end, every
+    task sandbox must be deleted, and overflow must be off in both workspaces.
+  - The orchestrator's call, 22 November 2026: agent 0.1.5 replaces 0.1.4,
+    which the main preview rejects, with no 0.1.4 fix. The main machine in
+    Firna-AI must end Ready on 0.1.5. A case starts with no main preview
+    deploy active, and a deploy in a case allows one rerun in the two slots.
 - **Problem:**
   - For a successful job, the job-end cleanup and the exit report compete
     for the workspace lock, and the code gives neither side priority. When
     the cleanup takes the lock first and ends the delivery, the claim is
     lost.
-  - The one observed run ended with no claim, so the check failed while
-    the product met the protocol. Its lock holder is an inference, because
-    the holder's process ID was not retained.
+  - The observed `large` run ended with no claim, so the check failed
+    while the product met the protocol.
   - One claim rule covers all three cases, but the plan ties the callback
     only to the large job.
 - **Impact if no action:** The two held smoke cases can fail the same way
@@ -164,8 +163,7 @@
     - The observed POST came 0.75 seconds after the completed job.
     - A new `large` run needs a paid sandbox past the six-sandbox limit,
       and each failed run needs one more. Each needs a new call of the
-      orchestrator.
-    - Effort: Medium, plus the product change.
+      orchestrator. Effort: Medium, plus the product change.
   - **D.** Prove the exit report where it is the only deletion trigger.
     That is a launched sandbox whose runner exits with no job, while no
     other Boat work runs. Make that exit with a cause outside ciproxy. An
@@ -190,9 +188,8 @@
       own delivery. It weakens the claim rule of the live check for the two
       smokes, which then need only the route activity of B. C keeps every
       claim rule of the live check.
-    - The milestone stays open. The callback run needs one paid sandbox
-      past the six-sandbox limit, and each failed run needs one more. Each
-      needs a new call of the orchestrator.
+    - The milestone stays open. As in C, each callback run needs a paid
+      sandbox past the limit and a new call of the orchestrator.
     - Effort: Medium, plus the product change.
   - **F.** Do B for the two held smokes. Prove the exit callback with the
     two accepted reports of `bx_748nk3ay` and `bx_gbsxpayp` above.
@@ -204,8 +201,7 @@
       `plans/follow-ups/boat-exit-report-lock-timeout.md` shows that the
       product does not give that claim in the observed order.
     - Its evidence comes from cases that failed for other causes, on an
-      older snapshot with the same report path.
-    - Effort: Small.
+      older snapshot with the same report path. Effort: Small.
   - **G.** Do B, and accept only a status that the race can explain. G
     compares the POST's arrival and response, the delivery end, the
     lock-timeout line, and its statement form, where each exists.
@@ -235,8 +231,7 @@
     - G fails a status that the race cannot explain, which A and B accept.
       So it narrows the false positive of the isolated window. It needs
       Cloud SQL logs in the live check and a small clock tolerance between
-      the two logs. G puts no check in force.
-    - Effort: Medium.
+      the two logs. G puts no check in force. Effort: Medium.
 - **Left out:**
   - Change nothing and run the held cases, because successful jobs can
     meet the same race and use the last paid slots.
@@ -254,9 +249,6 @@
   - `plans/follow-ups/boat-exit-report-response-log.md`: it corrects the
     guest's log line that the Background describes. No option here waits
     for it.
-  - `plans/follow-ups/agent-preview-report-compatibility.md`: the current
-    preview rejects the released agent 0.1.4 reports. This blocks the
-    machine readiness that both smokes require.
 - **Recommendation:** F. The first recommendation was B. F has B's cost.
   It needs no sandbox beyond the two held slots. Earlier claims prove
   report acceptance and deletion after a no-job exit. B was the fallback
@@ -269,6 +261,13 @@
   load balancer log. It also needs GitHub job success, the matching
   runner, an ended delivery, and a Boat GET 404. The two earlier saved
   claims prove the report path. No recorded FAIL becomes a PASS.
+- **Result, 2026-11-23:** on agent 0.1.5, both held smokes passed under F.
+  Each job succeeded on its matching runner, each delivery ended, and
+  `bx_2tqn7tnv` and `bx_efzatsxv` return 404. A 1-cent limit held the
+  spend-limit job for 75 seconds before the same job ran. The one exit-route
+  POST in each smoke's window got 503, and `reported_at` stayed NULL. A
+  deploy stopped the first overflow attempt before any Boat admission, so it
+  stays FAIL with no new sandbox. The final Ready check passed.
 - **Action:** fix now, apply F to the two one-shot live smokes, as the user
   chose on 22 November 2026. Keep both records as the user requested.
 
@@ -297,4 +296,5 @@ sender match.
 
 Evidence outside Git: the observed run and the orchestrator's check of the
 two earlier accepted reports, in the folder `callback-resume/` in
-`.context/ciproxy-mvp/live-2026-11-20/boat-runner-start-2026-11-21/`.
+`.context/ciproxy-mvp/live-2026-11-20/boat-runner-start-2026-11-21/`. The
+runs of 23 November 2026 are in `callback-resume/resume-015-2026-11-22/`.
