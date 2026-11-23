@@ -16,9 +16,17 @@ the warm runners.
 - First subtract the image budget from the disk capacity.
 - The default image budget is 140,000,000,000 bytes, or 140 GB, on Linux.
 - It holds two full images and one compressed download during an update.
-- A Mac has its own default image budget, for two full macOS images and
-  one compressed download. Its value is a placeholder until the size of the
-  [macOS image](agent-images.md#the-macos-image) is measured.
+- A Mac has its own default image budget: 100,000,000,000 bytes, or
+  100 GB. It holds one standard
+  [macOS image](agent-images.md#the-macos-image), a 100 GB disk with about
+  77 GB allocated, and headroom. During an update, the new image and its
+  download need space beside the old image. The check of the real free
+  space below stops new macOS VMs while that space is short.
+- **Decision (23 November 2026):** the default macOS image budget is
+  100 GB, so a Mac with about 176 GB of free disk runs a default job.
+  Rejected for now: a budget for two macOS images and a download, about
+  200 GB, because no 256 GB Mac could then run a job. A space policy from
+  the measured image size is a follow-up item.
 - An explicit image budget override stays separate from the job disk.
 - The host reserve keeps a quarter of the remaining disk for the system
   and filesystem overhead.
@@ -39,13 +47,20 @@ the warm runners.
   4 GB in the job disk. The margin covers the swap, the logs, and the
   runner files that the guest writes beside the job.
 - A macOS label fits a Mac only when its free job disk is at most the
-  measured free bytes of the Mac's selected image, because a clone cannot
-  grow past the fixed image disk. The agent reports those free bytes with
-  the image.
-- A clone can still grow past what it holds, up to the free bytes of its
-  image. So the agent also refuses a new macOS VM when the real free space
-  of its volume is less than the disk that the VM holds. The control plane
-  then tries the start again on a later pass.
+  measured free bytes inside the Mac's selected image, because the guest
+  cannot use more than the free space of the fixed image disk. The agent
+  reports those free bytes with the image.
+- A Mac whose agent reports no free bytes for its image gets no new macOS
+  job until it does. Its running jobs go on. An older agent counts each VM
+  by the Linux rule, so it would refuse each such start.
+- A clone can still grow past what it holds. A write to a block that the
+  clone still shares with the image takes a new block on the Mac, so a
+  clone can grow up to the logical size of the image disk, also when the
+  guest's own use stays the same.
+- So the agent also refuses a new macOS VM when the real free space of its
+  volume is less than the disk that the VM holds. Placement uses the real
+  free space of the Mac's last report in the same way, so a job goes to a
+  Mac that has the space.
 - When the running jobs of a Mac fill its volume, a job that writes more
   gets a full disk inside its VM, and that job can fail. The agent removes
   each VM after its job, which frees the space of its clone.
@@ -53,7 +68,7 @@ the warm runners.
   job disk and a margin. Rejected: the logical size of the image disk,
   because the shared blocks of a clone take no space, and a Mac with
   256 GB could then run no job. Rejected: the free bytes of the image,
-  because a 200 GB image with 121 GB free would also keep small Macs from
+  because a large free space in the image would also keep small Macs from
   jobs. Reason: a job writes about what its label gives it, and the check
   of the real free space covers a job that writes more.
 - Linux keeps its rule: each job VM holds its complete ext4 root.

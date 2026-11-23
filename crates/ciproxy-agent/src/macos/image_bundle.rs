@@ -97,18 +97,22 @@ pub(crate) struct IndexedImage {
     pub(crate) free_job_bytes: u64,
 }
 
+impl IndexedImage {
+    /// The facts of this image for the machine report and for a start, so
+    /// both carry the same measured free bytes.
+    pub(crate) fn metadata(&self) -> ImageMetadata {
+        ImageMetadata {
+            image_id: self.image_id.clone(),
+            root_disk_bytes: self.root_disk_bytes,
+            free_job_bytes: Some(self.free_job_bytes),
+        }
+    }
+}
+
 impl ImageIndex {
     pub(crate) fn report(&self) -> ImageReport {
         ImageReport {
-            available: self
-                .images
-                .iter()
-                .map(|image| ImageMetadata {
-                    image_id: image.image_id.clone(),
-                    root_disk_bytes: image.root_disk_bytes,
-                    free_job_bytes: Some(image.free_job_bytes),
-                })
-                .collect(),
+            available: self.images.iter().map(IndexedImage::metadata).collect(),
             newest: self.newest.clone(),
         }
     }

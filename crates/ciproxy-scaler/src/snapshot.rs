@@ -124,6 +124,10 @@ pub struct Machine {
     pub disk_budget_bytes: u64,
     /// Active Docker reservations, absent while their statistics are unavailable.
     pub docker_leased_bytes: Option<u64>,
+    /// Real free space of the machine's disk in its last report. Only a Mac
+    /// gives it: its VMs are APFS clones that grow as their jobs write, so
+    /// the job disk count alone can promise space that they already took.
+    pub free_bytes: Option<u64>,
     /// One shared warm count for this machine, across all organizations.
     pub warm_count: usize,
     /// Per-machine targets from the documented warm-runner allocation policy.

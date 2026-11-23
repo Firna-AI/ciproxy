@@ -48,6 +48,9 @@ mod capacity_tests;
 #[path = "_tests_/admission_tests.rs"]
 mod admission_tests;
 
+#[path = "_tests_/mac_admission_tests.rs"]
+mod mac_admission_tests;
+
 #[path = "_tests_/recovery_tests.rs"]
 mod recovery_tests;
 

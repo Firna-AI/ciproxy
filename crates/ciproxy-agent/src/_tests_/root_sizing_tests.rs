@@ -54,9 +54,9 @@ mod root_rule {
     use ciproxy_protocol::platform::Platform;
     use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 
-    use crate::root_sizing::{MACOS_ROOT_MARGIN_BYTES, RootRule, RootSizing};
+    use crate::root_sizing::{MACOS_ROOT_MARGIN_BYTES, RootFit, RootRule, RootSizing};
 
-    /// The standard macOS release: a 200 GB disk with 79 GB written.
+    /// A macOS release with a 200 GB disk and 121 GB free.
     fn macos_image() -> ImageMetadata {
         ImageMetadata {
             image_id: ImageId("macos-26.7.3-1".to_owned()),
@@ -84,6 +84,10 @@ mod root_rule {
         let size = root.vm_size(label(20 * GIGABYTE)).expect("fits the image");
 
         assert_eq!(size.disk_bytes, 20 * GIGABYTE + MACOS_ROOT_MARGIN_BYTES);
+        assert_eq!(
+            root.fit(20 * GIGABYTE),
+            RootFit::Holds(20 * GIGABYTE + MACOS_ROOT_MARGIN_BYTES)
+        );
         assert_eq!(size.vcpu, 2);
         assert_eq!(size.memory_bytes, 8 * GIGABYTE);
         assert_eq!(
@@ -100,8 +104,25 @@ mod root_rule {
             RootSizing::default(),
         );
 
+        assert_eq!(root.fit(121 * GIGABYTE + 1), RootFit::AboveImage);
         assert_eq!(root.root_bytes(121 * GIGABYTE + 1), None);
         assert_eq!(root.vm_size(label(200 * GIGABYTE)), None);
+    }
+
+    /// An older agent reports no free bytes, so its Mac gets no new VM.
+    #[test]
+    fn a_macos_image_with_no_measured_free_bytes_gives_no_root() {
+        let image = ImageMetadata {
+            free_job_bytes: None,
+            ..macos_image()
+        };
+        let root =
+            RootRule::for_platform(Platform::MacosArm64, Some(&image), RootSizing::default());
+
+        assert_eq!(root.fit(20 * GIGABYTE), RootFit::Unknown);
+        assert_eq!(root.vm_size(label(20 * GIGABYTE)), None);
+        let no_image = RootRule::for_platform(Platform::MacosArm64, None, RootSizing::default());
+        assert_eq!(no_image.fit(20 * GIGABYTE), RootFit::Unknown);
     }
 
     #[test]

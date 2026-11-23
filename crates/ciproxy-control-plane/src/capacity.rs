@@ -1,6 +1,6 @@
 //! Dashboard capacity uses the same prepared bytes as hosted root admission.
 
-use ciproxy_agent::root_sizing::{RootRule, RootSizing};
+use ciproxy_agent::root_sizing::{RootFit, RootRule, RootSizing};
 use ciproxy_api::capacity::{Capacity, MachineCapacity};
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::Slots;
@@ -46,12 +46,18 @@ impl MachineCapacity for ReportedCapacity {
 
     fn required_root_bytes(&self, snapshot: &MachineSnapshot, requested: u64) -> Option<u64> {
         let image = snapshot.report.as_ref()?.report.images.selected()?;
-        RootRule::for_platform(
+        let rule = RootRule::for_platform(
             snapshot.machine.platform,
             Some(image),
             RootSizing::for_image(image),
-        )
-        .root_bytes(requested)
+        );
+        match rule.fit(requested) {
+            RootFit::Holds(bytes) => Some(bytes),
+            // A known refusal: no disk holds such a root, so the label fit
+            // shows that the Mac runs no job of it, not unknown facts.
+            RootFit::AboveImage => Some(u64::MAX),
+            RootFit::Unknown => None,
+        }
     }
 }
 

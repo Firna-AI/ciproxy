@@ -80,6 +80,22 @@ fn the_index_keeps_the_newest_and_held_images() {
     assert_eq!(index.newest, Some(ImageId("a".to_owned())));
 }
 
+/// The report carries each image's measured free bytes on the wire, so the
+/// control plane can apply the image limit of a macOS label.
+#[test]
+fn the_report_sends_the_measured_free_bytes_of_each_image() {
+    let mut index = ImageIndex::default();
+    index.publish(image("a"));
+
+    let report = serde_json::to_value(index.report()).expect("encode the report");
+
+    assert_eq!(
+        report["available"][0]["free_job_bytes"],
+        serde_json::json!(100_u64 << 30)
+    );
+    assert_eq!(index.images[0].metadata().free_job_bytes, Some(100 << 30));
+}
+
 #[test]
 fn folder_names_never_follow_the_id() {
     let name = folder_name(&ImageId("../../etc".to_owned()));

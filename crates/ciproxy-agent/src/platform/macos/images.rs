@@ -127,11 +127,7 @@ impl Images for MacImages {
     fn hold_newest(&self) -> Result<Arc<dyn ImageLease>> {
         let mut state = self.inner.state();
         let image = state.index.newest().ok_or(Error::NoImage)?;
-        let metadata = ImageMetadata {
-            image_id: image.image_id.clone(),
-            root_disk_bytes: image.root_disk_bytes,
-            free_job_bytes: Some(image.free_job_bytes),
-        };
+        let metadata = image.metadata();
         *state.held.entry(metadata.image_id.0.clone()).or_default() += 1;
         Ok(Arc::new(HeldImage {
             metadata,

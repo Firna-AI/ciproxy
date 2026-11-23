@@ -128,3 +128,55 @@ fn install_refuses_with_a_repair_message() {
         "[agent/host] ciproxy needs macOS 26.7.3 or later on this Mac. This Mac runs macOS 15.4.0. Update macOS in System Settings, then run the install again."
     );
 }
+
+mod area_size {
+    use ciproxy_agent::root_sizing::{RootRule, RootSizing};
+    use ciproxy_protocol::identifiers::ImageId;
+    use ciproxy_protocol::images::ImageMetadata;
+    use ciproxy_protocol::platform::Platform;
+    use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
+
+    use super::super::hardware::{IMAGE_BUDGET_BYTES, MINIMUM_AREA_BYTES};
+
+    /// The default macOS label on the standard image: 100 GB disk, 21.8 GB
+    /// free.
+    fn default_job() -> VmSize {
+        let image = ImageMetadata {
+            image_id: ImageId("macos-26.7.3-standard-v2".to_owned()),
+            root_disk_bytes: 100 * GIGABYTE,
+            free_job_bytes: Some(21_800_000_000),
+        };
+        RootRule::for_platform(Platform::MacosArm64, Some(&image), RootSizing::default())
+            .vm_size(VmSize {
+                vcpu: 2,
+                memory_bytes: 8 * GIGABYTE,
+                disk_bytes: 20 * GIGABYTE,
+            })
+            .expect("the default label fits the standard image")
+    }
+
+    fn jobs(quota: u64) -> u64 {
+        Resources::for_machine_with_image_budget(10, 16 * GIGABYTE, quota, IMAGE_BUDGET_BYTES, true)
+            .concurrent_vms(default_job())
+    }
+
+    #[test]
+    fn the_smallest_default_area_runs_one_default_job() {
+        assert_eq!(jobs(MINIMUM_AREA_BYTES), 1);
+        assert_eq!(jobs(MINIMUM_AREA_BYTES - 1), 0);
+    }
+
+    /// A 256 GB Mac: the default quota is three quarters of the free space.
+    #[test]
+    fn a_small_mac_runs_one_default_job_from_about_176_gb_free() {
+        for (free_gb, expected) in [(160, 0), (176, 1), (180, 1), (200, 1)] {
+            let quota = free_gb * GIGABYTE / 4 * 3;
+            let runs = if quota < MINIMUM_AREA_BYTES {
+                0
+            } else {
+                jobs(quota)
+            };
+            assert_eq!(runs, expected, "free={free_gb} GB quota={quota}");
+        }
+    }
+}

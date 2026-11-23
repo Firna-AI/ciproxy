@@ -76,12 +76,27 @@ pub enum RootRule {
     /// the label's free job disk.
     Ext4(RootSizing),
     /// macOS: an APFS clone of the image disk. The clone shares the image's
-    /// blocks and takes space only as the job writes. The image budget
-    /// already holds the image itself.
+    /// blocks, which the image budget already holds, and takes host space
+    /// only as the guest writes. A write to a shared block also takes a new
+    /// host block, so a clone can use more host space than the free bytes of
+    /// the image, up to the logical size of the image disk.
     ApfsClone {
-        /// The most that one clone can grow, when the image reports it.
+        /// The measured free space inside the image disk, which the guest
+        /// can use. An older agent reports none.
         image_free_bytes: Option<u64>,
     },
+}
+
+/// The root of one VM of a label on one machine.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RootFit {
+    /// The VM holds these bytes of the job disk.
+    Holds(u64),
+    /// The label asks for more free disk than the macOS image has.
+    AboveImage,
+    /// A fact is missing, such as the free bytes of a macOS image, or the
+    /// root does not fit in a byte count.
+    Unknown,
 }
 
 impl RootRule {
@@ -100,21 +115,34 @@ impl RootRule {
         }
     }
 
-    /// The disk that one VM holds for a label's free job disk.
+    /// The root of one VM for a label's free job disk.
     ///
     /// A macOS VM holds the label's free job disk and
-    /// [`MACOS_ROOT_MARGIN_BYTES`]. It gives `None` when the label asks for
-    /// more free disk than the image has, because a clone cannot grow past
-    /// the fixed image disk.
-    pub fn root_bytes(self, free_job_bytes: u64) -> Option<u64> {
-        match self {
+    /// [`MACOS_ROOT_MARGIN_BYTES`]. A label that asks for more free disk
+    /// than the image has gets [`RootFit::AboveImage`], because the guest
+    /// cannot use more than the free space of the fixed image disk. An
+    /// image with no measured free bytes, from an older agent, gives
+    /// [`RootFit::Unknown`], so no new VM starts on that Mac.
+    pub fn fit(self, free_job_bytes: u64) -> RootFit {
+        let held = match self {
             Self::Ext4(sizing) => sizing.root_bytes(free_job_bytes),
-            Self::ApfsClone { image_free_bytes } => {
-                if image_free_bytes.is_some_and(|free| free_job_bytes > free) {
-                    return None;
-                }
-                free_job_bytes.checked_add(MACOS_ROOT_MARGIN_BYTES)
-            }
+            Self::ApfsClone {
+                image_free_bytes: None,
+            } => return RootFit::Unknown,
+            Self::ApfsClone {
+                image_free_bytes: Some(free),
+            } if free_job_bytes > free => return RootFit::AboveImage,
+            Self::ApfsClone { .. } => free_job_bytes.checked_add(MACOS_ROOT_MARGIN_BYTES),
+        };
+        held.map_or(RootFit::Unknown, RootFit::Holds)
+    }
+
+    /// The disk that one VM holds, or `None` when no VM of that label can
+    /// start, as [`Self::fit`] says.
+    pub fn root_bytes(self, free_job_bytes: u64) -> Option<u64> {
+        match self.fit(free_job_bytes) {
+            RootFit::Holds(bytes) => Some(bytes),
+            RootFit::AboveImage | RootFit::Unknown => None,
         }
     }
 

@@ -1,6 +1,6 @@
 //! Reserve shared resources and hold the selected image through VM preparation.
 
-use ciproxy_agent::root_sizing::{RootRule, RootSizing};
+use ciproxy_agent::root_sizing::{RootFit, RootRule, RootSizing};
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::reports::DrainState;
 use ciproxy_protocol::runners::{RunnerReport, RunnerSpec, RunnerState};
@@ -50,10 +50,10 @@ impl Controller {
                     Some(&metadata),
                     RootSizing::for_image(&metadata),
                 );
-                let Some(size) = root.vm_size(runner.size) else {
+                if root.fit(runner.size.disk_bytes) == RootFit::AboveImage {
                     tracing::warn!(image = %metadata.image_id.0, free_job_bytes = runner.size.disk_bytes, "the label asks for more free disk than the image gives");
-                    return Err(Error::Capacity);
-                };
+                }
+                let size = root.vm_size(runner.size).ok_or(Error::Capacity)?;
                 if !real_space_fits(&report.hardware, size) {
                     tracing::warn!(
                         needed_bytes = size.disk_bytes,

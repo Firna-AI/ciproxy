@@ -149,6 +149,11 @@ fn a_mac_counts_its_job_disk_and_the_label_disk_of_each_vm() {
     );
     assert_eq!(
         adapter.required_root_bytes(&snapshot, 121_000_000_001),
-        None
+        Some(u64::MAX)
     );
+
+    // An older agent reports no free bytes: the facts are unknown.
+    let report = &mut snapshot.report.as_mut().unwrap().report;
+    report.images.available[0].free_job_bytes = None;
+    assert_eq!(adapter.required_root_bytes(&snapshot, 20_000_000_000), None);
 }
