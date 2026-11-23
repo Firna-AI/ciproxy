@@ -1,6 +1,7 @@
 //! One root allocation includes the image, free job bytes, and ext4 overhead.
 
 use ciproxy_protocol::images::ImageMetadata;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 
 /// Measured logical root length of the current full-image release.
@@ -8,6 +9,11 @@ pub const DEFAULT_IMAGE_ROOT_BYTES: u64 = 60_263_759_872;
 
 /// The smallest free job disk accepted for a label.
 pub const MINIMUM_JOB_DISK_BYTES: u64 = GIGABYTE;
+
+/// The disk that a macOS guest writes beside the job's own files, such as
+/// swap, logs, and the runner's files. A macOS VM counts its label's free
+/// job disk plus this margin.
+pub const MACOS_ROOT_MARGIN_BYTES: u64 = 4 * GIGABYTE;
 
 /// Maximum kernel ext4 reserve pool: 4096 clusters of 4096 bytes each.
 ///
@@ -52,6 +58,67 @@ impl RootSizing {
     }
 
     /// Replace label free bytes with the complete VM root allocation.
+    pub fn vm_size(self, label: VmSize) -> Option<VmSize> {
+        Some(VmSize {
+            disk_bytes: self.root_bytes(label.disk_bytes)?,
+            ..label
+        })
+    }
+}
+
+/// How the root disk of one own-machine VM takes space on its machine.
+///
+/// The agent, the scaler, and the control plane use this one rule, so the
+/// placement, the runner report, and the dashboard agree.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RootRule {
+    /// Linux: a private ext4 copy of the image root, grown before boot to
+    /// the label's free job disk.
+    Ext4(RootSizing),
+    /// macOS: an APFS clone of the image disk. The clone shares the image's
+    /// blocks and takes space only as the job writes. The image budget
+    /// already holds the image itself.
+    ApfsClone {
+        /// The most that one clone can grow, when the image reports it.
+        image_free_bytes: Option<u64>,
+    },
+}
+
+impl RootRule {
+    /// The root rule of `platform` for its selected `image`. `fallback`
+    /// gives the Linux image root when the machine reports no image.
+    pub fn for_platform(
+        platform: Platform,
+        image: Option<&ImageMetadata>,
+        fallback: RootSizing,
+    ) -> Self {
+        match platform {
+            Platform::LinuxX64 => Self::Ext4(image.map_or(fallback, RootSizing::for_image)),
+            Platform::MacosArm64 => Self::ApfsClone {
+                image_free_bytes: image.and_then(|image| image.free_job_bytes),
+            },
+        }
+    }
+
+    /// The disk that one VM holds for a label's free job disk.
+    ///
+    /// A macOS VM holds the label's free job disk and
+    /// [`MACOS_ROOT_MARGIN_BYTES`]. It gives `None` when the label asks for
+    /// more free disk than the image has, because a clone cannot grow past
+    /// the fixed image disk.
+    pub fn root_bytes(self, free_job_bytes: u64) -> Option<u64> {
+        match self {
+            Self::Ext4(sizing) => sizing.root_bytes(free_job_bytes),
+            Self::ApfsClone { image_free_bytes } => {
+                if image_free_bytes.is_some_and(|free| free_job_bytes > free) {
+                    return None;
+                }
+                free_job_bytes.checked_add(MACOS_ROOT_MARGIN_BYTES)
+            }
+        }
+    }
+
+    /// Replace label free bytes with the disk that the VM holds.
     pub fn vm_size(self, label: VmSize) -> Option<VmSize> {
         Some(VmSize {
             disk_bytes: self.root_bytes(label.disk_bytes)?,

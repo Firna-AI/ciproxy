@@ -12,10 +12,7 @@ pub(crate) fn place_own(
     label: &Label,
 ) -> bool {
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        let Some(size) = machine
-            .root_sizing(snapshot.root_sizing)
-            .vm_size(label.size)
-        else {
+        let Some(size) = machine.root_rule(snapshot.root_sizing).vm_size(label.size) else {
             continue;
         };
         if eligible(machine, label, snapshot.root_sizing)
@@ -38,10 +35,7 @@ pub(crate) fn place_own(
 
 pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, label: &Label) {
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        let Some(size) = machine
-            .root_sizing(snapshot.root_sizing)
-            .vm_size(label.size)
-        else {
+        let Some(size) = machine.root_rule(snapshot.root_sizing).vm_size(label.size) else {
             continue;
         };
         if !eligible(machine, label, snapshot.root_sizing) {

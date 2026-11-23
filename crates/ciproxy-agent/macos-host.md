@@ -375,12 +375,16 @@ An image ID that the index already lists is not imported again.
 
 ### Job disk
 
-Cal's decision 17 is open. P and A recommend option (b): the image disk
-has a fixed size of 200 GB, and each VM holds the image's measured
-`free_job_bytes` in the disk accounting. So the agent passes no disk size,
-and one saved state per seat serves every label. The agent keeps
-`free_job_bytes` in its image index. The core uses it once P adds the field
-to the protocol.
+The image disk has a fixed size, and each VM is an APFS clone of it. A
+VM holds its label's free job disk and `MACOS_ROOT_MARGIN_BYTES` (4 GB)
+in the disk accounting, through `RootRule` in `src/root_sizing.rs`. The
+scaler and the control plane use the same rule. The agent reports the
+image's `free_job_bytes` with its image metadata, so a label that asks
+for more free disk than the image has fits no Mac with that image. The
+agent refuses such a start with a warning. It also refuses a new VM when
+the real free space of the area volume is less than the disk that the VM
+holds (`real_space_fits` in `src/capacity.rs`), because running clones
+can grow past their count.
 
 The image budget is the space of the volume that the job disk does not
 use: the job disk is (volume capacity − image budget) × 3/4. The default

@@ -81,8 +81,12 @@ Stopping the service also stops its preparation helpers.
 
 Each VM gets one writable root disk with the image and free job space.
 The label disk means free bytes available to the runner at job start.
-`root_sizing::RootSizing` defines the allocation for every caller.
-It adds the image and ext4 growth allowance to the free label bytes.
+`root_sizing::RootRule` defines the allocation for every own-machine
+caller: the agent, the scaler, and the control plane. On Linux it is
+`RootSizing`, which adds the image and ext4 growth allowance to the free
+label bytes. On a Mac, a VM is an APFS clone of the image disk, so it
+holds the free label bytes and `MACOS_ROOT_MARGIN_BYTES`. A macOS start
+also needs that disk as real free space on the area volume.
 The [image budget and root sizing guide](image-budget.md) defines its
 formula, image geometry, and deployment metadata contract.
 Docker shares the root's free space and cached Docker images.
@@ -306,7 +310,8 @@ that only creates its output files. The check does not link.
 - [src/network_lifecycle.rs](src/network_lifecycle.rs) keeps active and
   pending network ownership across retirement, restart, and uninstall.
 - [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root
-  allocation rule for the agent, scaler, and hosted image configuration.
+  allocation rule for the agent, scaler, and hosted image configuration:
+  `RootSizing` for an ext4 root and `RootRule` for each platform.
 - [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
 - [src/process.rs](src/process.rs) runs host tools and shares the required
   reflink copy operation for VM roots and disposable Docker disks.

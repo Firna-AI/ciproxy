@@ -157,12 +157,14 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
     state.machines[0].selected_image = Some(ImageMetadata {
         image_id: ImageId("newer".into()),
         root_disk_bytes: 63_000_000_000,
+        free_job_bytes: None,
     });
     let mut older = state.machines[0].clone();
     older.id = MachineId("older".into());
     older.selected_image = Some(ImageMetadata {
         image_id: ImageId("older".into()),
         root_disk_bytes: 61_000_000_000,
+        free_job_bytes: None,
     });
     state.machines.push(older);
     state.queue = vec![queued("a", "ciproxy", 0); 2];

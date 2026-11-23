@@ -249,10 +249,12 @@ pub(crate) fn report() -> MachineReport {
                 ImageMetadata {
                     image_id: ImageId("ubuntu-image-0".into()),
                     root_disk_bytes: 59 * GIGABYTE,
+                    free_job_bytes: None,
                 },
                 ImageMetadata {
                     image_id: image_id(),
                     root_disk_bytes: 60_263_759_872,
+                    free_job_bytes: None,
                 },
             ],
             newest: Some(image_id()),

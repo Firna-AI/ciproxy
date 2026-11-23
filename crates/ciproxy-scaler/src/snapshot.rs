@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_agent::root_sizing::{RootRule, RootSizing};
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
@@ -137,11 +137,10 @@ pub struct Machine {
 }
 
 impl Machine {
-    /// Prefer selected local release facts to the deployment fallback.
-    pub fn root_sizing(&self, fallback: RootSizing) -> RootSizing {
-        self.selected_image
-            .as_ref()
-            .map_or(fallback, RootSizing::for_image)
+    /// The root rule of this machine's platform and selected image. A Linux
+    /// machine with no selected image uses the deployment fallback.
+    pub fn root_rule(&self, fallback: RootSizing) -> RootRule {
+        RootRule::for_platform(self.platform, self.selected_image.as_ref(), fallback)
     }
 }
 

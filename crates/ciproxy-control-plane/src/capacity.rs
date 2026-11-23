@@ -1,7 +1,8 @@
 //! Dashboard capacity uses the same prepared bytes as hosted root admission.
 
-use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_agent::root_sizing::{RootRule, RootSizing};
 use ciproxy_api::capacity::{Capacity, MachineCapacity};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::Slots;
 use ciproxy_store_interface::gateway::MachineSnapshot;
 
@@ -12,17 +13,23 @@ impl MachineCapacity for ReportedCapacity {
         match &snapshot.report {
             Some(report) => Capacity {
                 slots: report.report.capacity,
-                job_disk_bytes: report
-                    .report
-                    .docker_disks
-                    .as_ref()
-                    .measured()
-                    .map(|docker| {
-                        report
-                            .report
-                            .job_disk_bytes
-                            .saturating_sub(docker.leased_bytes)
-                    }),
+                // A Mac has no Docker disks, as docker-disks.md says, so it
+                // leases no bytes and sends no Docker report.
+                job_disk_bytes: if snapshot.machine.platform == Platform::MacosArm64 {
+                    Some(report.report.job_disk_bytes)
+                } else {
+                    report
+                        .report
+                        .docker_disks
+                        .as_ref()
+                        .measured()
+                        .map(|docker| {
+                            report
+                                .report
+                                .job_disk_bytes
+                                .saturating_sub(docker.leased_bytes)
+                        })
+                },
                 image_disk_bytes: report
                     .report
                     .images
@@ -38,8 +45,13 @@ impl MachineCapacity for ReportedCapacity {
     }
 
     fn required_root_bytes(&self, snapshot: &MachineSnapshot, requested: u64) -> Option<u64> {
-        RootSizing::for_image(snapshot.report.as_ref()?.report.images.selected()?)
-            .root_bytes(requested)
+        let image = snapshot.report.as_ref()?.report.images.selected()?;
+        RootRule::for_platform(
+            snapshot.machine.platform,
+            Some(image),
+            RootSizing::for_image(image),
+        )
+        .root_bytes(requested)
     }
 }
 

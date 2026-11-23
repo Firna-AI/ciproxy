@@ -106,6 +106,7 @@ impl ImageIndex {
                 .map(|image| ImageMetadata {
                     image_id: image.image_id.clone(),
                     root_disk_bytes: image.root_disk_bytes,
+                    free_job_bytes: Some(image.free_job_bytes),
                 })
                 .collect(),
             newest: self.newest.clone(),
