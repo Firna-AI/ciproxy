@@ -109,6 +109,9 @@ Replaced ways:
   wire. Consumers: `ciproxy-api`, `ts/api/generated`, `ts/app/src/api`, and
   the app tests and harness scripts. Moved in Milestones 9 and 10. Deleted in
   Milestone 9.
+- The chart colour token `chartColors.boat` of `ts/tokens/index.ts` → a
+  neutral overflow token. Consumers: the mockups and the app. Moved in
+  Milestone 10. Deleted in Milestone 10.
 - Boat copy for rules of every provider → copy that names the provider.
   Consumers: the mockups, the app, and the site. Moved in Milestones 1, 10,
   and 11. Deleted in Milestone 11.
@@ -254,6 +257,39 @@ My calls, 23 November 2026:
 - Mockups show the states with two providers with a fixture provider named
   "Second provider". The follow-up of item 3 replaces it with the real
   provider. Reason: the label order needs a second entry to design.
+- Two words for two facts: a provider is "available" when the deployment
+  has its settings, and "offered" when the workspace connected it once.
+  Reason: the mockups showed that one word for both was unclear.
+
+My calls from the mockups, 23 November 2026:
+
+- When no place of a label's order can take a job, the Jobs notice gives
+  the reason of the first place of the order that fits the size, such as
+  "Overflow providers are off" or the spend limit of that provider. Reason:
+  one short reason per label, as each wait reason has one notice today.
+- "Add a place" in the label order offers own machines and each offered
+  provider. Reason: it matches the offered mark and the append rule of item
+  6. A provider that the workspace never connected joins the labels on its
+  first connection.
+- A macOS label's order is always own machines, with no handle, Remove, or
+  Add. Reason: it keeps today's rule that a macOS label never overflows.
+- The provider descriptor says whether a connection has a billing account
+  choice. Boat checks the key and offers its wallets first. Reason: the
+  wallet is a Boat fact.
+- The descriptor holds facts only. The app keeps each provider's summary,
+  key placeholder, key hint, and key error copy. Reason: copy belongs with
+  the screens.
+- Settings under Overflow shows the switch and the wait first, then one
+  panel for each available provider. A notice about one provider names it
+  and says when jobs start there again. Each order row says what that place
+  does with a job of the label's size. Reason: the reader sees the rule for
+  all providers once, then each provider.
+- The live queue shows one running count for each provider, and the savings
+  report and the job history filter have one row or choice for each
+  provider. Reason: one month can hold jobs on several providers.
+- The shared dialog scrolls its body between the title and the footer.
+  Reason: the order rows pushed label dialogs past the top of a phone
+  screen.
 
 ### Risks
 
@@ -333,6 +369,13 @@ The label dialog shows the label order.
       `fixtures/boat-spend.ts`.
 - [ ] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
       pages.
+- [ ] Add a state for a connected provider that becomes unavailable in the
+      deployment: Settings keeps its account and Disconnect, and its order
+      row says that jobs skip it.
+- [ ] Add one job history filter choice for each provider that ran jobs.
+- [ ] Make the site mockups provider-neutral where they state a rule of
+      every provider: `labels-reference.tsx`, `quickstart.tsx`,
+      `docs-home.tsx`, `docs-nav.ts`, `tiers.ts`, and `hero-panel.tsx`.
 - [ ] Update the design and the TODOs of this plan for each problem that the
       mockups show.
 
@@ -552,6 +595,7 @@ milestone, so that the gate stays green. Its screens move in Milestone 10.
 
 - [ ] Add the provider routes of the design calls: the key check, connect,
       change key, Disconnect, and the spend limit.
+- [ ] Give the live view one running count for each provider.
 - [ ] Return a list of providers in `OverflowSettings`, each with its account
       view and spend. Keep the wallet types `BoatKeyCheck`, `BoatWallets`,
       `BoatWallet`, and `BoatConnection.wallet` for the Boat case only.
@@ -587,6 +631,11 @@ The app shows the approved mockups.
 - [ ] Update the Jobs notices, the job page, the live queue, the Machines
       page, and the savings report.
 - [ ] Update the app tests, the harness scripts, and the browser checks.
+- [ ] Add one job history filter choice for each provider.
+- [ ] Make the shared dialog scroll its body between the title and the
+      footer, as the mockups do.
+- [ ] Replace `chartColors.boat` in `ts/tokens/index.ts` with a neutral
+      overflow token, and move its consumers.
 - [ ] Run the app typecheck, lint, tests, and export. Compare the screens
       with the mockups, and save screenshots under
       `.context/providers-interface/`.
