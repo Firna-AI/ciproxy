@@ -210,6 +210,10 @@ label.
   its sizes, and whose largest size holds the complete image. That size can
   be smaller than the label.
 - When no provider of the order can do that, the jobs wait.
+- While such a label waits because the provider that would run it cannot
+  take jobs now, the label list and the Jobs notice give the reason of that
+  provider, such as its spend limit. That provider is the first connected
+  and available provider of the order whose largest size holds the image.
 - That fallback can give less free disk than the label promises.
 - While the order holds no provider, the dialog says to add a provider for
   this choice.

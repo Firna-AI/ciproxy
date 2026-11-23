@@ -276,6 +276,11 @@ My calls from the mockups, 23 November 2026:
   reason. The label list, the order rows, and the Jobs notice take the
   reason from one function. An order row shows "off", "not connected", or
   "unavailable" before it says whether a size fits.
+- A label with "Run on the largest size" that waits because the provider
+  that would run it cannot take jobs now shows that provider's reason, such
+  as its spend limit, not "nothing fits". That provider is the first
+  connected and available provider of the order whose largest size holds
+  the image. Reason: the customer can act on that reason.
 - A provider that counts as fitting for the wait reason never stops "Run
   on the largest size". Reason: the counting exists only to give a true
   reason, and the largest-size rule needs a provider that can start.
