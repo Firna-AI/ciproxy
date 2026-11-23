@@ -100,13 +100,15 @@
     attribution correction. Commit `995e4f88` had attributed calls of the
     orchestrator to the user. The orchestrator had chosen two options and
     set the scope and the six-sandbox limit of a Boat task.
-  - The first text of `plans/follow-ups/boat-exit-report-lock-timeout.md`
-    and `plans/follow-ups/boat-live-completion-acceptance.md` said that the
+  - The first text of the [lock-timeout item][lock-timeout-item] and of
+    `plans/follow-ups/boat-live-completion-acceptance.md` said that the
     user asked to see the options. No retained record showed who asked.
-    Their current text names the user for the two decisions, and the
+    Their later text names the user for the two decisions, and the
     orchestrator for the run order and the sandbox budget.
 - **Recommendation:** C. It gives the role a definition, a place in each
   record, and a rule for delegates. It grants no agent the user's approval
   powers.
 - **Action:** fix after merge, apply C, because the source lives in the
   shared-skills repository.
+
+[lock-timeout-item]: https://github.com/Firna-AI/ciproxy/blob/2976db158049aefce6cfe96cf6337d12afc9be64/plans/follow-ups/boat-exit-report-lock-timeout.md
