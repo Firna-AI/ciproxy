@@ -5,7 +5,9 @@
 The upstream template builds with Anka or with Packer's null builder over SSH.
 This copy keeps every upstream provisioner, removes the Anka plugin and its
 source, selects the null builder, keeps the pinned Xcode set in a toolset copy,
-and appends the ciproxy steps: the runner, the guest, and the cleanup.
+and appends the ciproxy steps: the runner and the guest. The facts phase of
+build.sh removes the build state afterwards, because the build still needs
+SSH for the facts.
 """
 
 import argparse
@@ -47,8 +49,7 @@ CIPROXY_STEPS = '''
   provisioner "file" {
     destination = "/tmp/ciproxy/"
     sources     = ["${var.ciproxy_inputs}/runner.tar.gz", "${var.ciproxy_inputs}/guest",
-                   "${var.ciproxy_definition}/install-runner.sh",
-                   "${var.ciproxy_definition}/clean-image.sh"]
+                   "${var.ciproxy_definition}/install-runner.sh"]
   }
 
   provisioner "shell" {
@@ -56,8 +57,7 @@ CIPROXY_STEPS = '''
     execute_command  = "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}"
     inline           = ["bash /tmp/ciproxy/install-runner.sh /tmp/ciproxy/runner.tar.gz",
                         "cd /tmp/ciproxy/guest && ./install.sh ${var.ciproxy_image_id}",
-                        "defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser -string ${var.vm_username}",
-                        "bash /tmp/ciproxy/clean-image.sh"]
+                        "defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser -string ${var.vm_username}"]
   }
 }
 '''

@@ -87,27 +87,41 @@ limit in the upstream scripts. The token stays out of the image.
 7. `prepare-template.py` copies the upstream template and keeps every
    upstream provisioner. It removes the Anka plugin and its source, selects
    the upstream `null` builder over SSH, and writes the trimmed toolset.
-   Packer logs in with the build's SSH key, not the password. Each upstream
-   shell step that expects no restart retries twice, because a step lost its
-   SSH session twice in a row while `softwareupdate` ran, for no cause found.
-   It appends three ciproxy steps: `install-runner.sh` puts the runner in
-   `/opt/actions-runner`, the guest's `install.sh` adds the guest and its
-   launchd service, and `clean-image.sh` removes the build state. The host
-   serves the Xcode archive on its loopback address, in place of upstream's
-   storage account. One SSH connection from Apple's `ssh`, which the host
-   opens again after each guest restart, carries two tunnels. It brings the
-   archive to the guest's `127.0.0.1`, so the agent's pf rules, which block
-   guests from the host, do not stop the build. It also brings the guest's
-   SSH to the host's `127.0.0.1:2222`, where Packer connects. macOS Local
-   Network privacy cut Packer off from the VM network a few minutes after
-   the session that started the build ended. Loopback is not covered. Set
-   `GITHUB_API_PAT` to a token without rights for a higher GitHub API rate
-   limit, or put it in `secrets/github-api-pat` of the work folder. It
-   reaches Packer through the environment, not the command line.
-   The upstream tests and software report run as upstream.
-8. `guest-facts.sh` reads the macOS version, the used and free bytes of the
-   data volume, SIP, and Xcode. Then the guest turns off, and the build
-   packages it.
+   Packer logs in with the build's SSH key, not the password, and gets the
+   build ID in upstream's form, such as `macos-26-arm64_20261117.0516`, so
+   the software report shows GitHub's image version. The template also
+   changes these points, because the upstream recipe expects GitHub's base
+   image:
+   - Each upstream shell step that expects no restart retries twice.
+   - Before each upstream restart, a step writes the auto-login user again,
+     because the setting was lost once. After each restart, a step closes
+     Finder's windows, because upstream's window check fails on the
+     Utilities window that the Setup Assistant phase opened.
+   - Before Packer starts, the build creates `/usr/local/bin` and
+     `/usr/local/share` for the job user, and sets the sshd setting
+     `StrictModes no`, because upstream's `configure-ssh.sh` makes `~/.ssh`
+     writable for everyone. `clean-image.sh` removes that setting.
+
+   The template appends two ciproxy steps: `install-runner.sh` puts the
+   runner in `/opt/actions-runner`, and the guest's `install.sh` adds the
+   guest and its launchd service. The host serves the Xcode archive on its
+   loopback address, in place of upstream's storage account. One SSH
+   connection from Apple's `ssh`, which the host opens again after each
+   guest restart, carries two tunnels. It brings the archive to the guest's
+   `127.0.0.1`, so the agent's pf rules, which block guests from the host,
+   do not stop the build. It also brings the guest's SSH to the host's
+   `127.0.0.1:2222`, where Packer connects. macOS Local Network privacy cut
+   Packer off from the VM network a few minutes after the session that
+   started the build ended. Loopback is not covered. Set `GITHUB_API_PAT` to
+   a token without rights for a higher GitHub API rate limit, or put it in
+   `secrets/github-api-pat` of the work folder. It reaches Packer through
+   the environment, not the command line. The upstream tests and software
+   report run as upstream.
+8. The `facts` phase runs `guest-facts.sh`, which reads the macOS version,
+   the used and free bytes of the data volume, SIP, and Xcode. Then it runs
+   `clean-image.sh`, which removes the build state and the build's SSH key,
+   and the guest turns off. Copy the VM folder first to run this phase
+   again. The `package` phase then packages the guest.
 
 The shipped image has no SSH key and accepts no SSH password. The auto-login
 file holds the password in a reversible form.

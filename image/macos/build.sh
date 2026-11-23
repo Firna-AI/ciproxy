@@ -226,6 +226,12 @@ phase_facts() {
     cp "$work_dir/upstream/images/image-output/software-report.json" "$work_dir/artifacts/"
     cp "$work_dir/inputs/upstream-software.json" "$work_dir/artifacts/"
     cat "$work_dir/artifacts/guest-facts.json"
+    # The cleanup removes the build's SSH key, so it comes last, after the
+    # facts. Keep a copy of the VM folder to run this phase again.
+    guest_scp /tmp/ "$definition/clean-image.sh"
+    guest_ssh 'sudo bash /tmp/clean-image.sh && sudo rm -f /tmp/clean-image.sh
+        sudo shutdown -h now' || true
+    vm_wait_stopped 300
 }
 
 phase_package() {
