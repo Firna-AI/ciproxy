@@ -19,8 +19,9 @@ sign-in, access, GitHub permissions, and keys.
 - The job metadata also holds the CPU and memory
   [samples](job-usage.md#terms) and the [steps](job-usage.md#steps) of the
   job.
-- The control plane stores no step name that can hold job code, as
+- The control plane stores no step name that holds job code, as
   [Step names](job-usage.md#step-names) says.
+- The guest checks each script name against the actions of the job.
 - The control plane also stores what the agent reports about each machine,
   as [Health](agent.md#health) says.
 - Job logs stay on GitHub, and the job page links to them.

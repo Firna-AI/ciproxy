@@ -111,8 +111,16 @@ samples with the exit report when available.
 
 When the series would exceed 3,600 points, the guest merges adjacent
 points. Each merged point keeps the average CPU, peak memory, and total
-kill count. The last point can cover part of its stated width. After a
-read gap, the guest keeps the longest series of consecutive samples.
+kill count. The last point can cover part of its stated width.
+
+A read takes its slot from the whole seconds since sampling started on
+the monotonic clock. If two reads less than two seconds apart skip one
+slot, both slots get the same CPU average. The skipped slot gets the
+earlier memory reading and no kills. The later slot gets the later memory
+reading and the kills since the earlier read. A failed read, a read in
+the same slot, or a gap of at least two seconds ends the run. The guest
+keeps the longest unbroken run.
+
 A failed read or sample post logs a warning without figures. The runner
 and its exit report do not depend on a sample or a sample post.
 See [Job usage](../../docs/protocol/job-usage.md).
@@ -126,14 +134,23 @@ only new complete lines at each Boat sample report and at runner exit.
 It keeps the steps on those pages even if they ended before the first
 sample.
 
+For a step that reaches `Starting the step.`, the guest uses `Processing
+step` as its start. It uses `Step result:` as its end. A skipped step has
+no times. A step that did not finish can have a start but no end.
+
+The guest checks names that start with "Run", "Pre Run", or "Post Run"
+and a space against the remote action references in the Worker's
+`Job message:` record. It replaces each name without a match with a
+script placeholder. It uses at most 1 MiB of JSON and retains only the
+action references. If the record is missing, malformed, or too large,
+the guest replaces all such names.
+
 The guest keeps the first 1,000 steps and the first 256 characters of each
-name. It sends names as the runner writes them. A skipped step has no times.
-A step that did not finish can have a start but no end. A missing or broken
-log does not change the samples or the runner exit. The guest drops the
-steps if they would make a vsock exit report exceed the agent's line
-limit. The step reader does not log names or figures. The
-[image checks][worker-log-check] verify the format when the runner pin
-changes.
+name. A missing or broken log does not change the samples or the runner
+exit. The guest drops the steps if they would make a vsock exit report
+exceed the agent's line limit. The step reader does not log the job
+message, names, or figures. The [image checks][worker-log-check] verify
+the format when the runner pin changes.
 
 [worker-log-check]: ../../image/checks.md#runner-pin-updates
 

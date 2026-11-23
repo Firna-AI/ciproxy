@@ -5,11 +5,19 @@ use std::ops::Range;
 
 use ciproxy_protocol::usage::{JobStep, JobStepTiming, MAX_STEP_NAME_CHARS, MAX_STEPS};
 
+use super::job_message::JobActions;
+
 /// Ordered step observations, including one step with an unknown outcome.
 #[derive(Default)]
 pub(super) struct Steps {
     finished: Vec<JobStep>,
-    current: Option<JobStep>,
+    current: Option<PendingStep>,
+    job_actions: Option<JobActions>,
+}
+
+struct PendingStep {
+    step: JobStep,
+    processing_at_ms: i64,
 }
 
 enum Event<'line> {
@@ -43,6 +51,16 @@ impl<'line> Event<'line> {
 }
 
 impl Steps {
+    /// Accept the first job message only, before any step records.
+    pub(super) fn wants_job_actions(&self) -> bool {
+        self.job_actions.is_none() && self.finished.is_empty() && self.current.is_none()
+    }
+
+    /// Keep the action names from the job message.
+    pub(super) fn set_job_actions(&mut self, actions: JobActions) {
+        self.job_actions = Some(actions);
+    }
+
     /// Consume one complete trace line in the pinned Worker log format.
     pub(super) fn observe(&mut self, line: &str) -> io::Result<()> {
         if self.full() {
@@ -65,23 +83,29 @@ impl Steps {
         if let Event::Processing(name) = event {
             self.finish_step();
             if !self.full() {
-                self.current = Some(JobStep {
-                    name: name.chars().take(MAX_STEP_NAME_CHARS).collect(),
-                    timing: JobStepTiming::Ran {
-                        started_at_ms: None,
-                        ended_at_ms: None,
+                self.current = Some(PendingStep {
+                    step: JobStep {
+                        name: JobActions::filter_name(self.job_actions.as_ref(), name)
+                            .chars()
+                            .take(MAX_STEP_NAME_CHARS)
+                            .collect(),
+                        timing: JobStepTiming::Ran {
+                            started_at_ms: None,
+                            ended_at_ms: None,
+                        },
                     },
+                    processing_at_ms: at_ms,
                 });
             }
             return Ok(());
         }
 
         let current = self.current.as_mut().ok_or(ErrorKind::InvalidData)?;
-        match (&mut current.timing, event) {
+        match (&mut current.step.timing, event) {
             (JobStepTiming::Ran { started_at_ms, .. }, Event::Starting)
                 if started_at_ms.is_none() =>
             {
-                *started_at_ms = Some(at_ms);
+                *started_at_ms = Some(current.processing_at_ms);
             }
             (JobStepTiming::Ran { ended_at_ms, .. }, Event::Result) => {
                 *ended_at_ms = Some(at_ms);
@@ -94,7 +118,7 @@ impl Steps {
                 },
                 Event::Skipping,
             ) => {
-                current.timing = JobStepTiming::Skipped;
+                current.step.timing = JobStepTiming::Skipped;
                 self.finish_step();
             }
             _ => return Err(ErrorKind::InvalidData.into()),
@@ -111,14 +135,14 @@ impl Steps {
     pub(super) fn snapshot(&self) -> Vec<JobStep> {
         let mut steps = self.finished.clone();
         if let Some(pending) = &self.current {
-            steps.push(pending.clone());
+            steps.push(pending.step.clone());
         }
         steps
     }
 
     fn finish_step(&mut self) {
         if let Some(step) = self.current.take() {
-            self.finished.push(step);
+            self.finished.push(step.step);
         }
     }
 }

@@ -4,25 +4,28 @@ use std::io::ErrorKind;
 
 use ciproxy_protocol::usage::{JobStep, JobStepTiming};
 
+use super::super::follow_tests::replay;
 use super::Steps;
 
 const START: i64 = 1_709_164_800_000;
 
 #[test]
 fn pinned_worker_log_keeps_job_steps_and_incomplete_timing() {
-    let mut steps = Steps::default();
-    for line in include_str!("fixtures/worker-v2.338.2.txt").lines() {
-        steps.observe(line).unwrap();
-    }
-
     assert_eq!(
-        steps.snapshot(),
+        replay(include_str!("fixtures/worker-v2.338.2.txt")),
         [
-            ran("Run printf %s \"smoke\"", 1, Some(2)),
+            ran("Run script", 1, Some(2)),
             skipped("Skip smoke"),
-            ran("Composite's outer step", 3, Some(5)),
-            ran("Post Run actions/checkout@v5", 6, Some(6)),
-            ran("Interrupted step", 7, None),
+            ran("Composite's outer step", 4, Some(10)),
+            JobStep {
+                name: "Background step".into(),
+                timing: JobStepTiming::Ran {
+                    started_at_ms: None,
+                    ended_at_ms: None,
+                },
+            },
+            ran("Post Run actions/checkout@v5", 12, Some(12)),
+            ran("Interrupted step", 13, None),
         ]
     );
 }

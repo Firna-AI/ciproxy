@@ -1,18 +1,28 @@
 [2024-02-29 00:00:00Z INFO Worker] Waiting to receive the job message from the channel.
+[2024-02-29 00:00:00Z INFO Worker] Job message:
+ {
+  "steps": [
+    { "type": "action", "reference": { "type": "script" } },
+    { "type": "action", "reference": { "type": "repository", "name": "actions/checkout", "ref": "v5" } }
+  ]
+}
 [2024-02-29 00:00:01Z INFO StepsRunner] Processing step: DisplayName='Run printf %s "smoke"'
 [2024-02-29 00:00:01Z INFO StepsRunner] Starting the step.
 [2024-02-29 00:00:02Z INFO StepsRunner] Step result: Succeeded
 [2024-02-29 00:00:02Z INFO StepsRunner] Processing step: DisplayName='Skip smoke'
-[2024-02-29 00:00:02Z INFO StepsRunner] Skipping step due to condition evaluation.
-[2024-02-29 00:00:03Z INFO StepsRunner] Processing step: DisplayName='Composite's outer step'
-[2024-02-29 00:00:03Z INFO StepsRunner] Starting the step.
-[2024-02-29 00:00:03Z INFO CompositeActionHandler] Processing embedded step: DisplayName='Skip inner'
-[2024-02-29 00:00:03Z INFO CompositeActionHandler] Skipping step due to condition evaluation.
-[2024-02-29 00:00:04Z INFO CompositeActionHandler] Step result: Succeeded
+[2024-02-29 00:00:03Z INFO StepsRunner] Skipping step due to condition evaluation.
+[2024-02-29 00:00:04Z INFO StepsRunner] Processing step: DisplayName='Composite's outer step'
+[2024-02-29 00:00:08Z INFO StepsRunner] Starting the step.
+[2024-02-29 00:00:08Z INFO CompositeActionHandler] Processing embedded step: DisplayName='Skip inner'
+[2024-02-29 00:00:08Z INFO CompositeActionHandler] Skipping step due to condition evaluation.
+[2024-02-29 00:00:09Z INFO CompositeActionHandler] Step result: Succeeded
 This is not a trace header.
-[2024-02-29 00:00:05Z INFO StepsRunner] Step result: Succeeded
-[2024-02-29 00:00:06Z INFO StepsRunner] Processing step: DisplayName='Post Run actions/checkout@v5'
-[2024-02-29 00:00:06Z INFO StepsRunner] Starting the step.
-[2024-02-29 00:00:06Z INFO StepsRunner] Step result: Succeeded
-[2024-02-29 00:00:07Z INFO StepsRunner] Processing step: DisplayName='Interrupted step'
-[2024-02-29 00:00:07Z INFO StepsRunner] Starting the step.
+[2024-02-29 00:00:10Z INFO StepsRunner] Step result: Succeeded
+[2024-02-29 00:00:10Z INFO StepsRunner] Processing step: DisplayName='Background step'
+[2024-02-29 00:00:11Z INFO BackgroundStepCoordinator] Background step 'example' acquired slot.
+[2024-02-29 00:00:11Z INFO BackgroundStepCoordinator] Background step 'example' completed with result: Succeeded
+[2024-02-29 00:00:12Z INFO StepsRunner] Processing step: DisplayName='Post Run actions/checkout@v5'
+[2024-02-29 00:00:12Z INFO StepsRunner] Starting the step.
+[2024-02-29 00:00:12Z INFO StepsRunner] Step result: Succeeded
+[2024-02-29 00:00:13Z INFO StepsRunner] Processing step: DisplayName='Interrupted step'
+[2024-02-29 00:00:13Z INFO StepsRunner] Starting the step.

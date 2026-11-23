@@ -1,6 +1,7 @@
 //! Page selection and following at report boundaries.
 
 use std::io::Cursor;
+use std::sync::Arc;
 
 use ciproxy_protocol::usage::{JobStep, JobStepTiming};
 use unimock::{MockFn, Unimock, matching};
@@ -25,6 +26,12 @@ const NEXT_PAGE: &str = concat!(
     "[2023-11-14 22:13:22Z INFO StepsRunner] Starting the step.\n",
     "[2023-11-14 22:13:23Z INFO StepsRunner] Step result: Succeeded\n",
 );
+const SCRIPT_NAMES: &str = concat!(
+    "[2023-11-14 22:13:19Z INFO StepsRunner] Processing step: DisplayName='Pre Run foo/bar@baz'\n",
+    "[2023-11-14 22:13:20Z INFO StepsRunner] Processing step: DisplayName='Run foo/bar@baz'\n",
+    "[2023-11-14 22:13:21Z INFO StepsRunner] Processing step: DisplayName='Post Run foo/bar@baz'\n",
+);
+const JOB_HEADER: &str = "[2023-11-14 22:13:18Z INFO Worker] Job message:\n";
 
 #[test]
 fn follows_new_pages_in_order_and_waits_for_a_complete_line() {
@@ -85,6 +92,81 @@ fn follows_new_pages_in_order_and_waits_for_a_complete_line() {
             ran("Post action", 1_700_000_002_000, Some(1_700_000_003_000)),
         ]
     );
+}
+
+#[test]
+fn redacts_an_action_shaped_command_without_the_action() {
+    assert_eq!(
+        names(replay(include_str!(
+            "fixtures/worker-action-shaped-script.txt"
+        ))),
+        ["Run script"]
+    );
+}
+
+#[test]
+fn keeps_the_names_of_remote_actions_in_the_job() {
+    assert_eq!(
+        names(replay(include_str!("fixtures/worker-remote-actions.txt"))),
+        [
+            "Pre Run foo/bar@baz",
+            "Run foo/bar@baz",
+            "Run other/action/nested@release/stable",
+            "Run alpine:3.20",
+            "Run script",
+            "Post Run foo/bar@baz",
+        ]
+    );
+}
+
+#[test]
+fn redacts_script_names_without_a_job_message() {
+    assert_eq!(
+        names(replay(SCRIPT_NAMES)),
+        ["Pre Run script", "Run script", "Post Run script"]
+    );
+}
+
+#[test]
+fn redacts_script_names_with_a_malformed_job_message() {
+    let contents = format!(
+        "{JOB_HEADER} {{\n  \"steps\": [{{\"reference\": {{\"type\": \"repository\", \"name\": \"foo/bar\", \"ref\": \"baz\"}}}}],\n}}\n{SCRIPT_NAMES}"
+    );
+    assert_eq!(
+        names(replay(&contents)),
+        ["Pre Run script", "Run script", "Post Run script"]
+    );
+}
+
+#[test]
+fn redacts_script_names_with_an_oversized_job_message() {
+    let contents = format!(
+        "{JOB_HEADER} {{\n  \"steps\": [{{\"reference\": {{\"type\": \"repository\", \"name\": \"foo/bar\", \"ref\": \"baz\"}}}}],\n  \"padding\": \"{}\"\n}}\n{SCRIPT_NAMES}",
+        "x".repeat(1024 * 1024)
+    );
+    assert_eq!(
+        names(replay(&contents)),
+        ["Pre Run script", "Run script", "Post Run script"]
+    );
+}
+
+fn names(steps: Vec<JobStep>) -> Vec<String> {
+    steps.into_iter().map(|step| step.name).collect()
+}
+
+pub(super) fn replay(contents: &str) -> Vec<JobStep> {
+    let bytes = contents.as_bytes().to_vec();
+    let pages = Unimock::new((
+        LogPagesMock::list
+            .some_call(matching!())
+            .returns(Ok(vec![FIRST.into()])),
+        LogPagesMock::open
+            .some_call(matching!((name, 0) if *name == FIRST))
+            .answers_arc(Arc::new(move |_, _, _| {
+                Ok(Box::new(Cursor::new(bytes.clone())))
+            })),
+    ));
+    WorkerLog::new(Box::new(pages)).report().unwrap()
 }
 
 fn ran(name: &str, start: i64, end: Option<i64>) -> JobStep {

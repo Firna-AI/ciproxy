@@ -1,5 +1,6 @@
 //! Track the Worker log pages of one runner.
 
+mod job_message;
 mod steps;
 
 use std::fs::{self, OpenOptions};
@@ -9,6 +10,7 @@ use std::path::Path;
 
 use ciproxy_protocol::usage::JobStep;
 
+use self::job_message::JobActions;
 use self::steps::Steps;
 
 const DIAG: &str = "/opt/actions-runner/_diag";
@@ -146,17 +148,18 @@ impl WorkerLog {
 
     fn read_page(
         &mut self,
-        mut reader: Box<dyn BufRead>,
+        reader: Box<dyn BufRead>,
         mut offset: u64,
         budget: &mut u64,
     ) -> io::Result<u64> {
+        let mut reader = reader.take(*budget + 1);
         let mut line = Vec::new();
         while !self.steps.full() {
             line.clear();
+            let before = reader.limit();
             let count = (&mut reader)
                 .take(MAX_LINE_BYTES + 1)
                 .read_until(b'\n', &mut line)? as u64;
-            *budget = budget.checked_sub(count).ok_or(ErrorKind::InvalidData)?;
             if count > MAX_LINE_BYTES {
                 return Err(ErrorKind::InvalidData.into());
             }
@@ -166,9 +169,21 @@ impl WorkerLog {
             let Ok(text) = str::from_utf8(&line) else {
                 return Err(ErrorKind::InvalidData.into());
             };
-            self.steps.observe(text.trim_end_matches(['\r', '\n']))?;
-            offset += count;
+            let text = text.trim_end_matches(['\r', '\n']);
+            if self.steps.wants_job_actions() && JobActions::is_header(text) {
+                let Some(actions) = JobActions::read(&mut reader)? else {
+                    break;
+                };
+                self.steps.set_job_actions(actions);
+            } else {
+                self.steps.observe(text)?;
+            }
+            offset += before - reader.limit();
         }
+        *budget = reader
+            .limit()
+            .checked_sub(1)
+            .ok_or(ErrorKind::InvalidData)?;
         Ok(offset)
     }
 }

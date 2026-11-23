@@ -1,0 +1,58 @@
+[2023-11-14 22:13:18Z INFO Worker] Job message:
+ {
+  "steps": [
+    {
+      "type": "action",
+      "reference": {
+        "type": "repository",
+        "name": "foo/bar",
+        "ref": "baz",
+        "repositoryType": "GitHub",
+        "path": ""
+      }
+    },
+    {
+      "type": "action",
+      "reference": {
+        "type": "repository",
+        "name": "other/action",
+        "ref": "release/stable",
+        "repositoryType": "GitHub",
+        "path": "nested"
+      }
+    },
+    {
+      "type": "action",
+      "reference": {
+        "type": "containerRegistry",
+        "image": "alpine:3.20"
+      }
+    },
+    {
+      "type": "action",
+      "reference": {
+        "type": "repository",
+        "repositoryType": "self",
+        "path": "./build"
+      }
+    }
+  ]
+}
+[2023-11-14 22:13:19Z INFO StepsRunner] Processing step: DisplayName='Pre Run foo/bar@baz'
+[2023-11-14 22:13:19Z INFO StepsRunner] Starting the step.
+[2023-11-14 22:13:20Z INFO StepsRunner] Step result: Succeeded
+[2023-11-14 22:13:20Z INFO StepsRunner] Processing step: DisplayName='Run foo/bar@baz'
+[2023-11-14 22:13:20Z INFO StepsRunner] Starting the step.
+[2023-11-14 22:13:21Z INFO StepsRunner] Step result: Succeeded
+[2023-11-14 22:13:21Z INFO StepsRunner] Processing step: DisplayName='Run other/action/nested@release/stable'
+[2023-11-14 22:13:21Z INFO StepsRunner] Starting the step.
+[2023-11-14 22:13:22Z INFO StepsRunner] Step result: Succeeded
+[2023-11-14 22:13:22Z INFO StepsRunner] Processing step: DisplayName='Run alpine:3.20'
+[2023-11-14 22:13:22Z INFO StepsRunner] Starting the step.
+[2023-11-14 22:13:23Z INFO StepsRunner] Step result: Succeeded
+[2023-11-14 22:13:23Z INFO StepsRunner] Processing step: DisplayName='Run ./build'
+[2023-11-14 22:13:23Z INFO StepsRunner] Starting the step.
+[2023-11-14 22:13:24Z INFO StepsRunner] Step result: Succeeded
+[2023-11-14 22:13:24Z INFO StepsRunner] Processing step: DisplayName='Post Run foo/bar@baz'
+[2023-11-14 22:13:24Z INFO StepsRunner] Starting the step.
+[2023-11-14 22:13:25Z INFO StepsRunner] Step result: Succeeded

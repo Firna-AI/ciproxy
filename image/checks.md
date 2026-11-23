@@ -242,7 +242,11 @@ cargo test --package ciproxy-guest pinned_worker_log_keeps_job_steps
 ```
 
 Compare the fixture with the pinned runner's `StepsRunner.cs` and
-`HostTraceListener.cs` when the pin changes.
+`HostTraceListener.cs`. A sequential step starts at the line that the
+runner writes just before `ExecutionContext.Start()`. It ends at the line
+next to `Complete()`. Check that the `Job message:` Info record in
+`Worker.cs` still has indented JSON without a log header on each line.
+Check the action name form in `ActionRunner.cs`.
 
 ### Live Worker steps
 

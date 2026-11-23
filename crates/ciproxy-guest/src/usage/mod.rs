@@ -186,7 +186,7 @@ async fn collect(
 
     let mut window = Window::new(source.platform());
     let started = Instant::now();
-    window.capture(&*source);
+    window.capture(&*source, started.elapsed());
     let mut ticks = interval(started + SAMPLE_INTERVAL, SAMPLE_INTERVAL);
     let mut reports = interval(started + REPORT_INTERVAL, REPORT_INTERVAL);
     let mut posting: Option<Post> = None;
@@ -194,7 +194,7 @@ async fn collect(
         tokio::select! {
             biased;
             _ = &mut stop => return report(&window, &mut log),
-            _ = ticks.tick() => window.capture(&*source),
+            _ = ticks.tick() => window.capture(&*source, started.elapsed()),
             () = wait_for_post(&mut posting) => posting = None,
             _ = reports.tick(), if boat.is_some() => {
                 if let Some(job) = &boat

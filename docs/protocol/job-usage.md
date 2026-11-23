@@ -101,19 +101,23 @@ what the job page shows.
 
 ### Step names
 
-- GitHub names a step without a name from its `run` command or its action, as
-  in "Run npm test".
-- So the control plane treats each name that starts with "Run", "Pre Run",
-  or "Post Run" and a space as a script name.
-- A script name keeps its text only when the rest names a remote action,
-  such as `actions/checkout@v4` or `docker://alpine:3.20`.
+- GitHub names a step without a name from its `run` command or its action,
+  as in "Run npm test".
+- ciproxy treats each name that starts with "Run", "Pre Run", or "Post Run"
+  and a space as a script name.
+- The guest checks each script name against the actions of the job.
+- A script name keeps its text only when the rest matches a remote action
+  of that job, such as `actions/checkout@v4`.
 - A local action, such as `./build`, is not a remote action.
-- Each other script name becomes "Run script", "Pre Run script", or "Post
-  Run script", to match its start.
-- So a name such as "Running tests" keeps its text.
+- Each script name without a match becomes "Run script", "Pre Run script",
+  or "Post Run script", to match its start.
+- ciproxy stores no generated step name that holds job code.
+- A name such as "Running tests" keeps its text.
 - The job page links each step with a replaced name to that step on GitHub.
-- The control plane applies this rule before it stores a name, because the
-  names come from the VM, which job code controls.
+- The control plane also checks the shape of a script name before storage,
+  because job code controls the VM.
+- The runner names an unnamed container step "Run alpine:3.20", for example.
+  The control plane replaces that name with "Run script".
 - **Decision:** a script name keeps its text only when it names a remote
   action. Rejected: each name as the runner gives it, because the control
   plane then stores lines of job code. Rejected: no names, or names from
@@ -168,16 +172,19 @@ what the job page shows.
 
 ## Out of memory
 
-- On Linux, an out-of-memory kill ends only the killed process.
-- The job goes on, and the guest still sends its figures.
-- So GitHub shows the result of each step, not a stop of the runner.
-- When the VM runs out of memory, the kernel kills a process of the job,
-  not the guest.
+- On Linux, an out-of-memory kill ends only the killed process, not the
+  whole runner scope. The kernel does not select the guest.
+- The kernel usually stops a step process, because the runner gives step
+  processes a higher out-of-memory score than its own.
+- If the runner stays up, GitHub shows the step result and later steps can
+  run. If the runner stops, the job ends and the guest sends its figures.
+- A service such as `systemd-oomd` can stop the whole runner scope. The job
+  ends, but the guest stays up and sends its figures.
 - **Decision:** an out-of-memory kill ends only the killed process, and no
-  stop of the processes of the job ends the guest. Rejected: an end of the
-  whole job, also with a report at that end, because the job then loses its
-  later steps. Rejected: the job inside the service of the guest, because a
-  stop of that service still ends the guest.
+  stop of the job processes ends the guest. Rejected: stopping the whole
+  job after every kill, because the job then loses its later steps.
+  Rejected: running the job inside the guest service, because the guest
+  must stay separate from the job processes.
 
 ## Trust
 

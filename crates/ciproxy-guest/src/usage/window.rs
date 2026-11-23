@@ -5,7 +5,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::usage::JobUsage;
-use tokio::time::Instant;
 use tracing::warn;
 
 use super::series::{Sample, Series};
@@ -52,7 +51,7 @@ impl Reading {
 /// A sampled job window. After a gap, retain the longest contiguous segment.
 pub(super) struct Window {
     platform: Platform,
-    previous: Option<(Instant, Reading)>,
+    previous: Option<(Duration, Reading)>,
     current: Option<Series>,
     longest: Option<Series>,
 }
@@ -68,25 +67,34 @@ impl Window {
         }
     }
 
-    /// Take a baseline or measure the next second. A bad read breaks the segment.
-    pub(super) fn capture(&mut self, source: &dyn Source) {
-        let now = Instant::now();
+    /// Place a read by its monotonic time since sampling started.
+    pub(super) fn capture(&mut self, source: &dyn Source, since_start: Duration) {
         let Ok(next) = source.read() else {
             warn!("job usage sample unavailable");
             self.previous = None;
             self.end_segment();
             return;
         };
-        let Some((taken, previous)) = self.previous.replace((now, next)) else {
+        let Some((taken, previous)) = self.previous.replace((since_start, next)) else {
             return;
         };
-        let elapsed = now - taken;
+        let elapsed = since_start - taken;
+        let slot_gap = since_start.as_secs() - taken.as_secs();
         if elapsed < Duration::from_secs(2)
+            && matches!(slot_gap, 1 | 2)
             && let Some(sample) = next.since(previous, elapsed)
         {
-            self.current
-                .get_or_insert_with(|| Series::new(previous.at_ms))
-                .push(sample);
+            let series = self
+                .current
+                .get_or_insert_with(|| Series::new(previous.at_ms));
+            if slot_gap == 2 {
+                series.push(Sample {
+                    memory_mib: previous.memory_mib,
+                    oom_kills: 0,
+                    ..sample
+                });
+            }
+            series.push(sample);
         } else {
             warn!("job usage sample window unavailable");
             self.end_segment();
@@ -116,3 +124,7 @@ impl Window {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/window_tests.rs"]
+mod window_tests;

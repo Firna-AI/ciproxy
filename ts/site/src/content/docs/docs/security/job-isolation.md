@@ -94,8 +94,9 @@ on one machine between the jobs of that repository.
   memory samples and step records when available. On Linux, the samples
   include out-of-memory counts. Step records include names, available
   start and end times, and which steps the runner skipped.
-- The control plane replaces a step name such as "Run npm test" with
-  "Run script" before it stores the name.
+- ciproxy stores no generated step name that holds job code. For example,
+  it stores "Run script" in place of "Run npm test".
+- The guest checks each script name against the actions of the job.
 - Job logs stay on GitHub, and the page of each job links to them.
 - ciproxy keeps the details of each finished job for 90 days, on every plan.
   Each page shows the job history of your plan.

@@ -1,0 +1,15 @@
+[2023-11-14 22:13:18Z INFO Worker] Job message:
+ {
+  "jobDisplayName": "foo/bar@baz",
+  "steps": [
+    {
+      "type": "action",
+      "reference": {
+        "type": "script"
+      }
+    }
+  ]
+}
+[2023-11-14 22:13:19Z INFO StepsRunner] Processing step: DisplayName='Run foo/bar@baz'
+[2023-11-14 22:13:19Z INFO StepsRunner] Starting the step.
+[2023-11-14 22:13:20Z INFO StepsRunner] Step result: Succeeded
