@@ -62,22 +62,28 @@ These are design calls of the agent, made on 23 November 2026.
   the first place that a new reader looks.
 - The picture follows the job. On a desktop, the first row holds three boxes
   from left to right, and the second row holds the Boat box and step 4. On a
-  phone, the boxes stack in one column:
+  phone, the boxes stack in one column. Each box is the step of the list "A
+  job on your machines" with its number, and names the part that acts:
   1. GitHub queues a job of a ciproxy label.
-  2. ciproxy decides how many runners start, and where.
-  3. On your machine, the agent starts a fresh VM with a runner.
-  4. The runner takes a job from GitHub and runs it. Then the VM ends.
+  2. ciproxy keeps a warm runner ready, or starts a runner where a machine
+     has room.
+  3. The runner runs the job in a fresh VM that no other job used.
+  4. On your machine, the agent ends the VM when the job ends.
+- Review finding 2 of 23 November 2026 changed the boxes to this order. The
+  first boxes put the start of a VM at step 3, but a warm runner's VM is
+  ready before the job arrives, and list step 3 runs the job.
 - Step 4 sits under step 3, with a down arrow. A full-width row under the
   Boat box read as a step after Boat, but the VM ends only on your machines.
   This replaces the full-width row of the first sketch. The mockup found it.
 - A branch from ciproxy goes to your Boat account. Its label says "Or, when
-  your machines have no room and Boat can take the job". This stays true for
-  macOS jobs, which never go to Boat. The Boat box has no number. On a phone,
-  the Boat way comes after step 4, below a hairline, because Boat is not a
-  step between 3 and 4.
-- Each box has a small icon: GitHub, the ciproxy mark, a server, a box for
-  the runner, and a cloud for Boat. The icons and arrows use the faint grey
-  token.
+  your machines cannot take the job in time and Boat can". This covers a
+  label that allows only Boat, as review finding 1 of 23 November 2026
+  found. It stays true for macOS jobs, which never go to Boat. The Boat box
+  has no number. On a phone, the Boat way comes after step 4, below a
+  hairline, because Boat is not a step between 3 and 4.
+- Each box has a small icon: GitHub, the ciproxy mark, a box for the
+  runner, a server for your machine, and a cloud for Boat. The icons and
+  arrows use the faint grey token.
 - The figure takes its layout from its own width, not from the window: a row
   from 560 px, a column below that. The docs column can be narrow beside the
   sidebar and "On this page".
@@ -89,7 +95,10 @@ These are design calls of the agent, made on 23 November 2026.
 - The picture leaves out the job image, because the open follow-up item
   `plans/follow-ups/boat-image-services.md` questions the claim of one image.
 - The text in the boxes is real text in reading order, inside a figure with
-  a caption. The arrows are hidden from screen readers.
+  a caption. The arrows are hidden from screen readers. They turn through a
+  class that the icon component takes as a prop.
+- A browser test in `ts/site/_tests_/browser/docs.test.ts` checks a row at a
+  720 px window and one column at an 840 px window, beside the sidebar.
 - The figure carries `data-pagefind-ignore`, so that search shows the text
   of the page and not a copy of it.
 - The mockup showed that one picture is not too dense, so it stays one

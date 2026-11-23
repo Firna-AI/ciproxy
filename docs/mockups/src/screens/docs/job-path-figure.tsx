@@ -15,7 +15,7 @@ import { BrandMark } from "../../components/brand.tsx";
 import "./job-path-figure.css";
 
 /** The part that a box shows. It also names the place of the box. */
-type PartKey = "github" | "ciproxy" | "machine" | "runner" | "boat";
+type PartKey = "github" | "ciproxy" | "runner" | "machine" | "boat";
 
 type PathBox = {
   part: PartKey;
@@ -30,8 +30,8 @@ const iconSize = 16;
 const icons: Readonly<Record<PartKey, ReactNode>> = {
   github: <Github size={iconSize} strokeWidth={1.75} />,
   ciproxy: <BrandMark size={iconSize} />,
-  machine: <Server size={iconSize} strokeWidth={1.75} />,
   runner: <Box size={iconSize} strokeWidth={1.75} />,
+  machine: <Server size={iconSize} strokeWidth={1.75} />,
   boat: <Cloud size={iconSize} strokeWidth={1.75} />,
 };
 
@@ -47,19 +47,19 @@ const path: readonly PathBox[] = [
     part: "ciproxy",
     step: 2,
     title: "ciproxy",
-    text: "Decides how many runners start, and where.",
-  },
-  {
-    part: "machine",
-    step: 3,
-    title: "Your machine",
-    text: "The agent starts a fresh VM with a runner.",
+    text: "Keeps a warm runner ready, or starts a runner where a machine has room.",
   },
   {
     part: "runner",
-    step: 4,
+    step: 3,
     title: "The runner",
-    text: "Takes a job from GitHub and runs it. Then the VM ends.",
+    text: "Runs the job in a fresh VM that no other job used.",
+  },
+  {
+    part: "machine",
+    step: 4,
+    title: "Your machine",
+    text: "The agent ends the VM when the job ends.",
   },
 ];
 
@@ -70,18 +70,29 @@ const boat: PathBox = {
   text: "Runs the job in its own sandbox.",
 };
 
-/** When a job takes the other way. It stays true for a macOS job. */
+/**
+ * When a job takes the other way. It covers a label that allows only Boat,
+ * and it stays true for a macOS job, which never goes to Boat.
+ */
 const boatWhen =
-  "Or, when your machines have no room and Boat can take the job";
+  "Or, when your machines cannot take the job in time and Boat can";
 
 const caption =
   "A job on ciproxy, from the queue in GitHub to the end of its VM.";
 
-/** An arrow to a box. A wide figure turns the arrows of its first row. */
+/**
+ * An arrow to a box. A wide figure turns the arrows of its first row. The
+ * icon gets the class job-path-arrow-icon through its `className` prop, and
+ * the CSS turns that class, so the turn does not depend on the icon markup.
+ */
 function Arrow({ to }: { to: PartKey }) {
   return (
     <span className={`job-path-arrow job-path-to-${to}`} aria-hidden="true">
-      <ArrowDown size={iconSize} strokeWidth={1.5} />
+      <ArrowDown
+        size={iconSize}
+        strokeWidth={1.5}
+        className="job-path-arrow-icon"
+      />
     </span>
   );
 }

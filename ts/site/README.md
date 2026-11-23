@@ -172,10 +172,15 @@ The tests under `_tests_` run on the Node test runner. They cover the choice
 of the cheapest plan, the calculation of the cost claim, search selection
 and heading counts, and the Copy text of the runs-on examples of the docs.
 The search tests also cover query changes during unfinished searches.
-The browser tests under `_tests_/browser/` use the same Node test runner
-with `playwright-core`. They need Google Chrome installed. They build and
-serve a fresh production site with its real search index. They check focus
-after same-page result navigation and after Escape and Cancel dismissals.
+The browser tests in `_tests_/browser/docs.test.ts` use the same Node test
+runner with `playwright-core`. They need Google Chrome installed. They build
+and serve a fresh production site with its real search index. They check
+focus after same-page result navigation and after Escape and Cancel
+dismissals. They also check the picture of How ciproxy works: a row in a
+window of 720 px, and one column beside the sidebar in a window of 840 px.
+Keep each browser test in that file, so that the suite builds the site once.
+The Node test runner runs each test file in its own process at the same
+time.
 Run site builds and test commands one at a time. Astro shares its `.astro/`
 prerender directory.
 The Copy test builds the site with

@@ -124,9 +124,9 @@
       minmax(0, 1fr) var(--job-path-gap) minmax(0, 1fr) var(--job-path-gap)
       minmax(0, 1fr);
     grid-template-areas:
-      "github to-ciproxy ciproxy to-machine machine"
-      "when when when . to-runner"
-      ". . boat . runner";
+      "github to-ciproxy ciproxy to-runner runner"
+      "when when when . to-machine"
+      ". . boat . machine";
   }
 
   .job-path-github {
@@ -137,12 +137,12 @@
     grid-area: ciproxy;
   }
 
-  .job-path-machine {
-    grid-area: machine;
-  }
-
   .job-path-runner {
     grid-area: runner;
+  }
+
+  .job-path-machine {
+    grid-area: machine;
   }
 
   .job-path-boat {
@@ -153,12 +153,12 @@
     grid-area: to-ciproxy;
   }
 
-  .job-path-to-machine {
-    grid-area: to-machine;
-  }
-
   .job-path-to-runner {
     grid-area: to-runner;
+  }
+
+  .job-path-to-machine {
+    grid-area: to-machine;
   }
 
   /* The number above the name. The head line keeps its height in the Boat
@@ -180,9 +180,11 @@
     min-height: var(--job-path-drop);
   }
 
-  /* The first row runs from left to right. */
-  .job-path-to-ciproxy svg,
-  .job-path-to-machine svg {
+  /* The first row runs from left to right. job-path-figure.tsx gives its
+     arrow icons this class, so the turn does not depend on the markup of
+     the icon. */
+  .job-path-to-ciproxy .job-path-arrow-icon,
+  .job-path-to-runner .job-path-arrow-icon {
     transform: rotate(-90deg);
   }
 

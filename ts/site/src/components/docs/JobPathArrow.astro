@@ -1,8 +1,10 @@
 ---
 // An arrow of the picture of How ciproxy works (JobPathFigure.astro) to the
 // box of a part. It points down, and a wide figure turns the arrows of its
-// first row to the right. The arrows follow the job, not the side that opens
-// a connection. Screen readers skip them.
+// first row to the right. The icon gets the class job-path-arrow-icon through
+// the `class` prop of Icon.astro, and the CSS turns that class, so the turn
+// does not depend on the markup of the icon. The arrows follow the job, not
+// the side that opens a connection. Screen readers skip them.
 
 import type { JobPathPart } from "../../data/job-path.ts";
 import Icon from "../icon/Icon.astro";
@@ -16,5 +18,10 @@ const { to } = Astro.props;
 ---
 
 <span class:list={["job-path-arrow", `job-path-to-${to}`]} aria-hidden="true">
-  <Icon name="arrow-down" size={16} strokeWidth={1.5} />
+  <Icon
+    name="arrow-down"
+    size={16}
+    strokeWidth={1.5}
+    class="job-path-arrow-icon"
+  />
 </span>

@@ -57,7 +57,8 @@ function Parts() {
       </li>
       <li>
         <strong>Your Boat account</strong> runs the jobs that your machines have
-        no room for. Boat bills you for them.
+        no room for, and the jobs of labels that allow only Boat. Boat bills you
+        for them.
       </li>
     </ul>
   );
@@ -78,10 +79,7 @@ function JobSteps() {
         your machines.
       </li>
       <li>The runner runs the job in a fresh VM that no other job used.</li>
-      <li>
-        When the job ends, the agent ends the VM. ciproxy starts a new warm
-        runner when the machine has room for it.
-      </li>
+      <li>When the job ends, the agent ends the VM.</li>
     </ol>
   );
 }

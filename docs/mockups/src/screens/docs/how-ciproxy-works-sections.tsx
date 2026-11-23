@@ -1,7 +1,10 @@
 // The last sections of the docs page How ciproxy works (how-ciproxy-works.tsx):
 // slots and disk, overflow to Boat, the cache, and the job image. A link to a
 // docs page that has no mockup yet, such as Connect Boat, shows as its plain
-// title.
+// title. The software of ubuntu-latest, the container: key, and the sticky
+// Docker disks are for Linux jobs. A macOS job starts from an image with the
+// software of macos-latest, and a macOS job VM has no Docker, as the agent
+// images doc and the Docker disks doc say.
 
 import { TextLink } from "../../components/actions.tsx";
 import { paths } from "../../components/paths.ts";
@@ -107,8 +110,8 @@ export function CacheSection() {
       </ul>
       <p>
         On {stickyDiskPlans()}, sticky Docker disks keep the Docker data of each
-        repository on each machine between its jobs. Docker disks gives the
-        rules.
+        repository on each Linux machine between its jobs. A macOS job VM has no
+        Docker. Docker disks gives the rules.
       </p>
     </>
   );
@@ -119,13 +122,15 @@ export function JobImageSection() {
     <>
       <DocsH2 id="the-job-image">The job image</DocsH2>
       <p>
-        Every job starts from one image with the software of the GitHub runner
-        image of <span className="inline-code">ubuntu-latest</span>, on your
-        machines and on Boat. So a workflow keeps its steps, and only its{" "}
+        Every Linux job starts from one image with the software of the GitHub
+        runner image of <span className="inline-code">ubuntu-latest</span>, on
+        your machines and on Boat. A macOS job starts from an image with the
+        software of <span className="inline-code">macos-latest</span>. So a
+        workflow keeps its steps, and only its{" "}
         <span className="inline-code">runs-on</span> line changes.
       </p>
       <p>
-        A job can run its steps in any Docker image, with the{" "}
+        A Linux job can run its steps in any Docker image, with the{" "}
         <span className="inline-code">container:</span> key of GitHub Actions,
         on every plan. Run steps in another image gives the full example.
       </p>
