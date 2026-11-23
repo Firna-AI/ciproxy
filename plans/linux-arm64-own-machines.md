@@ -62,6 +62,13 @@ User decisions, 22 November 2026:
   now". A label of any size still takes a whole slot, so the follow-up item
   above records the change.
 
+User decisions, 23 November 2026:
+
+- Decision 5 = D: an arm64 Linux VM with nested virtualization on the Mac
+  mini M4, over Tailscale, runs the VM checks, the image build, and the
+  live checks before the Pi arrives. The user wrote "5 = D" and "I will
+  get the pi ready in the background".
+
 Earlier user decisions that hold:
 
 - One image for each platform until launch, from 5 November 2026.
@@ -308,6 +315,8 @@ Design calls, mine, 22 November 2026:
   failed check.
 - **Action:** ask the user, because options C, D, E, and F need your
   hardware, accounts, or money.
+- **Answer:** D, from the user on 23 November 2026. If the short check of D
+  fails, the next host is a new decision for the user.
 
 ## Milestone 1: Mockups
 
