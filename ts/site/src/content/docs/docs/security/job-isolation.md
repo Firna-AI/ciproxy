@@ -76,19 +76,26 @@ on one machine between the jobs of that repository.
 - A job VM holds the registration of its own runner, which works for that
   one runner only.
 - ciproxy never sends the Boat key to a machine, a job VM, or a sandbox.
-- A sandbox holds a token that reports the end of its own runner. Job code
-  can read this token, but it can only end its own job.
+- A sandbox uses a token to report the end of its runner. It uses the same
+  token to send CPU and memory samples and step details for its own job.
+  Job code can read the token, but it can use the token only for reports
+  about its own job.
 
 ## Code, secrets, and logs
 
 - Code and secrets go from GitHub straight to the runner, and the logs go
   from the runner straight to GitHub.
-- The control plane of ciproxy never receives, stores, or logs the code, the
-  secrets, the logs, or the cache contents of a job. The cache contents stay
-  in the machine cache and in the GitHub cache.
+- The control plane of ciproxy never stores or logs the code, the secrets,
+  the logs, or the cache contents of a job. The cache contents stay in the
+  machine cache and in the GitHub cache.
 - The control plane stores the details of each job that the dashboard
   shows: its name, workflow, repository, ref, result, place, times, label,
-  VM size, cache source, and cache counts.
+  VM size, cache source, and cache counts. The details also include CPU and
+  memory samples and step records when available. On Linux, the samples
+  include out-of-memory counts. Step records include names, available
+  start and end times, and which steps the runner skipped.
+- The control plane replaces a step name such as "Run npm test" with
+  "Run script" before it stores the name.
 - Job logs stay on GitHub, and the page of each job links to them.
 - ciproxy keeps the details of each finished job for 90 days, on every plan.
   Each page shows the job history of your plan.

@@ -107,6 +107,10 @@ export default defineConfig({
               slug: "docs/guides/move-your-workflows",
             },
             {
+              label: "Choose a label size",
+              slug: "docs/guides/choose-a-label-size",
+            },
+            {
               label: "Set a spend limit",
               slug: "docs/guides/set-a-spend-limit",
             },

@@ -1,8 +1,6 @@
 ---
 title: Labels and VM sizes
-description: >-
-  The label in runs-on picks the platform and size of the VM that runs the
-  job.
+description: The label in runs-on sets the platform and requested VM size.
 ---
 
 import { Badge } from "@astrojs/starlight/components";
@@ -17,9 +15,9 @@ import {
   macStudio,
 } from "../../../../data/hardware.ts";
 
-Each job starts in a fresh VM of the platform and size of its label: on
-your machines first, and on Boat when they are busy. A job of a macOS label
-runs on your Macs only.
+A label sets the platform and requested VM size. Each job starts in a
+fresh VM: on your machines first, and on Boat when they are busy. A job of
+a macOS label runs on your Macs only.
 
 ## Default labels
 

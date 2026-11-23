@@ -15,11 +15,11 @@ The pages follow the marketing and docs mockups under
 - `/terms/` and `/privacy/` are the approved terms of service and privacy
   policy of Firna Ltd, the provider of ciproxy. The privacy policy also
   shows the decided data retention.
-- `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
-  of the docs sidebar mockup, in its order:
+- `/docs/` is Starlight with a Graphite theme. Its sidebar has the pages of
+  the docs sidebar mockup, in its order:
   - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
   - Guides under `/docs/guides/`: Add a machine, Connect Boat, Move your
-    workflows, Set a spend limit, and Remove a machine.
+    workflows, Choose a label size, Set a spend limit, and Remove a machine.
   - Reference under `/docs/reference/`: Labels and VM sizes, Agent install
     options, GitHub App permissions, and Plans and starts.
   - Security under `/docs/security/`: Job isolation, and The agent

@@ -25,7 +25,7 @@ The change does not cover size hints, figures on the job list, figures
 while a job runs, figures for each process, alerts, or an export to the
 customer's own monitoring. A job that ran before the change has no figures.
 
-Decisions 6 and 7 wait for the user. Each TODO that needs an answer ends
+Decisions 6 to 9 wait for the user. Each TODO that needs an answer ends
 with "Waits for decision N". The other TODOs do not wait.
 
 Contract owners:
@@ -547,6 +547,91 @@ and the
 - **Action:** ask the user, because D adds a state to the job page that no
   requirement covers.
 
+## Decision 8. Real-machine checks cannot run here
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation. The orchestrator found it on 23 November
+  2026, during Milestones 4, 9, and 13.
+- **Category:** Test.
+- **Location:** Milestones 4 and 13 of this plan, and
+  `image/check-worker-steps.py`.
+- **Background:** Four required TODOs need real infrastructure: the
+  out-of-memory proof in a Linux job VM and a Boat sandbox, the image check
+  of the Worker log steps, the end-to-end smoke test on a Linux machine, a
+  Mac, and Boat, and the check that the Worker log masks a secret in a step
+  name. The workspace sandbox has no KVM, systemd is not its init, and it
+  has no runner registration, no Mac, and no Boat key.
+- **Problem:** The unit tests and the chroot check pass, but nothing has run
+  the out-of-memory scope, the samplers, or the step reader in a real VM.
+- **Impact if no action:** The plan cannot complete, because required TODOs
+  stay open. If they move out, a mistake in the runner scope can reach every
+  Linux job.
+- **Root question:** How does the change get its real-machine proof before
+  it reaches customers?
+- **Options:**
+  - **A.** Move the four checks to the post-merge section. They become
+    follow-up items when the plan is deleted. Cost: the runner scope and the
+    samplers reach `main` unproven on real VMs. Effort: Small.
+  - **B.** The user gives a test workspace with a Linux machine with KVM, a
+    Mac, and a Boat key, and the orchestrator runs the checks before the
+    pull request. Cost: the setup time and a few Boat sandboxes. Effort:
+    Medium.
+  - **C.** Run the Linux and Boat checks before the pull request, and move
+    the Mac check to the post-merge section. Cost: the macOS sampler
+    reaches `main` unproven on a real Mac. Effort: Medium.
+- **Left out:** Faking a job VM in the sandbox, because the proof is about
+  systemd, the kernel, and the runner in a real VM.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Recommendation:** B. The runner scope changes how every Linux job
+  starts, so it needs a real proof before customers get it.
+- **Action:** ask the user, because each option except A needs credentials
+  or infrastructure that only the user can give.
+
+## Decision 9. The privacy policy is already approved
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation. The orchestrator found it on 23 November
+  2026, while it checked Milestone 12.
+- **Category:** Docs or spec.
+- **Location:** `ts/site/src/data/legal-privacy.ts:34`,
+  `ts/site/src/pages/privacy.astro`, and `ts/site/README.md:15`.
+- **Background:** The site README on `main` says that `/privacy/` is the
+  approved privacy policy of Firna Ltd, effective on 23 November 2026, and
+  that each change is a new version that needs the owner's approval. The
+  policy says that the control plane never receives job code, and its list
+  of job data has no samples and no steps. This plan wrongly treated the
+  policy as a draft.
+- **Problem:** The feature stores new job data, so the approved policy
+  becomes incomplete when the feature ships. Only the owner can approve a
+  new version.
+- **Impact if no action:** The public privacy policy does not name the CPU
+  and memory samples and the steps that ciproxy stores.
+- **Root question:** How does the privacy policy cover the new job data when
+  the feature ships?
+- **Options:**
+  - **A.** The user approves the revised text now, and the page gets a new
+    effective date for the release. The revision is in
+    `.context/job-step-cpu-and-memory/privacy-revision.patch`. Effort:
+    Small.
+  - **B.** The page shows the revision as a draft, with no effective date,
+    until the user approves it. Cost: the public site shows a draft privacy
+    policy. Effort: Small.
+  - **C.** Keep the approved text, and ship the feature only after the user
+    approves a revision. Cost: the feature waits for the legal work.
+    Effort: Small.
+- **Left out:** Shipping with the old text, because the policy would then
+  miss data that ciproxy stores.
+- **Wider fix:** None.
+- **Previous examples:** `plans/follow-ups/legal-pages-approval.md` still
+  describes both texts as drafts, but the site README calls them approved.
+- **Related:** Milestone 2a already changed the privacy mockup title, in
+  commit `8ffca01`. That change follows the answer.
+- **Recommendation:** A. It keeps one approved policy that names all data,
+  and the revision only adds the new data and the stores-or-logs words.
+- **Action:** ask the user, because only the owner can approve a new version
+  of the privacy policy.
+
 ## Design
 
 Design calls, my calls, 22 November 2026:
@@ -798,6 +883,10 @@ Design calls, my calls, 23 November 2026, from Milestone 10:
 - **Step spans:** a step span includes its start and excludes its end, so a
   point on a boundary counts once. When two spans overlap, the earlier step
   gets the point. Reason: each point counts once.
+
+- **Docs dependency:** Milestone 12 depends on Milestones 1 and 2, not on
+  Milestone 11. Reason: the mockups and the protocol docs fix the content
+  of the customer docs, and Milestone 11 must match the same mockups.
 
 Contract sketch, for the protocol crate:
 
@@ -1080,25 +1169,26 @@ The dashboard shows the panel of the mockups.
 
 ## Milestone 12: Customer docs
 
-Depends on: 11
+Depends on: 1, 2
 
 The public docs explain the figures.
 
-- [ ] Add the samples and the steps to the stored job details in
+- [x] Add the samples and the steps to the stored job details in
       `ts/site/src/content/docs/docs/security/job-isolation.md`, with the
       rule words design call. Say that the sandbox token also sends the
       samples of its own job.
-- [ ] Add the guide "Choose a label size" at
+- [x] Add the guide "Choose a label size" at
       `ts/site/src/content/docs/docs/guides/choose-a-label-size.md`, after
       "Move your workflows" in the sidebar: what each figure of the CPU and
       memory panel means, and how to use the figures to choose a label size.
-- [ ] Update the privacy policy draft in `ts/site/src/data/legal-privacy.ts`:
-      add the samples and the steps to the job metadata with the script
-      names rule, and use the rule words in the heading "What ciproxy never
-      stores or logs". Keep the stored Boat key fact only under "What
-      ciproxy stores". The legal pages stay drafts until the user approves
-      them, as `plans/follow-ups/legal-pages-approval.md` says.
-- [ ] Build the site with `npm --prefix ts run site:build`.
+- [x] Update the privacy policy in `ts/site/src/data/legal-privacy.ts`: add
+      the samples and the steps to the job metadata with the script names
+      rule, and use the rule words in the heading "What ciproxy never stores
+      or logs". Keep the stored Boat key fact only under "What ciproxy
+      stores". The revision is in
+      `.context/job-step-cpu-and-memory/privacy-revision.patch`. Waits for
+      decision 9.
+- [x] Build the site with `npm --prefix ts run site:build`.
 
 ## Milestone 13: Verification, commit, review, and pull request
 
