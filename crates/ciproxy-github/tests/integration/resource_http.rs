@@ -126,19 +126,34 @@ pub(super) fn respond(
         }
         let existed = state.group_exists.swap(true, Ordering::SeqCst);
         state.group_creates.fetch_add(1, Ordering::SeqCst);
-        *state.group_name.lock().unwrap() = body["name"].as_str().unwrap().to_owned();
-        *state.selected_repository_ids.lock().unwrap() = body
-            .get("selected_repository_ids")
-            .map(|ids| serde_json::from_value(ids.clone()).unwrap())
-            .unwrap_or_default();
-        return Some((StatusCode::CREATED, Json(json!({"id":if existed {97} else {47},"name":*state.group_name.lock().unwrap(),"inherited":false}))).into_response());
+        let name = body["name"].as_str().unwrap();
+        if !existed {
+            *state.group_name.lock().unwrap() = name.to_owned();
+            *state.selected_repository_ids.lock().unwrap() = body
+                .get("selected_repository_ids")
+                .map(|ids| serde_json::from_value(ids.clone()).unwrap())
+                .unwrap_or_default();
+        }
+        let id = if existed { 97 } else { 47 };
+        return Some(
+            (
+                StatusCode::CREATED,
+                Json(json!({"id":id,"name":name,"inherited":false})),
+            )
+                .into_response(),
+        );
     }
-    if path.ends_with("/runner-groups/47/repositories") && *method == Method::PUT {
+    let existing_group_repositories = path.ends_with("/runner-groups/47/repositories");
+    if *method == Method::PUT
+        && (existing_group_repositories || path.ends_with("/runner-groups/97/repositories"))
+    {
         if let Some(response) = reject_unknown_keys(body, &["selected_repository_ids"]) {
             return Some(response);
         }
-        *state.selected_repository_ids.lock().unwrap() =
-            serde_json::from_value(body["selected_repository_ids"].clone()).unwrap();
+        let ids = serde_json::from_value(body["selected_repository_ids"].clone()).unwrap();
+        if existing_group_repositories {
+            *state.selected_repository_ids.lock().unwrap() = ids;
+        }
         return Some(StatusCode::NO_CONTENT.into_response());
     }
     let missing = state.missing_status.load(Ordering::SeqCst);

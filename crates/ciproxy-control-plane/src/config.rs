@@ -36,7 +36,8 @@ pub struct Config {
     pub cdn_signing_key_name: String,
     /// Mounted runtime secret directory.
     pub secrets_directory: PathBuf,
-    /// Numeric GitHub App ID, used as the App JWT issuer.
+    /// Numeric GitHub App ID, used as the App JWT issuer and in each managed
+    /// runner-group name.
     pub github_app_id: String,
     /// Public OAuth client identity of the same GitHub App.
     pub github_oauth_client_id: String,

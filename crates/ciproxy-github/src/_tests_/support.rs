@@ -116,6 +116,7 @@ pub(super) fn facts() -> RunFacts {
 pub(super) fn app(mock: Unimock) -> AppService {
     let mock = Arc::new(mock);
     AppService {
+        app_id: "3571".to_owned(),
         leases: mock.clone(),
         installations: mock.clone(),
         store: mock.clone(),

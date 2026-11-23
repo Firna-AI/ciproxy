@@ -66,6 +66,7 @@ pub(super) fn configure_with_cipher(
         fixture.runtime.clone(),
     ));
     let app = Arc::new(AppService {
+        app_id: "3571".to_owned(),
         leases: persistence.clone(),
         installations: fixture.remote.clone(),
         store: persistence.clone(),

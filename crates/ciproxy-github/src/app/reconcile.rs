@@ -82,7 +82,7 @@ impl AppService {
         } else {
             self.store.runner_group(organization.github_id).await?
         };
-        let group_name = format!("ciproxy-{}", organization.github_id);
+        let group_name = format!("ciproxy-{}-{}", self.app_id, organization.github_id);
         lease.check().await?;
         let group_id = self
             .rest

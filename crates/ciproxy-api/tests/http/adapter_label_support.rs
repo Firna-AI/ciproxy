@@ -27,6 +27,7 @@ pub(super) fn compose(
         fixture.runtime.clone(),
     ));
     fixture.app = Arc::new(AppService {
+        app_id: "3571".to_owned(),
         leases: persistence.clone(),
         installations: fixture.remote.clone(),
         store: persistence.clone(),

@@ -94,6 +94,7 @@ impl Fixture {
         let factory = Arc::new(Factory(remote.clone()));
         let persistence = Arc::new(StoreAdapter::new(database.store.clone(), runtime.clone()));
         let app: Arc<dyn GitHubApp> = Arc::new(AppService {
+            app_id: "3571".to_owned(),
             leases: persistence.clone(),
             installations: remote.clone(),
             store: persistence.clone(),

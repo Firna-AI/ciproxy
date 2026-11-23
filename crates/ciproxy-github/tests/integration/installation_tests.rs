@@ -179,10 +179,6 @@ async fn replaced_remote_bindings_and_recreated_registration_keep_organization_g
         fixture.remote.policies.lock().unwrap()[0].saved_id,
         Some(47)
     );
-    assert_eq!(
-        fixture.remote.policies.lock().unwrap()[0].name,
-        "ciproxy-17"
-    );
     app.installation(event(InstallationAction::Deleted, 19))
         .await
         .unwrap();
@@ -200,7 +196,13 @@ async fn replaced_remote_bindings_and_recreated_registration_keep_organization_g
     assert_eq!(recreated.len(), 1);
     assert_ne!(recreated[0].id, target.organization_id);
     let policies = fixture.remote.policies.lock().unwrap();
-    assert_eq!(policies.last().unwrap().name, "ciproxy-17");
+    assert_eq!(
+        [
+            policies[0].name.as_str(),
+            policies.last().unwrap().name.as_str(),
+        ],
+        ["ciproxy-3571-17", "ciproxy-3571-17"]
+    );
     assert_eq!(policies.last().unwrap().saved_id, None);
     assert_eq!(*fixture.authority.admins.lock().unwrap(), vec![41]);
 }

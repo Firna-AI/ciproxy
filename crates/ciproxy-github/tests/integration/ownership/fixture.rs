@@ -45,6 +45,7 @@ pub(super) fn app(store: Arc<dyn Store>, fixture: &Fixture, origin: &str) -> App
         Arc::new(Inputs(AtomicU64::new(1000))),
     ));
     AppService {
+        app_id: "3571".to_owned(),
         leases: adapter.clone(),
         installations: fixture.state.clone(),
         store: adapter.clone(),

@@ -255,6 +255,7 @@ impl Fixture {
         *self.authority.store.lock().unwrap() = Some(store.clone());
         let adapter = Arc::new(StoreAdapter::new(store, self.runtime.clone()));
         Arc::new(AppService {
+            app_id: "3571".to_owned(),
             leases: adapter.clone(),
             installations,
             store: adapter.clone(),

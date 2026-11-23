@@ -121,6 +121,8 @@ pub trait GitHubApp: Send + Sync {
 
 /// The App service, consumed through dyn GitHubApp at the composition root.
 pub struct AppService {
+    /// GitHub App ID of this environment, used to keep runner groups separate.
+    pub app_id: String,
     /// Waiting cross-process mutation authority for GitHub organizations.
     pub leases: Arc<dyn OrganizationMutations>,
     /// App-authenticated current installation identity and suspension state.

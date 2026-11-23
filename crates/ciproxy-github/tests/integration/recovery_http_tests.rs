@@ -1,7 +1,7 @@
 //! Real HTTP proves saved group ownership, 204 absence, and typed recovery.
 
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicI64, Ordering};
 
 use ciproxy_github::auth::tokens::RotatingTokens;
 use ciproxy_github::error::Error;
@@ -12,7 +12,6 @@ use ciproxy_github::scale_sets::ScaleSetFactory;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use reqwest::redirect::Policy;
 use reqwest::{Client, Method, Url};
-use std::sync::atomic::AtomicI64;
 
 use super::fake_http::Server;
 use super::support::{Factory, FixedJwt, FixedRuntime, id};
@@ -31,14 +30,7 @@ fn organization() -> Organization {
     }
 }
 
-#[tokio::test]
-async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_missing_signals() {
-    let server = Server::start(None).await;
-    server
-        .state
-        .resource
-        .group_exists
-        .store(true, Ordering::SeqCst);
+fn rest_client(server: &Server) -> RestClient {
     let http = Client::builder().redirect(Policy::none()).build().unwrap();
     let api = Url::parse(&format!("{}/api/v3/", server.origin)).unwrap();
     let tokens = Arc::new(RotatingTokens::new(
@@ -47,32 +39,40 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
         Arc::new(FixedJwt),
         Arc::new(FixedRuntime(AtomicI64::new(1_793_793_600))),
     ));
-    let rest = RestClient::new(http, api, tokens);
+    RestClient::new(http, api, tokens)
+}
+
+#[tokio::test]
+async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_missing_signals() {
+    let server = Server::start(None).await;
+    let resource = &server.state.resource;
+    resource.group_exists.store(true, Ordering::SeqCst);
+    *resource.group_name.lock().unwrap() = "ciproxy-17".to_owned();
+    let rest = rest_client(&server);
     let group = rest
-        .restrict_runner_group(19, "customer", "ciproxy-17", &[23], Some(47))
-        .await;
-    assert!(matches!(group, Ok(47)));
+        .restrict_runner_group(19, "customer", "ciproxy-3571-17", &[23], Some(47))
+        .await
+        .unwrap();
+    let group_lists = server
+        .state
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|(method, path, _)| *method == Method::GET && path.contains("runner-groups?"))
+        .count();
     assert_eq!(
-        server.state.resource.group_creates.load(Ordering::SeqCst),
-        0
+        (
+            group,
+            resource.group_creates.load(Ordering::SeqCst),
+            group_lists,
+            resource.group_name.lock().unwrap().as_str(),
+            resource.selected_repository_ids.lock().unwrap().as_slice(),
+        ),
+        (47, 0, 0, "ciproxy-3571-17", &[23][..])
     );
     assert_eq!(
-        server
-            .state
-            .requests
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|(method, path, _)| *method == Method::GET && path.contains("runner-groups?"))
-            .count(),
-        0
-    );
-    assert_eq!(
-        *server.state.resource.group_name.lock().unwrap(),
-        "ciproxy-17"
-    );
-    assert_eq!(
-        rest.restrict_runner_group(19, "customer", "ciproxy-17", &[23], None)
+        rest.restrict_runner_group(19, "customer", "ciproxy-3571-17", &[23], None)
             .await
             .unwrap(),
         47
@@ -149,6 +149,39 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
         ),
         "an absent retired scale set must not block preparation"
     );
+}
+
+#[tokio::test]
+async fn group_lookup_without_saved_id_leaves_other_environment_untouched() {
+    for other in ["ciproxy-17", "ciproxy-9001-17"] {
+        let server = Server::start(None).await;
+        let resource = &server.state.resource;
+        resource.group_exists.store(true, Ordering::SeqCst);
+        *resource.group_name.lock().unwrap() = other.to_owned();
+        let group = rest_client(&server)
+            .restrict_runner_group(19, "customer", "ciproxy-3571-17", &[23], None)
+            .await
+            .unwrap();
+        let requests = server.state.requests.lock().unwrap();
+        let writes: Vec<_> = requests
+            .iter()
+            .filter_map(|(method, path, body)| {
+                let route = path.strip_prefix("/api/v3/orgs/customer/actions/runner-groups")?;
+                (*method != Method::GET).then_some((method, route, body["name"].as_str()))
+            })
+            .collect();
+        assert_eq!(
+            (group, writes),
+            (
+                97,
+                vec![
+                    (&Method::POST, "", Some("ciproxy-3571-17")),
+                    (&Method::PUT, "/97/repositories", None),
+                ],
+            ),
+            "the group of another environment is named {other}"
+        );
+    }
 }
 
 #[tokio::test]

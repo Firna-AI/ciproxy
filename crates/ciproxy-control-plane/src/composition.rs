@@ -173,6 +173,7 @@ impl Hosted {
         let machines: Arc<dyn OwnMachines> = Arc::new(machine_runtime);
         relay.bind(&machines)?;
         let app: Arc<dyn GitHubApp> = Arc::new(AppService {
+            app_id: config.github_app_id.clone(),
             leases: persistence.clone(),
             installations,
             store: persistence.clone(),

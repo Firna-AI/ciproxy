@@ -17,11 +17,38 @@ refresh when a provider sends them.
 
 ## Runner groups
 
-Managed group names use the stable GitHub organization ID. Reconcile first
-reads a saved managed group ID, including retained registrations, so an
-owner rename does not create another group. It restores the managed name
-and repository policy on that same group. After local data is purged, the
-stable name finds the retained GitHub group again.
+Each environment keeps one managed runner group in each GitHub
+organization. An [environment](../../deploy/README.md#environments) is one
+deployed control plane with its own GitHub App, such as main preview or
+production. The managed group name is `ciproxy-<app id>-<organization id>`.
+The App ID is the GitHub App ID of the environment, from the control-plane
+setting `GITHUB_APP_ID`. The organization ID is the stable GitHub
+organization ID. For example, App ID `3571` and organization ID `17` give
+`ciproxy-3571-17`.
+
+GitHub documents no length limit for a runner-group name. The
+[REST docs][group-api] and the [OpenAPI description][rest-openapi] of
+`POST /orgs/{org}/actions/runner-groups` give no limit. GitHub accepted the
+46-character group name of the live selected-group probe. That name is
+`ciproxy-probe-` and 32 hexadecimal digits. A managed name has 25
+characters for a 7-digit App ID and a 9-digit organization ID.
+
+Each environment finds, changes, and uses only its own group and the scale
+sets in that group. Reconcile first reads a saved managed group ID,
+including retained registrations. The saved ID finds the group under any
+name. Reconcile then sets the managed name and the repository policy on
+that same group. So the group keeps its ID and its scale sets, also
+after a rename by an organization owner. When no saved ID finds a group,
+reconcile looks up the group by name. That lookup matches the full managed
+name only, so it does not find the group of another environment. After
+local data is purged, the managed name finds the retained GitHub group of
+the same environment again.
+
+Runner group sync creates or updates the managed name and private-access
+policy. It sets selected repositories through the separate repository
+access endpoint after either operation. The create and update bodies omit
+repository IDs, so repeated syncs use GitHub's supported update fields.
+
 GitHub supports self-hosted runner groups on its Free plan, as its
 [Free runner-group announcement][free-groups] confirms.
 The live selected-group probe verified the selected-repository policy on
@@ -29,10 +56,13 @@ GitHub Free. GitHub runs the job of a selected repository on a runner of
 the group. It keeps the job of another private repository queued with no
 runner.
 
-Runner group sync creates or updates the managed name and private-access
-policy. It sets selected repositories through the separate repository
-access endpoint after either operation. The create and update bodies omit
-repository IDs, so repeated syncs use GitHub's supported update fields.
+The GitHub Apps of two environments can be installed in one organization.
+GitHub keeps scale-set names unique within one runner group, so the groups
+of two environments can hold scale sets with the same label names. The
+groups of two environments can also allow the same repository. When both
+environments have an online scale set for the label of a job, GitHub gives
+the job to either environment. GitHub has no setting that controls this
+choice. GitHub's [runner scale-set guide][arc-scale-sets] gives both rules.
 
 ## Scale sets
 
@@ -108,3 +138,6 @@ that uses an internal prefix remains valid.
 the workspace rule.
 
 [free-groups]: https://github.blog/changelog/2024-10-17-actions-runner-groups-now-available-for-organizations-on-free-plan/
+[group-api]: https://docs.github.com/en/rest/actions/self-hosted-runner-groups#create-a-self-hosted-runner-group-for-an-organization
+[rest-openapi]: https://github.com/github/rest-api-description
+[arc-scale-sets]: https://docs.github.com/en/actions/how-tos/manage-runners/use-actions-runner-controller/deploy-runner-scale-sets
