@@ -3,7 +3,6 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_scaler::actions::{Action, Destination};
 use uuid::Uuid;
@@ -30,12 +29,7 @@ impl MachineRuntime {
             lease.check().await.internal()?;
             let input = self.load(workspace_id).await?;
             let runnable = self.runnable_organizations(&input).await?;
-            let sizing = self
-                .image
-                .as_ref()
-                .map_or_else(RootSizing::default, |image| RootSizing {
-                    image_root_bytes: image.root_disk_bytes,
-                });
+            let sizing = self.root_sizing();
             let mut snapshot = build(&input, &runnable, self.clock.now(), sizing);
             self.reconcile_boat(&input, &mut snapshot, false).await;
             for action in ciproxy_scaler::decision::decide(&snapshot) {
@@ -84,12 +78,7 @@ impl MachineRuntime {
                 tracing::warn!(machine=%machine.machine.id,%error,"Docker policy update will retry");
             }
         }
-        let root_sizing = self
-            .image
-            .as_ref()
-            .map_or_else(RootSizing::default, |image| RootSizing {
-                image_root_bytes: image.root_disk_bytes,
-            });
+        let root_sizing = self.root_sizing();
         let runnable = self.runnable_organizations(&input).await?;
         let mut snapshot = build(&input, &runnable, self.clock.now(), root_sizing);
         self.reconcile_boat(&input, &mut snapshot, refresh).await;

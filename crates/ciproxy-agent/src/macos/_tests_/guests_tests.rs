@@ -1,9 +1,17 @@
-//! A helper's stop maps to the unit states that the guest bridge knows.
+//! A helper's stop maps to the unit states that the guest bridge knows, and
+//! a new helper is awaited until its control socket answers.
 
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-use super::guests::{GUEST_PORT, VmFolders, unit_state};
+use unimock::{MockFn, Unimock, matching};
+
+use super::guests::{GUEST_PORT, VmFolders, unit_state, wait_for_helper, wait_for_helper_end};
+use super::vm_control::VmPhase;
+use super::vm_control_server::{VmControlMock, bind, serve};
 use super::vm_spec::ExitReason;
+use crate::error::Error;
 use crate::unit_state::UnitState;
 
 #[test]
@@ -30,4 +38,126 @@ fn helper_files_stay_in_the_vm_folder() {
         folders.exit_file(id),
         PathBuf::from(format!("/var/db/ciproxy/area/vms/{id}/exit.json"))
     );
+}
+
+/// A short area folder under the system temporary folder, removed on drop.
+/// Socket paths have a length limit, so the names stay short.
+struct Area(PathBuf);
+
+impl Drop for Area {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+const HELPER: &str = "vm1";
+
+fn helper_area() -> (Area, VmFolders) {
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+    let area = Area(std::env::temp_dir().join(format!("cg-{}", &suffix[..12])));
+    let folders = VmFolders {
+        area: area.0.clone(),
+    };
+    std::fs::create_dir_all(folders.folder(HELPER)).expect("VM folder");
+    (area, folders)
+}
+
+/// The helper binds its socket only some time after `launchctl bootstrap`.
+#[tokio::test]
+async fn a_new_helper_is_awaited_until_its_socket_answers() {
+    let (_area, folders) = helper_area();
+    let id = HELPER;
+    let socket = folders.client(id).socket;
+    let helper = tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        let listener = bind(&socket).expect("bind");
+        let control = Unimock::new(
+            VmControlMock::phase
+                .each_call(matching!())
+                .returns(VmPhase::Running),
+        );
+        serve(listener, Arc::new(control)).await
+    });
+
+    let started = Instant::now();
+    wait_for_helper(&folders, id, Duration::from_secs(10))
+        .await
+        .expect("the helper answers");
+
+    assert!(started.elapsed() >= Duration::from_millis(300));
+    helper.abort();
+}
+
+/// Paused time: a retry would move the clock by the poll interval, so a
+/// clock that stays still proves that the wait did not retry.
+#[tokio::test(start_paused = true)]
+async fn a_helper_that_already_ended_fails_the_wait_at_once() {
+    let (_area, folders) = helper_area();
+    let id = HELPER;
+    std::fs::write(folders.exit_file(id), br#"{"reason":"failure"}"#).expect("exit file");
+
+    let started = tokio::time::Instant::now();
+    let result = wait_for_helper(&folders, id, Duration::from_secs(10)).await;
+
+    assert!(matches!(result, Err(Error::Disconnected)), "{result:?}");
+    assert_eq!(tokio::time::Instant::now(), started);
+}
+
+#[tokio::test]
+async fn a_helper_that_never_answers_fails_after_the_wait() {
+    let (_area, folders) = helper_area();
+    let id = HELPER;
+
+    let result = wait_for_helper(&folders, id, Duration::from_millis(300)).await;
+
+    assert!(matches!(result, Err(Error::VmHelper { .. })), "{result:?}");
+}
+
+/// After a bootout, a helper that still answers holds its seat identity.
+#[tokio::test]
+async fn a_stop_waits_until_the_helper_no_longer_answers() {
+    let (_area, folders) = helper_area();
+    let socket = folders.client(HELPER).socket;
+    wait_for_helper_end(&folders, HELPER, Duration::from_secs(1))
+        .await
+        .expect("no socket: the helper ended");
+
+    let listener = bind(&socket).expect("bind");
+    let control = Unimock::new(
+        VmControlMock::phase
+            .each_call(matching!())
+            .returns(VmPhase::Stopping),
+    );
+    let helper = tokio::spawn(serve(listener, Arc::new(control)));
+    let result = wait_for_helper_end(&folders, HELPER, Duration::from_millis(300)).await;
+    assert!(matches!(result, Err(Error::VmHelper { .. })), "{result:?}");
+
+    helper.abort();
+    let _ = helper.await;
+    // A killed helper leaves a socket that refuses connections.
+    wait_for_helper_end(&folders, HELPER, Duration::from_secs(1))
+        .await
+        .expect("a refused socket: the helper ended");
+}
+
+/// A helper that accepts but never answers ends the wait at its deadline,
+/// not after the longer limit of one state request.
+#[tokio::test]
+async fn one_deadline_covers_a_request_in_flight() {
+    let (_area, folders) = helper_area();
+    let listener = bind(&folders.client(HELPER).socket).expect("bind");
+    let silent = tokio::spawn(async move {
+        let mut held = Vec::new();
+        loop {
+            let (stream, _) = listener.accept().await.expect("accept");
+            held.push(stream);
+        }
+    });
+
+    let started = Instant::now();
+    let result = wait_for_helper(&folders, HELPER, Duration::from_millis(300)).await;
+
+    assert!(matches!(result, Err(Error::VmHelper { .. })), "{result:?}");
+    assert!(started.elapsed() < Duration::from_secs(5));
+    silent.abort();
 }

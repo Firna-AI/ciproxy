@@ -29,9 +29,13 @@ image/macos/package-guest.sh OUT_DIR
 The script builds `ciproxy-guest` and `ciproxy-cache-sidecar` for
 `aarch64-apple-darwin`. It builds the patched Worker for `osx-arm64` with
 `image/build-runner.sh WORK_DIR osx-arm64`. The runner source takes its OS
-constants from the build host, so this Worker builds only on macOS. The
-script copies the binaries, the Worker, and the files of this folder into
-`OUT_DIR`. Its work files stay under `.context/ciproxy-macos-guest/`.
+constants from the build host, so this Worker builds only on macOS. It
+downloads the pinned stock runner `osx-arm64` 2.338.2 and checks its
+SHA-256. It makes the
+[Worker overlay](../../runner-patch/README.md#worker-overlay) from the
+Worker and that runner into `OUT_DIR/worker`. The script copies the
+binaries, `install-worker.sh`, and the files of this folder into `OUT_DIR`.
+Its work files stay under `.context/ciproxy-macos-guest/`.
 
 ## Install into the image
 
@@ -49,8 +53,11 @@ sudo ./install.sh IMAGE_ID
 
 The script installs the two binaries in `/usr/local/bin`, the start script
 and the runner entry in `/usr/local/libexec`, and the daemon in
-`/Library/LaunchDaemons`. It keeps the stock `Runner.Worker.dll` as
+`/Library/LaunchDaemons`. It installs the Worker overlay with
+`install-worker.sh`. That script keeps the stock `Runner.Worker.dll` as
 `Runner.Worker.stock.dll` beside the patched `Runner.Worker.own.dll`. It
+also installs the raised package assemblies and the changed deps file, and
+it stops when the runner is not the pinned stock runner. The install script
 writes `IMAGE_ID`, the guest port 5252, and the account in
 `/etc/ciproxy/guest.env`. It does not start the guest. The guest starts at
 the next boot. `CIPROXY_RUNNER_ACCOUNT` names another account, for a test.

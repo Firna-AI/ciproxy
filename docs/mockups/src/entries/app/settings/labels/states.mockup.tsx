@@ -10,7 +10,7 @@ export const editLabel = defineScreen({
   slug: "edit-label",
   title: "Edit a label",
   description:
-    "The dialog that edits the size of ciproxy-8vcpu, where its jobs may run, and what they do when nothing fits. Its disk is the free disk of each job, 60 GB, with the least value, 1 GB, as the hint of the field. The line under the size gives the VM disk with the current image, 122 GB. It says how many jobs of the size fit on one machine. The name shows with a lock, because a label keeps its name; Delete label leads the footer, for a rename by a new label.",
+    "The dialog that edits the size of ciproxy-large, where its jobs may run, and what they do when nothing fits. Its disk is the free disk of each job, 60 GB, with the least value, 1 GB, as the hint of the field. The line under the size gives the VM disk with the current image, 122 GB. It says how many jobs of the size fit on one machine. The name shows with a lock, because a label keeps its name; Delete label leads the footer, for a rename by a new label.",
   rationale:
     "Design call 33: label names follow the GitHub label rules, and a label has no rename, because a new label and a delete give a safe rename. The answer to item 77: the disk of a label is the free disk of each job, as GitHub states the disk of its runners, and the VM disk adds the image.",
   relatedDocs: relatedMvp("labels", "jobRouting", "overflow"),
@@ -50,7 +50,7 @@ export const mixedMachines = defineScreen({
   slug: "mixed-machines",
   title: "Machines that fit different numbers of jobs",
   description:
-    "The dialog of ciproxy-4vcpu after office-mini-1 joined as the fourth machine. An Admin raises the free disk of the label from 20 to 40 GB, and before the save the dialog says what the new size gives: a VM disk of 102 GB with the current image. Each Hetzner AX42 runs 3 jobs of the size at a time. office-mini-1 has the slots for 3 too, but its 279 GB of job disk holds only 2 such VM disks, so the dialog says 2 to 3 jobs. The banner offers the extra-machine add-on, because Team includes three machines.",
+    "The dialog of ciproxy-medium after office-mini-1 joined as the fourth machine. An Admin raises the free disk of the label from 20 to 40 GB, and before the save the dialog says what the new size gives: a VM disk of 102 GB with the current image. Each Hetzner AX42 runs 3 jobs of the size at a time. office-mini-1 has the slots for 3 too, but its 279 GB of job disk holds only 2 such VM disks, so the dialog says 2 to 3 jobs. The banner offers the extra-machine add-on, because Team includes three machines.",
   rationale:
     "Design call 41: a size that fits a different number of jobs on different machines shows a range, which keeps the rule of one machine: a job runs on one machine. The answer to item 77: the fit counts the whole VM disk of a job, the image with its free disk.",
   relatedDocs: relatedMvp("labels", "jobRouting"),

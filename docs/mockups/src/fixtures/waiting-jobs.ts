@@ -17,7 +17,7 @@ export const boatRefused = {
       "waiting",
       none,
       "1m 42s",
-      "ciproxy-4vcpu",
+      "ciproxy-medium",
     ],
     [
       "e2e (webkit) 2/2",
@@ -27,7 +27,7 @@ export const boatRefused = {
       "waiting",
       none,
       "1m 42s",
-      "ciproxy-4vcpu",
+      "ciproxy-medium",
     ],
     ["storybook", "CI", "mokly", "#1571", "waiting", none, "1m 20s"],
     ["unit (node 24)", "CI", "mokly-cloud", "#331", "waiting", none, "58s"],

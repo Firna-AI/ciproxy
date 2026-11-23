@@ -1,9 +1,10 @@
 //! A local release origin accepts the real client's signed discovery URLs.
 
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::Router;
+use axum::extract::OriginalUri;
 use axum::http::StatusCode;
 use axum::routing::get;
 use tokio::net::TcpListener;
@@ -48,6 +49,20 @@ pub(super) fn released() -> Router {
                 )
             }),
         )
+}
+
+/// A macOS store that refuses each read and records it.
+pub(super) fn forbidden_macos() -> (Router, Arc<Mutex<Vec<String>>>) {
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let recorded = requests.clone();
+    let routes = Router::new().route(
+        "/ciproxy-macos-images/releases/macos-startup/manifest.json",
+        get(move |OriginalUri(uri): OriginalUri| {
+            recorded.lock().unwrap().push(uri.to_string());
+            async { StatusCode::FORBIDDEN }
+        }),
+    );
+    (routes, requests)
 }
 
 /// Keep the origin bound to its allocated port until fixture cleanup.

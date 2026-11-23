@@ -12,10 +12,9 @@ The pages follow the marketing and docs mockups under
   closing call to action.
 - `/pricing/` has the tiers, the add-ons, the feature comparison, and the
   questions. The last question shows the calculation of the cost claim.
-- `/terms/` and `/privacy/` are the terms of service and the privacy policy.
-  Both pages show draft text for the owner's review, with visible
-  placeholders in square brackets. The privacy policy also shows the
-  decided data retention.
+- `/terms/` and `/privacy/` are the approved terms of service and privacy
+  policy of Firna Ltd, the provider of ciproxy. The privacy policy also
+  shows the decided data retention.
 - `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
   of the docs sidebar mockup, in its order:
   - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
@@ -117,23 +116,18 @@ Rules for the legal pages:
   `src/data/legal-privacy.ts`. `src/data/legal.ts` joins them into the two
   pages. Each page file, `src/pages/terms.astro` or
   `src/pages/privacy.astro`, gives the effective date of its text.
-- A placeholder in square brackets, such as `[effective date]`, marks a
-  detail that the owner must complete. Keep the placeholder until the owner
-  gives the detail. Never put the current date or a guess in its place.
+- Both texts are approved. Each change to a text is a new version, which
+  needs the owner's approval. Set the effective date of its page to the
+  day that the new version goes live.
+- When a text states a legal right or tells a person how to use it, give
+  each channel or detail as a help, not as a condition. Add no condition
+  that the law does not set, such as where the person lives.
+- Take each provider role and each transfer safeguard from the current
+  data processing agreement or privacy policy of that provider. Name the
+  document, its date, and its section in a comment beside the sentence.
 - The data retention of the privacy policy shows its text first. The table
   of the decided limits and the job history of each plan come after it.
   The limits come from `src/data/legal.ts`.
-- A shared draft note at the top of each page says that the text is a
-  draft. Remove the note only after the owner completes every placeholder
-  and approves both texts. To remove it:
-  1. Open `/terms/` and `/privacy/`, and search each page for `[`. No match
-     may remain.
-  2. In `src/components/legal/LegalPage.astro`, delete the element with the
-     class `legal-draft`.
-  3. In `src/components/legal/legal.css`, delete the `.legal-draft` and
-     `.legal-draft-title` rules and the comment above them.
-  4. In this README, delete this rule and the rule on placeholders. Then
-     describe `/terms/` and `/privacy/` as the approved texts.
 
 ## Development
 

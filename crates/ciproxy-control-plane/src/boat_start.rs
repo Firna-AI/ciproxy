@@ -1,6 +1,5 @@
 //! Wire pure Boat actions to the existing durable overflow executor.
 
-use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_github::registrations::RegistrationRequest;
 use ciproxy_overflow::api::{StartOutcome, StartRequest};
 use ciproxy_protocol::identifiers::OrganizationId;
@@ -59,11 +58,7 @@ impl MachineRuntime {
             requested_size: action.requested_size,
             size: action.size,
             required_root_disk_bytes: self
-                .image
-                .as_ref()
-                .map_or_else(RootSizing::default, |image| RootSizing {
-                    image_root_bytes: image.root_disk_bytes,
-                })
+                .root_sizing()
                 .root_bytes(action.requested_size.disk_bytes)
                 .ok_or(Error::StateChanged)?,
             github_id: None,

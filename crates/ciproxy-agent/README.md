@@ -4,7 +4,8 @@ The Apache-2.0 agent runs on the x64 Linux machines of a customer.
 It runs one GitHub Actions runner in each fresh Firecracker VM.
 On an Apple Silicon Mac, it runs each runner in a fresh macOS VM.
 The [macOS host guide](macos-host.md) gives the parts that differ on a Mac.
-It depends only on `ciproxy-protocol` inside this workspace.
+Inside this workspace, it depends on `ciproxy-protocol`, and on
+`ciproxy-vz` on macOS and in tests. Both have the Apache-2.0 licence.
 It contains no hosted implementation or embedded credential.
 
 ## Responsibilities
@@ -224,6 +225,7 @@ The default `docker_regression` target also uses path includes.
 The gate compiles and runs that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
 The image download regression uses local HTTP and a controlled clock.
+The resumable download tests use a local HTTP server and a temporary folder.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
 The [development guide](development.md) gives the `docker_regression` checks,
@@ -333,6 +335,9 @@ that only creates its output files. The check does not link.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
+- [src/resumable_download.rs](src/resumable_download.rs) continues a large
+  image download from its partial file with `Range` requests. The macOS
+  image store uses it, and Linux tests run it.
 - [src/application_images.rs](src/application_images.rs) constructs image
   services and their client with a read timeout.
 - [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.

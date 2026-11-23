@@ -16,6 +16,8 @@ supplies its image, settings, and secret versions. The release server and
 static exports can deploy independently.
 The optional [Boat snapshot](runtime.md#boat-shared-snapshot) follows the
 release-token delivery path and needs no secret version while Boat is off.
+The optional R2 read key of the [macOS images](runtime.md#macos-images)
+follows the same path and needs no version while macOS images are off.
 
 - [Setup](setup.md) gives the first operator steps.
 - [First deploy](first-deploy.md) gives CI data creation, the expected token
@@ -25,11 +27,19 @@ release-token delivery path and needs no secret version while Boat is off.
 - [Promotion](promotion.md) gives saved plans, approvals, and recovery.
 - [Control-plane images](control-plane-images.md) gives automatic image
   publication, source reuse, promotion, operator grants, and rollback.
-- [Image workflow trust](image-workflow-bootstrap.md) gives the prelaunch
-  trust root of the image identities, its activation, and its launch move.
+- [Image workflow trust](image-workflow-bootstrap.md) gives the trusted
+  reusable workflow claim, its two caller forms, its activation, its launch
+  move, and the shared provider read and rerun blocks.
 - [Operations](operations.md) gives images, runtime setup, and rotation.
 - [Release server](release-server.md) gives the source pin, release channels,
   archive contract, and rollout checks.
+
+## Shared command blocks
+
+Some guide steps reuse one command block with different values. A shared
+block takes those values as inputs from the step that runs it. The block
+never sets or overwrites an input. Each step sets its own values before it
+runs the block.
 
 ## Environments
 
@@ -139,7 +149,7 @@ writes. The operator drains preview before the launch handoff.
 | `scripts/control_plane_image.py`                     | Exact source hashing, credentialless build, registry reuse, and digest-bound archive publication.                     |
 | `scripts/image_promotion.py`                         | Select the image deployed by the exact successful upstream preview rollout.                                           |
 | `scripts/deploy.py`                                  | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation.                                           |
-| `scripts/boat_secret.py`                             | Optional Boat snapshot delivery over standard input and its public rollout revision.                                  |
+| `scripts/optional_secret.py`                         | Optional Boat snapshot and R2 images key delivery over standard input, and their public rollout revisions.            |
 | `scripts/github-ruleset.sh`                          | Idempotent protected `main` ruleset setup.                                                                            |
 | `org-policies/`                                      | The managed sharing rule of project `ciproxy`, applied once by an operator.                                           |
 | `tests/`                                             | Executable CI tests and recorded plan-policy cases.                                                                   |

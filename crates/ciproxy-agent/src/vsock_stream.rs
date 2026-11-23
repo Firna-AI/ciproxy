@@ -35,6 +35,7 @@ impl GuestBridge {
         loop {
             match self.liveness.state(&self.vm).await {
                 Ok(UnitState::Exited(code)) => {
+                    tracing::info!(vm_id = %self.vm.local_id, code, "the VM ended; report the runner exit");
                     let _ = self
                         .emit(
                             GuestToAgent::RunnerExited {
@@ -47,6 +48,7 @@ impl GuestBridge {
                     return;
                 }
                 Ok(UnitState::Absent) => {
+                    tracing::info!(vm_id = %self.vm.local_id, "the VM is gone; report the runner exit");
                     let _ = self
                         .emit(
                             GuestToAgent::RunnerExited {

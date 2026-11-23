@@ -11,10 +11,10 @@ import tempfile
 from deploy.tests.promotion_support import ROOT
 
 
-TRUSTED = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
+TRUSTED = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main"
 UNTRUSTED = {
-    "former main binding": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main",
-    "unrelated reusable workflow": "Firna-AI/ciproxy/.github/workflows/other.yml@refs/heads/calummoore/ci-proxy-load-balancer",
+    "former preview branch binding": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer",
+    "unrelated reusable workflow": "Firna-AI/ciproxy/.github/workflows/other.yml@refs/heads/main",
     "unrelated reusable branch": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/untrusted",
 }
 SOURCE_SHA = "c" * 40
@@ -74,13 +74,39 @@ def admits(provider, claims, oidc=True):
                 {"__builtins__": {}}, {"assertion": Claims()})
 
 
-def jobs(documents):
+def preview_workflow_ref(caller_ref):
+    return f"Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@{caller_ref}"
+
+
+def image_workflow_ref(uses, caller_ref):
+    path = ".github/workflows/deploy-control-plane-image.yml"
+    if uses == f"./{path}":
+        return f"Firna-AI/ciproxy/{path}@{caller_ref}"
+    if uses.startswith(f"Firna-AI/ciproxy/{path}@"):
+        return uses.replace("@", "@refs/heads/", 1)
+    return None
+
+
+def image_call_runs_for_ref(condition, caller_ref):
+    if condition is None:
+        return True
+    match = re.fullmatch(r"github\.ref\s*(==|!=)\s*'([^']+)'", condition.strip())
+    if not match:
+        raise ValueError(f"The image job fixture cannot resolve condition: {condition}")
+    operator, reference = match.groups()
+    matches = caller_ref.casefold() == reference.casefold()
+    return matches if operator == "==" else not matches
+
+
+def jobs(documents, caller_ref):
     entry = documents["deploy-main-preview.yml"]
     result = []
-    caller = "Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@refs/heads/calummoore/ci-proxy-load-balancer"
+    caller = preview_workflow_ref(caller_ref)
     for name, job in entry["jobs"].items():
-        if job.get("uses", "").startswith("Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@"):
-            reference = job["uses"].replace("@", "@refs/heads/", 1)
+        reference = image_workflow_ref(job.get("uses", ""), caller_ref)
+        if reference:
+            if not image_call_runs_for_ref(job.get("if"), caller_ref):
+                continue
             called = documents.get("deploy-control-plane-image.yml", {})
             for child, configuration in called.get("jobs", {}).items():
                 result.append((child, configuration, reference, called.get("permissions", {})))
@@ -89,17 +115,16 @@ def jobs(documents):
     return result
 
 
-def image_jobs(documents):
-    return [item for item in jobs(documents) if any(
+def image_jobs(documents, caller_ref):
+    return [item for item in jobs(documents, caller_ref) if any(
         "GCP_IMAGE_" in str(step.get("with", {}).get("service_account", ""))
         for step in item[1].get("steps", []))]
 
 
-def claims(job, reusable=None):
+def claims(job, caller_ref, reusable=None):
     result = {"repository_id": "1442045837", "repository_owner_id": "307519338",
               "environment": job.get("environment", ""), "event_name": "push",
-              "ref": "refs/heads/calummoore/ci-proxy-load-balancer",
-              "workflow_ref": "Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@refs/heads/calummoore/ci-proxy-load-balancer"}
+              "ref": caller_ref, "workflow_ref": preview_workflow_ref(caller_ref)}
     if reusable:
         result["job_workflow_ref"] = reusable
         result["job_workflow_sha"] = TOOLS_SHA

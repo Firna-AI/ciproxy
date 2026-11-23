@@ -74,7 +74,7 @@ export const peakWaiting = rows("peak-wait", [
     "waiting",
     none,
     "24s",
-    "ciproxy-4vcpu",
+    "ciproxy-medium",
   ],
   [
     "e2e (webkit) 2/2",
@@ -84,7 +84,7 @@ export const peakWaiting = rows("peak-wait", [
     "waiting",
     none,
     "24s",
-    "ciproxy-4vcpu",
+    "ciproxy-medium",
   ],
   ["storybook", "CI", "mokly", "#1544", "waiting", none, "19s"],
   ["unit (node 24)", "CI", "mokly-cloud", "#320", "waiting", none, "15s"],
@@ -96,7 +96,7 @@ export const peakWaiting = rows("peak-wait", [
     "waiting",
     none,
     "9s",
-    "ciproxy-8vcpu",
+    "ciproxy-large",
   ],
   ["fmt", "CI", "mokly", "#1545", "waiting", none, "4s"],
 ]);

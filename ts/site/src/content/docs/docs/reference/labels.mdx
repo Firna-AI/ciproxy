@@ -29,10 +29,10 @@ default label.
 | Label                                       | Platform | Size                             | Slots |
 | ------------------------------------------- | -------- | -------------------------------- | ----- |
 | `ciproxy` {jsx(Badge, { text: "Default" })} | Linux    | 2 vCPU · 8 GB · 20 GB free disk  | 1     |
-| `ciproxy-4vcpu`                             | Linux    | 4 vCPU · 16 GB · 20 GB free disk | 2     |
-| `ciproxy-8vcpu`                             | Linux    | 8 vCPU · 32 GB · 60 GB free disk | 4     |
+| `ciproxy-medium`                            | Linux    | 4 vCPU · 16 GB · 20 GB free disk | 2     |
+| `ciproxy-large`                             | Linux    | 8 vCPU · 32 GB · 60 GB free disk | 4     |
 | `ciproxy-macos`                             | macOS    | 2 vCPU · 8 GB · 20 GB free disk  | 1     |
-| `ciproxy-macos-4vcpu`                       | macOS    | 4 vCPU · 16 GB · 20 GB free disk | 2     |
+| `ciproxy-macos-medium`                      | macOS    | 4 vCPU · 16 GB · 20 GB free disk | 2     |
 
 Like the disk of a GitHub-hosted runner, the disk of a label is the free
 disk that each job gets. Its VM also holds the image: with the current
@@ -41,7 +41,7 @@ image, a job of `ciproxy` has a VM disk of about {defaultJobDiskGb} GB.
 ```yaml title=".github/workflows/e2e.yml"
 jobs:
   e2e:
-    runs-on: ciproxy-8vcpu
+    runs-on: ciproxy-large
     steps:
       - uses: actions/checkout@v4
       - run: npm run test:e2e
@@ -55,7 +55,7 @@ label of a platform starts from the same image. To use other software, see
 
 Each machine keeps a quarter of its threads and its memory for the host. It
 splits the rest into slots of 2 vCPU and 8 GB. A job takes as many slots as
-its size needs, so a job of `ciproxy-8vcpu` takes 4 slots.
+its size needs, so a job of `ciproxy-large` takes 4 slots.
 
 A running job also holds its VM disk. Each machine keeps {imageBudgetGb} GB
 for the VM images, and a quarter of the rest for the host. The machine cache

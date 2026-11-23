@@ -36,7 +36,16 @@ fn files_round_trip_and_a_complete_bundle_passes_the_check() {
 
     std::fs::write(bundle.auxiliary_storage(), b"aux").unwrap();
     bundle.write_hardware_model(b"model").unwrap();
+    bundle.check_image_files().unwrap();
+    assert!(matches!(
+        bundle.check_files(),
+        Err(Error::Io { path, .. }) if path == bundle.machine_identifier()
+    ));
     bundle.write_machine_identifier(b"id").unwrap();
+    assert!(matches!(
+        bundle.check_files(),
+        Err(Error::Io { path, .. }) if path == bundle.mac_address()
+    ));
     let mac = MacAddress::new([0xa2, 0, 1, 2, 3, 4]);
     bundle.write_mac_address(mac).unwrap();
 

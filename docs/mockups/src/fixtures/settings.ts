@@ -45,7 +45,7 @@ export const labels: readonly Label[] = [
     whenNothingFits: "wait",
   },
   {
-    name: "ciproxy-4vcpu",
+    name: "ciproxy-medium",
     platform: "linux",
     vcpu: 4,
     memoryGb: 16,
@@ -54,7 +54,7 @@ export const labels: readonly Label[] = [
     whenNothingFits: "wait",
   },
   {
-    name: "ciproxy-8vcpu",
+    name: "ciproxy-large",
     platform: "linux",
     vcpu: 8,
     memoryGb: 32,
@@ -121,7 +121,7 @@ export const macosLabel: Label = {
 export const macosLabels: readonly Label[] = [
   macosLabel,
   {
-    name: "ciproxy-macos-4vcpu",
+    name: "ciproxy-macos-medium",
     platform: "macos",
     vcpu: 4,
     memoryGb: 16,
