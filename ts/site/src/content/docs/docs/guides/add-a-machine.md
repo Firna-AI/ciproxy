@@ -30,19 +30,23 @@ Docker disks are disposable.
 
 ## Add a Mac
 
-A Mac runs the jobs of macOS labels, each in a fresh macOS VM with Xcode. A
-Mac needs:
-
-<!-- The disk is a placeholder until the size of the macOS image is
-measured. -->
+A Mac runs the jobs of macOS labels, each in a fresh macOS VM with Xcode.
+[The macOS image](/docs/reference/macos-image/) lists what the VM holds and
+how it differs from GitHub `macos-latest`. A Mac needs:
 
 - A Mac with Apple Silicon, M1 or later.
 - macOS 26.7.3 or later. A macOS VM cannot run a newer macOS than its Mac,
   so the Mac needs the macOS of the job image.
-- 16 GB of memory and 512 GB of disk or more. The disk can be an external
-  APFS SSD, as [Use an external disk](#use-an-external-disk) says.
-- Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The Mac
-  opens no inbound port.
+- 16 GB of memory or more.
+- About 176 GB of free disk. The agent takes three quarters of the free
+  space for its disk area, which holds the macOS image and the jobs. With
+  176 to 200 GB free, the Mac runs one macOS job at a time. With less free
+  space, the install command stops and says how much to free. In place of
+  the startup disk, you can use an external APFS SSD, as
+  [Use an external disk](#use-an-external-disk) says.
+- Outbound HTTPS to ciproxy, to GitHub, to `get.ciproxy.dev`, and to
+  `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
+  the macOS image. The Mac opens no inbound port.
 
 A Mac uses the same slots as a Linux machine, but it runs at most 2 jobs at
 a time, because Apple allows at most 2 macOS VMs on one Mac. A Mac with

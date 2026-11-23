@@ -9,15 +9,13 @@
 // as a Linux machine does.
 
 import { unbroken } from "./format.ts";
-import { jobDiskBytes, machineSlots, type Hardware } from "./hardware.ts";
+import { machineSlots, type Hardware } from "./hardware.ts";
 import {
   latestAgentVersion,
   machineScenes,
   type Machine,
   type SlotState,
 } from "./machines.ts";
-import { defaultMacosLabelSize } from "./sizes.ts";
-import { gigabyte, vmDiskBytes } from "./vm-disk.ts";
 
 /** A Mac Studio with more slots than its 2 macOS VMs use. */
 export const macStudio: Hardware = {
@@ -44,13 +42,6 @@ export const macMini: Hardware = {
 /** The warm runners that mokly-ai keeps on each Mac. */
 const macWarmRunners = 1;
 
-/** The job disk that the macOS VMs leave to the machine cache, in GB. */
-function macCacheGb(hardware: Hardware, jobVms: number): number {
-  const vmDisks =
-    jobVms * vmDiskBytes({ ...defaultMacosLabelSize, platform: "macos" });
-  return Math.round((jobDiskBytes(hardware) - vmDisks) / gigabyte);
-}
-
 function macSlots(hardware: Hardware, busy: number): SlotState[] {
   const total = machineSlots(hardware);
   const warm = Math.min(macWarmRunners, total - busy);
@@ -70,11 +61,8 @@ function mac(name: string, hardware: Hardware, busy: number): Machine {
     slots,
     virtualization: true,
     warmTarget: macWarmRunners,
-    cache: {
-      status: "measured",
-      usedGb: 24,
-      sizeGb: macCacheGb(hardware, slots.filter((s) => s !== "free").length),
-    },
+    // A Mac has no machine cache yet, so it measures none.
+    cache: { status: "unavailable" },
     freeDiskGb: hardware.diskGb === 1000 ? 590 : 232,
     dockerDisks: { status: "measured", repositories: 0, sizeGb: 0 },
     lastSeen: "3s ago",

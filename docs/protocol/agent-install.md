@@ -164,6 +164,13 @@ command, and the wait for the first image.
 - A Mac must stay awake. The agent prevents system sleep while it runs.
 - Other apps can also run macOS VMs. Each such VM counts against the limit
   of 2 macOS VMs on the Mac, as [Platforms](agent.md#platforms) says.
+- In place of the startup disk, the disk area can be on an external APFS
+  disk. The agent then needs Full Disk Access, as
+  [Area on another disk](../../crates/ciproxy-agent/macos-host.md#area-on-another-disk)
+  says.
+- A Mac also needs outbound HTTPS to
+  `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
+  the macOS image.
 - **Decision:** own machines run x64 Linux or macOS on Apple Silicon. This
   replaces the decision of x64 Linux only. Reason: the user chose macOS
   jobs on the customer's own Macs on 21 November 2026. Rejected: Linux

@@ -6,13 +6,13 @@ import { AddMachineScreen } from "../../../../screens/machines/add-machine.tsx";
 import { MachinesScreen } from "../../../../screens/machines/machines-list.tsx";
 
 const rationale =
-  "The agent doc says that an own machine is an x64 Linux machine or an Apple Silicon Mac, and that the same install command connects both. A Mac counts as one own machine on every tier, at the price of any own machine, as the billing doc says. A Mac uses the slot rule of a Linux machine and runs at most 2 job VMs at a time. A Mac needs macOS 26.7.3 or later, the macOS of the job image. Its 512 GB of disk is a placeholder until the size of the macOS image is measured.";
+  "The agent doc says that an own machine is an x64 Linux machine or an Apple Silicon Mac, and that the same install command connects both. A Mac counts as one own machine on every tier, at the price of any own machine, as the billing doc says. A Mac uses the slot rule of a Linux machine and runs at most 2 job VMs at a time. A Mac needs macOS 26.7.3 or later, the macOS of the job image. It also needs about 176 GB of free disk: the agent takes three quarters of it for the macOS image and the jobs.";
 
 export const list = defineScreen({
   slug: "list",
   title: "Machines with a Mac",
   description:
-    "A what-if of 18 November: mokly-ai added mac-studio-1 as its fourth machine, beside its three AX42 machines. The caption under each name gives the platform, Linux or macOS, with the threads or cores and the memory. mac-studio-1 shows its 6 slots, with one job and one warm runner, its 2 VMs. Four machines pass the three of Team, so the banner offers the extra-machine add-on. The Mac opens its machine page.",
+    "A what-if of 18 November: mokly-ai added mac-studio-1 as its fourth machine, beside its three AX42 machines. The caption under each name gives the platform, Linux or macOS, with the threads or cores and the memory. The Cache column of the Mac says that the machine cache is not on macOS yet. mac-studio-1 shows its 6 slots, with one job and one warm runner, its 2 VMs. Four machines pass the three of Team, so the banner offers the extra-machine add-on. The Mac opens its machine page.",
   rationale,
   relatedDocs: related("agent", "jobRouting", "metering"),
   address: orgAddress("machines"),

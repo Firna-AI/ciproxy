@@ -31,6 +31,7 @@ export const docsNav: readonly DocsNavGroup[] = [
     title: "Reference",
     items: [
       { label: "Labels and VM sizes", to: paths.labelsReference },
+      { label: "The macOS image" },
       { label: "Agent install options" },
       { label: "GitHub App permissions" },
       { label: "Plans and starts" },

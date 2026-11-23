@@ -68,8 +68,11 @@ slots.
 ## macOS labels
 
 A job of a macOS label, such as `ciproxy-macos`, runs in a fresh macOS VM
-on one of your Macs. The macOS image holds Xcode and the tools of the
-GitHub runner image for `macos-latest`.
+on one of your Macs. The macOS image holds Xcode 26.6, the iOS simulator
+runtime, and the other tools of the GitHub runner image for
+`macos-latest`, but not the Android SDK.
+[The macOS image](/docs/reference/macos-image/) lists what it holds and how
+it differs from `macos-latest`.
 
 - A macOS label runs on your Macs only. Its jobs never run on Boat, so they
   wait for a free Mac.
