@@ -715,6 +715,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ciproxy-image-vm"
+version = "0.1.5"
+dependencies = [
+ "ciproxy-vz",
+ "clap",
+ "futures-executor",
+]
+
+[[package]]
 name = "ciproxy-metering"
 version = "0.1.5"
 dependencies = [
