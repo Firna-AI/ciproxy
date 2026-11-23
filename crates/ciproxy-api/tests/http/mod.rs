@@ -23,6 +23,7 @@ mod adapter_tests;
 mod retention_tests;
 
 mod initial_admin_tests;
+mod job_usage_tests;
 
 mod takeout_pending_tests;
 mod takeout_reinstall_tests;

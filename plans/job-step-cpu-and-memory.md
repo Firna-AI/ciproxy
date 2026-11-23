@@ -790,6 +790,15 @@ Design calls, my calls, 23 November 2026, from Milestone 9:
   without its steps. Reason: the agent would otherwise refuse the whole
   report.
 
+Design calls, my calls, 23 November 2026, from Milestone 10:
+
+- **Detail only:** the usage goes on the job detail response, not on the
+  job view that the job lists share. Reason: the lists must not carry the
+  samples of every job.
+- **Step spans:** a step span includes its start and excludes its end, so a
+  point on a boundary counts once. When two spans overlap, the earlier step
+  gets the point. Reason: each point counts once.
+
 Contract sketch, for the protocol crate:
 
 - Times in the agent protocol are whole milliseconds since the Unix epoch,
@@ -1033,16 +1042,16 @@ Depends on: 7
 
 The job API gives the figures of the job page.
 
-- [ ] Add the usage of a job to `JobView`: its state, the peaks, at most
-      600 chart points, and the figures of each step. Put the new wire
-      types in a new module beside `crates/ciproxy-api/src/wire/jobs.rs`,
-      which has 264 of its 300 lines.
-- [ ] Compute the step figures as the design says, with the "Set up job"
+- [x] Add the usage of a job to the job detail response: its state, the
+      peaks, at most 600 chart points, and the figures of each step. Put
+      the new wire types in a new module beside
+      `crates/ciproxy-api/src/wire/jobs.rs`, which has 264 of its 300 lines.
+- [x] Compute the step figures as the design says, with the "Set up job"
       and "Complete job" steps. Test a step that holds no point, a step
       outside the samples, a skipped step, an out-of-memory kill, and a job
       without steps.
-- [ ] Regenerate the API types with `npm --prefix ts run api:generate`.
-- [ ] Update the `ciproxy-api` README.
+- [x] Regenerate the API types with `npm --prefix ts run api:generate`.
+- [x] Update the `ciproxy-api` README.
 
 ## Milestone 11: Job page
 

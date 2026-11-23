@@ -1013,6 +1013,8 @@ export interface components {
             banner?: components["schemas"]["PageBanner"] | null;
             /** @description Trusted job metadata. */
             job: components["schemas"]["JobView"];
+            /** @description CPU and memory for this job, not included in the job lists. */
+            usage: components["schemas"]["JobUsageView"];
         };
         /**
          * @description Label name and optional whole-GB resource request.
@@ -1089,6 +1091,108 @@ export interface components {
          * @enum {string}
          */
         JobStatus: "queued" | "running" | "completed";
+        /** @description The chart's consecutive buckets of samples. */
+        JobUsageChart: {
+            /**
+             * Format: date-time
+             * @description UTC end of the last point. It can end before a full bucket.
+             */
+            ended_at: string;
+            /**
+             * Format: int64
+             * @description Bucket width in seconds. The last point can be shorter.
+             */
+            point_seconds: number;
+            /** @description Merged points in time order. */
+            points: components["schemas"]["JobUsageFigures"][];
+            /**
+             * Format: date-time
+             * @description UTC start of the first point.
+             */
+            started_at: string;
+        };
+        /** @description CPU, memory, and out-of-memory kills for a window of samples. */
+        JobUsageFigures: {
+            /**
+             * Format: int32
+             * @description Average busy CPU in thousandths of a vCPU, rounded down.
+             */
+            average_cpu_milli_vcpu: number;
+            /**
+             * Format: int64
+             * @description Linux kill count, including zero. Null on macOS.
+             */
+            oom_kills: number | null;
+            /** @description Peak memory in bytes as a decimal string. */
+            peak_memory_bytes: string;
+        };
+        /** @description The label bounds to mark on the meters and plots. */
+        JobUsageLabelMark: {
+            /** @description Requested memory bytes as a decimal string, null unless smaller. */
+            memory_bytes: string | null;
+            /**
+             * Format: int32
+             * @description Requested virtual CPUs, null unless smaller than the VM's count.
+             */
+            vcpus: number | null;
+        };
+        /** @description One numbered step and its usage within the sample window. */
+        JobUsageStep: {
+            /** @description Elapsed seconds as a decimal string, null without a valid span. */
+            duration_seconds: string | null;
+            /**
+             * Format: date-time
+             * @description UTC end, when known.
+             */
+            ended_at: string | null;
+            figures: components["schemas"]["JobUsageFigures"] | null;
+            /** @description Safe stored name or the name of a synthetic step. */
+            name: string;
+            /**
+             * Format: int32
+             * @description Step number in display order, from 1 for Set up job.
+             */
+            number: number;
+            /** @description The name is a script placeholder and can link to the step on GitHub. */
+            script: boolean;
+            /** @description The runner did not run this step. */
+            skipped: boolean;
+            /**
+             * Format: date-time
+             * @description UTC start, when known.
+             */
+            started_at: string | null;
+        };
+        /** @description Usage for the exact runner of a visible job. */
+        JobUsageView: {
+            /** @description Points and their time range for the CPU and memory plots. */
+            chart: components["schemas"]["JobUsageChart"];
+            /** @description Figures from all the stored points, before chart merging. */
+            job: components["schemas"]["JobUsageFigures"];
+            label_mark: components["schemas"]["JobUsageLabelMark"] | null;
+            /** @enum {string} */
+            state: "measured";
+            /** @description Steps in runner order, or an empty list when unavailable. */
+            steps: components["schemas"]["JobUsageStep"][];
+            /** @description Actual CPU and memory of the VM that ran the job. */
+            vm: components["schemas"]["JobUsageVmSize"];
+        } | {
+            /** @enum {string} */
+            state: "running";
+        } | {
+            /** @enum {string} */
+            state: "unavailable";
+        };
+        /** @description The actual bounds of the meters and plots. */
+        JobUsageVmSize: {
+            /** @description Actual memory bytes as a decimal string. */
+            memory_bytes: string;
+            /**
+             * Format: int32
+             * @description Actual virtual CPUs.
+             */
+            vcpus: number;
+        };
         /** @description Credential-free trusted metadata for one visible job. */
         JobView: {
             actual_size?: components["schemas"]["JobVmSize"] | null;

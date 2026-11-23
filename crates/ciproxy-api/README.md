@@ -184,6 +184,12 @@ Plans, usage, and Checkout use the billing catalog in ciproxy-store-interface.
 The same catalog supplies job-history limits. The page builders use its
 shared Selection plan model directly.
 
+`GET /workspaces/{workspace_id}/jobs/{job_id}` includes `usage` after the
+workspace and history checks. A running job has no figures. A finished job
+with samples shows job and step figures and a chart of at most 600 points.
+A report without steps still supplies job figures and a chart.
+The job lists do not include usage. See [Job usage] for what the figures mean.
+
 ## Machines and Settings facts
 
 Settings keeps the Admin's permission to start Add in `can_add_organization`.
@@ -265,6 +271,8 @@ It never prints a cookie, token, install command, or response body.
   and intentional uninstall.
 - [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and
   enable, and creates attempts only through explicit installation starts.
+- [src/handlers/job_usage.rs](src/handlers/job_usage.rs) reads the exact
+  runner's report through `ApiState.store` and prepares the job usage panel.
 - [src/handlers/overflow.rs](src/handlers/overflow.rs) serves the Boat Setup
   and Settings routes.
 - [src/handlers/overflow_views.rs](src/handlers/overflow_views.rs) builds the
@@ -272,6 +280,7 @@ It never prints a cookie, token, install command, or response body.
 - [src/wire/overflow.rs](src/wire/overflow.rs) defines the Boat wire types.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
+- [src/wire/job_usage.rs](src/wire/job_usage.rs) defines the job usage contract.
 - [src/wire/machines.rs](src/wire/machines.rs) defines the machine view and
   its closed contact and selected-image state.
 - [src/wire/machine_statistics.rs](src/wire/machine_statistics.rs) carries
@@ -288,8 +297,11 @@ It never prints a cookie, token, install command, or response body.
 - [Security](../../docs/protocol/security.md) defines sign-in and roles.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Agent](../../docs/protocol/agent.md) defines install and machine controls.
+- [Job usage] defines CPU and memory on the job page.
 - [Labels](../../docs/protocol/labels.md) defines label policy.
 - [Overflow](../../docs/protocol/overflow.md) defines the Boat account and
   the spend limit.
 - [Cache](../../docs/protocol/cache.md) defines Clear cache.
 - [App removal](../../docs/protocol/app-removal.md) defines owner removal.
+
+[Job usage]: ../../docs/protocol/job-usage.md#the-job-page

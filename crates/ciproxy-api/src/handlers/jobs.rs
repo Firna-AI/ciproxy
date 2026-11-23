@@ -18,7 +18,7 @@ use crate::wire::jobs::{
     HistoryPlace, JobDetailPage, JobHistoryQuery, JobPath, JobsHistoryPage, JobsLivePage,
 };
 
-use super::{job_views, jobs_live, page_context};
+use super::{job_usage, job_views, jobs_live, page_context};
 
 pub(super) async fn read(
     state: &ApiState,
@@ -118,8 +118,10 @@ pub(crate) async fn detail(
         .into_iter()
         .find(|job| job.id == path.job_id)
         .ok_or(Error::NotFound)?;
+    let usage = job_usage::read(&state, workspace, &value).await?;
     Ok(Json(JobDetailPage {
         job: job_views::job(value, context.at),
+        usage,
         banner: page_context::banner(&mut context)?,
     }))
 }

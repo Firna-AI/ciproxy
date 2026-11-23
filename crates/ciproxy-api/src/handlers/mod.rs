@@ -8,6 +8,7 @@ pub(crate) mod checkout;
 pub(crate) mod github_setup;
 mod install_command;
 mod job_fit;
+mod job_usage;
 mod job_views;
 pub(crate) mod jobs;
 mod jobs_live;

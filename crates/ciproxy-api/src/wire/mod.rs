@@ -11,6 +11,7 @@ pub mod settings;
 pub mod billing;
 pub mod job_fit;
 pub mod job_overflow;
+pub mod job_usage;
 pub mod jobs;
 pub mod money;
 pub mod overflow;

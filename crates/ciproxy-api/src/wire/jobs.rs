@@ -9,6 +9,7 @@ use crate::access::workspace::WorkspaceId;
 
 use super::job_fit::WaitingLabelFit;
 use super::job_overflow::JobOverflow;
+use super::job_usage::JobUsageView;
 use super::pages::PageBanner;
 
 /// One job detail path, opened only after current workspace access.
@@ -259,6 +260,8 @@ pub struct JobsHistoryPage {
 pub struct JobDetailPage {
     /// Trusted job metadata.
     pub job: JobView,
+    /// CPU and memory for this job, not included in the job lists.
+    pub usage: JobUsageView,
     /// One page banner.
     pub banner: Option<PageBanner>,
 }

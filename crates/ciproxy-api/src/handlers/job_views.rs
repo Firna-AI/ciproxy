@@ -91,7 +91,8 @@ pub(super) fn job(value: DashboardJob, at: DateTime<Utc>) -> JobView {
     }
 }
 
-fn seconds(from: DateTime<Utc>, until: DateTime<Utc>) -> String {
+/// Express elapsed time as decimal seconds, with no loss of subsecond precision.
+pub(super) fn seconds(from: DateTime<Utc>, until: DateTime<Utc>) -> String {
     let duration = until - from;
     let whole = duration.num_seconds();
     let nanos = duration.subsec_nanos();
