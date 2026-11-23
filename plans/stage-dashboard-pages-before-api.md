@@ -134,7 +134,7 @@ Depends on: 1, 2
       in `AGENTS.md`.
 - [x] Commit with Conventional Commits and push the branch.
 - [x] Open a ready pull request against `main`, as the task asks.
-- [ ] Review the complete local diff against `origin/main` with the
+- [x] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, re-review once,
       and report. The task scope allows no new follow-up item, so the final

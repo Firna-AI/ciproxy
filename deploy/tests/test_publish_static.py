@@ -9,7 +9,6 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from threading import Event
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
@@ -18,12 +17,93 @@ from urllib.parse import parse_qs, unquote, urlsplit
 from deploy.scripts import publish_static
 
 
-def request_name(request):
+def read_upload(request):
     headers = (
         f"Content-Type: {request.get_header('Content-type')}\r\nMIME-Version: 1.0\r\n\r\n"
     ).encode()
     message = BytesParser(policy=policy.default).parsebytes(headers + request.data)
-    return json.loads(next(message.iter_parts()).get_payload(decode=True))["name"]
+    metadata, content = message.iter_parts()
+    return json.loads(metadata.get_payload(decode=True))["name"], content.get_payload(decode=True)
+
+
+class DeferredUpload:
+    def __init__(self, upload):
+        self.upload = upload
+        self.error = None
+
+    def run(self):
+        if self.upload is None:
+            return
+        upload, self.upload = self.upload, None
+        try:
+            self.value = upload()
+        except Exception as error:
+            self.error = error
+
+    def result(self, timeout=None):
+        if timeout is not None:
+            raise AssertionError("Fake upload futures do not support result() timeouts")
+        self.run()
+        if self.error is not None:
+            raise self.error
+        return self.value
+
+    def __getattr__(self, attribute):
+        raise AssertionError(f"Fake upload futures require result(), not wait() or as_completed() ({attribute})")
+
+
+class DeferredUploadPool:
+    def __init__(self, events):
+        self.events = events
+        self.tasks = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exception):
+        for task in self.tasks:
+            task.run()
+
+    def submit(self, upload, bucket, name, *args, **kwargs):
+        self.events.append(("submitted", name))
+
+        def run():
+            try:
+                return upload(bucket, name, *args, **kwargs)
+            finally:
+                self.events.append(("completed", name))
+
+        task = DeferredUpload(run)
+        self.tasks.append(task)
+        return task
+
+    def __getattr__(self, operation):
+        raise AssertionError(f"Fake upload pool does not support {operation}(); use submit()")
+
+
+class FakeBucket:
+    def __init__(self, objects):
+        self.objects = objects.copy()
+        self.uploads = []
+        self.reads = []
+        self.written = []
+
+    def open_url(self, request, timeout):
+        url = urlsplit(request.full_url)
+        if request.get_method() == "GET":
+            name = unquote(url.path.partition("/o/")[2])
+            self.reads.append((request.full_url, request.get_header("Authorization")))
+            if name in self.objects:
+                return io.BytesIO(json.dumps({"name": name}).encode())
+            raise HTTPError(request.full_url, 404, "Not Found", {}, io.BytesIO())
+        name, content = read_upload(request)
+        query = parse_qs(url.query)
+        self.uploads.append((name, query))
+        if name in self.objects and query.get("ifGenerationMatch") == ["0"]:
+            raise HTTPError(request.full_url, 412, "Precondition Failed", {}, io.BytesIO())
+        self.written.append(name)
+        self.objects[name] = content
+        return io.BytesIO(b"{}")
 
 
 class StaticPublishingTests(unittest.TestCase):
@@ -91,7 +171,19 @@ class StaticPublishingTests(unittest.TestCase):
                     self.assertEqual(request.get_method(), "POST")
                     self.assertEqual(request.full_url, "https://storage.googleapis.com/upload/storage/v1/b/private-static-origin/o?uploadType=multipart")
 
-    def stage_export(self, names, open_url):
+    def test_new_only_rejects_export_without_index(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            (Path(temporary) / "jobs.html").write_text("<!doctype html>", encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, publish_static.__file__, "--directory", temporary,
+                 "--bucket", "app-bucket", "--new-only"],
+                cwd=temporary, capture_output=True, text=True, timeout=10,
+                env={"PATH": "", "LC_ALL": "C", "TZ": "UTC"},
+            )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("the export must contain index.html", result.stderr)
+
+    def publish_export(self, names, open_url, events, *flags):
         scratch = Path(__file__).resolve().parents[2] / ".context/static-upload-tests"
         scratch.mkdir(parents=True, exist_ok=True)
         output = io.StringIO()
@@ -101,51 +193,51 @@ class StaticPublishingTests(unittest.TestCase):
                 path = directory / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("offline-payload", encoding="utf-8")
-            arguments = ["publish_static.py", f"--directory={directory}", "--bucket=app-bucket", "--new-only"]
+            arguments = ["publish_static.py", f"--directory={directory}", "--bucket=app-bucket", *flags]
             with (patch.object(sys, "argv", arguments), redirect_stdout(output),
                   patch.object(publish_static.subprocess, "check_output", return_value="synthetic-token"),
-                  patch.object(publish_static.urllib.request, "urlopen", side_effect=open_url)):
+                  patch.object(publish_static.urllib.request, "urlopen", side_effect=open_url),
+                  patch.object(publish_static.concurrent.futures, "ThreadPoolExecutor",
+                               side_effect=lambda **options: DeferredUploadPool(events))):
                 publish_static.main()
         return output.getvalue()
 
+    def test_full_publication_replaces_existing_page_without_metadata_reads(self):
+        bucket = FakeBucket({"index.html": b"previous export"})
+        output = self.publish_export(("index.html", "assets/site.css"), bucket.open_url, [])
+
+        self.assertCountEqual(bucket.uploads, [
+            ("assets/site.css", {"uploadType": ["multipart"]}),
+            ("index.html", {"uploadType": ["multipart"]}),
+        ])
+        self.assertEqual(bucket.objects["index.html"], b"offline-payload")
+        self.assertEqual(bucket.reads, [])
+        self.assertEqual(output, "Published 2 objects to gs://app-bucket.\n")
+
     def test_new_only_creates_missing_assets_before_html_and_aliases(self):
-        existing = {"assets/old.js", "index.html", "jobs/"}
-        upload_requests = []
-        reads = []
-        written = []
-
-        def open_url(request, timeout):
-            url = urlsplit(request.full_url)
-            if request.get_method() == "GET":
-                name = unquote(url.path.partition("/o/")[2])
-                reads.append((request.full_url, request.get_header("Authorization")))
-                if name in existing:
-                    return io.BytesIO(json.dumps({"name": name}).encode())
-                raise HTTPError(request.full_url, 404, "Not Found", {}, io.BytesIO())
-            name = request_name(request)
-            query = parse_qs(url.query)
-            upload_requests.append((name, query))
-            if name in existing and query.get("ifGenerationMatch") == ["0"]:
-                raise HTTPError(request.full_url, 412, "Precondition Failed", {}, io.BytesIO())
-            written.append(name)
-            return io.BytesIO(b"{}")
-
-        output = self.stage_export(
-            ("index.html", "continue.html", "jobs.html", "assets/old.js", "assets/new.js"), open_url,
+        bucket = FakeBucket(dict.fromkeys(("assets/old.js", "index.html", "jobs/"), b"previous export"))
+        events = []
+        output = self.publish_export(
+            ("index.html", "continue.html", "jobs.html", "assets/old.js", "assets/new.js"),
+            bucket.open_url, events, "--new-only",
         )
 
-        for name, query in upload_requests:
+        asset_names = ["assets/new.js", "assets/old.js"]
+        html_names = ["continue", "continue/", "continue.html", "index.html", "jobs", "jobs/", "jobs.html"]
+        milestones = [(event, name) for event, name in events
+                      if event == ("submitted" if name in html_names else "completed")]
+        self.assertCountEqual(milestones[:2], [("completed", name) for name in asset_names])
+        self.assertCountEqual(milestones[2:], [("submitted", name) for name in html_names])
+        for name, query in bucket.uploads:
             self.assertEqual(query, {"uploadType": ["multipart"], "ifGenerationMatch": ["0"]}, name)
-        names = [name for name, query in upload_requests]
-        self.assertCountEqual(names[:2], ["assets/new.js", "assets/old.js"])
-        self.assertCountEqual(names[2:], [
-            "continue", "continue/", "continue.html", "index.html", "jobs", "jobs/", "jobs.html",
-        ])
-        self.assertCountEqual(written, [
+        names = [name for name, query in bucket.uploads]
+        self.assertCountEqual(names[:2], asset_names)
+        self.assertCountEqual(names[2:], html_names)
+        self.assertCountEqual(bucket.written, [
             "assets/new.js", "continue", "continue/", "continue.html", "jobs", "jobs.html",
         ])
         metadata_url = "https://storage.googleapis.com/storage/v1/b/app-bucket/o"
-        self.assertCountEqual(reads, [
+        self.assertCountEqual(bucket.reads, [
             (f"{metadata_url}/assets%2Fold.js?fields=name", "Bearer synthetic-token"),
             (f"{metadata_url}/index.html?fields=name", "Bearer synthetic-token"),
             (f"{metadata_url}/jobs%2F?fields=name", "Bearer synthetic-token"),
@@ -168,7 +260,7 @@ class StaticPublishingTests(unittest.TestCase):
              ["https://storage.googleapis.com/storage/v1/b/app-bucket/o/assets%2Fblocked.js?fields=name"]),
         ):
             with self.subTest(status=refusal.code):
-                html_started = Event()
+                events = []
                 requested = []
                 reads = []
                 missing_body = io.BytesIO()
@@ -177,21 +269,20 @@ class StaticPublishingTests(unittest.TestCase):
                     if request.get_method() == "GET":
                         reads.append(request.full_url)
                         raise HTTPError(request.full_url, 404, "Not Found", {}, missing_body)
-                    name = request_name(request)
+                    name, _ = read_upload(request)
                     requested.append(name)
-                    if name == "index.html":
-                        html_started.set()
                     if name == "assets/blocked.js":
-                        html_started.wait(0.5)
                         raise refusal
                     return io.BytesIO(b"{}")
 
                 with self.assertRaises(expected_type) as raised:
-                    self.stage_export(("index.html", "assets/allowed.js", "assets/blocked.js"), open_url)
+                    self.publish_export(("index.html", "assets/allowed.js", "assets/blocked.js"),
+                                        open_url, events, "--new-only")
 
                 self.assertEqual(type(raised.exception), expected_type)
                 self.assertEqual(str(raised.exception), expected_message)
                 self.assertEqual(raised.exception is refusal, expected_type is HTTPError)
+                self.assertNotIn(("submitted", "index.html"), events)
                 self.assertCountEqual(requested, ["assets/allowed.js", "assets/blocked.js"])
                 self.assertEqual(reads, expected_reads)
                 self.assertEqual(refusal.fp.closed, bool(expected_reads))
