@@ -87,3 +87,14 @@ export const slotColors = {
 
 /** The sidebar: labels between the ink and the muted grey, lighter icons. */
 export const navColors = { label: "#5E5E5E", icon: "#8F8F8F" } as const;
+
+export const heroStudyColors = {
+  cobalt: "#193CB1",
+  blueprint: "#CEE2FF",
+  copper: "#9C4022",
+  apricot: "#F8DBC4",
+  paper: "#FFF9E9",
+  pine: "#173B32",
+  mint: "#E3EDE6",
+  signal: "#C9F880",
+} as const;
