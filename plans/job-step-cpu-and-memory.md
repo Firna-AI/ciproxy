@@ -893,6 +893,9 @@ The docs of Milestone 2 found two mockup gaps.
 - [ ] Add the state of figures that end before the job ended, if decision 7
       chooses A, D, or F. The `cpu-memory` sub-page already has five
       screens, so add a nested sub-page for it. Waits for decision 7.
+- [x] Add the guide "Choose a label size" of Milestone 12 to the sidebar of
+      the docs mockup in `docs/mockups/src/screens/docs/docs-nav.ts`, as a
+      planned page after "Move your workflows".
 - [ ] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
       pages in the mobile and the desktop variants.
 
@@ -1085,8 +1088,10 @@ The public docs explain the figures.
       `ts/site/src/content/docs/docs/security/job-isolation.md`, with the
       rule words design call. Say that the sandbox token also sends the
       samples of its own job.
-- [ ] Add a docs page about the CPU and memory panel: what each figure
-      means, and how to use the figures to choose a label size.
+- [ ] Add the guide "Choose a label size" at
+      `ts/site/src/content/docs/docs/guides/choose-a-label-size.md`, after
+      "Move your workflows" in the sidebar: what each figure of the CPU and
+      memory panel means, and how to use the figures to choose a label size.
 - [ ] Update the privacy policy draft in `ts/site/src/data/legal-privacy.ts`:
       add the samples and the steps to the job metadata with the script
       names rule, and use the rule words in the heading "What ciproxy never

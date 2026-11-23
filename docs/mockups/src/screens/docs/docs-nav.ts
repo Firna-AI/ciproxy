@@ -23,6 +23,7 @@ export const docsNav: readonly DocsNavGroup[] = [
       { label: "Add a machine", to: paths.addMachineGuide },
       { label: "Connect Boat" },
       { label: "Move your workflows" },
+      { label: "Choose a label size" },
       { label: "Set a spend limit" },
       { label: "Remove a machine" },
     ],
