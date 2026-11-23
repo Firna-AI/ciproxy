@@ -317,6 +317,11 @@ Design calls, mine, 22 November 2026:
   hardware, accounts, or money.
 - **Answer:** D, from the user on 23 November 2026. If the short check of D
   fails, the next host is a new decision for the user.
+- **Short check:** passed on 23 November 2026. A Lima 2.3.0 Ubuntu 24.04
+  arm64 VM on the Mac mini M4 has `/dev/kvm`. Firecracker v1.17.0 aarch64
+  boots a guest to its login prompt in about 8 seconds there. The agent's
+  own VM setup waits for Milestone 5. The steps are in
+  `.context/linux-arm64-own-machines/spikes/README.md`.
 
 ## Milestone 1: Mockups
 
