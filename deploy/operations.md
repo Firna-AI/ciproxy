@@ -65,6 +65,13 @@ Storage URL must each fail.
 
 Use [database setup](runtime.md#prepare-the-database) after the first deploy.
 
+## Delete manual database backups
+
+Cloud SQL keeps the 14 most recent automatic backups of each database. An
+on-demand backup, such as one taken before a rollback, stays until an
+operator deletes it. Delete each on-demand backup within 14 days, because
+the privacy policy on the site promises that limit.
+
 ## Turn on the runtime
 
 Use [runtime setup](runtime.md#turn-on-the-runtime) when a real HTTP image

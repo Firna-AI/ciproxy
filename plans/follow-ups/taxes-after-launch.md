@@ -25,6 +25,11 @@
   - Many countries and US states make a seller of software collect tax from
     local customers. The duty depends on where the seller is registered and
     on its sales in each place.
+  - The seller is Firna Ltd, a company registered in England and Wales.
+    The terms of service on the site give its UK VAT number, GB191373695.
+    A VAT-registered UK seller usually charges UK VAT on its sales to
+    customers in the UK. The terms of service also say that prices exclude
+    tax and that ciproxy collects no tax.
 - **Problem:** The payments carry no tax, although some customers' places
   can make the seller owe tax on them.
 - **Impact if no action:** The company can owe tax that it did not
