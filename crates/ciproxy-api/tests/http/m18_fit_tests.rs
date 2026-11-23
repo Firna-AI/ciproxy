@@ -74,6 +74,7 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
         .view(pages.fixture.workspace)
         .await
         .unwrap();
+    let source = source.provider(OverflowProvider::Boat).unwrap();
     assert_eq!(source.spend.unbounded_starts, [unbounded]);
     assert!(matches!(
         source.scaler_account(at("2026-11-06T12:00:00Z")),

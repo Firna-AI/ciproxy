@@ -18,6 +18,7 @@ use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{ProviderParameters, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
 use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
+use ciproxy_store_interface::overflow_provider_settings::OverflowProviderSettings;
 use ciproxy_store_interface::secrets::{EncryptedOverflowKey, TokenHash};
 use rust_decimal::Decimal;
 use sha2::{Digest, Sha256};
@@ -63,7 +64,15 @@ pub(super) fn snapshot() -> OverflowSnapshot {
         }],
         starts: Vec::new(),
         enabled: true,
-        spend_limit_usd_micros: Some(200_000_000),
+        provider_settings: [(
+            OverflowProvider::Boat,
+            OverflowProviderSettings {
+                spend_limit_usd_micros: Some(200_000_000),
+                offered: true,
+            },
+        )]
+        .into_iter()
+        .collect(),
     }
 }
 

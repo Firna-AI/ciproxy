@@ -125,7 +125,7 @@ async fn lost_delete_acknowledgment_never_prices_a_day_of_absent_runtime() {
     *harness.now.lock().unwrap() = at() + Duration::days(1);
     harness.service.cleanup(id(1)).await.unwrap();
     harness.set_checked(at() + Duration::days(1));
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);

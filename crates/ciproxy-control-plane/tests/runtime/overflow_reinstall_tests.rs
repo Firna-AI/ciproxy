@@ -4,6 +4,7 @@ use std::sync::atomic::Ordering;
 
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::runners::RunnerState;
 use uuid::Uuid;
@@ -83,6 +84,7 @@ async fn reinstall_then_boat_reconnect_retires_old_idle_supply_and_preserves_run
         .service
         .connect(
             workspace,
+            OverflowProvider::Boat,
             new_key,
             Secret::new("fake-reconnected-boat-key"),
             "personal".to_owned(),

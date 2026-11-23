@@ -590,24 +590,26 @@ Depends on: 5, 6
 
 The service keeps one account for each provider of a workspace.
 
-- [ ] Change `Overflow::wallets` to a key check that names the provider.
+- [x] Change `Overflow::wallets` to a key check that names the provider.
       Add the provider to `connect` and `disconnect`.
-- [ ] Return the view of each connected provider, with its catalog, spend,
+- [x] Return the view of each connected provider, with its catalog, spend,
       and refusals, for the scaler snapshot.
-- [ ] Check the spend limit of each provider in the budget.
-- [ ] When a provider is offered for the first time, append it to each
+- [x] Check the spend limit of each provider in the budget.
+- [x] When a provider is offered for the first time, append it to each
       Linux label, as item 6 says.
-- [ ] Read the label order in the size choice of
+- [x] Read the label order in the size choice of
       `src/service/provider_preparation.rs`.
-- [ ] Pick the factory of each delivery from its saved provider in start,
+- [x] Pick the factory of each delivery from its saved provider in start,
       resume, the end report, and cleanup.
-- [ ] Add service tests through `PgStoreFactory` for connect, Disconnect,
+- [x] Add service tests through `PgStoreFactory` for connect, Disconnect,
       the spend limit, and the offered mark, with Boat.
-- [ ] Update the README of the overflow crate.
-- [ ] Delete the Milestone 4 adapters in
+- [x] Update the README of the overflow crate.
+- [x] Delete the Milestone 4 adapters in
       `src/service/provider_preparation.rs`, `ciproxy-store-pg`
       `overflow/rows.rs`, and `overflow/accounts.rs` that map the order and
       the Boat limit to the old single-provider shape.
+
+Evidence: `.context/providers-interface/m7/`.
 
 ## Milestone 8: Control plane, guest, and metering
 

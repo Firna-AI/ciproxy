@@ -4,6 +4,7 @@ use std::slice;
 use std::sync::atomic::Ordering;
 
 use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::runners::RunnerPlace;
 use rust_decimal::Decimal;
@@ -37,7 +38,8 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
     assert_eq!(intents[0].runner_id, original.runner_id);
     assert_eq!(intents[0].github_id, Some(100));
     let expected_bound = Decimal::new(502, 3);
-    let before = harness.service.view(workspace).await.unwrap().spend;
+    let view = harness.service.view(workspace).await.unwrap();
+    let before = &view.provider(OverflowProvider::Boat).unwrap().spend;
     assert_eq!(before.confirmed_usd, Decimal::ZERO);
     assert_eq!(before.pending_usd, expected_bound);
     assert_eq!(before.settled_bound_usd, Decimal::ZERO);
@@ -120,7 +122,8 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
         );
         assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
         assert_eq!(harness.own_starts.load(Ordering::SeqCst), 0);
-        let after = harness.service.view(workspace).await.unwrap().spend;
+        let view = harness.service.view(workspace).await.unwrap();
+        let after = &view.provider(OverflowProvider::Boat).unwrap().spend;
         assert_eq!(after.confirmed_usd, Decimal::ZERO);
         assert_eq!(after.pending_usd, expected_bound);
         assert_eq!(after.settled_bound_usd, Decimal::ZERO);

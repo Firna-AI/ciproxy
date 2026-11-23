@@ -128,6 +128,7 @@ impl Harness {
         service
             .connect(
                 fixture.workspace,
+                OverflowProvider::Boat,
                 Uuid::new_v4(),
                 Secret::new("fake-boat-key"),
                 "personal".to_owned(),

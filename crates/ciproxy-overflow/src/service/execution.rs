@@ -56,10 +56,12 @@ impl OverflowService {
         let mut account = snapshot
             .accounts
             .iter()
-            .find(|account| account.account.id == record.key_id)
+            .find(|account| account.owns_start(&record))
             .ok_or(Error::OwnershipUnknown)?
             .clone();
-        let maintenance = self.maintenance(workspace_id, &account).await?;
+        let maintenance = self
+            .maintenance(workspace_id, record.provider, &account)
+            .await?;
         let delivery = record.delivery_id;
         if session
             .call(move |session| session.startup_account(delivery))

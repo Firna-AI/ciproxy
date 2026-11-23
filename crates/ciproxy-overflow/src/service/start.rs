@@ -1,4 +1,4 @@
-//! Durable acceptance of a scaler Boat action before provider dispatch.
+//! Durable acceptance of a scaler action before provider dispatch.
 
 use ciproxy_scaler::actions::{Destination, StartReason};
 use ciproxy_scaler::provider::ProviderId;
@@ -23,12 +23,12 @@ impl OverflowService {
         workspace_id: Uuid,
         request: StartRequest,
     ) -> Result<StartOutcome> {
-        let provider = OverflowProvider::Boat;
-        if !matches!(request.action.destination, Destination::Provider { provider: id, .. }
-            if id == ProviderId::new(provider.as_str()))
-        {
-            return Err(Error::NotBoatAction);
-        }
+        let Destination::Provider { provider: id, .. } = request.action.destination else {
+            return Err(Error::NotProviderAction);
+        };
+        let provider = OverflowProvider::all()
+            .find(|provider| ProviderId::new(provider.as_str()) == id)
+            .ok_or(Error::NotProviderAction)?;
         let session =
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
         let mut snapshot = session.call(|session| session.snapshot()).await?;
@@ -37,7 +37,8 @@ impl OverflowService {
             .iter()
             .find(|record| record.delivery_id == request.delivery_id)
         {
-            if record.runner_id != request.runner_id
+            if record.provider != provider
+                || record.runner_id != request.runner_id
                 || record.organization_id != request.organization_id
                 || record.label_id != request.label_id
                 || record.scale_set_id != request.scale_set_id
@@ -52,13 +53,8 @@ impl OverflowService {
             return self.execute(&session, workspace_id, record.clone()).await;
         }
         let Some(mut account) = snapshot
-            .accounts
-            .iter()
-            .find(|account| {
-                account.account.provider == provider
-                    && account.account.retired_at.is_none()
-                    && account.account.rejected_at.is_none()
-            })
+            .active_account(provider)
+            .filter(|account| account.account.rejected_at.is_none())
             .cloned()
         else {
             return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
@@ -81,10 +77,10 @@ impl OverflowService {
             Err(Error::RejectedKey) => return Ok(StartOutcome::Waiting(WaitReason::Disconnected)),
             Err(error) => return Err(error),
         };
-        self.refresh_costs(&session, workspace_id, &mut snapshot)
+        self.refresh_costs(&session, workspace_id, provider, &mut snapshot)
             .await?;
         let now = self.dependencies.clock.now();
-        spend::current(&snapshot.starts, now)?.counted_usd()?;
+        spend::current(provider, &snapshot.starts, now)?.counted_usd()?;
         if let Some(wait @ WaitReason::RetryAt(_)) = preparation_wait(&account.state, now) {
             return Ok(StartOutcome::Waiting(wait));
         }
@@ -119,7 +115,7 @@ impl OverflowService {
             )
             .await?;
         let mut record = StartRecord {
-            provider: account.account.provider,
+            provider,
             delivery_id: request.delivery_id,
             runner_id: request.runner_id,
             organization_id: request.organization_id,

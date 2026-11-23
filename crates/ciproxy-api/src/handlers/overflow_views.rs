@@ -1,8 +1,11 @@
 //! Credential-free Boat metadata and exact limit conversion.
 
 use chrono::Datelike;
+use ciproxy_overflow::api::Overflow;
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::provider::KeyAccounts;
+use ciproxy_overflow::view::{OverflowView, ProviderView, RefreshStatus};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::settings::OverflowWait;
 use rust_decimal::{Decimal, RoundingStrategy};
 use uuid::Uuid;
@@ -50,13 +53,15 @@ pub(super) fn result<T>(value: ciproxy_overflow::error::Result<T>) -> error::Res
 }
 
 pub(super) async fn read(state: &ApiState, workspace: Uuid) -> error::Result<OverflowSettings> {
-    let (view, refreshed) = if let Some(service) = &state.overflow {
-        match service.view(workspace).await {
-            Ok(view) => (view, true),
-            Err(_) => (stored(state, workspace).await?, false),
-        }
+    let current = if let Some(service) = &state.overflow {
+        current_boat(service.as_ref(), workspace).await
     } else {
-        (stored(state, workspace).await?, false)
+        None
+    };
+    let refreshed = current.is_some();
+    let view = match current {
+        Some(view) => view,
+        None => stored_boat(state, workspace).await?,
     };
     let settings = query(state.store.clone(), move |store| store.settings(workspace)).await?;
     let account = view.account.map(|account| BoatAccountView {
@@ -117,16 +122,26 @@ fn display_cents(usd: Decimal) -> error::Result<Cents> {
         .ok_or(error::Error::Unavailable)
 }
 
-async fn stored(
-    state: &ApiState,
-    workspace: Uuid,
-) -> error::Result<ciproxy_overflow::view::OverflowView> {
+pub(super) async fn current_boat(service: &dyn Overflow, workspace: Uuid) -> Option<ProviderView> {
+    service
+        .view(workspace)
+        .await
+        .ok()?
+        .providers
+        .into_iter()
+        .find(|view| {
+            view.provider == OverflowProvider::Boat && view.refresh == RefreshStatus::Current
+        })
+}
+
+async fn stored_boat(state: &ApiState, workspace: Uuid) -> error::Result<ProviderView> {
     let stored = query(state.store.clone(), move |store| {
         store.overflow_runtime_snapshot(workspace)
     })
     .await?;
-    result(ciproxy_overflow::view::OverflowView::from_snapshot(
-        stored,
-        state.runtime.now(),
-    ))
+    result(OverflowView::from_snapshot(stored, state.runtime.now()))?
+        .providers
+        .into_iter()
+        .find(|view| view.provider == OverflowProvider::Boat)
+        .ok_or(error::Error::Unavailable)
 }

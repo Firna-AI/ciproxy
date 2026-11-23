@@ -17,20 +17,22 @@ Pending acceptance saves demand, sealed input, and the saved fee together.
 It saves no fixed provider parameters or provider cost bound.
 Pending connections receive fresh database-generated grant identities.
 Activation consumes a matching live grant under the workspace row lock.
+The same transaction saves the provider's limit and appends its first offer
+to each active Linux label. Disconnect retires the requested provider's key.
 A later grant cannot restore an older operation, even with the same key ID.
 Suspension and removal with another App present preserve shared grants.
 One current startup query binds the saved delivery to its organization and
 key in that workspace. It requires active App state, enabled overflow, and
 the accepted non-retired key together.
-The same authority SQL checks scale-set ownership, the label's Boat switch,
-and exact original requested dimensions during reservation and later startup.
+The same authority SQL checks scale-set ownership, the provider in the
+label's order, and exact requested dimensions during reservation and startup.
 An undersized selected size also requires the label's current largest-size
 fallback permission. Fitting requests remain permitted under Wait.
 Each delivery retains its image root bytes and required total root bytes.
 Authority compares catalog disk with those saved totals.
 Even a largest-size fallback must hold the complete image.
 The dispatch transaction accepts only the saved unsent delivery.
-It rechecks authority and the current saved limit before saving `Creating`.
+It rechecks authority and the provider's saved limit before saving `Creating`.
 It compares the exact pending record, including its identity and saved fee.
 It saves selected size, lifetime, and dispatch time in that same transaction.
 The caller supplies those parameters with their required monthly amounts.
@@ -53,16 +55,17 @@ request. The insert holds the workspace row lock. It saves nothing and
 returns `Conflict` unless all of these facts hold:
 
 - The organization has an active App and admitted execution.
-- The workspace has overflow on and an accepted key.
-- The current label allows Boat and matches the requested size.
+- The workspace has overflow on and an accepted key for the provider.
+- The current label lists the provider and matches the requested size.
 - The scale set of that organization and label is active.
 
 A row holds identities, the provider, sizes, the required root bytes, and the
 installation ID of its organization at the insert. It holds no JIT
 configuration or callback token. The saved GitHub runner ID also goes to
 the runner row of the delivery, when that row exists. The routing snapshot
-reads these rows with the account and delivery rows in one repeatable-read
-transaction. The separate durable snapshot read takes no overflow session.
+reads these rows with account, delivery, and provider settings rows in one
+repeatable-read transaction. The separate durable snapshot read takes no
+overflow session.
 `save_overflow_registration` saves the response's exact remote scale-set ID
 with its runner ID. It updates the intent and an existing runner together.
 Sandbox materialization copies this captured ID from the saved intent.

@@ -5,7 +5,6 @@ use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_schema::settings::settings;
 use ciproxy_store_interface::error::{Result, ResultExt};
 use ciproxy_store_interface::overflow::account::AccountState;
-use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
 use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
@@ -77,10 +76,8 @@ pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<
         .select(settings::overflow_enabled)
         .first::<bool>(connection)
         .store()?;
-    let spend_limit_usd_micros =
-        overflow_provider_settings::load(connection, workspace_id, OverflowProvider::Boat)
-            .store()?
-            .and_then(|settings| settings.spend_limit_usd_micros);
+    let provider_settings =
+        overflow_provider_settings::load_all(connection, workspace_id).store()?;
     let accounts = diesel::sql_query(
         "SELECT a.id, a.provider, a.account_name, a.key_ciphertext, a.connected_at,
                     a.retired_at, a.rejected_at, s.state_json
@@ -106,6 +103,6 @@ pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<
         accounts,
         starts,
         enabled,
-        spend_limit_usd_micros,
+        provider_settings,
     })
 }

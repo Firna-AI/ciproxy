@@ -1,6 +1,7 @@
 //! Five-minute catalog refresh, key rejection, billing recovery, and safe views.
 
 use chrono::Duration;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
 use uuid::Uuid;
 
@@ -8,7 +9,7 @@ use crate::catalog;
 use crate::error::{Error, Result, ResultExt};
 use crate::provider::{AccountFacts, Capabilities};
 use crate::session::Session;
-use crate::view::OverflowView;
+use crate::view::{OverflowView, RefreshStatus};
 
 use super::OverflowService;
 
@@ -48,7 +49,9 @@ impl OverflowService {
         workspace_id: Uuid,
         account: &mut AccountRecord,
     ) -> Result<Capabilities> {
-        let capabilities = self.capabilities(workspace_id, account).await?;
+        let capabilities = self
+            .capabilities(workspace_id, account.account.provider, account)
+            .await?;
         let now = self.dependencies.clock.now();
         if account
             .state
@@ -87,20 +90,45 @@ impl OverflowService {
         let session =
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
         let mut snapshot = session.call(|session| session.snapshot()).await?;
+        let mut refreshes = Vec::new();
+        for provider in OverflowProvider::all() {
+            let status = if self.dependencies.providers.get(provider).is_err() {
+                RefreshStatus::Unavailable
+            } else {
+                match self
+                    .refresh_provider(&session, workspace_id, provider, &mut snapshot)
+                    .await
+                {
+                    Ok(()) => RefreshStatus::Current,
+                    Err(error) => {
+                        tracing::warn!(provider = provider.as_str(), %error, "Provider refresh failed");
+                        RefreshStatus::Failed
+                    }
+                }
+            };
+            refreshes.push((provider, status));
+        }
+        OverflowView::with_refreshes(snapshot, self.dependencies.clock.now(), refreshes)
+    }
+
+    async fn refresh_provider(
+        &self,
+        session: &Session,
+        workspace_id: Uuid,
+        provider: OverflowProvider,
+        snapshot: &mut OverflowSnapshot,
+    ) -> Result<()> {
         if let Some(account) = snapshot.accounts.iter_mut().find(|account| {
-            account.account.retired_at.is_none() && account.account.rejected_at.is_none()
+            account.account.provider == provider
+                && account.account.retired_at.is_none()
+                && account.account.rejected_at.is_none()
         }) {
-            match self.refresh_catalog(&session, workspace_id, account).await {
+            match self.refresh_catalog(session, workspace_id, account).await {
                 Ok(_) | Err(Error::RejectedKey) => {}
                 Err(error) => return Err(error),
             }
         }
-        self.refresh_costs(&session, workspace_id, &mut snapshot)
-            .await?;
-        self.make_view(snapshot)
-    }
-
-    pub(super) fn make_view(&self, snapshot: OverflowSnapshot) -> Result<OverflowView> {
-        OverflowView::from_snapshot(snapshot, self.dependencies.clock.now())
+        self.refresh_costs(session, workspace_id, provider, snapshot)
+            .await
     }
 }

@@ -32,7 +32,7 @@ pub(crate) fn input() -> RoutingSnapshot {
             accounts: Vec::new(),
             starts: Vec::new(),
             enabled: false,
-            spend_limit_usd_micros: None,
+            provider_settings: Default::default(),
         },
         workspace_id: Uuid::from_u128(1),
         organizations: vec![organization(2)],

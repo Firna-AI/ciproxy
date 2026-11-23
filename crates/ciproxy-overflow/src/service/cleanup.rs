@@ -52,9 +52,11 @@ impl OverflowService {
         let account = snapshot
             .accounts
             .iter()
-            .find(|account| account.account.id == record.key_id)
+            .find(|account| account.owns_start(&record))
             .ok_or(Error::OwnershipUnknown)?;
-        let maintenance = self.maintenance(workspace_id, account).await?;
+        let maintenance = self
+            .maintenance(workspace_id, record.provider, account)
+            .await?;
         self.delete(&session, &maintenance, &mut record).await?;
         self.collect(&session).await
     }

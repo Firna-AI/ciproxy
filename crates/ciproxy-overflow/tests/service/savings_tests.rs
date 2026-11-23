@@ -59,7 +59,7 @@ async fn measured_production_start_uses_saved_fee_in_the_public_savings_report()
     assert_eq!(record.runtime[0].usd, Decimal::new(12, 3));
     assert!(record.runtime_complete);
     harness.set_checked(finished);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::new(12, 3));
     assert_eq!(view.spend.pending_usd, Decimal::new(7, 2));
     assert_eq!(view.scaler_account(finished).unwrap().spend.spent, 82_000);

@@ -93,10 +93,11 @@ pub(super) fn save(
 pub(super) fn retire(
     connection: &mut PgConnection,
     workspace_id: Uuid,
+    provider: OverflowProvider,
     at: DateTime<Utc>,
 ) -> Result<()> {
     transaction(connection, |connection| {
         lock_workspace(connection, workspace_id).store()?;
-        retire_keys(connection, workspace_id, Some(OverflowProvider::Boat), at).store()
+        retire_keys(connection, workspace_id, Some(provider), at).store()
     })
 }

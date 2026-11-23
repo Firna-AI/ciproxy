@@ -1,5 +1,6 @@
 //! Sandbox-only per-month provider runtime observations and price completion.
 
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, RuntimeTotal, StartRecord};
 use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use sandbox_interface::ProviderRef;
@@ -18,20 +19,26 @@ impl OverflowService {
         &self,
         session: &Session,
         workspace_id: Uuid,
+        provider: OverflowProvider,
         snapshot: &mut OverflowSnapshot,
     ) -> Result<()> {
         for record in snapshot.starts.iter_mut().filter(|record| {
-            record.sandbox.is_some() && (record.ends_at.is_none() || !record.runtime_complete)
+            record.provider == provider
+                && record.sandbox.is_some()
+                && (record.ends_at.is_none() || !record.runtime_complete)
         }) {
             let Some(account) = snapshot
                 .accounts
                 .iter()
-                .find(|account| account.account.id == record.key_id)
+                .find(|account| account.owns_start(record))
             else {
                 self.missing_usage(session, record).await?;
                 continue;
             };
-            let maintenance = match self.maintenance(workspace_id, account).await {
+            let maintenance = match self
+                .maintenance(workspace_id, record.provider, account)
+                .await
+            {
                 Ok(maintenance) => maintenance,
                 Err(_) => {
                     tracing::warn!(

@@ -28,6 +28,7 @@ mod label_tests;
 mod organization_hooks;
 mod organization_tests;
 mod preparation_tests;
+mod provider_tests;
 mod recording;
 mod refusals_tests;
 mod retired_tests;

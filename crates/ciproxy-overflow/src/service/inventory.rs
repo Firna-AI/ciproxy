@@ -17,26 +17,25 @@ impl OverflowService {
         let mut failed = self.cleanup_unsent(&session, workspace_id).await?;
         let snapshot = session.call(|session| session.snapshot()).await?;
         for account in &snapshot.accounts {
-            if !snapshot.starts.iter().any(|record| {
-                record.key_id == account.account.id
-                    && record.ends_at.is_none()
-                    && record.phase != StartPhase::Unsent
-            }) {
+            let records: Vec<_> = snapshot
+                .starts
+                .iter()
+                .filter(|record| {
+                    account.owns_start(record)
+                        && record.ends_at.is_none()
+                        && record.phase != StartPhase::Unsent
+                })
+                .collect();
+            let Some(record) = records.first() else {
                 continue;
-            }
-            let maintenance = match self.maintenance(workspace_id, account).await {
+            };
+            let maintenance = match self
+                .maintenance(workspace_id, record.provider, account)
+                .await
+            {
                 Ok(maintenance) => maintenance,
                 Err(_) => {
-                    for mut record in snapshot
-                        .starts
-                        .iter()
-                        .filter(|record| {
-                            record.key_id == account.account.id
-                                && record.ends_at.is_none()
-                                && record.phase != StartPhase::Unsent
-                        })
-                        .cloned()
-                    {
+                    for mut record in records.into_iter().cloned() {
                         if !self.unavailable_lifecycle(&session, &mut record).await? {
                             failed = true;
                         }
@@ -55,16 +54,7 @@ impl OverflowService {
                     Vec::new()
                 }
             };
-            for mut record in snapshot
-                .starts
-                .iter()
-                .filter(|record| {
-                    record.key_id == account.account.id
-                        && record.ends_at.is_none()
-                        && record.phase != StartPhase::Unsent
-                })
-                .cloned()
-            {
+            for mut record in records.into_iter().cloned() {
                 let delivery = record.delivery_id;
                 if !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)
                     && session

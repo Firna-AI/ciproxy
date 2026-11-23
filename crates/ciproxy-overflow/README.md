@@ -9,8 +9,8 @@ It has no open licence.
 ## Responsibilities
 
 The scaler decides where a runner is needed and proposes a size.
-The service uses the same size rule with the current catalog at dispatch.
-This crate supplies the account catalog and executes accepted actions.
+At dispatch, the service checks the current label order and provider catalogs.
+This crate supplies a view for each provider and executes accepted actions.
 GitHub still assigns each job to a runner.
 A workspace can have several GitHub organizations.
 Each delivery keeps its organization, label, and scale-set identity.
@@ -20,14 +20,15 @@ and the HTTPS callback route.
 It supplies `RunnerAuthority` for idle registration removal.
 It must keep a runner with a job, and one that waiting demand needs until its
 [ready deadline](../../docs/protocol/overflow-sandbox-end.md#the-ready-deadline).
-The control plane must keep own-machine routing available when Boat fails.
+The control plane must keep own-machine routing available when a provider fails.
 
 ## What This Crate Does
 
 The control plane supplies a registry of provider factories and images.
 The registry includes each provider with its deployment settings.
-The service selects capabilities from the provider of the saved account.
-It uses the saved delivery to build the create, recovery, and launch inputs.
+The service uses the provider of the saved account to refresh its catalog.
+It uses the provider and key version of each saved delivery for create,
+recovery, launch, and cleanup.
 The shared service owns delivery phases, budget checks, and cleanup.
 `ProviderAccountApi` checks keys and reads account and usage facts.
 `GuestLauncher` prepares private input and starts the guest.
@@ -44,7 +45,7 @@ their personal wallet or an organization wallet.
 The service refreshes eligible sizes every five minutes.
 The scaler uses their dimensions and exact hourly prices to choose the
 cheapest fitting size or the label's explicit largest-size fallback.
-Dispatch uses that same pure rule with the current label and catalog.
+Dispatch uses that same size rule in the current label order.
 It retains the scaler's known own-machine fit from admission.
 The scaler owns later changes to own-machine capacity.
 
@@ -59,7 +60,8 @@ Both key preparations finish before an atomic `Creating` transition.
 Dispatch reads current account lifetime and billing facts on each attempt.
 This read also runs inside the five-minute catalog refresh window.
 It selects size, lifetime, dispatch time, and required budget together.
-The transition rechecks current authority and monthly amounts.
+The transition rechecks current authority and the selected provider's limit.
+It counts starts on that provider across all organizations and key versions.
 It commits the budget reservation and fixed provider parameters together.
 The create call follows it directly.
 An unsent retry uses its actual dispatch time for UTC spend and lifetime.
@@ -170,7 +172,7 @@ They also require overflow to remain enabled in the workspace.
 A delivery also needs its own organization to have an active GitHub App.
 One current store query checks all three facts from the saved delivery.
 The same policy also requires the saved scale set and current label authority.
-The label must allow Boat and match all original requested dimensions.
+The label must allow the saved provider and match all original requested dimensions.
 The selected provider size can differ under the explicit largest-size fallback.
 An undersized fixed delivery requires fallback permission at each startup stage.
 Changing that permission to Wait withdraws its fixed startup authority.
@@ -213,12 +215,13 @@ Consume the result as `Arc<dyn Overflow>`.
 
 Call the public boundary in this order:
 
-1. Call `wallets` to check a key and offer its named wallets. Call `connect`
-   with the key, its new version ID, the chosen wallet, and a positive limit.
-   The store saves the Boat limit and records the first offer with the key.
-   A first offer appends Boat to active Linux labels.
-2. Call `view` for the current catalog and spend.
-3. Call `OverflowView::scaler_account` with the snapshot's UTC clock origin.
+1. Call `check_key` with the provider and key to list its billing accounts.
+   Call `connect` with the provider, key, new version ID, selected billing
+   account, and positive limit. The store saves the limit and records the
+   first offer with the key. A first offer appends that provider to active
+   Linux labels. Call `disconnect` with the provider to retire its key.
+2. Call `view` to read each provider's catalog, refusals, and spend.
+3. Call `ProviderView::scaler_account` with the snapshot's UTC clock origin.
 4. Build a consistent scaler snapshot and run its placement decision.
 5. Allocate a stable runner ID and a stable delivery ID.
 6. Obtain the GitHub registration for the action's organization and scale set.
@@ -230,10 +233,11 @@ Call the public boundary in this order:
 10. Pass authenticated guest exit reports to `report_end`.
 11. Call `cleanup` during regular reconciliation and after an outage.
 
-`OverflowView::from_snapshot` builds the view from durable store facts,
-with no provider call. Use it when `view` fails, so that accepted supply
-stays in the scaler snapshot. `OverflowView::retained_scaler_account` keeps
-the saved size catalog for those runners and permits no new start.
+`OverflowView::from_snapshot` reads durable store facts without a provider
+call. The live view reports refresh status for each provider and keeps
+saved account and spend facts when that provider is unavailable.
+`ProviderView::retained_scaler_account` keeps the saved size catalog for
+accepted runners and permits no new start.
 The [control-plane overflow guide](../ciproxy-control-plane/overflow.md)
 gives the production composition and its configuration.
 
@@ -312,9 +316,9 @@ These commands contact Boat or Cloud KMS and can incur charges.
 - [src/service/accounts.rs](src/service/accounts.rs) completes only live
   pending connection grants.
 - [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.
-- [src/view.rs](src/view.rs) supplies safe scaler and cost facts, also from
-  durable facts alone. Its `OverflowView::resource_catalog` accessor supplies
-  physical fit without accounting or temporary start refusals.
+- [src/view.rs](src/view.rs) supplies safe scaler and cost facts for each
+  provider. `ProviderView::resource_catalog` supplies physical fit without
+  accounting or temporary start refusals.
 - [src/boat](src/boat) composes the pinned adapter and fixed image launcher.
 - [src/kms](src/kms) implements real Cloud KMS encryption and runtime OAuth.
 - [tests/boat](tests/boat) tests the production HTTPS boundaries.

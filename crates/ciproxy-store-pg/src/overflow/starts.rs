@@ -7,6 +7,7 @@ use ciproxy_store_interface::overflow::admission::{
     DispatchFacts, PreparedDispatch, ReservationOutcome,
 };
 use ciproxy_store_interface::overflow::connection::ConnectionGrant;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSession, OverflowSnapshot};
 use ciproxy_store_interface::secrets::TokenHash;
@@ -50,8 +51,8 @@ impl OverflowSession for Session {
         )
     }
 
-    fn disconnect(&mut self, at: DateTime<Utc>) -> Result<()> {
-        accounts::retire(&mut self.connection, self.workspace_id, at)
+    fn disconnect(&mut self, provider: OverflowProvider, at: DateTime<Utc>) -> Result<()> {
+        accounts::retire(&mut self.connection, self.workspace_id, provider, at)
     }
 
     fn save_account(&mut self, account: &AccountRecord) -> Result<()> {

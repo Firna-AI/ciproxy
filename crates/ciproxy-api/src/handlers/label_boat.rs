@@ -1,7 +1,7 @@
 //! Physical Boat choices use the scaler policy and preserve temporary refusals.
 
 use ciproxy_agent::root_sizing::RootSizing;
-use ciproxy_overflow::view::OverflowView;
+use ciproxy_overflow::view::ProviderView;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 use ciproxy_scaler::size_policy::{ProviderChoice, select_provider_size};
@@ -15,7 +15,7 @@ use crate::wire::settings::{LabelFit, LabelInput, NothingFits};
 pub(super) fn enrich(
     fit: &mut LabelFit,
     label: &LabelInput,
-    overflow: Option<&OverflowView>,
+    overflow: Option<&ProviderView>,
     sizing: RootSizing,
 ) {
     fit.boat_connected = overflow.map(|view| view.account.is_some());

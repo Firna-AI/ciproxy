@@ -1,5 +1,7 @@
 //! Exclusive workspace sessions for recoverable external sandbox operations.
 
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use unimock::unimock;
 use uuid::Uuid;
@@ -8,8 +10,10 @@ use crate::error::Result;
 use crate::overflow::account::AccountState;
 use crate::overflow::admission::{DispatchFacts, PreparedDispatch, ReservationOutcome};
 use crate::overflow::connection::ConnectionGrant;
+use crate::overflow::provider::OverflowProvider;
 use crate::overflow::record::{EncryptedLaunch, StartRecord};
 use crate::overflow_provider_accounts::OverflowProviderAccount;
+use crate::overflow_provider_settings::OverflowProviderSettings;
 use crate::secrets::{EncryptedOverflowKey, TokenHash};
 
 /// A retained key and its credential-free account observations.
@@ -23,6 +27,13 @@ pub struct AccountRecord {
     pub state: AccountState,
 }
 
+impl AccountRecord {
+    /// Whether this is the key version saved for the delivery's provider.
+    pub fn owns_start(&self, record: &StartRecord) -> bool {
+        self.account.id == record.key_id && self.account.provider == record.provider
+    }
+}
+
 /// One coherent workspace view for spend and execution recovery.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OverflowSnapshot {
@@ -32,8 +43,17 @@ pub struct OverflowSnapshot {
     pub starts: Vec<StartRecord>,
     /// Whether workspace settings permit new starts.
     pub enabled: bool,
-    /// Boat's positive monthly USD limit in millionths of a dollar.
-    pub spend_limit_usd_micros: Option<i64>,
+    /// Saved spend limits and offered marks by provider, including disconnected providers.
+    pub provider_settings: HashMap<OverflowProvider, OverflowProviderSettings>,
+}
+
+impl OverflowSnapshot {
+    /// Read the current key version of one provider, including a rejected key.
+    pub fn active_account(&self, provider: OverflowProvider) -> Option<&AccountRecord> {
+        self.accounts.iter().find(|record| {
+            record.account.provider == provider && record.account.retired_at.is_none()
+        })
+    }
 }
 
 /// Durable persistence used only by the hosted overflow service.
@@ -76,8 +96,8 @@ pub trait OverflowSession: Send {
         account: &AccountRecord,
         spend_limit_usd_micros: i64,
     ) -> Result<bool>;
-    /// Retire active keys and preserve keys referenced by unfinished deliveries.
-    fn disconnect(&mut self, at: DateTime<Utc>) -> Result<()>;
+    /// Retire this provider's active key and preserve keys for unfinished deliveries.
+    fn disconnect(&mut self, provider: OverflowProvider, at: DateTime<Utc>) -> Result<()>;
     /// Persist refreshed capacity or a refusal for one retained key.
     fn save_account(&mut self, account: &AccountRecord) -> Result<()>;
     /// Commit a definitive refusal and its account restriction atomically.

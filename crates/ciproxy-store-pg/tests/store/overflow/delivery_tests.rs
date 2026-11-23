@@ -4,6 +4,7 @@ use std::thread;
 
 use chrono::Duration;
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use ciproxy_store_interface::secrets::TokenHash;
 use diesel::prelude::*;
@@ -54,7 +55,9 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
                 .complete_connection(grant, &replacement, 300_000_000)
                 .unwrap()
         );
-        session.disconnect(at() + Duration::seconds(2)).unwrap();
+        session
+            .disconnect(OverflowProvider::Boat, at() + Duration::seconds(2))
+            .unwrap();
         session.collect(at() - Duration::days(90)).unwrap();
         assert_eq!(
             session.snapshot().unwrap().accounts,
@@ -225,7 +228,7 @@ fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authorit
     );
     diesel::sql_query("UPDATE organization_activation SET admitted=TRUE,billing_hold=FALSE WHERE organization_id=$1")
         .bind::<sql_types::Uuid,_>(record.organization_id).execute(&mut database.connection).unwrap();
-    session.disconnect(at()).unwrap();
+    session.disconnect(OverflowProvider::Boat, at()).unwrap();
     assert_eq!(
         reserve(
             &mut *session,

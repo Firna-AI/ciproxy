@@ -19,7 +19,7 @@ use crate::state::{ApiState, query};
 use crate::wire::job_overflow::JobOverflow;
 use crate::wire::jobs::{JobVisibility, JobsLivePage, StartingRunner};
 
-use super::{billing_views, job_fit, job_views, page_context};
+use super::{billing_views, job_fit, job_views, overflow_views, page_context};
 
 pub(super) async fn page(
     state: &ApiState,
@@ -125,7 +125,7 @@ pub(super) async fn page(
         .collect();
     let sizing = pages.as_ref().and_then(|pages| pages.boat_root_sizing);
     let overflow_view = match pages.and_then(|pages| pages.overflow.clone()) {
-        Some(service) => service.view(workspace).await.ok(),
+        Some(service) => overflow_views::current_boat(service.as_ref(), workspace).await,
         None => None,
     };
     let waiting_labels = job_fit::labels(job_fit::FitInput {

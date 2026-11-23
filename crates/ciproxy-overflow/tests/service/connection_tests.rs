@@ -6,6 +6,7 @@ use ciproxy_overflow::api::Overflow;
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::store::Store;
 use sandbox_interface::SandboxAccountCapacityMock;
 use unimock::{MockFn, Unimock, matching};
@@ -50,6 +51,7 @@ async fn revoked_connection(reinstall: bool) {
         .service
         .connect(
             id(1),
+            OverflowProvider::Boat,
             id(8),
             Secret::new("synthetic-pending-key"),
             "personal".to_owned(),
@@ -89,6 +91,7 @@ async fn revoked_connection(reinstall: bool) {
         .service
         .connect(
             id(1),
+            OverflowProvider::Boat,
             id(8),
             Secret::new("synthetic-no-app-key"),
             "personal".to_owned(),

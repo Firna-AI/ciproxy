@@ -2,6 +2,7 @@
 
 use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 
 use super::authority_support::disable;
 use super::fixtures::{at, id, request};
@@ -24,12 +25,17 @@ pub(super) enum Entry {
 
 pub(super) async fn withdraw(harness: &Harness, withdrawal: Withdrawal) {
     match withdrawal {
-        Withdrawal::Disconnect => harness.service.disconnect(id(1)).await.unwrap(),
+        Withdrawal::Disconnect => harness
+            .service
+            .disconnect(id(1), OverflowProvider::Boat)
+            .await
+            .unwrap(),
         Withdrawal::Replacement => {
             harness
                 .service
                 .connect(
                     id(1),
+                    OverflowProvider::Boat,
                     id(44),
                     Secret::new("replacement-key"),
                     "personal".to_owned(),

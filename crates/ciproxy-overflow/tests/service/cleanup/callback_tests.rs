@@ -8,6 +8,7 @@ use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::provider::{GuestLauncherMock, ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{
@@ -146,8 +147,9 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
         view.starts[0].reported_at,
         Some(at() + Duration::seconds(90))
     );
-    assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
-    assert!(view.spend.complete());
+    let boat = view.provider(OverflowProvider::Boat).unwrap();
+    assert_eq!(boat.spend.confirmed_usd, Decimal::new(318, 4));
+    assert!(boat.spend.complete());
     let mut next = request();
     next.delivery_id = id(21);
     next.runner_id = id(22);

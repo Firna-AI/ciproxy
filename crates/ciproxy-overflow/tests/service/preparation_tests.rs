@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
 use ciproxy_overflow::error::Error;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 
@@ -46,7 +47,7 @@ async fn key_preparation_failures_retry_the_same_delivery_once() {
         assert_eq!(provider.counts.lock().unwrap().recoveries, 0);
         assert_eq!(provider.counts.lock().unwrap().launches, 1);
         assert_eq!(harness.snapshot().starts.len(), 1);
-        let view = harness.service.view(id(1)).await.unwrap();
+        let view = harness.boat_view().await;
         assert_eq!(view.spend.counted_usd().unwrap(), Decimal::new(462, 3));
     }
 }
@@ -61,7 +62,11 @@ async fn disconnect_cancels_unsent_without_keys_or_provider_access() {
             harness.service.start(id(1), request()).await,
             Err(Error::KmsHttp { status: 503 })
         ));
-        harness.service.disconnect(id(1)).await.unwrap();
+        harness
+            .service
+            .disconnect(id(1), OverflowProvider::Boat)
+            .await
+            .unwrap();
         let opens = harness.state.lock().unwrap().key_opens;
         assert!(matches!(
             harness.service.resume(id(1), id(11)).await.unwrap(),
@@ -88,7 +93,7 @@ async fn disconnect_cancels_unsent_without_keys_or_provider_access() {
             harness.service.report_end(token, id(12)).await,
             Err(Error::InvalidToken)
         ));
-        let view = harness.service.view(id(1)).await.unwrap();
+        let view = harness.boat_view().await;
         assert_eq!(view.spend.counted_usd().unwrap(), Decimal::ZERO);
         assert_eq!(harness.state.lock().unwrap().key_opens, opens);
         let counts = provider.counts.lock().unwrap();

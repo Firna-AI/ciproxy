@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
-use ciproxy_overflow::view::OverflowView;
+use ciproxy_overflow::view::ProviderView;
 use ciproxy_store_interface::job_views::DashboardJob;
 use uuid::Uuid;
 
@@ -11,10 +11,10 @@ use crate::pages::PageServices;
 use crate::state::{ApiState, query};
 use crate::wire::settings::{LabelFit, LabelInput, LabelView};
 
-use super::label_boat;
+use super::{label_boat, overflow_views};
 
 pub(super) struct Facts {
-    overflow: Option<OverflowView>,
+    overflow: Option<ProviderView>,
     sizing: RootSizing,
     jobs: Vec<DashboardJob>,
     at: DateTime<Utc>,
@@ -30,7 +30,7 @@ impl Facts {
             .and_then(|pages| pages.overflow.as_ref())
             .or(state.overflow.as_ref());
         let overflow = match overflow {
-            Some(service) => service.view(workspace).await.ok(),
+            Some(service) => overflow_views::current_boat(service.as_ref(), workspace).await,
             None => None,
         };
         let sizing = pages

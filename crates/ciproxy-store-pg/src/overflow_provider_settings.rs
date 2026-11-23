@@ -1,5 +1,7 @@
 //! Queries for durable limits and the first offer of each overflow provider.
 
+use std::collections::HashMap;
+
 use ciproxy_schema::overflow_provider_settings::overflow_provider_settings;
 use ciproxy_store_interface::error::{Error, Result};
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
@@ -80,6 +82,32 @@ pub(crate) fn load(
                 offered: position.is_some(),
             },
         ))
+}
+
+/// Read all saved provider settings inside the caller's workspace snapshot.
+pub(crate) fn load_all(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+) -> QueryResult<HashMap<OverflowProvider, OverflowProviderSettings>> {
+    Ok(overflow_provider_settings::table
+        .filter(overflow_provider_settings::workspace_id.eq(workspace_id))
+        .select((
+            overflow_provider_settings::provider,
+            overflow_provider_settings::spend_limit_usd_micros,
+            overflow_provider_settings::offered_position,
+        ))
+        .load::<(DbOverflowProvider, Option<i64>, Option<i32>)>(connection)?
+        .into_iter()
+        .map(|(provider, spend_limit_usd_micros, position)| {
+            (
+                provider.0,
+                OverflowProviderSettings {
+                    spend_limit_usd_micros,
+                    offered: position.is_some(),
+                },
+            )
+        })
+        .collect())
 }
 
 /// Read provider identities in the order in which the workspace first offered them.

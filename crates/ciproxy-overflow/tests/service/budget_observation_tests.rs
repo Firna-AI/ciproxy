@@ -5,6 +5,7 @@ use ciproxy_overflow::api::Overflow;
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::provider::{ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, RuntimeTotal, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::SandboxLifecycleMock;
@@ -78,21 +79,22 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
         let now = at() + Duration::hours(hours);
         *harness.now.lock().unwrap() = now;
         harness.set_checked(now);
-        let view = harness.service.view(id(1)).await.unwrap();
+        let workspace = harness.service.view(id(1)).await.unwrap();
+        let view = workspace.provider(OverflowProvider::Boat).unwrap();
         assert_eq!(view.spend.confirmed_usd, Decimal::new(504, 3));
         assert_eq!(view.spend.pending_usd, Decimal::new(3, 2));
         assert_eq!(view.scaler_account(now).unwrap().spend.spent, 534_000);
         assert_eq!(view.spend.settled_bound_usd, Decimal::ZERO);
         assert_eq!(
-            view.starts[0].runtime_total.as_ref().unwrap().until,
+            workspace.starts[0].runtime_total.as_ref().unwrap().until,
             at() + Duration::hours(7)
         );
         assert_eq!(
-            view.starts[0].running_observed_at,
+            workspace.starts[0].running_observed_at,
             Some(at() + Duration::hours(7))
         );
         assert_eq!(
-            view.starts[0].billing.unwrap().ends_at(),
+            workspace.starts[0].billing.unwrap().ends_at(),
             at() + Duration::seconds(90)
         );
         assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
@@ -108,14 +110,15 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
     let now = at() + Duration::hours(14);
     *harness.now.lock().unwrap() = now;
     harness.set_checked(now);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let workspace = harness.service.view(id(1)).await.unwrap();
+    let view = workspace.provider(OverflowProvider::Boat).unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::new(504, 3));
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
     assert_eq!(view.spend.settled_bound_usd, Decimal::new(3, 2));
     assert_eq!(view.scaler_account(now).unwrap().spend.spent, 534_000);
-    assert_eq!(view.starts[0].start_usd, None);
+    assert_eq!(workspace.starts[0].start_usd, None);
     assert_eq!(
-        view.starts[0].billing.unwrap().ends_at(),
+        workspace.starts[0].billing.unwrap().ends_at(),
         at() + Duration::hours(7)
     );
 
@@ -135,7 +138,11 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
         });
         retained.seed(ended);
         let mut replacement = retained.snapshot().accounts[0].clone();
-        retained.database.session().disconnect(now).unwrap();
+        retained
+            .database
+            .session()
+            .disconnect(OverflowProvider::Boat, now)
+            .unwrap();
         assert_eq!(
             retained
                 .database
@@ -148,7 +155,7 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
         replacement.account.connected_at = now;
         retained.connect_account(&replacement);
     }
-    let view = retained.service.view(id(1)).await.unwrap();
+    let view = retained.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::new(18, 4));
     assert_eq!(view.spend.settled_bound_usd, Decimal::new(4602, 4));
     assert_eq!(view.scaler_account(now).unwrap().spend.spent, 462_000);

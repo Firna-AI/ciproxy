@@ -5,6 +5,7 @@ use ciproxy_overflow::api::{Overflow, Retirement, RunnerAuthorityMock, StartOutc
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::maintenance::LaunchState;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use unimock::{MockFn, matching};
 
@@ -115,7 +116,11 @@ async fn retired_launching_delivery_keeps_recovery_authority_when_inspection_is_
     *provider.launched.lock().unwrap() = None;
     let harness = Harness::new(provider.backend, (), Runtime::Read);
     harness.seed(record(StartPhase::Launching));
-    harness.service.disconnect(id(1)).await.unwrap();
+    harness
+        .service
+        .disconnect(id(1), OverflowProvider::Boat)
+        .await
+        .unwrap();
     let result = harness.service.resume(id(1), id(11)).await.unwrap();
     assert!(matches!(result, StartOutcome::Pending(_)));
     assert!(matches!(
@@ -154,7 +159,11 @@ async fn retired_ambiguous_create_stays_recover_only_until_its_identity_is_found
     let mut creating = record(StartPhase::Creating);
     creating.sandbox = None;
     harness.seed(creating);
-    harness.service.disconnect(id(1)).await.unwrap();
+    harness
+        .service
+        .disconnect(id(1), OverflowProvider::Boat)
+        .await
+        .unwrap();
     for entry in [Entry::Resume, Entry::Duplicate, Entry::Cleanup] {
         reconcile(&harness, entry).await;
         assert_eq!(harness.start(id(11)).phase, StartPhase::Creating);

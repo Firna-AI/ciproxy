@@ -23,10 +23,10 @@ use super::OverflowService;
 
 #[async_trait]
 impl Overflow for OverflowService {
-    async fn wallets(&self, key: Secret) -> Result<KeyAccounts> {
+    async fn check_key(&self, provider: OverflowProvider, key: Secret) -> Result<KeyAccounts> {
         self.dependencies
             .providers
-            .get(OverflowProvider::Boat)?
+            .get(provider)?
             .factory
             .for_key_check(&key)?
             .check_key()
@@ -36,9 +36,10 @@ impl Overflow for OverflowService {
     async fn connect(
         &self,
         workspace_id: Uuid,
+        provider: OverflowProvider,
         key_id: Uuid,
         key: Secret,
-        wallet: String,
+        billing_account: String,
         limit: i64,
     ) -> Result<OverflowProviderAccount> {
         if limit <= 0 {
@@ -50,13 +51,12 @@ impl Overflow for OverflowService {
             .call(move |session| session.begin_connection(key_id))
             .await?
             .ok_or(Error::ConnectionNotPermitted)?;
-        let provider = OverflowProvider::Boat;
         let capabilities = self
             .dependencies
             .providers
             .get(provider)?
             .factory
-            .capabilities(&key, &wallet)?;
+            .capabilities(&key, &billing_account)?;
         let facts = capabilities.account.account().await?;
         let sizes = catalog::offers(capabilities.capacity.account_capacity().await.internal()?)?;
         let now = self.dependencies.clock.now();
@@ -67,7 +67,7 @@ impl Overflow for OverflowService {
                 KeyContext {
                     workspace_id,
                     id: key_id,
-                    purpose: SecretPurpose::BoatKey,
+                    purpose: SecretPurpose::provider_key(provider),
                 },
                 SecretBytes::new(key.expose_secret().as_bytes().to_vec()),
             )
@@ -100,17 +100,19 @@ impl Overflow for OverflowService {
         if !connected {
             return Err(Error::ConnectionNotPermitted);
         }
-        self.cancel_withdrawn_unsent(&session).await?;
+        self.cancel_withdrawn_unsent(&session, provider).await?;
         self.collect(&session).await?;
         Ok(metadata)
     }
 
-    async fn disconnect(&self, workspace_id: Uuid) -> Result<()> {
+    async fn disconnect(&self, workspace_id: Uuid, provider: OverflowProvider) -> Result<()> {
         let session =
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
         let now = self.dependencies.clock.now();
-        session.call(move |session| session.disconnect(now)).await?;
-        self.cancel_withdrawn_unsent(&session).await?;
+        session
+            .call(move |session| session.disconnect(provider, now))
+            .await?;
+        self.cancel_withdrawn_unsent(&session, provider).await?;
         self.collect(&session).await
     }
 
@@ -147,30 +149,26 @@ impl OverflowService {
     pub(super) async fn capabilities(
         &self,
         workspace_id: Uuid,
+        provider: OverflowProvider,
         account: &AccountRecord,
     ) -> Result<Capabilities> {
         if account.account.retired_at.is_some() || account.account.rejected_at.is_some() {
             return Err(Error::RejectedKey);
         }
+        let factory = &self.dependencies.providers.get(provider)?.factory;
         let key = self.account_key(workspace_id, account).await?;
-        self.dependencies
-            .providers
-            .get(account.account.provider)?
-            .factory
-            .capabilities(&key, &account.state.wallet)
+        factory.capabilities(&key, &account.state.wallet)
     }
 
     pub(super) async fn maintenance(
         &self,
         workspace_id: Uuid,
+        provider: OverflowProvider,
         account: &AccountRecord,
     ) -> Result<MaintenanceCapabilities> {
+        let factory = &self.dependencies.providers.get(provider)?.factory;
         let key = self.account_key(workspace_id, account).await?;
-        self.dependencies
-            .providers
-            .get(account.account.provider)?
-            .factory
-            .maintenance(&key, &account.state.wallet)
+        factory.maintenance(&key, &account.state.wallet)
     }
 
     async fn account_key(&self, workspace_id: Uuid, account: &AccountRecord) -> Result<Secret> {
@@ -181,7 +179,7 @@ impl OverflowService {
                 KeyContext {
                     workspace_id,
                     id: account.account.id,
-                    purpose: SecretPurpose::BoatKey,
+                    purpose: SecretPurpose::provider_key(account.account.provider),
                 },
                 account.key.as_bytes().to_vec(),
             )

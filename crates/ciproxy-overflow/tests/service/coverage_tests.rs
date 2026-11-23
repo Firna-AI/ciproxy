@@ -68,7 +68,7 @@ async fn missing_usage(missing_total: bool) {
         harness.set_checked(now);
         harness.seed(running_observation());
     }
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert!(!view.spend.complete(), "missing total: {missing_total}");
     let expected = if missing_total {
         Decimal::new(318, 4)
@@ -179,7 +179,7 @@ async fn failed_retained_key_cost_read_keeps_replacement_metadata_and_saved_cost
     replacement.account.connected_at = at() + Duration::minutes(3);
     replacement.state.checked_at = Some(now);
     harness.connect_account(&replacement);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.account.unwrap().id, id(44));
     assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert_eq!(view.spend.unmeasured_runtime, [id(11)]);

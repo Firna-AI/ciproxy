@@ -1,7 +1,9 @@
 //! Reconciliation reads saved Boat supply and dispatches independent remote work.
 
-use ciproxy_overflow::view::OverflowView;
+use ciproxy_overflow::error::Error;
+use ciproxy_overflow::view::{OverflowView, RefreshStatus};
 use ciproxy_scaler::snapshot::Snapshot;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use uuid::Uuid;
@@ -23,11 +25,13 @@ impl MachineRuntime {
             return;
         };
         let workspace = input.workspace_id;
-        if let Ok(view) = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now()) {
+        if let Ok(view) = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())
+            && let Some(boat) = view.provider(OverflowProvider::Boat)
+        {
             match if refresh {
-                view.retained_scaler_account()
+                boat.retained_scaler_account()
             } else {
-                view.scaler_account(chrono::DateTime::UNIX_EPOCH)
+                boat.scaler_account(chrono::DateTime::UNIX_EPOCH)
             } {
                 Ok(facts) => snapshot
                     .providers
@@ -49,7 +53,14 @@ impl MachineRuntime {
                 {
                     let boat = runtime.boat_operation(workspace).await;
                     let _boat = boat.lock().await;
-                    overflow.view(workspace).await.internal()?;
+                    overflow
+                        .view(workspace)
+                        .await
+                        .internal()?
+                        .provider(OverflowProvider::Boat)
+                        .filter(|boat| boat.refresh == RefreshStatus::Current)
+                        .ok_or(Error::ProviderUnavailable)
+                        .internal()?;
                 }
                 let _operation = runtime.operation.lock().await;
                 runtime.reconcile_workspace_saved(workspace).await

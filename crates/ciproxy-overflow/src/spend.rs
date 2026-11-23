@@ -1,6 +1,7 @@
 //! Calendar-month costs from measured runtime and the exact pinned hourly price.
 
 use chrono::{DateTime, Datelike, Months, Utc};
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase, StartRecord};
 use rust_decimal::Decimal;
 
@@ -25,7 +26,11 @@ pub(crate) fn next_month(at: DateTime<Utc>) -> Result<DateTime<Utc>> {
         .ok_or(Error::InvalidProviderData)
 }
 
-pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spend> {
+pub(crate) fn current<'a>(
+    provider: OverflowProvider,
+    starts: impl IntoIterator<Item = &'a StartRecord>,
+    now: DateTime<Utc>,
+) -> Result<Spend> {
     let month_at = month_start(now)?;
     let month = month_at.date_naive();
     let mut spend = Spend {
@@ -36,11 +41,12 @@ pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spen
         unknown_start_charges: Vec::new(),
         unmeasured_runtime: Vec::new(),
     };
-    for start in starts.iter().filter(|start| {
-        !matches!(
-            start.phase,
-            StartPhase::Unsent | StartPhase::Refused | StartPhase::CancelledUnsent
-        )
+    for start in starts.into_iter().filter(|start| {
+        start.provider == provider
+            && !matches!(
+                start.phase,
+                StartPhase::Unsent | StartPhase::Refused | StartPhase::CancelledUnsent
+            )
     }) {
         let fee_in_month = month_start(start.starts_at)?.date_naive() == month;
         let (runtime, unallocated) = budget::runtime_evidence(start, month_at)?;

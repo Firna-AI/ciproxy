@@ -1,6 +1,7 @@
-//! Narrow workspace-bound encryption for Boat keys and runner launch input.
+//! Narrow workspace-bound encryption for provider keys and runner launch input.
 
 use async_trait::async_trait;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use unimock::unimock;
 use uuid::Uuid;
 
@@ -10,10 +11,18 @@ use crate::secrets::SecretBytes;
 /// The kind of sealed secret, included in KMS authenticated data.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SecretPurpose {
-    /// One account API key version.
+    /// One Boat API key version.
     BoatKey,
     /// One runner registration and callback credential.
     Launch,
+}
+
+impl SecretPurpose {
+    pub(crate) fn provider_key(provider: OverflowProvider) -> Self {
+        match provider {
+            OverflowProvider::Boat => Self::BoatKey,
+        }
+    }
 }
 
 /// Immutable authority authenticated with every encrypted secret.

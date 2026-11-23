@@ -30,7 +30,11 @@ pub(crate) async fn wallets(
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    let wallets = overflow_views::result(service(&state)?.wallets(body.api_key).await)?;
+    let wallets = overflow_views::result(
+        service(&state)?
+            .check_key(OverflowProvider::Boat, body.api_key)
+            .await,
+    )?;
     Ok(Json(overflow_views::wallets(wallets)))
 }
 
@@ -75,6 +79,7 @@ pub(crate) async fn connect(
     let result = service(&state)?
         .connect(
             workspace,
+            OverflowProvider::Boat,
             state.runtime.identifier(),
             body.api_key,
             body.wallet,
@@ -95,7 +100,11 @@ pub(crate) async fn disconnect(
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    overflow_views::result(service(&state)?.disconnect(workspace).await)?;
+    overflow_views::result(
+        service(&state)?
+            .disconnect(workspace, OverflowProvider::Boat)
+            .await,
+    )?;
     Ok(Json(Success { ok: true }))
 }
 

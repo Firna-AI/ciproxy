@@ -90,14 +90,7 @@ async fn unsent_deliveries_wait_for_saved_refusals_and_dispatch_once_after_recov
         assert_eq!(provider.counts.lock().unwrap().creates, 1);
         assert_eq!(provider.counts.lock().unwrap().recoveries, 0);
         assert_eq!(
-            harness
-                .service
-                .view(id(1))
-                .await
-                .unwrap()
-                .spend
-                .counted_usd()
-                .unwrap(),
+            harness.boat_view().await.spend.counted_usd().unwrap(),
             Decimal::ZERO
         );
 

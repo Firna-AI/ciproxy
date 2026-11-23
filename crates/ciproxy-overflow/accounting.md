@@ -1,9 +1,9 @@
 # Overflow accounting
 
-Spend includes all ciproxy sandboxes across the workspace's organizations
-and retained key versions.
-It excludes other use of the Boat account.
-The service saves the highest published start fee before dispatch.
+The spend of a provider includes its ciproxy sandboxes across the workspace's
+organizations and key versions.
+It excludes other use of the provider account.
+For Boat, the service saves the highest published start fee before dispatch.
 The existing admission read selects the maximum
 `overagePrices.startBrackets[].dollars` from `GET /limits`.
 Missing or empty brackets fall back to `nextStartDollars`.
@@ -50,10 +50,10 @@ Later running evidence that contradicts a known lifetime prevents cleanup
 from treating that old deadline as proof that the sandbox ended.
 A later real cost replaces the estimate, including costs above its bound.
 
-New starts continue while the limit covers existing costs and the proposed
-start's bound in each UTC month its lifetime touches.
-Dispatch locks the current saved settings and compares those exact monthly
-amounts before it fixes the provider parameters.
+New starts continue while the provider's limit covers its existing costs
+and the proposed start's bound in each UTC month its lifetime touches.
+Dispatch locks current workspace settings and compares those exact monthly
+amounts with that provider's saved limit before it fixes the parameters.
 Lowering the limit during provider or encryption work therefore blocks that
 dispatch when the new limit cannot cover it.
 The pending demand retains its identity and sealed input while it waits.

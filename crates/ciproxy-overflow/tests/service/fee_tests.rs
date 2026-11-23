@@ -3,6 +3,7 @@
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 use serde_json::{Value, json};
@@ -63,7 +64,7 @@ async fn zero_quote_saves_the_highest_fee_through_zero_runtime_completion_and_ex
     assert_eq!(harness.start(id(11)).start_usd, None);
 
     *harness.now.lock().unwrap() = at() + Duration::seconds(1);
-    let pending = harness.service.view(id(1)).await.unwrap();
+    let pending = harness.boat_view().await;
     assert_eq!(pending.spend.confirmed_usd, Decimal::ZERO);
     assert_eq!(pending.spend.pending_usd, Decimal::new(502, 3));
     assert_eq!(pending.scaler_account(at()).unwrap().spend.spent, 502_000);
@@ -74,11 +75,12 @@ async fn zero_quote_saves_the_highest_fee_through_zero_runtime_completion_and_ex
         .report_end(Secret::new("callback-token-for-one-sandbox"), id(12))
         .await
         .unwrap();
-    let completed = harness.service.view(id(1)).await.unwrap();
-    assert_eq!(completed.starts[0].phase, StartPhase::Ended);
-    assert_eq!(completed.starts[0].runtime[0].usd, Decimal::ZERO);
-    assert!(completed.starts[0].runtime_complete);
-    assert_eq!(completed.starts[0].start_usd, None);
+    let workspace = harness.service.view(id(1)).await.unwrap();
+    let completed = workspace.provider(OverflowProvider::Boat).unwrap();
+    assert_eq!(workspace.starts[0].phase, StartPhase::Ended);
+    assert_eq!(workspace.starts[0].runtime[0].usd, Decimal::ZERO);
+    assert!(workspace.starts[0].runtime_complete);
+    assert_eq!(workspace.starts[0].start_usd, None);
     assert_eq!(completed.spend.confirmed_usd, Decimal::ZERO);
     assert_eq!(completed.spend.pending_usd, Decimal::new(7, 2));
     assert_eq!(completed.scaler_account(at()).unwrap().spend.spent, 70_000);
@@ -86,9 +88,10 @@ async fn zero_quote_saves_the_highest_fee_through_zero_runtime_completion_and_ex
     let after_expiry = at() + Duration::hours(7);
     *harness.now.lock().unwrap() = after_expiry;
     harness.set_checked(after_expiry);
-    let expired = harness.service.view(id(1)).await.unwrap();
+    let workspace = harness.service.view(id(1)).await.unwrap();
+    let expired = workspace.provider(OverflowProvider::Boat).unwrap();
     assert_eq!(
-        expired.starts[0].start_fee_bound_usd,
+        workspace.starts[0].start_fee_bound_usd,
         Some(Decimal::new(7, 2))
     );
     assert_eq!(expired.spend.confirmed_usd, Decimal::ZERO);

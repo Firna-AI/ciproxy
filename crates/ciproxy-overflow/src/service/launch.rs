@@ -71,9 +71,7 @@ impl OverflowService {
                     input.0,
                 )
                 .await?;
-            let Some(authority) = self
-                .launch_authority(session, workspace_id, record.delivery_id)
-                .await?
+            let Some(authority) = self.launch_authority(session, workspace_id, record).await?
             else {
                 return self
                     .reconcile_retired(session, workspace_id, maintenance, record.clone())
@@ -98,9 +96,7 @@ impl OverflowService {
                 self.confirm_write(session, maintenance, record, write)
                     .await?;
             }
-            let Some(authority) = self
-                .launch_authority(session, workspace_id, record.delivery_id)
-                .await?
+            let Some(authority) = self.launch_authority(session, workspace_id, record).await?
             else {
                 return self
                     .reconcile_retired(session, workspace_id, maintenance, record.clone())
@@ -110,9 +106,7 @@ impl OverflowService {
                 .launcher()
                 .prepare(sandbox.clone(), delivery)
                 .await?;
-            let Some(authority) = self
-                .launch_authority(session, workspace_id, record.delivery_id)
-                .await?
+            let Some(authority) = self.launch_authority(session, workspace_id, record).await?
             else {
                 return self
                     .reconcile_retired(session, workspace_id, maintenance, record.clone())
@@ -135,9 +129,7 @@ impl OverflowService {
                 .await?;
         }
         if record.phase == StartPhase::Launching {
-            let Some(authority) = self
-                .launch_authority(session, workspace_id, record.delivery_id)
-                .await?
+            let Some(authority) = self.launch_authority(session, workspace_id, record).await?
             else {
                 return self
                     .reconcile_retired(session, workspace_id, maintenance, record.clone())

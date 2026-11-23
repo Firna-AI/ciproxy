@@ -6,6 +6,7 @@ use chrono::{DateTime, Duration, Utc};
 use ciproxy_overflow::api::Overflow;
 use ciproxy_overflow::provider::{ProviderAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
 use unimock::{MockFn, Unimock, matching};
@@ -59,23 +60,24 @@ async fn expired_cross_month_total_retains_unallocated_cost_without_a_measured_i
         });
         harness.seed(start);
     }
-    let view = harness.service.view(id(1)).await.unwrap();
+    let workspace = harness.service.view(id(1)).await.unwrap();
+    let view = workspace.provider(OverflowProvider::Boat).unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::ZERO);
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
     assert_eq!(view.spend.settled_bound_usd, Decimal::from(7));
     assert_eq!(view.scaler_account(now).unwrap().spend.spent, 7_000_000);
     assert_eq!(
-        view.starts[0].runtime_total.as_ref().unwrap().usd,
+        workspace.starts[0].runtime_total.as_ref().unwrap().usd,
         Decimal::from(9)
     );
-    assert_eq!(view.starts[0].runtime.len(), 1);
+    assert_eq!(workspace.starts[0].runtime.len(), 1);
     assert_eq!(
-        view.starts[0].runtime[0].month,
+        workspace.starts[0].runtime[0].month,
         "2026-11-01".parse().unwrap()
     );
-    assert_eq!(view.starts[0].runtime[0].usd, Decimal::from(2));
+    assert_eq!(workspace.starts[0].runtime[0].usd, Decimal::from(2));
     assert_eq!(
-        view.starts[0].billing.unwrap().ends_at(),
+        workspace.starts[0].billing.unwrap().ends_at(),
         "2026-11-30T20:00:00Z".parse::<DateTime<Utc>>().unwrap()
     );
 }

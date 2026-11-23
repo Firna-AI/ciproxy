@@ -2,6 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_overflow::api::Overflow;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase, StartRecord};
 use rust_decimal::Decimal;
 use unimock::Unimock;
@@ -36,7 +37,7 @@ async fn unclear_six_dollar_start_counts_156_then_real_two_dollars_counts_152() 
     confirmed.start_usd = Some(Decimal::from(150));
     confirmed.runtime_complete = true;
     let harness = harness(vec![confirmed, ambiguous()]);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::from(150));
     assert_eq!(view.spend.pending_usd, Decimal::from(6));
     assert_eq!(view.spend.settled_bound_usd, Decimal::ZERO);
@@ -62,7 +63,7 @@ async fn unclear_six_dollar_start_counts_156_then_real_two_dollars_counts_152() 
     }
     *harness.now.lock().unwrap() = at() + Duration::hours(2);
     harness.set_checked(at() + Duration::hours(2));
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::from(152));
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
     assert_eq!(
@@ -86,7 +87,7 @@ async fn partial_costs_leave_only_the_remaining_bound_and_expiry_keeps_the_spend
     let harness = harness(vec![start]);
     *harness.now.lock().unwrap() = at() + Duration::hours(2);
     harness.set_checked(at() + Duration::hours(2));
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::from(2));
     assert_eq!(view.spend.pending_usd, Decimal::new(43, 1));
     assert_eq!(
@@ -97,7 +98,8 @@ async fn partial_costs_leave_only_the_remaining_bound_and_expiry_keeps_the_spend
     );
     *harness.now.lock().unwrap() = at() + Duration::hours(6);
     harness.set_checked(at() + Duration::hours(6));
-    let view = harness.service.view(id(1)).await.unwrap();
+    let workspace = harness.service.view(id(1)).await.unwrap();
+    let view = workspace.provider(OverflowProvider::Boat).unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::from(2));
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
     assert_eq!(view.spend.settled_bound_usd, Decimal::new(43, 1));
@@ -107,9 +109,9 @@ async fn partial_costs_leave_only_the_remaining_bound_and_expiry_keeps_the_spend
             .map_err(|_| "incomplete"),
         Ok(6_300_000)
     );
-    assert_eq!(view.starts[0].phase, StartPhase::Creating);
-    assert_eq!(view.starts[0].ends_at, None);
-    assert_eq!(view.starts[0].sandbox, None);
+    assert_eq!(workspace.starts[0].phase, StartPhase::Creating);
+    assert_eq!(workspace.starts[0].ends_at, None);
+    assert_eq!(workspace.starts[0].sandbox, None);
 }
 
 #[tokio::test]
@@ -118,7 +120,7 @@ async fn trial_bound_uses_two_hours_and_actual_cost_above_the_bound_still_counts
     trial.dispatch.as_mut().unwrap().lifetime_seconds = 7200;
     trial.start_fee_bound_usd = Some(Decimal::new(7, 2));
     let harness = harness(vec![trial]);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::ZERO);
     assert_eq!(view.spend.pending_usd, Decimal::new(207, 2));
     assert_eq!(
@@ -143,7 +145,7 @@ async fn trial_bound_uses_two_hours_and_actual_cost_above_the_bound_still_counts
     }
     *harness.now.lock().unwrap() = at() + Duration::hours(3);
     harness.set_checked(at() + Duration::hours(3));
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::new(32, 1));
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
     assert_eq!(
@@ -163,7 +165,7 @@ async fn ambiguous_expiry_splits_months_without_repeating_fees_or_ending_authori
     let december = "2026-12-01T00:00:00Z".parse().unwrap();
     *harness.now.lock().unwrap() = december;
     harness.set_checked(december);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::ZERO);
     assert_eq!(view.spend.pending_usd, Decimal::from(5));
     assert_eq!(
@@ -175,13 +177,14 @@ async fn ambiguous_expiry_splits_months_without_repeating_fees_or_ending_authori
     let expires = december + Duration::hours(5);
     *harness.now.lock().unwrap() = expires;
     harness.set_checked(expires);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
     assert_eq!(view.spend.settled_bound_usd, Decimal::from(5));
     let january = "2027-01-01T00:00:00Z".parse().unwrap();
     *harness.now.lock().unwrap() = january;
     harness.set_checked(january);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let workspace = harness.service.view(id(1)).await.unwrap();
+    let view = workspace.provider(OverflowProvider::Boat).unwrap();
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
     assert_eq!(view.spend.settled_bound_usd, Decimal::ZERO);
     assert_eq!(
@@ -190,6 +193,6 @@ async fn ambiguous_expiry_splits_months_without_repeating_fees_or_ending_authori
             .map_err(|_| "incomplete"),
         Ok(0)
     );
-    assert_eq!(view.starts[0].phase, StartPhase::Creating);
-    assert_eq!(view.starts[0].ends_at, None);
+    assert_eq!(workspace.starts[0].phase, StartPhase::Creating);
+    assert_eq!(workspace.starts[0].ends_at, None);
 }

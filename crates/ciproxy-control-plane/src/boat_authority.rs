@@ -14,6 +14,7 @@ use ciproxy_scaler::actions::Action;
 use ciproxy_scaler::decision::decide;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::runtime_results::{
@@ -114,10 +115,13 @@ impl RunnerAuthority for BoatRunnerAuthority {
         });
         if !takeout && !busy {
             let view = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())?;
+            let boat = view
+                .provider(OverflowProvider::Boat)
+                .ok_or(Error::ProviderUnavailable)?;
             let mut snapshot = build(&input, &runnable, self.clock.now(), self.root_sizing);
             snapshot.providers.push(boat_snapshot::account(
                 self.root_sizing,
-                view.retained_scaler_account()?,
+                boat.retained_scaler_account()?,
             ));
             let sandbox = snapshot.sandboxes.iter().find(|sandbox| {
                 sandbox

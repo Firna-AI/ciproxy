@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
-use ciproxy_overflow::api::OverflowConfig;
+use ciproxy_overflow::api::{Overflow, OverflowConfig};
 use ciproxy_overflow::boat::BoatFactory;
 use ciproxy_overflow::error::Result;
 use ciproxy_overflow::maintenance::MaintenanceCapabilities;
@@ -14,6 +14,7 @@ use ciproxy_overflow::provider::{
 use ciproxy_overflow::registry::{ImageSource, ProviderRegistry};
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
+use ciproxy_overflow::view::{ProviderView, RefreshStatus};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
@@ -76,6 +77,18 @@ pub(super) struct Harness {
 
 impl Harness {
     pub(super) fn new(backend: Capabilities, extra: impl unimock::Clause, kind: Runtime) -> Self {
+        Self::with_provider(Some(backend), extra, kind)
+    }
+
+    pub(super) fn without_provider(kind: Runtime) -> Self {
+        Self::with_provider(None, (), kind)
+    }
+
+    fn with_provider(
+        backend: Option<Capabilities>,
+        extra: impl unimock::Clause,
+        kind: Runtime,
+    ) -> Self {
         let database = Database::new();
         {
             let mut session = database.session();
@@ -93,6 +106,23 @@ impl Harness {
         let state = Arc::new(Mutex::new(Capture::default()));
         let now = Arc::new(Mutex::new(at()));
         let runtime = runtime::build(extra, state.clone(), now.clone(), kind);
+        let providers = ProviderRegistry::default();
+        let providers = match backend {
+            Some(backend) => providers.with_provider(
+                OverflowProvider::Boat,
+                Arc::new(Factory {
+                    backend,
+                    capture: state.clone(),
+                }),
+                ImageSource {
+                    reference: "shared-image-v7".to_owned(),
+                    root_sizing: RootSizing {
+                        image_root_bytes: 47_000_000_000,
+                    },
+                },
+            ),
+            None => providers,
+        };
         let service = OverflowService::new(
             OverflowConfig {
                 deployment: "ciproxy-main".to_owned(),
@@ -104,19 +134,7 @@ impl Harness {
                     capture: state.clone(),
                 }),
                 cipher: runtime.clone(),
-                providers: ProviderRegistry::default().with_provider(
-                    OverflowProvider::Boat,
-                    Arc::new(Factory {
-                        backend,
-                        capture: state.clone(),
-                    }),
-                    ImageSource {
-                        reference: "shared-image-v7".to_owned(),
-                        root_sizing: RootSizing {
-                            image_root_bytes: 47_000_000_000,
-                        },
-                    },
-                ),
+                providers,
                 runners: runtime.clone(),
                 clock: runtime.clone(),
                 tokens: runtime,
@@ -128,6 +146,13 @@ impl Harness {
             service,
             database,
         }
+    }
+
+    pub(super) async fn boat_view(&self) -> ProviderView {
+        let view = self.service.view(id(1)).await.unwrap();
+        let boat = view.provider(OverflowProvider::Boat).unwrap();
+        assert_eq!(boat.refresh, RefreshStatus::Current);
+        boat.clone()
     }
 
     pub(super) fn snapshot(&self) -> OverflowSnapshot {
@@ -196,7 +221,9 @@ impl Harness {
     }
 
     pub(super) fn connect_account(&self, account: &AccountRecord) {
-        let limit = self.snapshot().spend_limit_usd_micros.unwrap();
+        let limit = self.snapshot().provider_settings[&account.account.provider]
+            .spend_limit_usd_micros
+            .unwrap();
         let mut session = self.database.session();
         let grant = session
             .begin_connection(account.account.id)

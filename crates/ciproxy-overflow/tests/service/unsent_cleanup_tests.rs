@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use ciproxy_overflow::api::{Overflow, Retirement, RunnerAuthorityMock, StartOutcome};
 use ciproxy_overflow::error::Error;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 use unimock::{MockFn, matching};
@@ -77,6 +78,7 @@ async fn replacement_cancels_unsent_without_opening_the_old_key() {
             .service
             .connect(
                 id(1),
+                OverflowProvider::Boat,
                 id(44),
                 Secret::new("replacement-key"),
                 "personal".to_owned(),
@@ -100,7 +102,7 @@ async fn replacement_cancels_unsent_without_opening_the_old_key() {
             harness.service.resume(id(1), id(11)).await.unwrap(),
             StartOutcome::Ended(_)
         ));
-        let view = harness.service.view(id(1)).await.unwrap();
+        let view = harness.boat_view().await;
         assert_eq!(view.spend.counted_usd().unwrap(), Decimal::ZERO);
         assert_eq!(provider.counts.lock().unwrap().creates, 0);
         assert_eq!(provider.counts.lock().unwrap().recoveries, 0);

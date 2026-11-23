@@ -36,6 +36,7 @@ async fn rejected_key_is_never_encrypted_or_saved() {
             .service
             .connect(
                 id(1),
+                OverflowProvider::Boat,
                 id(8),
                 Secret::new("invalid-key"),
                 "personal".to_owned(),
@@ -65,6 +66,7 @@ async fn accepted_key_is_workspace_bound_ciphertext_and_requires_a_positive_limi
             .service
             .connect(
                 id(1),
+                OverflowProvider::Boat,
                 id(8),
                 Secret::new("new-key"),
                 "personal".to_owned(),
@@ -77,6 +79,7 @@ async fn accepted_key_is_workspace_bound_ciphertext_and_requires_a_positive_limi
         .service
         .connect(
             id(1),
+            OverflowProvider::Boat,
             id(8),
             Secret::new("new-key"),
             "personal".to_owned(),
@@ -89,7 +92,10 @@ async fn accepted_key_is_workspace_bound_ciphertext_and_requires_a_positive_limi
     assert_eq!(state.contexts[0].workspace_id, id(1));
     assert_eq!(state.contexts[0].id, id(8));
     assert_eq!(state.contexts[0].purpose, SecretPurpose::BoatKey);
-    assert_eq!(harness.snapshot().spend_limit_usd_micros, Some(20_000_000));
+    assert_eq!(
+        harness.snapshot().provider_settings[&OverflowProvider::Boat].spend_limit_usd_micros,
+        Some(20_000_000)
+    );
     assert_ne!(harness.snapshot().accounts[0].key.as_bytes(), b"new-key");
 }
 
@@ -109,13 +115,11 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
     )));
     let harness = Harness::new(backend, (), Runtime::Read);
     *harness.now.lock().unwrap() = at() + Duration::seconds(299);
-    assert_eq!(
-        harness.service.view(id(1)).await.unwrap().state.sizes.len(),
-        1
-    );
+    assert_eq!(harness.boat_view().await.state.sizes.len(), 1);
     *harness.now.lock().unwrap() = at() + Duration::seconds(300);
     let view = harness.service.view(id(1)).await.unwrap();
-    assert_eq!(view.state.sizes.len(), 4);
+    let boat = view.provider(OverflowProvider::Boat).unwrap();
+    assert_eq!(boat.state.sizes.len(), 4);
     let label_name = LabelName("ciproxy".to_owned());
     let target = RegistrationTarget {
         organization_id: OrganizationId("github-org-42".to_owned()),
@@ -155,7 +159,7 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
             id: provider,
             available: true,
             root_sizing,
-            facts: view.scaler_account(at()).unwrap(),
+            facts: boat.scaler_account(at()).unwrap(),
         }],
         sandboxes: Vec::new(),
         overflow_wait: std::time::Duration::from_secs(30),
@@ -202,14 +206,14 @@ async fn newly_rejected_saved_key_stops_starts_and_keeps_its_rejection_time() {
     let harness = Harness::new(backend, (), Runtime::Read);
     harness.seed(super::coverage_tests::running_observation());
     *harness.now.lock().unwrap() = at() + Duration::minutes(5);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(
         view.account.unwrap().rejected_at,
         Some(at() + Duration::minutes(5))
     );
     assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
     assert!(!harness.snapshot().starts[0].runtime_complete);
-    let again = harness.service.view(id(1)).await.unwrap();
+    let again = harness.boat_view().await;
     assert_eq!(
         again.account.unwrap().rejected_at,
         Some(at() + Duration::minutes(5))

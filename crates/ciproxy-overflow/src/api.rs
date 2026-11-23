@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::StartRunner;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartRecord;
 use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use sandbox_interface::SandboxStartRefusal;
@@ -23,7 +24,7 @@ pub struct OverflowConfig {
     pub exit_report_url: Secret,
 }
 
-/// One authorized Boat start chosen by the scaler.
+/// One authorized provider start chosen by the scaler.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StartRequest {
     /// Stable delivery identity. Retry this identity until its result is known.
@@ -36,7 +37,7 @@ pub struct StartRequest {
     pub label_id: Uuid,
     /// Store scale-set identity.
     pub scale_set_id: Uuid,
-    /// Boat action selected from a consistent scaler snapshot.
+    /// Provider action selected from a consistent scaler snapshot.
     pub action: StartRunner,
     /// One-use GitHub registration. The store receives only its ciphertext.
     pub registration: Secret,
@@ -102,21 +103,22 @@ pub trait RunnerAuthority: Send + Sync {
 /// All impure overflow entry points, consumed through dyn by the control plane.
 #[async_trait]
 pub trait Overflow: Send + Sync {
-    /// Verify a key and offer its named wallets without saving the key.
-    async fn wallets(&self, key: Secret) -> Result<KeyAccounts>;
+    /// Verify a key and list its accessible billing accounts without saving it.
+    async fn check_key(&self, provider: OverflowProvider, key: Secret) -> Result<KeyAccounts>;
     /// Grant a pending connection before verification and encryption.
     /// Return ConnectionNotPermitted after last-App removal invalidates that grant.
     async fn connect(
         &self,
         workspace_id: Uuid,
+        provider: OverflowProvider,
         key_id: Uuid,
         key: Secret,
-        wallet: String,
+        billing_account: String,
         spend_limit_usd_micros: i64,
     ) -> Result<OverflowProviderAccount>;
-    /// Stop new starts and retain keys until their last unfinished delivery ends.
-    async fn disconnect(&self, workspace_id: Uuid) -> Result<()>;
-    /// Refresh account sizes when five minutes old and return current scaler facts.
+    /// Stop new starts on one provider and retain its keys for unfinished deliveries.
+    async fn disconnect(&self, workspace_id: Uuid, provider: OverflowProvider) -> Result<()>;
+    /// Refresh provider catalogs when five minutes old and return workspace scaler facts.
     async fn view(&self, workspace_id: Uuid) -> Result<OverflowView>;
     /// Persist one scaler action and execute its sandbox delivery.
     async fn start(&self, workspace_id: Uuid, request: StartRequest) -> Result<StartOutcome>;

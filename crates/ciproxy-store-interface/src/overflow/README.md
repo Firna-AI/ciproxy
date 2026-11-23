@@ -11,15 +11,18 @@ OverflowStore adds exclusive workspace sessions for overflow execution.
 Pending connections use fresh store-issued grants before external work.
 Last-App removal revokes these grants, and activation consumes one live grant.
 Reusing a key-version identity cannot reuse an earlier grant.
+Activation saves the provider's key, limit, and first offer together.
+Disconnect retires the specified provider's active key.
+The workspace snapshot includes the saved settings of every provider.
 Pending acceptance retains immutable demand, sealed input, and its saved fee.
 It fixes no provider parameters and counts no provider cost bound.
 Prepared dispatch carries the selected provider parameters and exact monthly
 amounts together.
-Its transaction locks saved settings and returns a distinct spend-limit refusal.
+Its transaction compares the amounts with the selected provider's saved limit.
 Its startup query derives the organization and key from the saved delivery.
 It checks tenant ownership, active App state, enabled overflow, and the
 accepted non-retired key together.
-It also requires the saved scale set and the label's current Boat switch.
+It also requires the saved scale set and the provider in the label's order.
 All current label dimensions must match the original requested dimensions.
 Each delivery retains its image root bytes and required total root bytes.
 Authority compares catalog disk with those saved totals.

@@ -3,9 +3,12 @@
 use ciproxy_protocol::platform::Platform;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 
 /// The provider that owns an overflow account, sandbox, or cost.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize, strum::EnumIter,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum OverflowProvider {
     /// Boat, also the provider of records saved before provider identity.
@@ -14,6 +17,11 @@ pub enum OverflowProvider {
 }
 
 impl OverflowProvider {
+    /// Iterate through the providers this version supports.
+    pub fn all() -> impl Iterator<Item = Self> {
+        Self::iter()
+    }
+
     /// The stored text identifier.
     pub const fn as_str(self) -> &'static str {
         match self {

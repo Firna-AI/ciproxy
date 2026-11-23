@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
 use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_store_interface::overflow::admission::ReservationBudget;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 use sandbox_interface::SandboxLifecycleMock;
@@ -45,20 +46,16 @@ async fn limit_lowered_during_encryption_refuses_0502_dollars_under_010_dollars(
         Some((100_000, harness.database.store.clone()));
     let outcome = harness.service.start(id(1), request()).await.unwrap();
     let saved = harness.snapshot();
-    assert_eq!(saved.spend_limit_usd_micros, Some(100_000));
+    assert_eq!(
+        saved.provider_settings[&OverflowProvider::Boat].spend_limit_usd_micros,
+        Some(100_000)
+    );
     assert_eq!(saved.starts.len(), 1);
     assert_eq!(saved.starts[0].phase, StartPhase::Unsent);
     assert_eq!(saved.starts[0].dispatch, None);
     assert_eq!(creates.load(Ordering::SeqCst), 0);
     assert_eq!(
-        harness
-            .service
-            .view(id(1))
-            .await
-            .unwrap()
-            .spend
-            .counted_usd()
-            .unwrap(),
+        harness.boat_view().await.spend.counted_usd().unwrap(),
         Decimal::ZERO
     );
     assert_eq!(

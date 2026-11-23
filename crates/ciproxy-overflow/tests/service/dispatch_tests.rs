@@ -40,14 +40,7 @@ async fn resumed_fallback_selects_fitting_size_and_reserves_its_current_price() 
     assert_eq!(pending.start_usd, None);
     assert_eq!(pending.billing, None);
     assert_eq!(
-        harness
-            .service
-            .view(id(1))
-            .await
-            .unwrap()
-            .spend
-            .counted_usd()
-            .unwrap(),
+        harness.boat_view().await.spend.counted_usd().unwrap(),
         Decimal::ZERO
     );
     let input = harness.database.session().encrypted_launch(id(11)).unwrap();

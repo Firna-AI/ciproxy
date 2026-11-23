@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_gateway::types::MachineView;
-use ciproxy_overflow::view::OverflowView;
+use ciproxy_overflow::view::ProviderView;
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::jobs::JobState;
 use ciproxy_store_interface::labels::Label;
@@ -20,7 +20,7 @@ pub(super) struct FitInput<'a> {
     pub labels: Vec<Label>,
     pub machines: &'a [MachineView],
     pub capacity: &'a dyn MachineCapacity,
-    pub overflow: Option<&'a OverflowView>,
+    pub overflow: Option<&'a ProviderView>,
     pub sizing: Option<RootSizing>,
     pub admin: bool,
 }

@@ -1,6 +1,7 @@
 //! Additional owned registration identities for retention boundaries.
 
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
@@ -42,6 +43,7 @@ pub(super) async fn extra_intent(
             .service
             .connect(
                 workspace,
+                OverflowProvider::Boat,
                 Uuid::new_v4(),
                 Secret::new("fake-other-boat-key"),
                 "personal".to_owned(),

@@ -44,7 +44,7 @@ async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_the
     harness.seed(record(StartPhase::Running));
     harness.set_limit(31_800);
     *harness.now.lock().unwrap() = at() + Duration::seconds(90);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert!(view.spend.complete());
     let mut next = request();
@@ -114,7 +114,7 @@ async fn new_month_counts_runtime_across_keys_and_organizations_without_repeatin
         harness.seed(other);
         harness.set_limit(60_000);
     }
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.confirmed_usd, Decimal::new(524, 4));
     assert!(view.spend.complete());
     assert_eq!(view.scaler_account(december).unwrap().spend.spent, 52_400);
@@ -130,7 +130,7 @@ async fn accepted_start_with_no_fee_bound_stays_explicit_in_the_spend_view() {
     ended.start_fee_bound_usd = None;
     ended.runtime_complete = true;
     harness.seed(ended);
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.unknown_start_charges, [id(11)]);
     assert!(!view.spend.complete());
     assert!(matches!(

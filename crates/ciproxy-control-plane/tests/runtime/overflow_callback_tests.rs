@@ -83,6 +83,7 @@ async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
         .service
         .connect(
             other,
+            OverflowProvider::Boat,
             Uuid::new_v4(),
             Secret::new("other-fake-key"),
             "personal".to_owned(),

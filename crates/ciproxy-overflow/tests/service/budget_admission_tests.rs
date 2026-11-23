@@ -79,14 +79,7 @@ async fn start_reserves_its_own_bound_after_156_dollars_and_waits_when_room_runs
     assert_eq!(harness.start(id(41)).dispatch, None);
     assert_eq!(creates.load(Ordering::SeqCst), 1);
     assert_eq!(
-        harness
-            .service
-            .view(id(1))
-            .await
-            .unwrap()
-            .spend
-            .counted_usd()
-            .unwrap(),
+        harness.boat_view().await.spend.counted_usd().unwrap(),
         Decimal::new(156_462, 3)
     );
 }
@@ -170,14 +163,7 @@ async fn dispatch_near_midnight_checks_the_next_months_existing_bounds() {
     assert_eq!(harness.start(id(41)).dispatch, None);
     assert_eq!(creates.load(Ordering::SeqCst), 0);
     assert_eq!(
-        harness
-            .service
-            .view(id(1))
-            .await
-            .unwrap()
-            .spend
-            .counted_usd()
-            .unwrap(),
+        harness.boat_view().await.spend.counted_usd().unwrap(),
         Decimal::ONE
     );
     harness.set_limit(6_000_000);

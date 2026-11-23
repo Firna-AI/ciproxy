@@ -3,6 +3,7 @@
 use ciproxy_store_interface::overflow::admission::{
     PreparedDispatch, ReservationBudget, ReservationOutcome,
 };
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{ProviderParameters, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use sandbox_interface::BackendSandbox;
@@ -15,31 +16,28 @@ use crate::session::Session;
 use crate::spend;
 
 use super::OverflowService;
-use super::provider_preparation::{Preparation, selected_size};
+use super::provider_preparation::Preparation;
 
 pub(super) enum DispatchOutcome {
     Submitted(sandbox_interface::Result<Option<BackendSandbox>>),
     Stopped(Box<StartOutcome>),
 }
 
-/// Count the selected dispatch once alongside every accepted provider bound.
+/// Count the proposed dispatch once alongside the same provider's saved starts.
 pub(super) fn required_budget(
     starts: &[StartRecord],
     record: &StartRecord,
 ) -> Result<ReservationBudget> {
-    let mut starts: Vec<_> = starts
+    let starts = starts
         .iter()
         .filter(|start| start.delivery_id != record.delivery_id)
-        .cloned()
-        .collect();
-    let mut dispatched = record.clone();
-    dispatched.phase = StartPhase::Creating;
-    starts.push(dispatched);
+        .chain(std::iter::once(record));
     let next_month = spend::next_month(record.starts_at)?;
     Ok(ReservationBudget {
-        current_month_usd: spend::current(&starts, record.starts_at)?.counted_usd()?,
+        current_month_usd: spend::current(record.provider, starts.clone(), record.starts_at)?
+            .counted_usd()?,
         next_month_usd: if next_month < budget::expires_at(record)? {
-            Some(spend::current(&starts, next_month)?.counted_usd()?)
+            Some(spend::current(record.provider, starts, next_month)?.counted_usd()?)
         } else {
             None
         },
@@ -54,10 +52,7 @@ impl OverflowService {
         record: &mut StartRecord,
         account: &mut AccountRecord,
     ) -> Result<DispatchOutcome> {
-        let Some(authority) = self
-            .launch_authority(session, workspace_id, record.delivery_id)
-            .await?
-        else {
+        let Some(authority) = self.launch_authority(session, workspace_id, record).await? else {
             return Ok(DispatchOutcome::Stopped(Box::new(
                 self.cancel_unsent(session, record).await?,
             )));
@@ -92,7 +87,9 @@ impl OverflowService {
                 self.cancel_unsent(session, record).await?,
             )));
         };
-        let Some(size) = selected_size(&account.state, record, &facts)? else {
+        let snapshot = session.call(|session| session.snapshot()).await?;
+        let now = self.dependencies.clock.now();
+        let Some(size) = self.selected_size(&snapshot, account, record, &facts, now)? else {
             return Ok(DispatchOutcome::Stopped(Box::new(StartOutcome::Waiting(
                 WaitReason::SizeUnavailable,
             ))));
@@ -103,9 +100,8 @@ impl OverflowService {
         };
         let mut candidate = record.clone();
         candidate.dispatch = Some(parameters.clone());
-        candidate.starts_at = self.dependencies.clock.now();
+        candidate.starts_at = now;
         candidate.phase = StartPhase::Creating;
-        let snapshot = session.call(|session| session.snapshot()).await?;
         let dispatch = PreparedDispatch {
             parameters,
             starts_at: candidate.starts_at,
@@ -183,12 +179,16 @@ impl OverflowService {
         Ok(StartOutcome::Ended(record.clone()))
     }
 
-    pub(super) async fn cancel_withdrawn_unsent(&self, session: &Session) -> Result<()> {
+    pub(super) async fn cancel_withdrawn_unsent(
+        &self,
+        session: &Session,
+        provider: OverflowProvider,
+    ) -> Result<()> {
         let snapshot = session.call(|session| session.snapshot()).await?;
         for mut record in snapshot
             .starts
             .into_iter()
-            .filter(|start| start.phase == StartPhase::Unsent)
+            .filter(|start| start.provider == provider && start.phase == StartPhase::Unsent)
         {
             let delivery = record.delivery_id;
             if session

@@ -4,6 +4,7 @@ use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::provider::ProviderAccountApiMock;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use rust_decimal::Decimal;
 use sandbox_interface::SandboxLifecycleMock;
@@ -47,7 +48,7 @@ async fn unsent_create_ends_without_cost_or_authority_and_permits_a_new_delivery
             .await,
         Err(Error::InvalidToken)
     ));
-    let view = harness.service.view(id(1)).await.unwrap();
+    let view = harness.boat_view().await;
     assert_eq!(view.spend.counted_usd().unwrap(), Decimal::ZERO);
     assert!(view.spend.complete());
     assert_eq!(view.state, snapshot().accounts[0].state);
@@ -74,7 +75,11 @@ async fn unsent_create_ends_without_cost_or_authority_and_permits_a_new_delivery
             StartPhase::Refused,
         ]
     );
-    harness.service.disconnect(id(1)).await.unwrap();
+    harness
+        .service
+        .disconnect(id(1), OverflowProvider::Boat)
+        .await
+        .unwrap();
     assert_eq!(
         harness
             .database

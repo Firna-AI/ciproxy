@@ -11,6 +11,7 @@ use ciproxy_store_interface::overflow::admission::{
     DispatchFacts, PreparedDispatch, ReservationBudget, ReservationOutcome,
 };
 use ciproxy_store_interface::overflow::connection::ConnectionGrant;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{
     AccountRecord, OverflowSession, OverflowSnapshot, OverflowStore,
@@ -123,8 +124,8 @@ impl OverflowSession for RecordingSession {
         self.inner.complete_connection(grant, account, limit)
     }
 
-    fn disconnect(&mut self, at: DateTime<Utc>) -> Result<()> {
-        self.inner.disconnect(at)
+    fn disconnect(&mut self, provider: OverflowProvider, at: DateTime<Utc>) -> Result<()> {
+        self.inner.disconnect(provider, at)
     }
 
     fn save_account(&mut self, account: &AccountRecord) -> Result<()> {

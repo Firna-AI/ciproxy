@@ -2,6 +2,7 @@
 
 use axum::http::StatusCode;
 use ciproxy_store_interface::dashboard::records::Role;
+use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use serde_json::{Value, json};
 
 use crate::boat_facts::{identity, limits};
@@ -106,7 +107,10 @@ async fn connects_wallet(orgs: Value, expected_wallets: Value, selected_wallet: 
         saved.accounts[0].account.account_name,
         "Customer Organization"
     );
-    assert_eq!(saved.spend_limit_usd_micros, Some(200_000_000));
+    assert_eq!(
+        saved.provider_settings[&OverflowProvider::Boat].spend_limit_usd_micros,
+        Some(200_000_000)
+    );
     let displayed = json(
         fixture
             .request(Some(&admin), "GET", &fixture.path("/overflow"), None)

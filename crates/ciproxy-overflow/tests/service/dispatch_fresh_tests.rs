@@ -49,14 +49,7 @@ async fn upgrade_during_key_preparation_uses_paid_dispatch_budget_and_lifetime()
         Decimal::new(462, 3)
     );
     assert_eq!(
-        harness
-            .service
-            .view(id(1))
-            .await
-            .unwrap()
-            .spend
-            .counted_usd()
-            .unwrap(),
+        harness.boat_view().await.spend.counted_usd().unwrap(),
         Decimal::ZERO
     );
     harness.set_limit(462_000);

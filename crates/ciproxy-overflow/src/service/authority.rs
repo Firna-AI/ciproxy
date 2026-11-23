@@ -1,5 +1,6 @@
 //! Startup capabilities minted from the saved delivery's current durable authority.
 
+use ciproxy_store_interface::overflow::record::StartRecord;
 use sandbox_interface::{BackendCreateSandboxRequest, BackendSandbox, SandboxFiles};
 use uuid::Uuid;
 
@@ -39,19 +40,23 @@ impl OverflowService {
         &self,
         session: &Session,
         workspace_id: Uuid,
-        delivery_id: Uuid,
+        record: &StartRecord,
     ) -> Result<Option<LaunchAuthority>> {
+        let delivery_id = record.delivery_id;
         let Some(account) = session
             .call(move |session| session.startup_account(delivery_id))
             .await?
+            .filter(|account| account.owns_start(record))
         else {
             return Ok(None);
         };
-        let capabilities = self.capabilities(workspace_id, &account).await?;
-        if session
+        let capabilities = self
+            .capabilities(workspace_id, record.provider, &account)
+            .await?;
+        if !session
             .call(move |session| session.startup_account(delivery_id))
             .await?
-            .is_none()
+            .is_some_and(|account| account.owns_start(record))
         {
             return Ok(None);
         }

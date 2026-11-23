@@ -70,7 +70,8 @@
     `crates/ciproxy-api/src/handlers/job_fit.rs` enriches `current.fit`
     through the same `label_boat::enrich` call when root sizing is known.
     Its outer Boat choice and `nothing_fits` use `current.fit.boat`.
-  - `label_boat::enrich` reads `OverflowView::resource_catalog` directly.
+  - `label_boat::enrich` reads `ProviderView::resource_catalog` of the
+    Boat provider directly.
     It uses the scaler size policy and the trusted root sizing.
     Temporary refusals and missing spend bounds do not change physical
     fit. A selected size keeps its refusal flag. Unknown own-machine

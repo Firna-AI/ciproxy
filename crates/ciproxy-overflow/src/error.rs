@@ -8,8 +8,8 @@ pub enum Error {
     /// Another delivery owns the workspace session.
     #[error("[overflow/service] workspace is busy")]
     Busy,
-    /// Boat did not accept the submitted credential.
-    #[error("[overflow/account] Boat rejected the key")]
+    /// The provider did not accept the submitted credential.
+    #[error("[overflow/account] provider rejected the key")]
     RejectedKey,
     /// The required spend limit is not above zero.
     #[error("[overflow/account] spend limit must be above zero")]
@@ -17,9 +17,9 @@ pub enum Error {
     /// No App remains, or removal revoked this pending connection.
     #[error("[overflow/account] connection is not permitted")]
     ConnectionNotPermitted,
-    /// This executor accepts Boat actions only.
-    #[error("[overflow/service] action does not start a Boat runner")]
-    NotBoatAction,
+    /// The action does not name a supported overflow provider.
+    #[error("[overflow/service] action does not name an overflow provider")]
+    NotProviderAction,
     /// A replay changed an immutable delivery identity.
     #[error("[overflow/service] delivery identity conflicts")]
     DeliveryConflict,
