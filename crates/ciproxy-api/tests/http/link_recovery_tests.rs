@@ -6,22 +6,20 @@ use ciproxy_store_interface::dashboard::records::Role;
 
 use super::fixture_io::{CallbackOutcome, json};
 use super::link_support::{self, begin, claims, event, memberships, pending, returned, scenario};
-use super::setup_support::{browser, configure, finish};
+use super::setup_support::{browser, complete_setup, configure};
 
 #[tokio::test]
 async fn request_return_and_browserless_approval_wait_for_original_person_and_current_admin_access()
 {
     let (mut fixture, server, admin, added) = scenario().await;
     let state = begin(&fixture, &admin).await;
-    let start = fixture
-        .request(
-            None,
-            "GET",
-            &format!("/github/setup?setup_action=request&state={state}"),
-            None,
-        )
-        .await;
-    let response = finish(&fixture, start, CallbackOutcome::Accepted).await;
+    let response = complete_setup(
+        &fixture,
+        None,
+        &format!("?setup_action=request&state={state}"),
+        CallbackOutcome::Accepted,
+    )
+    .await;
     let waiting = browser(&response);
     let session = json(
         fixture

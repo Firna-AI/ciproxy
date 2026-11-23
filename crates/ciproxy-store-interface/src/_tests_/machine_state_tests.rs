@@ -3,6 +3,7 @@
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::{ImageMetadata, ImageReport};
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_protocol::reports::{DrainState, HardwareReport, MachineReport};
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::statistics::Statistics;
@@ -17,6 +18,7 @@ fn machine_state_requires_recent_contact_and_a_selected_reported_image() {
     let image = ImageMetadata {
         image_id: ImageId("verified-image".to_owned()),
         root_disk_bytes: 60_000_000_000,
+        free_job_bytes: None,
     };
     let selected = ImageReport {
         newest: Some(image.image_id.clone()),
@@ -81,7 +83,8 @@ fn machine_state_requires_recent_contact_and_a_selected_reported_image() {
                 processor: "x64".to_owned(),
                 hardware_threads: 4,
                 memory_bytes: 16_000_000_000,
-                kvm_available: false,
+                platform: Platform::LinuxX64,
+                virtualization: Virtualization::KvmUnavailable,
                 slots: 0,
                 warm_runners: 0,
                 draining: true,
@@ -96,10 +99,11 @@ fn machine_state_requires_recent_contact_and_a_selected_reported_image() {
                     hostname: "builder".to_owned(),
                     agent_version: "0.1.0".to_owned(),
                     hardware: HardwareReport {
+                        platform: Platform::LinuxX64,
                         processor: "x64".to_owned(),
                         threads: 4,
                         memory_bytes: 16_000_000_000,
-                        kvm: false,
+                        virtualization: Virtualization::KvmUnavailable,
                         disks: vec![],
                     },
                     capacity: Slots(0),

@@ -21,7 +21,7 @@ use crate::process::{CommandsMock, UnitState};
 use crate::state::MachineState;
 
 use super::configuration_delivery_tests::{hello, socket};
-use super::{Guests, LinuxGuests};
+use super::{GuestChannels, Guests};
 
 #[tokio::test(start_paused = true)]
 async fn reconnect_before_first_handoff_permanently_uses_github_even_after_configuration_retry() {
@@ -54,7 +54,7 @@ async fn reconnect_before_first_handoff_permanently_uses_github_even_after_confi
             })),
     );
     let (events, mut observed) = mpsc::channel(16);
-    let mut guests = LinuxGuests::new(
+    let mut guests = GuestChannels::new(
         Layout {
             data: PathBuf::from("/fixture"),
             firecracker: PathBuf::new(),

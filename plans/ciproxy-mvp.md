@@ -1,9 +1,10 @@
 # ciproxy MVP
 
-Status: Active. [PR #97](https://github.com/Firna-AI/ciproxy/pull/97) is
-open. The user approved this plan on 4 November 2026, in the words
-"plan is approved". The pull request that completes the work deletes this
-plan, as the `plans` skill says.
+Status: Active. [PR #97](https://github.com/Firna-AI/ciproxy/pull/97)
+merged the MVP into `main` on 21 November 2026. The plan stays for the
+remaining Boat checks and page claims. The user approved this plan on
+4 November 2026, in the words "plan is approved". The pull request that
+completes the work deletes this plan, as the `plans` skill says.
 
 This plan builds and launches the MVP of ciproxy: the agent, the control
 plane, the dashboard, billing, the site, and the deployment. A job names a
@@ -2888,7 +2889,10 @@ regressions. Keep the rare failed-callback drain case as a follow-up.
 - [ ] Pass the actual large job, callback, PostgreSQL and Docker steps,
       job-log locale check, overflow smoke and complete spend-limit smoke.
       Turn overflow off in both workspaces and delete every task sandbox.
-- [ ] Restore the main machine in Firna-AI with agent/cache 0.1.4.
+      23 November 2026: the overflow and complete spend-limit smokes passed
+      under acceptance F. Evidence: `callback-resume/resume-015-2026-11-22/`
+      in `.context/ciproxy-mvp/live-2026-11-20/boat-runner-start-2026-11-21/`.
+- [x] Restore the main machine in Firna-AI with agent/cache 0.1.4.
 - [x] Run the complete gate with DATABASE_URL set, commit and push.
 - [x] Review the diff against the primary branch with implementation-review
       and apply its bounded fix rounds.
@@ -3496,7 +3500,9 @@ Answers of 5 November 2026:
   dashboard, and the docs state the supported hosts: x64 Linux with
   systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
   AlmaLinux. Wider support is the follow-up item
-  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B.
+  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B. That item
+  closed on 23 November 2026: install checks the host tools and adds
+  CentOS Stream, openSUSE, and Arch Linux.
 - Item 96, A, 8 November 2026: the shared docs grid styles match the
   mockups. Rejected: B and C.
 - Item 97, G, 8 November 2026: render with comrak, as a follow-up item that
@@ -5631,7 +5637,7 @@ mockup.
 ### 93. The installer supports fewer hosts than the docs say
 
 **Answer, 8 November 2026:** C, and D as a follow-up item:
-`follow-ups/installer-more-linux-hosts.md`.
+`follow-ups/installer-more-linux-hosts.md`, which closed on 23 November 2026.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 1.

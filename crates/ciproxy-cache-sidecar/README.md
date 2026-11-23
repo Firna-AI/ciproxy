@@ -9,6 +9,10 @@ VM keeps the runner interface unchanged. The library depends only on
 
 ## Responsibilities
 
+The crate builds for Linux and for `aarch64-apple-darwin`. In a macOS job
+VM, the guest starts the proxy on `127.0.0.1:8230`, because macOS jobs run
+no containers.
+
 Serve GitHub cache v1 and v2 requests. Keep repositories and pull requests
 apart. Keep hosted code out of the public dependency tree. Let cache faults
 fall back to GitHub or produce an unavailable cache result.
@@ -295,5 +299,5 @@ executable smoke, SDK conformance, and authenticated GitHub commands.
 
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Cache protocol](../../docs/protocol/cache.md) defines cache requirements.
-- [Job isolation](../../docs/protocol/security.md#job-isolation) defines VM
-  network access.
+- [Job isolation](../../docs/protocol/security-isolation.md#job-isolation)
+  defines VM network access.

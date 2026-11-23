@@ -7,9 +7,9 @@ use ciproxy_protocol::runners::{RunnerReport, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, ImagesMock, StoreMock, VmsMock};
+use crate::boundaries::{ImageLease, ImageLeaseMock};
 use crate::error::Error;
 use crate::fixtures::{controller, hardware, metadata, report_dependencies_for, spec, vm};
-use crate::image_registry::{ImageLease, ImageLeaseMock};
 use crate::state::{MachineState, VmRecord};
 
 #[derive(Debug, Eq, PartialEq)]

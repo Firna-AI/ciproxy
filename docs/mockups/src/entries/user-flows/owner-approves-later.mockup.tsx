@@ -16,6 +16,12 @@ export const ownerApprovesLater = defineUseCase({
         "Cal chooses Add an organization and asks for the install on GitHub.",
     },
     {
+      screenPath: paths.termsStep,
+      title: "Continue with GitHub",
+      description:
+        "GitHub sends the request to the owners of mokly-labs and returns to the terms step, which shows the terms notice of sign-in. Continue with GitHub signs Cal in again.",
+    },
+    {
       screenPath: paths.addRequestWait,
       title: "Waiting for an owner",
       description:

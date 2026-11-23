@@ -1,7 +1,10 @@
 //! Measure preloaded Docker facts before the runner can accept its one job.
+//! A macOS image has no Docker, so its steps reach the proxy on loopback.
 
 use async_trait::async_trait;
 use tokio::process::Command;
+
+use crate::platform::Platform;
 
 #[derive(Clone, Default)]
 pub(crate) struct PreloadedDocker {
@@ -45,6 +48,19 @@ impl GuestSetup for LinuxGuestSetup {
         PreloadedDocker {
             proxy_url,
             data_bytes,
+        }
+    }
+}
+
+/// The macOS image: no Docker, and steps run in the VM itself.
+pub(crate) struct MacGuestSetup;
+
+#[async_trait]
+impl GuestSetup for MacGuestSetup {
+    async fn inspect(&self) -> PreloadedDocker {
+        PreloadedDocker {
+            proxy_url: format!("http://{}", Platform::MacOs.proxy_listen()),
+            data_bytes: 0,
         }
     }
 }

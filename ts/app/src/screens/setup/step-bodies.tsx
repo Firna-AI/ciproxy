@@ -74,13 +74,15 @@ export function MachineStep({
   return (
     <View style={styles.body}>
       <Text style={text.small}>
-        Run this command on a Linux machine. It installs the ciproxy agent and
-        connects the machine to {workspaceName}.
+        Run this command on a Linux machine or a Mac. It installs the ciproxy
+        agent and connects the machine to {workspaceName}.
       </Text>
-      {model.noKvm ? (
-        <Notice tone="danger" title={`${model.noKvm} cannot start VMs`}>
-          ciproxy runs each job in its own VM, which needs KVM. Turn on
-          virtualization for this machine, then run the command again.
+      {model.cannotStartVms ? (
+        <Notice
+          tone="danger"
+          title={`${model.cannotStartVms.host} cannot start VMs`}
+        >
+          {model.cannotStartVms.fix}
         </Notice>
       ) : null}
       <InstallCommandView workspaceId={workspaceId} />

@@ -2,7 +2,10 @@
 
 The Apache-2.0 agent runs on the x64 Linux machines of a customer.
 It runs one GitHub Actions runner in each fresh Firecracker VM.
-It depends only on `ciproxy-protocol` inside this workspace.
+On an Apple Silicon Mac, it runs each runner in a fresh macOS VM.
+The [macOS host guide](macos-host.md) gives the parts that differ on a Mac.
+Inside this workspace, it depends on `ciproxy-protocol`, and on
+`ciproxy-vz` on macOS and in tests. Both have the Apache-2.0 licence.
 It contains no hosted implementation or embedded credential.
 
 ## Responsibilities
@@ -78,8 +81,12 @@ Stopping the service also stops its preparation helpers.
 
 Each VM gets one writable root disk with the image and free job space.
 The label disk means free bytes available to the runner at job start.
-`root_sizing::RootSizing` defines the allocation for every caller.
-It adds the image and ext4 growth allowance to the free label bytes.
+`root_sizing::RootRule` defines the allocation for every own-machine
+caller: the agent, the scaler, and the control plane. On Linux it is
+`RootSizing`, which adds the image and ext4 growth allowance to the free
+label bytes. On a Mac, a VM is an APFS clone of the image disk, so it
+holds the free label bytes and `MACOS_ROOT_MARGIN_BYTES`. A macOS start
+also needs that disk as real free space on the area volume.
 The [image budget and root sizing guide](image-budget.md) defines its
 formula, image geometry, and deployment metadata contract.
 Docker shares the root's free space and cached Docker images.
@@ -173,7 +180,8 @@ The hosted runtime does not guess an image or job-disk size.
 ### Agent updates and releases
 
 The [updates and releases guide](updates-and-releases.md) gives the
-hourly updater, public package format, and glibc release checks.
+hourly updater, public package format, glibc release checks, and the version
+raise by hand when a shared library moves.
 
 ## Quick Start
 
@@ -207,7 +215,7 @@ The default gate does not compile them because it leaves their feature off.
 Run this command after changing these files or their dependencies:
 
 - `tests/root_disk_regression.rs` uses path includes for `src/error.rs`,
-  `src/process.rs`, and `src/vm_root.rs`.
+  `src/process.rs`, `src/unit_state.rs`, and `src/vm_root.rs`.
 - `tests/storage_regression.rs` uses path includes for `src/budget_file.rs`,
   `src/error.rs`, `src/host_system.rs`, `src/image_space.rs`,
   `src/sparse_copy.rs`, and `src/storage_sizing.rs`.
@@ -221,14 +229,47 @@ The default `docker_regression` target also uses path includes.
 The gate compiles and runs that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
 The image download regression uses local HTTP and a controlled clock.
+The resumable download tests use a local HTTP server and a temporary folder.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
 The [development guide](development.md) gives the `docker_regression` checks,
 KVM and GitHub smoke checks, and release packaging commands.
 
+### Platform Layer
+
+The generic core runs on every platform. It holds the controller, the daemon,
+the connection, the reports, the state, and the CLI actions. The core reaches
+the operating system only through the ports in
+[src/boundaries.rs](src/boundaries.rs) and
+[src/preparation.rs](src/preparation.rs).
+
+The `Platform` trait in [src/platform.rs](src/platform.rs) builds those ports
+for one invocation: the service manager, the root check and hardware probe,
+host preparation, the image store, the machine cache, the VM backend, the
+Docker disks, the agent update, and the final uninstall.
+
+- [src/platform/linux.rs](src/platform/linux.rs) builds the Linux adapters:
+  systemd, Firecracker and its jailer, XFS, ext4, and nftables.
+  `src/main.rs` builds the Linux adapter modules only on Linux.
+- [src/platform/macos.rs](src/platform/macos.rs) builds the macOS adapters:
+  launchd, Virtualization.framework, an APFS volume, and pf. The
+  [macOS host guide](macos-host.md) gives them, with the hidden test and
+  operator commands `prepare-host` and `import-image`.
+
+The `Vms` port is the VM backend. The backend sends each guest message to the
+`GuestEvent` channel that it gets when it is built. When a VM stops, the
+backend sends `GuestToAgent::RunnerExited`. `Vms::reattach` connects again to
+a VM that kept running across an agent restart.
+
+To type-check the macOS build on Linux, add the target with
+`rustup target add aarch64-apple-darwin`. The C dependencies need the macOS
+SDK, so give `cargo check --target aarch64-apple-darwin` a C compiler stub
+that only creates its output files. The check does not link.
+
 ### Key Code
 
-- [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/application.rs](src/application.rs) composes the generic core over the
+  native platform.
 - [src/application_setup.rs](src/application_setup.rs) resolves commands
   and claims the [runtime lock](src/runtime_ownership.rs) for Run and uninstall.
 - [src/application_cache.rs](src/application_cache.rs) composes the cache
@@ -269,7 +310,8 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/network_lifecycle.rs](src/network_lifecycle.rs) keeps active and
   pending network ownership across retirement, restart, and uninstall.
 - [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root
-  allocation rule for the agent, scaler, and hosted image configuration.
+  allocation rule for the agent, scaler, and hosted image configuration:
+  `RootSizing` for an ext4 root and `RootRule` for each platform.
 - [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
 - [src/process.rs](src/process.rs) runs host tools and shares the required
   reflink copy operation for VM roots and disposable Docker disks.
@@ -298,6 +340,9 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
+- [src/resumable_download.rs](src/resumable_download.rs) continues a large
+  image download from its partial file with `Range` requests. The macOS
+  image store uses it, and Linux tests run it.
 - [src/application_images.rs](src/application_images.rs) constructs image
   services and their client with a read timeout.
 - [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.
@@ -307,8 +352,10 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/capacity.rs](src/capacity.rs) selects shared machine resources.
 - [src/workload_space.rs](src/workload_space.rs) releases idle Docker disks
   and machine-cache space before root and Docker writes.
-- [src/host_preparation.rs](src/host_preparation.rs) owns host setup and
-  uninstall entry points. `Uninstall::start` selects direct guarded cleanup
+- [src/preparation.rs](src/preparation.rs) defines the host setup and
+  uninstall ports.
+- [src/host_preparation.rs](src/host_preparation.rs) owns Linux host setup
+  and the final uninstall. `Uninstall::start` selects direct guarded cleanup
   or VM recovery and drain. `Uninstall::finish` removes the drained area.
 - [src/application_uninstall.rs](src/application_uninstall.rs) runs the
   uninstall drain loop while cleanup retains runtime ownership.
@@ -325,5 +372,6 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [Agent endpoint](../../docs/protocol/agent-endpoint.md) defines endpoint use.
 - [Job routing](../../docs/protocol/job-routing.md) defines VM resources.
 - [Labels](../../docs/protocol/labels.md) defines the sizes of job VMs.
-- [Security](../../docs/protocol/security.md) defines isolation and key custody.
+- [Security](../../docs/protocol/security.md) defines key custody.
+- [Isolation](../../docs/protocol/security-isolation.md) defines job isolation.
 - [Cache](../../docs/protocol/cache.md) defines cache integration.

@@ -20,6 +20,7 @@ use unimock::{MockFn, Unimock, matching};
 use super::harness::{Harness, Runtime};
 
 use super::fixtures::{at, capabilities, facts, id};
+use ciproxy_protocol::platform::Platform;
 
 #[tokio::test]
 async fn rejected_key_is_never_encrypted_or_saved() {
@@ -130,6 +131,7 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
         control_plane_available: true,
         organizations: vec![OrganizationId("github-org-42".to_owned())],
         labels: vec![Label {
+            platform: Platform::LinuxX64,
             targets: vec![target.clone()],
             name: label_name.clone(),
             size: VmSize {

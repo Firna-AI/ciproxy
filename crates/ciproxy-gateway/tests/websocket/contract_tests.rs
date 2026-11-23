@@ -3,6 +3,7 @@
 use ciproxy_gateway::types::{Delivery, MachineAction};
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::identifiers::{CommandId, MachineId, OrganizationId, RunnerId};
+use ciproxy_protocol::platform::Virtualization;
 use ciproxy_protocol::reports::DrainState;
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::secret::Secret;
@@ -33,7 +34,7 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
     let token = fixture.gateway.issue_token(ADMIN, WORKSPACE).unwrap();
     let mut first = FakeAgent::connect(&fixture.url).await;
     let mut no_kvm = report();
-    no_kvm.hardware.kvm = false;
+    no_kvm.hardware.virtualization = Virtualization::KvmUnavailable;
     no_kvm.capacity = Slots(0);
     no_kvm.slots.clear();
     no_kvm.runners.clear();
@@ -46,7 +47,10 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
         .machines(WORKSPACE)
         .unwrap()
         .remove(0);
-    assert_eq!((machine.kvm_available, machine.slots), (false, 0));
+    assert_eq!(
+        (machine.virtualization, machine.slots),
+        (Virtualization::KvmUnavailable, 0)
+    );
     first.disconnect().await;
 
     fixture.advance_to(3599);

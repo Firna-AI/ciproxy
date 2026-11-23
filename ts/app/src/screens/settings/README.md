@@ -14,9 +14,18 @@ Organizations tab.
   shows the count of open requests for access on each tab. While the first
   read loads or after it failed, Members shows no count, never 0. A later
   read that fails keeps the last count.
-- Labels lists each label with its size, where its jobs run now, and the
-  jobs of the last 30 days, as the API gives them. A count that the API does
-  not know says so.
+- Labels lists each label with its platform and size, where its jobs run
+  now, and the jobs of the last 30 days, as the API gives them. A count that
+  the API does not know says so.
+- The list shows the Linux labels first, then the macOS labels, each from
+  the smallest size to the largest, as
+  [The label list](../../../../../docs/protocol/labels.md#the-label-list)
+  says. The dashboard sorts the labels itself.
+- A label has a platform, Linux or macOS, which Add label asks for and Edit
+  shows read-only, as it shows the name. A macOS label runs on the Macs
+  only: its dialog has no switches and no "When nothing fits", and it always
+  sends Boat off and "Wait", which the API requires. Its fit line names
+  Macs. The free disk can have a most value; the API gives none yet.
 - Without a Boat account, the jobs of a label run on the machines only, and
   the dialog keeps the fit of the machines and says that Boat is not
   connected. It never says that a Boat size does not fit before the Boat
@@ -50,7 +59,9 @@ Organizations tab.
 - Members lists the requests for access and the members. The tab gives
   access, declines a request, changes a role, and removes a member. The row
   of the signed-in person has no Remove. Before a person gets the Admin role,
-  a dialog shows the trust notice of the API.
+  a dialog shows the trust notice of the API. The dialog also says that an
+  Admin accepts new versions of the ciproxy Terms for the customer that holds
+  the workspace, with a link to the Terms.
 - An organization row shows the day it joined and the counts of private
   repositories of its latest complete repository snapshot. An inactive row,
   its banner, and Turn on name the person who added the organization.

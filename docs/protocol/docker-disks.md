@@ -14,6 +14,17 @@ machine cache.
 - The [tiers](billing.md#tiers) call the Docker disk feature "sticky Docker
   disks".
 
+## Docker disks on a Mac
+
+- A Mac has no Docker disks, because a macOS job VM has no Docker.
+- The agent of a Mac offers no Docker disk to any job.
+- The guest in a macOS job VM reports `docker_data_bytes` as 0.
+- The machine page of a Mac shows no
+  [Docker disk figures](#terms).
+- So sticky Docker disks of Team and Business apply to Linux machines only.
+- **Decision:** a Mac has no Docker disks. Reason: the macOS image has no
+  Docker, as the GitHub macOS runner images have none.
+
 ## Writers and copies
 
 - A Docker disk keeps the Docker data of one repository on one own machine
@@ -103,4 +114,5 @@ machine cache.
 - [Agent](agent.md): own machines and job VMs.
 - [Job routing](job-routing.md#disk): the disk of a job and the spare disk.
 - [Billing](billing.md#tier-features): the tiers that include Docker disks.
-- [Security](security.md): job isolation and job data.
+- [Isolation](security-isolation.md#job-isolation): job isolation.
+- [Data and retention](security-data.md): job data.

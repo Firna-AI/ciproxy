@@ -12,13 +12,14 @@ The pages follow the marketing and docs mockups under
   closing call to action.
 - `/pricing/` has the tiers, the add-ons, the feature comparison, and the
   questions. The last question shows the calculation of the cost claim.
-- `/terms/` and `/privacy/` are the terms of service and the privacy policy.
-  Both pages show draft text for the owner's review, with visible
-  placeholders in square brackets. The privacy policy also shows the
-  decided data retention.
+- `/terms/` and `/privacy/` are the approved terms of service and privacy
+  policy of Firna Ltd, the provider of ciproxy. The privacy policy also
+  shows the decided data retention.
 - `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
   of the docs sidebar mockup, in its order:
   - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
+    Under its intro, How ciproxy works shows a picture of the parts of
+    ciproxy and the path of one job.
   - Guides under `/docs/guides/`: Add a machine, Connect Boat, Move your
     workflows, Set a spend limit, and Remove a machine.
   - Reference under `/docs/reference/`: Labels and VM sizes, Agent install
@@ -28,10 +29,13 @@ The pages follow the marketing and docs mockups under
 
 The look is Graphite:
 
-- One top bar serves both parts. The marketing pages show the wordmark,
-  Pricing, Docs, Sign in, and Start free. On a phone, a menu holds the links.
-  The docs show the wordmark with "Docs", the Starlight search, and the same
-  actions.
+- One top bar serves both parts. The marketing pages show the wordmark on
+  the left, and Pricing, Docs, GitHub, Sign in, and Start free on the right.
+  On a phone, a menu holds the links. The docs show the wordmark with "Docs",
+  the Starlight search, Pricing, GitHub, and the same actions. A narrow docs
+  window hides Pricing, GitHub, and Sign in.
+- The GitHub link is text, with no icon. It opens the public repository of
+  ciproxy, `https://github.com/Firna-AI/ciproxy`.
 - Every marketing page ends with the footer.
 - The docs use a Graphite theme of Starlight. Black is the one accent, and
   Geist and Geist Mono are the faces. Code is in the ink, because colour
@@ -66,8 +70,7 @@ Rules for work on the site:
   link open the dashboard at `https://app.ciproxy.dev/sign-in`.
 - Add a link only when its page exists. A marketing page links to a docs
   page through `docsLinks`, which shows the link only once the page exists.
-  The GitHub link of the mockups waits for the public repository of the
-  agent.
+  The GitHub mark of the footer mockup is not on the site yet.
 - The picture of the product in the hero is a static illustration with
   fixed values, and its caption says so. The site shows no customer logos,
   quotes, or press.
@@ -82,13 +85,14 @@ Rules for the docs pages:
   under **Overflow**.
 - The Markdown check of the gate refuses HTML and component tags, such as
   `<Steps>` or `<LinkCard>`, in the source of a docs page. An MDX page shows
-  a Starlight component without a tag, in one of two ways:
+  a component without a tag, in one of two ways:
   - It maps a Markdown element to a component with
     `export const components`. The Quickstart maps its ordered list to
     `StepsList`, which puts the list in Starlight `Steps`.
   - It calls `jsx()` of `astro/jsx-runtime` in an expression, such as
     `{jsx(Badge, { text: "Default" })}`. The Overview and the Quickstart
     draw their link cards with `CardGrid` and `LinkCard` in this way.
+    How ciproxy works shows its picture with `{jsx(JobPathFigure)}`.
 - Keep the data of such a call in an `export const` block, and the call on
   one line. Prettier formats the block as JavaScript, but it formats an
   expression on several lines as Markdown text and drops its indent.
@@ -109,6 +113,12 @@ Rules for the docs pages:
   of a job container is under "Run steps in another image" of Move your
   workflows. The list of supported Linux distributions is under "What the
   machine needs" of Add a machine.
+- The picture of How ciproxy works is a short form of the page. Its text is
+  in `src/data/job-path.ts`. Its numbers are the steps of "A job on your
+  machines", so change the steps and the picture together. The picture is
+  real text in HTML boxes, so it reads on a phone and with a screen reader.
+  It carries `data-pagefind-ignore`, so that search shows the text of the
+  page and not this copy.
 
 Rules for the legal pages:
 
@@ -117,23 +127,27 @@ Rules for the legal pages:
   `src/data/legal-privacy.ts`. `src/data/legal.ts` joins them into the two
   pages. Each page file, `src/pages/terms.astro` or
   `src/pages/privacy.astro`, gives the effective date of its text.
-- A placeholder in square brackets, such as `[effective date]`, marks a
-  detail that the owner must complete. Keep the placeholder until the owner
-  gives the detail. Never put the current date or a guess in its place.
+- Both texts are approved. Each change to a text is a new version, which
+  needs the owner's approval. Set the effective date of its page to the
+  day that the new version goes live.
+- On the day that a new version of the terms goes live, an operator emails
+  the billing address of each paid workspace, as
+  [Announce a new version of the terms](../../deploy/operations.md#announce-a-new-version-of-the-terms)
+  says.
+- The terms define "the customer", which holds a workspace, and "you", the
+  person who signs in. Each clause names the party that it binds.
+- When a text states a legal right or tells a person how to use it, give
+  each channel or detail as a help, not as a condition. Add no condition
+  that the law does not set, such as where the person lives.
+- Take each provider role and each transfer safeguard from the current
+  data processing agreement or privacy policy of that provider. Name the
+  document, its date, and its section in a comment beside the sentence.
 - The data retention of the privacy policy shows its text first. The table
   of the decided limits and the job history of each plan come after it.
   The limits come from `src/data/legal.ts`.
-- A shared draft note at the top of each page says that the text is a
-  draft. Remove the note only after the owner completes every placeholder
-  and approves both texts. To remove it:
-  1. Open `/terms/` and `/privacy/`, and search each page for `[`. No match
-     may remain.
-  2. In `src/components/legal/LegalPage.astro`, delete the element with the
-     class `legal-draft`.
-  3. In `src/components/legal/legal.css`, delete the `.legal-draft` and
-     `.legal-draft-title` rules and the comment above them.
-  4. In this README, delete this rule and the rule on placeholders. Then
-     describe `/terms/` and `/privacy/` as the approved texts.
+- Each retention period of the privacy policy is a requirement in
+  [Data retention](../../docs/protocol/security-data.md#data-retention).
+  Change the requirement and the text together.
 
 ## Development
 
@@ -160,10 +174,21 @@ The tests under `_tests_` run on the Node test runner. They cover the choice
 of the cheapest plan, the calculation of the cost claim, search selection
 and heading counts, and the Copy text of the runs-on examples of the docs.
 The search tests also cover query changes during unfinished searches.
-The browser tests under `_tests_/browser/` use the same Node test runner
-with `playwright-core`. They need Google Chrome installed. They build and
-serve a fresh production site with its real search index. They check focus
-after same-page result navigation and after Escape and Cancel dismissals.
+The browser tests in `_tests_/browser/docs.test.ts` use the same Node test
+runner with `playwright-core`. They need Google Chrome installed. They build
+and serve a fresh production site with its real search index. They check
+focus after same-page result navigation and after Escape and Cancel
+dismissals. They also check the place of each box of the picture of How
+ciproxy works. `_tests_/browser/job-path-places.ts` finds each box of
+`jobPath` by its title, and groups the boxes into rows and columns where
+they overlap. Each test compares that table of parts with a literal table.
+In a window of 720 px, the path is a row, with Boat under ciproxy and the
+machine under the runner. In a window of 840 px, beside the sidebar, the
+five boxes form one column. Two boxes in one cell, or a box that the page
+does not show, also change the table.
+Keep each browser test in that file, so that the suite builds the site once.
+The Node test runner runs each test file in its own process at the same
+time.
 Run site builds and test commands one at a time. Astro shares its `.astro/`
 prerender directory.
 The Copy test builds the site with
@@ -213,13 +238,19 @@ This keeps it separate from the Markdown lint tool's YAML version.
 - [src/components/site-header/SiteHeader.astro](src/components/site-header/SiteHeader.astro)
   is the top bar. Its `section` prop selects the page that it marks, and the
   docs form.
+- [src/components/Brand.astro](src/components/Brand.astro) draws the wordmark.
+  [src/components/BrandMark.astro](src/components/BrandMark.astro) draws the
+  mark for the wordmark and the picture of How ciproxy works.
+- [src/data/brand.ts](src/data/brand.ts) holds the SVG paths used by the mark
+  component and [src/pages/favicon.svg.ts](src/pages/favicon.svg.ts).
+  That endpoint serves `/favicon.svg` with the mark in the ink colour.
 - [src/components/LinkButton.astro](src/components/LinkButton.astro) is a
   link with the look of a button, and
   [src/components/icon/Icon.astro](src/components/icon/Icon.astro) an icon.
 - [src/data/](src/data/tiers.ts) holds the data of the pages: the tiers, the
   plan choice, the comparison, the price lists, the slot rule, the cost
-  claim, the legal text, the addresses, and the values of the
-  illustration.
+  claim, the legal text, the addresses, the values of the illustration,
+  and the text of the picture of How ciproxy works.
 - [src/components/starlight/](src/components/starlight/Header.astro) holds
   the Starlight overrides: the head, the top bar with the search, the page
   title with its lead, and the light-only theme provider and theme switch.
@@ -236,6 +267,11 @@ This keeps it separate from the Markdown lint tool's YAML version.
   `security` hold the pages of those sidebar groups.
 - [src/components/docs/StepsList.astro](src/components/docs/StepsList.astro)
   shows the ordered list of a docs page as Starlight steps.
+- [src/components/docs/JobPathFigure.astro](src/components/docs/JobPathFigure.astro)
+  is the picture of How ciproxy works: the parts of ciproxy and the path of
+  one job. `JobPathBox.astro` draws a box, and `JobPathArrow.astro` an
+  arrow. The figure takes its layout from its own width: a row from 560 px,
+  and a column below that.
 - [src/data/docs-links.ts](src/data/docs-links.ts) names the docs pages that
   the marketing pages link to, such as the docs links of the footer.
 - [src/content/i18n/en.json](src/content/i18n/en.json) changes Starlight

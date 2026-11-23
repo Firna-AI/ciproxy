@@ -16,9 +16,7 @@ use uuid::Uuid;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
 
-use super::{
-    Session, accounts, authority, completion, connections, deliveries, dispatch, preparation, rows,
-};
+use super::{Session, accounts, authority, connections, deliveries, dispatch, preparation, rows};
 
 impl OverflowSession for Session {
     fn snapshot(&mut self) -> Result<OverflowSnapshot> {
@@ -104,15 +102,6 @@ impl OverflowSession for Session {
 
     fn save_start(&mut self, record: &StartRecord) -> Result<()> {
         deliveries::save(&mut self.connection, self.workspace_id, record)
-    }
-
-    fn accept_end(
-        &mut self,
-        hash: &TokenHash,
-        runner_id: Uuid,
-        at: DateTime<Utc>,
-    ) -> Result<Option<StartRecord>> {
-        completion::accept(&mut self.connection, self.workspace_id, hash, runner_id, at)
     }
 
     fn collect(&mut self, before: DateTime<Utc>) -> Result<()> {

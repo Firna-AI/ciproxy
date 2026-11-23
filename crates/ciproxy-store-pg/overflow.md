@@ -8,7 +8,8 @@ the rest of the store.
 
 Overflow uses one dedicated advisory-lock connection per workspace.
 Its negative key range is separate from billing and scale-set locks.
-A blocking callback lease waits on that dedicated connection.
+A blocking callback lease waits on that dedicated connection after the claim.
+The 5-second lock timeout of that connection limits its wait.
 Catalog observations and exact delivery records persist before Boat access.
 Reservation rechecks the active key, workspace settings, organization,
 label, and scale-set ownership under the workspace row lock.
@@ -38,6 +39,9 @@ Cancelled unsent records release sealed input without provider or cost facts.
 Adoption saves the provider identity, immutable runner placement, and price
 facts in one transaction.
 Callback claims save token consumption and deletion intent together.
+They take no advisory lock, and they commit before the callback lease waits.
+Delivery saves keep the claim and the first end, as the
+[interface guide](../ciproxy-store-interface/src/overflow/README.md) says.
 Refusal records and account restrictions also commit together.
 Key erasure checks unfinished deliveries as well as live runners.
 No query receives a plaintext key or runner registration.

@@ -11,6 +11,11 @@
 import type { ReactNode } from "react";
 
 import { paths, type CataloguePath } from "../../components/paths.ts";
+import {
+  macMiniMachine,
+  macMiniOldMacos,
+  macStudioMachine,
+} from "../../fixtures/macs.ts";
 import { machineScenes, type Machine } from "../../fixtures/machines.ts";
 import { preparingAx42 } from "../../fixtures/new-machine.ts";
 import {
@@ -36,6 +41,9 @@ export const machineStates = [
   "clear-cache-unknown",
   "clear-docker-unknown",
   "clear-both-unknown",
+  "mac",
+  "mac-one-slot",
+  "mac-no-virtualization",
 ] as const;
 export type MachineState = (typeof machineStates)[number];
 
@@ -160,5 +168,11 @@ export function machineScene(state: MachineState): MachineDetailScene {
       return bothUnknown;
     case "clear-both-unknown":
       return confirming(bothUnknown);
+    case "mac":
+      return { machine: macStudioMachine };
+    case "mac-one-slot":
+      return { machine: macMiniMachine };
+    case "mac-no-virtualization":
+      return { machine: macMiniOldMacos };
   }
 }

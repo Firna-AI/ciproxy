@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{LabelName, MachineId, OrganizationId, WorkspaceId};
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 use ciproxy_scaler::actions::{Action, Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::{BoatAccount, MonthlySpend};
@@ -30,6 +31,7 @@ fn main() {
         control_plane_available: true,
         organizations: vec![OrganizationId("example-org".into())],
         labels: vec![Label {
+            platform: Platform::LinuxX64,
             targets: vec![target.clone()],
             name: LabelName("ciproxy".into()),
             size,
@@ -44,6 +46,7 @@ fn main() {
             queued_at: Duration::from_secs(100),
         }],
         machines: vec![Machine {
+            platform: Platform::LinuxX64,
             id: MachineId("example-machine".into()),
             selected_image: None,
             connected: true,
@@ -51,6 +54,7 @@ fn main() {
             capacity: Slots(1),
             disk_budget_bytes: 82_500_000_000,
             docker_leased_bytes: Some(0),
+            free_bytes: None,
             warm_count: 0,
             warm_allocation: Vec::new(),
             runners: Vec::new(),
@@ -72,7 +76,8 @@ fn main() {
     let actions = decide(&snapshot);
     assert_eq!(
         actions,
-        vec![Action::StartRunner(StartRunner {
+        vec![Action::StartRunner(Box::new(StartRunner {
+            platform: Platform::LinuxX64,
             target,
             organization_id: OrganizationId("example-org".into()),
             label: LabelName("ciproxy".into()),
@@ -83,7 +88,7 @@ fn main() {
             },
             destination: Destination::Machine(MachineId("example-machine".into())),
             reason: StartReason::OwnMachineCapacity,
-        })]
+        }))]
     );
     println!("{actions:#?}");
 }

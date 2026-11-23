@@ -24,9 +24,10 @@ person installs the App.
 - ciproxy does not stop a [sandbox](overflow.md#terms) of the organization
   whose runner started, also when the runner has no job.
 - Each such sandbox ends when its runner reports its exit, as
-  [After an App removal](overflow.md#after-an-app-removal) says.
-- Otherwise, Boat ends it at its [lifetime](overflow.md#overflow-runners)
-  of 6 hours, or 2 hours on a Boat free trial.
+  [After an App removal](overflow-sandbox-end.md#after-an-app-removal) says.
+- Otherwise, Boat ends it at its
+  [lifetime](overflow-sandbox-end.md#the-lifetime) of 6 hours, or 2 hours
+  on a Boat free trial.
 - **Decision:** after an App removal, ciproxy does not stop idle sandboxes
   early, and they end at their lifetime. Rejected: a new mechanism in the
   sandbox that lets ciproxy stop idle sandboxes early. Reason: App removal
@@ -50,7 +51,7 @@ person installs the App.
   its busy and idle runners. Reason: two workspaces can have the same label
   name, so an idle runner of another workspace could otherwise take a job
   of the current workspace, against
-  [Tenant isolation](security.md#tenant-isolation).
+  [Tenant isolation](security-isolation.md#tenant-isolation).
 - After a removal, the [dashboard](../architecture.md#components) says that
   the App was removed from the organization, and how to install it again.
 - For 30 days, the Organizations tab of Settings shows the organization as
@@ -82,7 +83,7 @@ person installs the App.
 - At the removal, ciproxy starts no new Boat runner.
 - The Boat jobs that run at that moment finish.
 - The sandboxes of the workspace end as
-  [After an App removal](overflow.md#after-an-app-removal) says.
+  [After an App removal](overflow-sandbox-end.md#after-an-app-removal) says.
 - ciproxy deletes the Boat key when the last of these sandboxes ends, as
   after [Disconnect](overflow.md#change-key-and-disconnect).
 - Reason: ciproxy needs the key to delete each sandbox when its runner
@@ -122,11 +123,13 @@ person installs the App.
 
 - [Workspaces](workspaces.md): the organizations of a workspace, and how an
   Admin takes one out.
-- [Security](security.md): sign-in, roles, key custody, tenant isolation,
-  and job data.
+- [Security](security.md): sign-in, roles, and key custody.
+- [Isolation](security-isolation.md#tenant-isolation): tenant isolation.
+- [Data and retention](security-data.md): job data and its retention.
 - [Agent](agent.md#drain-and-remove): what a removed machine does.
-- [Overflow](overflow.md#after-an-app-removal): the sandboxes after a
-  removal, and the Boat key.
+- [Sandbox end](overflow-sandbox-end.md#after-an-app-removal): the
+  sandboxes after a removal.
+- [Overflow](overflow.md#change-key-and-disconnect): the Boat key.
 - [Billing](billing.md#subscription-states): the end of a subscription.
 - [Architecture](../architecture.md#boundaries): the events that GitHub
   sends to the control plane.

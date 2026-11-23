@@ -2,6 +2,7 @@
 
 use crate::access::workspace::WorkspaceId;
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::platform::Platform;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -116,11 +117,15 @@ pub struct RepositoryView {
     pub allowed: bool,
 }
 
-/// Label definition whose name never changes after creation.
+/// Label definition whose name and platform never change after creation.
 #[derive(Clone, Deserialize, Serialize, ToSchema)]
 pub struct LabelInput {
     /// Workflow label accepted by GitHub.
     pub name: String,
+    /// Platform of the label's job VMs. Jobs run only on machines of this platform.
+    /// An absent value means `linux_x64`.
+    #[serde(default = "linux")]
+    pub platform: Platform,
     /// Requested hardware threads.
     pub vcpus: i32,
     /// Requested memory in decimal GB.
@@ -129,10 +134,14 @@ pub struct LabelInput {
     pub disk_gb: i32,
     /// Whether own machines may run this label.
     pub allow_machines: bool,
-    /// Whether Boat may run this label.
+    /// Whether Boat may run this label. Always false for a macOS label.
     pub allow_boat: bool,
-    /// What happens when neither destination fits.
+    /// What happens when neither destination fits. Always `wait` for a macOS label.
     pub when_nothing_fits: NothingFits,
+}
+
+fn linux() -> Platform {
+    Platform::LinuxX64
 }
 
 /// Waiting policy for a label that currently fits nothing.

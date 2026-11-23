@@ -14,46 +14,60 @@ from unittest.mock import patch
 from deploy.tests import image_security_support as security
 
 
+PRIMARY_CALLER_REF = "refs/heads/calummoore/ci-proxy-load-balancer"
+CALLER_REFS = (PRIMARY_CALLER_REF, "refs/heads/main")
+
+
 class ImageWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.documents = security.workflows()
         cls.providers = security.providers()
 
-    def test_only_primary_reusable_image_jobs_satisfy_real_provider_conditions(self):
+    def test_only_reusable_image_jobs_on_main_satisfy_real_provider_conditions(self):
         workload = self.documents["deploy-main-preview.yml"]["jobs"]["workloads"]
-        ordinary = security.claims(workload)
-        self.assertNotIn("job_workflow_ref", ordinary)
         self.assertEqual(set(self.providers), {"image_lookup", "image_publish"})
-        for name, provider in self.providers.items():
-            with self.subTest(identity=name, scenario="ordinary workload"):
-                self.assertFalse(security.admits(provider, ordinary))
-                self.assertEqual(provider["attribute_mapping"]["attribute.job_workflow_ref"], "assertion.job_workflow_ref")
-            for scenario, reference in security.UNTRUSTED.items():
-                with self.subTest(identity=name, scenario=scenario):
-                    self.assertFalse(security.admits(provider, dict(ordinary, job_workflow_ref=reference)))
-        privileged = security.image_jobs(self.documents)
-        self.assertEqual(len(privileged), 2)
-        for job_name, job, _, _ in privileged:
+        for caller_ref in CALLER_REFS:
+            ordinary = security.claims(workload, caller_ref)
+            privileged = security.image_jobs(self.documents, caller_ref)
+            with self.subTest(caller_ref=caller_ref):
+                self.assertNotIn("job_workflow_ref", ordinary)
+                self.assertEqual(len(privileged), 2)
             for name, provider in self.providers.items():
-                with self.subTest(identity=name, job=job_name, scenario="trusted primary workflow"):
-                    self.assertTrue(security.admits(provider, security.claims(job, security.TRUSTED)))
-        build = next(item for item in security.jobs(self.documents) if any(
+                with self.subTest(identity=name, caller_ref=caller_ref, scenario="ordinary workload"):
+                    self.assertFalse(security.admits(provider, ordinary))
+                    self.assertEqual(provider["attribute_mapping"]["attribute.job_workflow_ref"],
+                                     "assertion.job_workflow_ref")
+                for job_name, job, origin, _ in privileged:
+                    selected_claims = security.claims(job, caller_ref, origin)
+                    with self.subTest(identity=name, job=job_name, caller_ref=caller_ref,
+                                      scenario="trusted workflow on main"):
+                        self.assertTrue(security.admits(provider, selected_claims))
+                    for scenario, reference in security.UNTRUSTED.items():
+                        with self.subTest(identity=name, job=job_name, caller_ref=caller_ref, scenario=scenario):
+                            denied = dict(selected_claims, job_workflow_ref=reference)
+                            self.assertFalse(security.admits(provider, denied))
+        build = next(item for item in security.jobs(self.documents, PRIMARY_CALLER_REF) if any(
             "control_plane_image.py build" in step.get("run", "") for step in item[1].get("steps", [])))
         permissions = build[1].get("permissions", build[3])
         self.assertEqual(permissions, {"contents": "read"})
         self.assertNotIn("environment", build[1])
         for name, provider in self.providers.items():
             with self.subTest(identity=name, scenario="source build without OIDC"):
-                self.assertFalse(security.admits(provider, security.claims(build[1], build[2]),
-                                                  oidc=permissions.get("id-token") == "write"))
+                self.assertFalse(security.admits(
+                    provider, security.claims(build[1], PRIMARY_CALLER_REF, build[2]),
+                    oidc=permissions.get("id-token") == "write"))
 
-    def test_primary_tools_use_the_reusable_jobs_own_revision_without_token_output(self):
-        privileged = security.image_jobs(self.documents)
-        self.assertEqual(len(privileged), 2)
-        for name, _, origin, _ in privileged:
-            with self.subTest(job=name, scenario="preview calls primary workflow"):
-                self.assertEqual(origin, security.TRUSTED)
+    def test_main_image_workflow_uses_its_own_tools_revision_without_token_output(self):
+        privileged_by_caller = {caller_ref: security.image_jobs(self.documents, caller_ref)
+                                for caller_ref in CALLER_REFS}
+        for caller_ref, privileged in privileged_by_caller.items():
+            with self.subTest(caller_ref=caller_ref):
+                self.assertEqual(len(privileged), 2)
+            for name, _, origin, _ in privileged:
+                with self.subTest(job=name, caller_ref=caller_ref, scenario="preview calls image workflow on main"):
+                    self.assertEqual(origin, security.TRUSTED)
+        privileged = privileged_by_caller[PRIMARY_CALLER_REF]
         for _, job, _, _ in privileged:
             for executable in job.get("steps", []):
                 command = executable.get("run", "")
@@ -72,7 +86,7 @@ class ImageWorkflowTests(unittest.TestCase):
             environment = {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://fixture.invalid/id?request=1",
                            "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "fixture-request-credential",
                            "GITHUB_SHA": security.SOURCE_SHA}
-            scenarios = [("trusted primary workflow", security.TRUSTED, security.TOOLS_SHA, 0)]
+            scenarios = [("trusted workflow on main", security.TRUSTED, security.TOOLS_SHA, 0)]
             scenarios.extend((scenario, reference, security.TOOLS_SHA, 1)
                              for scenario, reference in security.UNTRUSTED.items())
             scenarios.append(("invalid tools revision", security.TRUSTED, "not-a-commit", 1))
@@ -99,7 +113,7 @@ class ImageWorkflowTests(unittest.TestCase):
                     self.assertNotIn(token, stdout.getvalue() + stderr.getvalue() + emitted)
                     self.assertNotIn(payload, stdout.getvalue() + stderr.getvalue() + emitted)
                     self.assertNotIn("fixture-request-credential", stdout.getvalue() + stderr.getvalue())
-        for _, job, _, _ in security.jobs(self.documents):
+        for _, job, _, _ in security.jobs(self.documents, PRIMARY_CALLER_REF):
             checkouts = [step for step in job.get("steps", []) if step.get("uses", "").startswith("actions/checkout@")]
             if not any("control_plane_image.py" in step.get("run", "") for step in job.get("steps", [])):
                 continue
@@ -112,10 +126,10 @@ class ImageWorkflowTests(unittest.TestCase):
             self.assertFalse(any(step.get("working-directory") == "source" for step in job.get("steps", [])))
 
     def test_publication_consumes_build_artifact_id_and_canonical_digest(self):
-        candidates = security.jobs(self.documents)
+        candidates = security.jobs(self.documents, PRIMARY_CALLER_REF)
         build = next(job for _, job, _, _ in candidates if any(
             "control_plane_image.py build" in step.get("run", "") for step in job.get("steps", [])))
-        publish = next(job for _, job, _, _ in security.image_jobs(self.documents) if any(
+        publish = next(job for _, job, _, _ in security.image_jobs(self.documents, PRIMARY_CALLER_REF) if any(
             "control_plane_image.py publish" in step.get("run", "") for step in job.get("steps", [])))
         upload = next(step for step in build["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
         digest = next(step for step in build["steps"] if "control_plane_image.py build" in step.get("run", ""))

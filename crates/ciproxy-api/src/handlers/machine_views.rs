@@ -1,13 +1,14 @@
 //! Report mappings retain hardware and cache facts while marking stale values.
 
 use chrono::{DateTime, Utc};
+use ciproxy_agent::root_sizing::RootFit;
 use ciproxy_gateway::types::{MachineView, Presence};
 use ciproxy_protocol::reports::SlotOccupancy;
 use ciproxy_protocol::resources::{Resources, Slots, VmSize};
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::metering::history::MachineCost;
 
-use crate::capacity::Capacity;
+use crate::capacity::{Capacity, platform_vms};
 use crate::wire::machine_statistics::{CacheView, DockerDiskView, MachineCacheView};
 use crate::wire::machines;
 use crate::wire::money::Cents;
@@ -18,8 +19,8 @@ use super::machine_jobs;
 pub(super) struct DefaultSize {
     /// Saved default-label CPU, memory, and free-disk request.
     pub requested: VmSize,
-    /// Runtime allocation under the machine-selected image policy.
-    pub root_bytes: Option<u64>,
+    /// Runtime root under the machine-selected image policy.
+    pub root: RootFit,
 }
 
 pub(super) fn machine(
@@ -92,24 +93,41 @@ pub(super) fn machine(
             .slots
             .0
             .checked_div(Slots::for_vm(size.requested).0)
+            .map(|count| platform_vms(machine.platform, count))
     });
-    let root = default_size.as_ref().and_then(|size| size.root_bytes);
+    let root = default_size.as_ref().and_then(|size| match size.root {
+        RootFit::Holds(bytes) => Some(bytes),
+        RootFit::AboveImage | RootFit::Unknown => None,
+    });
+    // The default label asks for more free disk than the image has: the
+    // machine runs none of its jobs, and more host disk would not help.
+    let refused = default_size
+        .as_ref()
+        .is_some_and(|size| size.root == RootFit::AboveImage);
     let allocated = default_size.as_ref().and_then(|size| {
-        size.root_bytes.map(|disk_bytes| VmSize {
+        root.map(|disk_bytes| VmSize {
             disk_bytes,
             ..size.requested
         })
     });
-    let concurrent = resources
-        .zip(allocated)
-        .map(|(resources, size)| resources.concurrent_vms(size));
+    let concurrent = if refused {
+        Some(0)
+    } else {
+        resources
+            .zip(allocated)
+            .map(|(resources, size)| platform_vms(machine.platform, resources.concurrent_vms(size)))
+    };
     machines::MachineView {
         default_jobs_by_slots: by_slots.map(|count| count.to_string()),
         default_root_disk_bytes: root.map(|bytes| bytes.to_string()),
         job_disk_bytes: capacity.job_disk_bytes.map(|bytes| bytes.to_string()),
-        disk_limited: concurrent
-            .zip(by_slots)
-            .map(|(concurrent, slots)| concurrent < slots),
+        disk_limited: if refused {
+            Some(false)
+        } else {
+            concurrent
+                .zip(by_slots)
+                .map(|(concurrent, slots)| concurrent < slots)
+        },
         agent_up_to_date: latest_agent_version.map(|latest| latest == machine.agent_version),
         latest_agent_version: latest_agent_version.map(str::to_owned),
         id: machine.id.to_string(),
@@ -117,12 +135,16 @@ pub(super) fn machine(
         processor: machine.processor,
         threads: machine.hardware_threads,
         memory_bytes: machine.memory_bytes.to_string(),
-        kvm: machine.kvm_available,
+        platform: machine.platform,
+        virtualization: machine.virtualization,
+        kvm: machine.virtualization.is_available(),
+        vm_limit: machine
+            .platform
+            .vm_limit()
+            .map(|limit| u32::try_from(limit).unwrap_or(u32::MAX)),
         slots: machine.slots,
         selected_image_disk_bytes: capacity.image_disk_bytes.map(|bytes| bytes.to_string()),
-        concurrent_default_jobs: resources
-            .zip(allocated)
-            .map(|(resources, size)| resources.concurrent_vms(size).to_string()),
+        concurrent_default_jobs: concurrent.map(|count| count.to_string()),
         capacity_known: resources.is_some() && allocated.is_some(),
         state: value.state.into(),
         offline: value.presence == Presence::Offline,

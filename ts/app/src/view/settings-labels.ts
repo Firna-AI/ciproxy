@@ -1,11 +1,20 @@
-// The Labels tab: each label with its size, where its jobs run now, and the
-// jobs that it ran in the last 30 days. The placement, the count, and whether
+// The Labels tab: each label with its platform and size, where its jobs run
+// now, and the
+// jobs that it ran in the last 30 days. A macOS label runs on the Macs only.
+// The placement, the count, and whether
 // the workspace has a Boat account come from the API; the switches of a label
 // only choose the words of a wait. When the API knows the fit of the machines
 // but not the Boat fit, the row names both. The fit of the label dialog is in
-// settings-label-fit.ts.
+// settings-label-fit.ts. The list shows the Linux labels first, then the
+// macOS labels, each from the smallest size to the largest.
 
-import type { LabelFit, LabelInput, LabelView } from "../api/schema.ts";
+import type {
+  LabelFit,
+  LabelInput,
+  LabelView,
+  Platform,
+} from "../api/schema.ts";
+import { isMacLabel, labelPlatform, platformName } from "./platform.ts";
 
 /**
  * The one label that cannot be deleted, because the warm runners serve it,
@@ -48,8 +57,23 @@ function waitReason(label: LabelInput, fit: LabelFit): string {
   return "nothing fits";
 }
 
+/** Where the jobs of a macOS label run now: on the Macs only, or they wait. */
+function macPlacement(fit: LabelFit): Placement {
+  switch (fit.placement) {
+    case "waits":
+      return { text: "Waits: no Mac fits", warn: true, note: null };
+    case "unavailable":
+      return fit.fitting_machines > 0
+        ? { text: "Your Macs only", warn: false, note: null }
+        : { text: "Not known yet", warn: false, note: null };
+    default:
+      return { text: "Your Macs only", warn: false, note: null };
+  }
+}
+
 /** Where the jobs of a label run now, as the API places them. */
 export function placement(label: LabelInput, fit: LabelFit): Placement {
+  if (isMacLabel(label)) return macPlacement(fit);
   switch (fit.placement) {
     case "machines_then_boat":
       return { text: "Your machines, then Boat", warn: false, note: null };
@@ -80,14 +104,42 @@ export type LabelRow = {
   jobs: string | null;
 };
 
+/** Linux labels come before macOS labels in the list. */
+const platformRank: Readonly<Record<Platform, number>> = {
+  linux_x64: 0,
+  macos_arm64: 1,
+};
+
+/** Two names by character code, so the order is the same in every locale. */
+function byCharacterCode(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+/**
+ * The order of the list: by platform, then vCPU, memory, free disk, and
+ * name, as "The label list" in docs/protocol/labels.md says.
+ */
+export function compareLabels(a: LabelInput, b: LabelInput): number {
+  return (
+    platformRank[labelPlatform(a)] - platformRank[labelPlatform(b)] ||
+    a.vcpus - b.vcpus ||
+    a.memory_gb - b.memory_gb ||
+    a.disk_gb - b.disk_gb ||
+    byCharacterCode(a.name, b.name)
+  );
+}
+
+/** The rows of the list, in the order of compareLabels. */
 export function labelRows(labels: readonly LabelView[]): LabelRow[] {
-  return labels.map((view) => {
+  const ordered = [...labels].sort((a, b) => compareLabels(a.label, b.label));
+  return ordered.map((view) => {
     const jobs = view.jobs_last_30_days ?? null;
     return {
       id: view.id,
       name: view.label.name,
       isDefault: view.label.name === protectedLabelName,
-      size: sizeText(view.label),
+      size: `${platformName[labelPlatform(view.label)]}${nbsp}· ${sizeText(view.label)}`,
       where: placement(view.label, view.fit),
       jobs: jobs === null ? null : grouped.format(BigInt(jobs)),
     };

@@ -5,9 +5,12 @@
 // host reserve keeps a quarter of the rest. A size fits a machine when the
 // machine has enough free slots and enough free disk for it: each running
 // job holds its VM disk, the image with the free disk of its size, as the
-// answer to item 77 says, and the machine cache uses the rest.
+// answer to item 77 says, and the machine cache uses the rest. A Mac uses the
+// same rule, and it runs at most 2 job VMs at a time, because Apple allows at
+// most 2 macOS VMs at a time on one Mac.
 
 import { dotJoin, unbroken } from "./format.ts";
+import { macosVmLimit, type Platform } from "./platform.ts";
 import type { Size } from "./sizes.ts";
 import { gigabyte, jobsInDisk } from "./vm-disk.ts";
 
@@ -22,6 +25,8 @@ export const imageBudgetGb = 140;
 
 /** What the agent reports about a machine, and the cost that mokly-ai set. */
 export type Hardware = {
+  /** Linux on x64, or macOS on Apple Silicon. */
+  platform: Platform;
   cpu: string;
   threads: number;
   memoryGb: number;
@@ -55,16 +60,35 @@ export function slotsFor(size: Pick<Size, "vcpu" | "memoryGb">): number {
   );
 }
 
-/** How many jobs of a size fit on a machine at a time: by slots and disk. */
+/** The most job VMs that a machine runs at a time, whatever its slots. */
+export function vmLimit(hardware: Hardware): number {
+  return hardware.platform === "macos" ? macosVmLimit : Infinity;
+}
+
+/**
+ * How many jobs of a size fit on a machine at a time: by slots and disk,
+ * and at most 2 on a Mac.
+ */
 export function jobsAtOnce(
   hardware: Hardware,
   slots: number,
   size: Size,
 ): number {
+  const disk = { ...size, platform: hardware.platform };
   return Math.min(
     Math.floor(slots / slotsFor(size)),
-    jobsInDisk(jobDiskBytes(hardware), size),
+    jobsInDisk(jobDiskBytes(hardware), disk),
+    vmLimit(hardware),
   );
+}
+
+/** What leaves a machine fewer slots: its threads, or its memory. */
+export function slotLimitOf(hardware: Hardware): "threads" | "memory" {
+  const byThreads = Math.floor((hardware.threads * jobShare) / slotSize.vcpu);
+  const byMemory = Math.floor(
+    (hardware.memoryGb * jobShare) / slotSize.memoryGb,
+  );
+  return byMemory <= byThreads ? "memory" : "threads";
 }
 
 /**
@@ -73,6 +97,7 @@ export function jobsAtOnce(
  * auction.
  */
 export const ax42: Hardware = {
+  platform: "linux",
   cpu: "AMD Ryzen 7 PRO 8700GE",
   threads: 16,
   memoryGb: 64,
@@ -83,6 +108,7 @@ export const ax42: Hardware = {
 
 /** office-mini-1, a mini PC in the office of mokly-ai, with one small disk. */
 export const miniPc: Hardware = {
+  platform: "linux",
   cpu: "AMD Ryzen 9 7940HS",
   threads: 16,
   memoryGb: 64,
@@ -97,6 +123,7 @@ export const miniPc: Hardware = {
  * with no slots. The monthly cost is the power that mokly-ai entered.
  */
 export const oldPc: Hardware = {
+  platform: "linux",
   cpu: "Intel Core i5-6500T",
   threads: 4,
   memoryGb: 8,
@@ -105,10 +132,14 @@ export const oldPc: Hardware = {
   monthlyCost: 12,
 };
 
-/** "16 threads · 64 GB", the line under a machine name. */
+/**
+ * "16 threads · 64 GB", the line under a machine name. Apple Silicon runs
+ * one thread on each core, so a Mac names its cores.
+ */
 export function hardwareSize(hardware: Hardware): string {
+  const unit = hardware.platform === "macos" ? "cores" : "threads";
   return dotJoin(
-    unbroken(`${hardware.threads} threads`),
+    unbroken(`${hardware.threads} ${unit}`),
     unbroken(`${hardware.memoryGb} GB`),
   );
 }

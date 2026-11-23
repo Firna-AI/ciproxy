@@ -8,12 +8,14 @@ use base64::Engine;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_github::app::AppId;
 use ciproxy_metering::report::catalog::PriceList;
 use ciproxy_protocol::images::ImageDownload;
 use secrecy::SecretString;
 
 use crate::comparison_prices;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos_release::MacosImageSettings;
 
 /// Explicit process configuration. Debug never reveals secret files.
 pub struct Config {
@@ -35,8 +37,9 @@ pub struct Config {
     pub cdn_signing_key_name: String,
     /// Mounted runtime secret directory.
     pub secrets_directory: PathBuf,
-    /// Numeric GitHub App ID, used as the App JWT issuer.
-    pub github_app_id: String,
+    /// Numeric GitHub App ID, used as the App JWT issuer and in each managed
+    /// runner-group name.
+    pub github_app_id: AppId,
     /// Public OAuth client identity of the same GitHub App.
     pub github_oauth_client_id: String,
     /// Registered public App slug used to derive the install URL.
@@ -45,12 +48,14 @@ pub struct Config {
     pub download_url: String,
     /// Immutable deployed commit identity.
     pub build_id: String,
-    /// Current authenticated image metadata supplied by release composition.
-    pub image: Option<ImageDownload>,
+    /// Released images, at most one for each platform, from release composition.
+    pub images: Vec<ImageDownload>,
     /// Immutable published manifest path under IMAGE_URL_PREFIX.
     pub image_manifest_path: String,
     /// Exact released filesystem bytes from the same operator manifest.
     pub image_disk_bytes: u64,
+    /// Optional settings of the macOS release in the private R2 store.
+    pub macos_images: MacosImageSettings,
 }
 
 impl Config {
@@ -71,14 +76,15 @@ impl Config {
             cdn_signing_key_name: required("CDN_SIGNING_KEY_NAME")?,
             secrets_directory: env::var_os("SECRETS_DIRECTORY")
                 .map_or_else(|| PathBuf::from("/var/run/secrets/ciproxy"), PathBuf::from),
-            github_app_id: required("GITHUB_APP_ID")?,
+            github_app_id: AppId::new(required("GITHUB_APP_ID")?),
             github_oauth_client_id: required("GITHUB_OAUTH_CLIENT_ID")?,
             github_app_slug: required("GITHUB_APP_SLUG")?,
             download_url: required("DOWNLOAD_URL")?,
             build_id: required("BUILD_ID")?,
-            image: None,
+            images: Vec::new(),
             image_disk_bytes: 0,
             image_manifest_path: required("JOB_IMAGE_MANIFEST_PATH")?,
+            macos_images: MacosImageSettings::from_env(),
             comparison_prices: comparison_prices::configured()?,
         })
     }

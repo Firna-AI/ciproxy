@@ -79,6 +79,7 @@ fn retires_a_changed_allocation_before_replacing_its_warm_runner() {
         machine.selected_image = Some(ImageMetadata {
             image_id: ImageId("newer".into()),
             root_disk_bytes: 63_000_000_000,
+            free_job_bytes: None,
         });
         machine.warm_count = count;
         machine.warm_allocation = vec![OrganizationId(organization.into())];

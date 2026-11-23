@@ -54,6 +54,23 @@ crates/ciproxy-agent/scripts/cli-release.sh package ciproxy-agent 0.1.0 x86_64-u
 Use the version from the agent manifest.
 Packaging produces the `.tar.gz` archive and its `.sha256` companion.
 
+Build, sign, and package the macOS binary on an Apple Silicon Mac:
+
+```sh
+export MACOSX_DEPLOYMENT_TARGET=14.0
+cargo build --locked --release --package ciproxy-agent --target aarch64-apple-darwin
+crates/ciproxy-agent/scripts/macos-release.sh sign target/aarch64-apple-darwin/release/ciproxy-agent
+crates/ciproxy-agent/scripts/macos-release.sh verify target/aarch64-apple-darwin/release/ciproxy-agent 14.0 false 0.1.0
+crates/ciproxy-agent/scripts/cli-release.sh package ciproxy-agent 0.1.0 aarch64-apple-darwin target/aarch64-apple-darwin/release/ciproxy-agent .context/agent-release
+```
+
+The agent uses Virtualization.framework on macOS. So each macOS binary needs
+the entitlements in [ciproxy-agent.entitlements](macos/ciproxy-agent.entitlements),
+also for local tests. Without the `MACOS_*` signing inputs, `sign` gives an
+ad-hoc signature with these entitlements. Such a binary is not for release.
+[Agent updates and releases](updates-and-releases.md#macos-signing) gives
+the release signing.
+
 ## KVM and GitHub smoke checks
 
 The [smoke guide](smoke-checks.md) gives the Docker, warm, and restart checks.

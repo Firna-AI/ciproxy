@@ -4,7 +4,19 @@ set -euo pipefail
 
 definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$definition/pins.env"
-work_dir=$(realpath "${1:?Usage: image/build-runner.sh WORK_DIR}")
+work_dir=$(realpath "${1:?Usage: image/build-runner.sh WORK_DIR [linux-x64|osx-arm64]}")
+runtime=${2:-linux-x64}
+case $runtime in
+    linux-x64) output="$work_dir/patched-worker" build_os=Linux ;;
+    osx-arm64) output="$work_dir/patched-worker-osx-arm64" build_os=Darwin ;;
+    *) echo "unsupported runner runtime: $runtime" >&2; exit 2 ;;
+esac
+# The runner source takes its OS constants from the build host, not from
+# PackageRuntime. So each Worker is built on its own OS.
+if [[ $(uname -s) != "$build_os" ]]; then
+    echo "build the $runtime Worker on $build_os" >&2
+    exit 2
+fi
 commit=d1eb12d4b115c301201de27d667284e1a80f2ab5
 digest=a0fa836ec067173a6de1d5afc1ae7c9f5e23cd576884385d6d020c7a529c6e5e
 source_dir="$work_dir/runner-$commit"
@@ -12,12 +24,17 @@ archive="$work_dir/runner-source.tar.gz"
 if [[ ! -f "$archive" ]]; then
     curl -fsSL "https://codeload.github.com/actions/runner/tar.gz/$commit" -o "$archive"
 fi
-printf '%s  %s\n' "$digest" "$archive" | sha256sum --check
+# macOS has a BSD sha256sum without --check, and shasum on every host.
+if command -v shasum >/dev/null; then
+    printf '%s  %s\n' "$digest" "$archive" | shasum -a 256 -c
+else
+    printf '%s  %s\n' "$digest" "$archive" | sha256sum -c
+fi
 if [[ ! -d "$source_dir" ]]; then tar -xzf "$archive" -C "$work_dir"; fi
 python3 "$definition/runner-patch/prepare-source.py" "$source_dir"
 (
     cd "$source_dir/src"
-    dotnet publish Runner.Worker/Runner.Worker.csproj -c Release -r linux-x64 \
-        --self-contained false -p:Version="$RUNNER_VERSION" -p:PackageRuntime=linux-x64 \
-        -o "$work_dir/patched-worker"
+    dotnet publish Runner.Worker/Runner.Worker.csproj -c Release -r "$runtime" \
+        --self-contained false -p:Version="$RUNNER_VERSION" -p:PackageRuntime="$runtime" \
+        -o "$output"
 )

@@ -3,7 +3,7 @@
 use super::clock::clock;
 use super::settled::Settled;
 use super::support::{Fixture, at};
-use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_control_plane::runtime::{ImageOffer, MachineRuntime};
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -63,6 +63,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
     let clock = clock(true);
     let image = ciproxy_protocol::images::ImageDownload {
         image_id: ciproxy_protocol::identifiers::ImageId("selected".to_owned()),
+        platform: ciproxy_protocol::platform::Platform::LinuxX64,
         download_url: ciproxy_protocol::secret::Secret::new(
             "https://images.example/selected.tar.zst",
         ),
@@ -78,7 +79,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        Some(image.clone()),
+        Some(ImageOffer::unsigned(image.clone())),
         Arc::new(Unimock::new(())),
     );
     runtime.settled_tick().await.unwrap();
@@ -100,6 +101,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
     fixture.contact.report.images.available = vec![ciproxy_protocol::images::ImageMetadata {
         image_id: image.image_id,
         root_disk_bytes: image.root_disk_bytes,
+        free_job_bytes: None,
     }];
     fixture.contact.at = at() + chrono::Duration::seconds(1);
     fixture

@@ -6,17 +6,11 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::{ImageMetadata, ImageReport};
 
+use crate::boundaries::ImageLease;
 use crate::error::{Error, Result};
 use crate::image_artifact::PendingImage;
 use crate::image_store::ImageStore;
 use crate::image_verification::CheckedBundle;
-
-/// A preparation hold keeps its selected image until its last reference ends.
-#[cfg_attr(test, unimock::unimock(api = ImageLeaseMock))]
-pub trait ImageLease: Send + Sync {
-    /// Return the exact selected release and its logical root length.
-    fn metadata(&self) -> ImageMetadata;
-}
 
 #[derive(Default)]
 struct RegistryState {

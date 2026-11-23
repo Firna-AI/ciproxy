@@ -174,7 +174,7 @@ async fn restore_reconnects_all_owned_vms_without_starting_new_vms() {
     let observed = Arc::new(Mutex::new(Vec::new()));
     let restore_calls = observed.clone();
     let mock = Unimock::new(
-        VmsMock::restore
+        VmsMock::reattach
             .each_call(matching!(_))
             .answers_arc(Arc::new(move |_, vm| {
                 restore_calls

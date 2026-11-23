@@ -1,6 +1,7 @@
 // The own machines as a table on desktop and as a dense list on mobile. An
 // offline machine and a machine that gets its first job image show no slot
-// bar: no job can start in their slots, and the caption says why.
+// bar: no job can start in their slots, and the caption says why. The
+// caption under each name gives the platform with the threads and memory.
 
 import type { Viewport } from "@mokly/mokly";
 import { MockLink } from "@mokly/mokly";
@@ -15,13 +16,15 @@ import { paths, type CataloguePath } from "../../components/paths.ts";
 import { MachineStatusLabel } from "../../components/status.tsx";
 import { dotJoin, unbroken } from "../../fixtures/format.ts";
 import { hardwareSize } from "../../fixtures/hardware.ts";
+import { macStudioMachine } from "../../fixtures/macs.ts";
 import { officeMini, type Machine } from "../../fixtures/machines.ts";
+import { platformName } from "../../fixtures/platform.ts";
 import { UnknownFigure } from "./machine-cache.tsx";
 
 /**
  * The detail screens that exist: hetzner-ax42-1, also while its cache is
  * unknown, the offline machine, office-mini-1, whose disk limits its slots,
- * and hetzner-ax42-4 while it gets its first job image. A person who cannot
+ * hetzner-ax42-4 while it gets its first job image, and the Mac mac-studio-1. A person who cannot
  * change machines opens the read-only machine page.
  */
 function detailPath(
@@ -33,6 +36,7 @@ function detailPath(
   if (machine.status === "offline") return paths.machineOffline;
   if (machine.status === "preparing") return paths.machinePreparing;
   if (machine.name === officeMini.name) return paths.machineDiskLimit;
+  if (machine.name === macStudioMachine.name) return paths.machineMac;
   if (!first) return undefined;
   return machine.cache.status === "measured"
     ? paths.machine
@@ -56,7 +60,12 @@ function MachineName({
       ) : (
         <span className="machine-link mono">{machine.name}</span>
       )}
-      <span className="caption">{hardwareSize(machine.hardware)}</span>
+      <span className="caption">
+        {dotJoin(
+          platformName[machine.hardware.platform],
+          hardwareSize(machine.hardware),
+        )}
+      </span>
     </span>
   );
 }
@@ -93,6 +102,9 @@ function cell(machine: Machine, key: string, readOnly: boolean) {
         </span>
       );
     case "cache":
+      if (machine.hardware.platform === "macos") {
+        return <span className="muted">Not on macOS yet</span>;
+      }
       return machine.cache.status === "measured" ? (
         <span className="num">
           {machine.cache.usedGb} of {machine.cache.sizeGb} GB

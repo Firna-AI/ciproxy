@@ -3,16 +3,16 @@
 use std::sync::Arc;
 
 use axum::extract::{Query, State};
-use axum::http::{HeaderMap, HeaderValue, header};
+use axum::http::{HeaderMap, HeaderValue, Uri, header};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{Extension, Json};
-use secrecy::ExposeSecret;
+use secrecy::{ExposeSecret, SecretString};
 
-use crate::access::Principal;
+use crate::access::{OAUTH_BINDING_LIFETIME, Principal};
 use crate::error::{ErrorResultExt, Result};
 use crate::router::cookie;
 use crate::state::ApiState;
-use crate::wire::access::{OAuthCallback, Success};
+use crate::wire::access::{OAuthCallback, OAuthStart, Success};
 
 pub(crate) fn set_cookie(
     headers: &mut HeaderMap,
@@ -32,18 +32,36 @@ pub(crate) fn set_cookie(
     Ok(())
 }
 
-#[utoipa::path(operation_id = "auth_begin", get, path = "/auth/github", responses((status = 303, description = "GitHub App authorization redirect")))]
-pub(crate) async fn begin(State(state): State<ApiState>, headers: HeaderMap) -> Result<Response> {
-    let previous = cookie(&headers, "__Host-ciproxy");
-    let attempt = state.access.begin_login(previous.as_deref()).await?;
-    let mut response = Redirect::to(&attempt.url).into_response();
+pub(super) fn set_oauth_cookie(headers: &mut HeaderMap, binding: &SecretString) -> Result<()> {
     set_cookie(
-        response.headers_mut(),
+        headers,
         "__Host-ciproxy-oauth",
-        attempt.binding.expose_secret(),
-        600,
+        binding.expose_secret(),
+        OAUTH_BINDING_LIFETIME.num_seconds(),
         true,
-    )?;
+    )
+}
+
+#[utoipa::path(operation_id = "auth_begin", get, path = "/auth/github", params(OAuthStart), responses((status = 303, description = "GitHub App authorization redirect")))]
+pub(crate) async fn begin(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    uri: Uri,
+) -> Result<Response> {
+    let previous = cookie(&headers, "__Host-ciproxy");
+    let pending_setup = if Query::<OAuthStart>::try_from_uri(&uri)
+        .is_ok_and(|Query(parameters)| parameters.resume.as_deref() == Some("setup"))
+    {
+        cookie(&headers, "__Host-ciproxy-oauth")
+    } else {
+        None
+    };
+    let attempt = state
+        .access
+        .begin_login(previous.as_deref(), pending_setup.as_deref())
+        .await?;
+    let mut response = Redirect::to(&attempt.url).into_response();
+    set_oauth_cookie(response.headers_mut(), &attempt.binding)?;
     Ok(response)
 }
 

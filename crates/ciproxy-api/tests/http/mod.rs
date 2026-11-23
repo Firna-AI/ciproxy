@@ -3,8 +3,10 @@
 mod access_tests;
 mod database;
 mod fixture;
+mod image_limit_tests;
 mod machine_statistics_tests;
 mod machine_tests;
+mod platform_label_tests;
 mod ports;
 mod ports_gate;
 mod ports_scale_sets;
@@ -53,6 +55,7 @@ mod refresh_tests;
 mod token_tests;
 
 mod setup_personal_tests;
+mod setup_terms_tests;
 
 mod continuation_tests;
 mod direct_recovery_tests;

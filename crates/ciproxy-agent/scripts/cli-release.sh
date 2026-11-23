@@ -29,7 +29,8 @@ package_cli() {
       cp "crates/$binary/LICENSE" "$staging/$artifact/LICENSE"
       ;;
   esac
-  tar -C "$staging" -czf "$dist_dir/$artifact.tar.gz" "$artifact"
+  # macOS tar must not add AppleDouble `._` members for extended attributes.
+  COPYFILE_DISABLE=1 tar -C "$staging" -czf "$dist_dir/$artifact.tar.gz" "$artifact"
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$dist_dir/$artifact.tar.gz" | awk '{print $1}' >"$dist_dir/$artifact.tar.gz.sha256"
   else

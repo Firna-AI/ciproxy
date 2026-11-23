@@ -1,4 +1,4 @@
-//! The Firecracker CONNECT handshake precedes newline-delimited protocol JSON.
+//! One guest channel: reconnect, replay, and newline-delimited protocol JSON.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -13,15 +13,14 @@ use tokio::time::{MissedTickBehavior, interval, sleep, timeout};
 use crate::boundaries::{GuestEvent, GuestProvenance};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::guest_transport::GuestTransport;
-use crate::layout::unit_name;
-use crate::process::{Commands, UnitState};
 use crate::state::VmRecord;
+use crate::vm_liveness::{UnitState, VmLiveness};
 use crate::vsock::Configuration;
 
 pub(crate) struct GuestBridge {
     pub(crate) configuration: Arc<Mutex<Configuration>>,
     pub(crate) transport: Arc<dyn GuestTransport>,
-    pub(crate) commands: Arc<dyn Commands>,
+    pub(crate) liveness: Arc<dyn VmLiveness>,
     pub(crate) events: mpsc::Sender<GuestEvent>,
     pub(crate) vm: VmRecord,
     pub(crate) initial: AtomicBool,
@@ -34,8 +33,9 @@ impl GuestBridge {
         mut shutdown: watch::Receiver<bool>,
     ) {
         loop {
-            match self.commands.unit(&unit_name(&self.vm)).await {
+            match self.liveness.state(&self.vm).await {
                 Ok(UnitState::Exited(code)) => {
+                    tracing::info!(vm_id = %self.vm.local_id, code, "the VM ended; report the runner exit");
                     let _ = self
                         .emit(
                             GuestToAgent::RunnerExited {
@@ -48,6 +48,7 @@ impl GuestBridge {
                     return;
                 }
                 Ok(UnitState::Absent) => {
+                    tracing::info!(vm_id = %self.vm.local_id, "the VM is gone; report the runner exit");
                     let _ = self
                         .emit(
                             GuestToAgent::RunnerExited {
@@ -164,7 +165,7 @@ impl GuestBridge {
                             message: hello.clone(),
                         }).await.context("replay lost configuration observation")?;
                     }
-                    if self.commands.unit(&unit_name(&self.vm)).await? != UnitState::Active {
+                    if self.liveness.state(&self.vm).await? != UnitState::Active {
                         return Err(Error::Disconnected);
                     }
                 }

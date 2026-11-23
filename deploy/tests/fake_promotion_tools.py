@@ -13,6 +13,9 @@ import sys
 tool = Path(sys.argv[0]).name
 args = sys.argv[1:]
 record = {"tool": tool, "args": args}
+if tool == "gcloud" and args[:3] == ["secrets", "versions", "access"]:
+    record["sdk_logging"] = {name: os.environ.get(name) for name in (
+        "CLOUDSDK_CORE_LOG_HTTP", "CLOUDSDK_CORE_DISABLE_FILE_LOGGING")}
 if "--input" in args:
     record["payload"] = json.loads(Path(args[args.index("--input") + 1]).read_text())
 if tool == "terraform" and len(args) > 1 and args[1] == "apply":
@@ -80,18 +83,23 @@ elif tool == "terraform":
             backend.write_text('{"backend":{"type":"gcs"}}')
     if action == "output":
         if args[-1] == "deployment":
-            print(json.dumps({
+            deployment = {
                 "project_id": "ciproxy", "region": "us-central1",
                 "cluster_name": "ciproxy-shared", "prefix": "ciproxy-main-preview",
                 "namespace": "ciproxy-main-preview",
                 "allowed_zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
                 "release_secret": "fake-release-token", "runtime_repository": "example.invalid/runtime",
                 "boat_shared_snapshot_secret": "fake-boat-shared-snapshot",
+                "r2_images_secret": "fake-r2-images",
                 "hosts": {"releases": "downloads.invalid", "dashboard": "app.invalid"},
                 "buckets": {"site": "site-bucket", "dashboard": "app-bucket"},
                 "control_plane_account": "runtime@example.invalid", "sql_connection": "test:eu:sql",
                 "sql_user": "runtime", "kms_key": "test-key", "secrets": {},
-            }))
+            }
+            # A data state from before the R2 images parent existed.
+            if os.environ.get("FAKE_NO_R2_OUTPUT") == "true":
+                deployment.pop("r2_images_secret")
+            print(json.dumps(deployment))
         elif args[-1] == "url_map":
             print("ciproxy-production" if prefix.startswith("production/") else "ciproxy-main-preview")
         else:
@@ -109,6 +117,12 @@ elif tool == "gcloud" and args[:3] == ["secrets", "versions", "access"]:
             print(f"ERROR: (gcloud.secrets.versions.access) {error}: fixture failure", file=sys.stderr)
             sys.exit(1)
         print(os.environ.get("FAKE_BOAT_SNAPSHOT", "fixture-boat-share-code"))
+    elif "--secret=fake-r2-images" in args:
+        error = os.environ.get("FAKE_R2_ERROR")
+        if error:
+            print(f"ERROR: (gcloud.secrets.versions.access) {error}: fixture failure", file=sys.stderr)
+            sys.exit(1)
+        print(os.environ.get("FAKE_R2_KEY", '{"access_key_id": "fixture-id", "secret_access_key": "fixture-key"}'))
     else:
         print("fake-token")
 elif (tool == "kubectl" and args[:1] == ["apply"]
@@ -117,6 +131,9 @@ elif (tool == "kubectl" and args[:1] == ["apply"]
         print(json.dumps(record["manifest"]), file=sys.stderr)
         sys.exit(1)
     print(os.environ.get("FAKE_BOAT_REVISION", "41"))
+elif (tool == "kubectl" and args[:1] == ["apply"]
+      and record["manifest"].get("metadata", {}).get("name") == "r2-images"):
+    print(os.environ.get("FAKE_R2_REVISION", "51"))
 elif tool == "kubectl" and args[:2] == ["get", "serviceaccount"]:
     print(os.environ.get("FAKE_KSA_UID", "22222222-2222-4222-8222-222222222222" if "--namespace=ciproxy-production" in args else "11111111-1111-4111-8111-111111111111"))
 elif tool == "kubectl" and args[:2] == ["get", "service"]:
@@ -127,7 +144,10 @@ elif tool == "kubectl" and args[:2] == ["get", "service"]:
         "network_endpoint_groups": {"8080": "ciproxy-main-preview-" + suffix},
         "zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
     })}}}))
-elif tool == "python3" and args[:1] != ["deploy/scripts/publish_static.py"]:
+elif tool == "python3" and args[:1] == ["deploy/scripts/publish_static.py"]:
+    if "--new-only" in args and os.environ.get("FAKE_STAGE_FAIL") == "true":
+        sys.exit(1)
+elif tool == "python3":
     os.execv(os.environ["FAKE_REAL_PYTHON"], [os.environ["FAKE_REAL_PYTHON"], *args])
 '''
 

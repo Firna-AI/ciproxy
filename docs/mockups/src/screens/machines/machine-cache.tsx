@@ -1,5 +1,8 @@
 // The machine cache of one machine: its use, the cache hits, and the Docker
-// disks. Each part shows the figures that the machine measured in its last
+// disks. A Mac has neither yet: a macOS VM runs no Docker, and the machine
+// cache of a Mac comes later, so its panel says that its jobs use the GitHub
+// cache. Each
+// part shows the figures that the machine measured in its last
 // report. A part that the machine did not measure shows Unknown, never a zero
 // or a share, and a note says that its figures show after the machine
 // measures them. A measured cache that served no restore yet, such as the
@@ -88,6 +91,17 @@ function unknownNote(machine: Machine): string | null {
   return null;
 }
 
+/** The panel of a Mac, which has no machine cache yet. */
+function MacCache() {
+  return (
+    <Panel title="Cache">
+      <p className="small">
+        A Mac has no machine cache yet. Its jobs restore from the GitHub cache.
+      </p>
+    </Panel>
+  );
+}
+
 export function MachineCache({
   machine,
   canClear,
@@ -99,6 +113,7 @@ export function MachineCache({
   /** The Clear cache confirmation of the page, when the screen of it exists. */
   confirm?: CataloguePath;
 }) {
+  if (machine.hardware.platform === "macos") return <MacCache />;
   const offline = machine.status === "offline";
   const { cache, dockerDisks } = machine;
   const note = unknownNote(machine);

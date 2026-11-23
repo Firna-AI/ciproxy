@@ -9,6 +9,7 @@ use ciproxy_protocol::jobs::{JobFacts, JobScope};
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
+use crate::boundaries::DockerDisks;
 use crate::docker_files::{self, AttachmentPhase, Lease};
 use crate::docker_prepare::Preparation;
 use crate::error::{ErrorResultExt, Result};
@@ -18,29 +19,6 @@ use crate::process::Commands;
 use crate::state::VmRecord;
 use crate::vm_drives::VmDrive;
 use crate::workload_space::WorkloadSpace;
-
-#[cfg_attr(test,unimock::unimock(api=DockerDisksMock))]
-#[async_trait]
-/// Durable Docker reservations and disk attachment operations.
-pub trait DockerDisks: Send + Sync {
-    fn reserved(&self, vm: &VmRecord) -> Result<bool>;
-    fn offered(&self, vm: &VmRecord) -> Result<()>;
-    fn failed(&self, vm: &VmRecord) -> Result<bool>;
-    fn pending(&self, vm: &VmRecord) -> Result<bool>;
-    async fn discard(&self, vm: &VmRecord) -> Result<()>;
-    async fn prepare(
-        &self,
-        vm: &VmRecord,
-        facts: &JobFacts,
-        scope: &JobScope,
-        data_bytes: u64,
-        spare: u64,
-    ) -> Result<Option<DockerDiskAttachment>>;
-    fn release(&self, vm: &VmRecord) -> Result<()>;
-    fn report(&self) -> Result<DockerDiskReport>;
-    fn unused_bytes(&self) -> Result<u64>;
-    fn reclaim(&self, free_pool: u64) -> Result<u64>;
-}
 
 pub(crate) struct LinuxDockers {
     pub(crate) layout: Layout,

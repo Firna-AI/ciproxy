@@ -73,7 +73,7 @@ pub(super) fn view(
             workspace_id: None,
             organization_id: None,
             activation: None,
-            reauthorization_url: "/api/auth/github".to_owned(),
+            reauthorization_url: "/continue".to_owned(),
         });
     }
     let mut workspaces = Vec::new();
@@ -135,6 +135,6 @@ pub(super) fn view(
         workspace_id: claim.workspace_id,
         organization_id: claim.organization_id,
         activation: local,
-        reauthorization_url: "/api/auth/github".to_owned(),
+        reauthorization_url: "/continue".to_owned(),
     })
 }

@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_control_plane::runtime::{ImageOffer, MachineRuntime};
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -23,6 +23,7 @@ use uuid::Uuid;
 use super::clock::clock;
 use super::settled::Settled;
 use super::support::{Fixture, at};
+use ciproxy_protocol::platform::Platform;
 
 #[tokio::test]
 async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
@@ -107,6 +108,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
         .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
         .unwrap();
     let label = Label {
+        platform: Platform::LinuxX64,
         id: Uuid::new_v4(),
         name: "large".to_owned(),
         size: VmSize {
@@ -193,6 +195,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
     let clock = clock(true);
     let image = ciproxy_protocol::images::ImageDownload {
         image_id: ciproxy_protocol::identifiers::ImageId("fixture".to_owned()),
+        platform: ciproxy_protocol::platform::Platform::LinuxX64,
         download_url: ciproxy_protocol::secret::Secret::new(
             "https://images.example/fixture.tar.zst",
         ),
@@ -208,7 +211,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        Some(image),
+        Some(ImageOffer::unsigned(image)),
         Arc::new(Unimock::new(())),
     );
     runtime.settled_tick().await.unwrap();

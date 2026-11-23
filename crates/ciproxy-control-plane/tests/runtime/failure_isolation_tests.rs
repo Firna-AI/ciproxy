@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use ciproxy_control_plane::runtime::MachineRuntime;
+use ciproxy_control_plane::runtime::{ImageOffer, MachineRuntime};
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -80,6 +80,7 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
     let clock = clock(true);
     let image = ciproxy_protocol::images::ImageDownload {
         image_id: ciproxy_protocol::identifiers::ImageId("fixture".to_owned()),
+        platform: ciproxy_protocol::platform::Platform::LinuxX64,
         download_url: ciproxy_protocol::secret::Secret::new(
             "https://images.example/fixture.tar.zst",
         ),
@@ -95,7 +96,7 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        Some(image),
+        Some(ImageOffer::unsigned(image)),
         Arc::new(Unimock::new(())),
     );
     runtime.settled_tick().await.unwrap();

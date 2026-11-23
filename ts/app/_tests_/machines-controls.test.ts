@@ -22,7 +22,12 @@ test("the warm runner count shows the saved count in every machine state", () =>
       occupancy: [slot(0, "job"), slot(1, "free")],
     }),
     offline: machine({ offline: true, health_old: true, occupancy: [] }),
-    noKvm: machine({ kvm: false, slots: 0, occupancy: [] }),
+    noKvm: machine({
+      kvm: false,
+      virtualization: "kvm_unavailable",
+      slots: 0,
+      occupancy: [],
+    }),
     noSlots: machine({ slots: 0, occupancy: [] }),
   };
   for (const [state, view] of Object.entries(states)) {

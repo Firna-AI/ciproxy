@@ -67,19 +67,20 @@ test("the label list says where jobs run now, as the API places them, and the jo
       row.where.warn,
       row.where.note,
     ]),
+    // Every label has the same size, so the list orders them by name.
     [
       ["ciproxy", true, "Your machines, then Boat", false, null],
-      ["own", false, "Your machines only", false, null],
-      ["huge", false, "Boat only", false, null],
       ["giant", false, "Waits: nothing fits", true, null],
-      ["giant-own", false, "Waits: no machine fits", true, null],
       ["giant-boat", false, "Waits: no Boat size fits", true, null],
-      ["off", false, "Waits: Your machines and Boat are off", true, null],
+      ["giant-own", false, "Waits: no machine fits", true, null],
+      ["huge", false, "Boat only", false, null],
       ["new-box", false, "Your machines", false, "Boat fit not known yet"],
-      ["unknown", false, "Not known yet", false, null],
       ["no-boat", false, "Your machines only", false, null],
       ["no-boat-big", false, "Waits: no machine fits", true, null],
       ["no-boat-only", false, "Waits: Boat is not connected", true, null],
+      ["off", false, "Waits: Your machines and Boat are off", true, null],
+      ["own", false, "Your machines only", false, null],
+      ["unknown", false, "Not known yet", false, null],
     ],
   );
   const counted = labelRows([
@@ -98,18 +99,56 @@ test("the label list says where jobs run now, as the API places them, and the jo
   ]);
 });
 
+test("the list shows Linux labels, then macOS labels, from the smallest size to the largest", () => {
+  const macos = { platform: "macos_arm64" } as const;
+  const medium = { vcpus: 4, memory_gb: 16, disk_gb: 20 };
+  const rows = labelRows([
+    label("a", { ...macos, ...medium, name: "ciproxy-macos-medium" }),
+    label("b", { name: "ciproxy-large" }),
+    label("c", { ...macos, name: "ciproxy-macos", vcpus: 2, memory_gb: 8 }),
+    label("d", { ...medium, name: "ciproxy-medium" }),
+    label("e", { ...medium, name: "more-memory", memory_gb: 32 }),
+    label("f", { ...medium, name: "more-disk", disk_gb: 40 }),
+    label("g", { ...medium, name: "builds" }),
+    label("h", { ...medium, name: "E2E" }),
+    label("i", { name: "ciproxy", vcpus: 2, memory_gb: 8, disk_gb: 20 }),
+    // Fewer vCPU but more memory than the labels of 4 vCPU, so the vCPU key
+    // decides its place.
+    label("j", { name: "lean-cpu", vcpus: 2, memory_gb: 64, disk_gb: 20 }),
+    // First by name among its memory, but more disk, so the disk key decides.
+    label("k", { ...medium, name: "big-disk", disk_gb: 40 }),
+  ]);
+  assert.deepEqual(
+    rows.map((row) => [row.id, row.name]),
+    [
+      ["i", "ciproxy"],
+      ["j", "lean-cpu"],
+      // Names of one size compare by character code, so E2E comes first.
+      ["h", "E2E"],
+      ["g", "builds"],
+      ["d", "ciproxy-medium"],
+      ["k", "big-disk"],
+      ["f", "more-disk"],
+      ["e", "more-memory"],
+      ["b", "ciproxy-large"],
+      ["c", "ciproxy-macos"],
+      ["a", "ciproxy-macos-medium"],
+    ],
+  );
+});
+
 test("every label except ciproxy offers Delete label", () => {
   assert.equal(canDelete(labelInput({ name: "ciproxy" })), false);
-  assert.equal(canDelete(labelInput({ name: "ciproxy-4vcpu" })), true);
+  assert.equal(canDelete(labelInput({ name: "ciproxy-medium" })), true);
   assert.equal(canDelete(labelInput({ name: "Ciproxy" })), true);
 });
 
 test("an edit sends the saved name unchanged with the new size", () => {
-  const saved = labelInput({ name: "ciproxy-4vcpu", disk_gb: 20 });
+  const saved = labelInput({ name: "ciproxy-medium", disk_gb: 20 });
   const draft = { ...editDraft(saved), disk: "40" };
   assert.deepEqual(checkDraft(draft), {
     ok: true,
-    input: { ...saved, disk_gb: 40 },
+    input: { ...saved, platform: "linux_x64", disk_gb: 40 },
   });
 });
 

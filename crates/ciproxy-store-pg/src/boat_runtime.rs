@@ -91,7 +91,7 @@ impl BoatRuntimeStore for PgStore {
              JOIN labels l ON l.workspace_id=w.id AND l.id=$5
              JOIN scale_sets b ON b.workspace_id=w.id AND b.organization_id=o.id AND b.label_id=l.id AND b.id=$6
              WHERE w.id=$2 AND o.app_state='active' AND a.admitted
-             AND s.overflow_enabled AND l.deleted_at IS NULL AND l.allow_boat AND b.remote_removed_at IS NULL
+             AND s.overflow_enabled AND l.deleted_at IS NULL AND l.allow_boat AND l.platform='linux_x64' AND b.remote_removed_at IS NULL
              AND l.vcpus=($7::jsonb->'requested_size'->>'vcpu')::bigint
              AND l.memory_gb::numeric*1000000000=($7::jsonb->'requested_size'->>'memory_bytes')::numeric
              AND l.disk_gb::numeric*1000000000=($7::jsonb->'requested_size'->>'disk_bytes')::numeric

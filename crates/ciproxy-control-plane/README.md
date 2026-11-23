@@ -136,6 +136,11 @@ and `JOB_IMAGE_MANIFEST_PATH`.
 [overflow guide](overflow.md#configuration) gives its rules. Deploy reads it
 from a Secret Manager secret, as
 [Boat setup](../../deploy/runtime.md#boat-shared-snapshot) says.
+The optional settings `MACOS_IMAGE_URL_PREFIX`, `MACOS_IMAGE_MANIFEST_PATH`,
+and `R2_IMAGES_KEY` turn on the macOS image.
+[macOS image setup](../../deploy/runtime.md#macos-images) gives where each
+one comes from, when a new key takes effect, and when the runtime offers
+the image.
 The runtime uses mounted private key, webhook, OAuth, session, and CDN keys.
 Billing reads `stripe-secret-key` and `stripe-webhook-secret` from the same
 secret directory. Startup constructs the blocking Stripe client on a blocking
@@ -149,7 +154,8 @@ Its [larger runner guide][github-sizes] gives the dimensions.
 
 [github-prices]: https://docs.github.com/en/billing/reference/actions-runner-pricing
 [github-sizes]: https://docs.github.com/en/actions/reference/runners/larger-runners
-Artifact delivery gets a fresh Cloud CDN signature each time.
+Linux artifact delivery gets a fresh Cloud CDN signature each time.
+macOS artifact delivery gets a fresh presigned R2 URL each time.
 `IMAGE_URL_PREFIX` selects the existing CDN /images origin.
 Signed image clients use HTTP/1 explicitly. This keeps their transport
 stable under Cargo feature unification and matches the real TRACE proof.
@@ -211,7 +217,14 @@ GitHub, and database access, so they stay operator work.
 - [src/capacity.rs](src/capacity.rs) gives the API each machine's capacity.
 - [src/composition.rs](src/composition.rs) constructs shared hosted adapters.
 - [src/config.rs](src/config.rs) resolves runtime and image configuration.
-- [src/image_release.rs](src/image_release.rs) fetches the pinned release.
+- [src/image_release.rs](src/image_release.rs) fetches the pinned release
+  of one platform with signed reads.
+- [src/macos_release.rs](src/macos_release.rs) reads the optional macOS
+  settings and release, and turns macOS images off when they are missing.
+- [src/image_signing.rs](src/image_signing.rs) signs Cloud CDN URLs and
+  gives each platform's release its signer.
+- [src/presigned_signing.rs](src/presigned_signing.rs) signs S3 presigned
+  GET URLs with AWS Signature Version 4.
 - [Gateway logging](../ciproxy-gateway/src/logging.rs) keeps frame guards
   mandatory while it preserves unrelated selected diagnostics.
 - [src/listeners.rs](src/listeners.rs) supervises reconciliation, listener
@@ -275,7 +288,7 @@ GitHub, and database access, so they stay operator work.
 - [src/boat_start.rs](src/boat_start.rs) starts a Boat delivery after its
   GitHub registration, in a supervised task.
 - [src/boat_snapshot.rs](src/boat_snapshot.rs) turns saved Boat deliveries,
-  registrations, and runner states into scaler supply.
+  registrations, runner states, and launch times into scaler supply.
 - [src/boat_authority.rs](src/boat_authority.rs) defines
   `BoatRunnerAuthority`. It retires Boat registrations GitHub-first for the
   overflow service and for runtime recovery. It asks GitHub again about a
@@ -305,3 +318,5 @@ GitHub, and database access, so they stay operator work.
 - [Dashboard API](../ciproxy-api/README.md) defines the `/api` routes.
 - [GitHub integration](../ciproxy-github/README.md) defines App boundaries.
 - [Runtime setup](../../deploy/runtime.md) defines the deployed interface.
+- [Agent images](../../docs/protocol/agent-images.md#the-macos-image)
+  defines how ciproxy serves the macOS image.

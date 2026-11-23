@@ -9,7 +9,7 @@ use ciproxy_store_interface::dashboard::records::Role;
 use super::adapter_server::Server;
 use super::fixture::Fixture;
 use super::fixture_io::{CallbackOutcome, assert_callback, json};
-use super::setup_support::{begin, browser, configure, finish, old_callback_status};
+use super::setup_support::{browser, complete_setup, configure, old_callback_status};
 
 #[tokio::test]
 async fn setup_proves_organization_and_preserves_start_bound_expiry() {
@@ -28,14 +28,10 @@ async fn setup_proves_organization_and_preserves_start_bound_expiry() {
     );
     fixture.advance(Duration::days(2));
     server.control.memberships.store(true, Ordering::SeqCst);
-    let response = finish(
+    let response = complete_setup(
         &fixture,
-        begin(
-            &fixture,
-            Some(&prior),
-            "?installation_id=101&state=forged&workspace_id=forged",
-        )
-        .await,
+        Some(&prior),
+        "?installation_id=101&state=forged&workspace_id=forged",
         CallbackOutcome::Accepted,
     )
     .await;
@@ -72,16 +68,10 @@ async fn setup_proves_organization_and_preserves_start_bound_expiry() {
     )
     .await;
     assert_eq!(unchanged["setup"]["kind"], "organization");
-    let response = finish(
+    let response = complete_setup(
         &fixture,
-        fixture
-            .request(
-                Some(&signed),
-                "GET",
-                "/github/setup?installation_id=1066",
-                None,
-            )
-            .await,
+        Some(&signed),
+        "?installation_id=1066",
         CallbackOutcome::Accepted,
     )
     .await;
@@ -121,16 +111,10 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
         .unwrap();
     fixture.advance(Duration::hours(1));
     for target in [201, 701, 702, 703, 704, 705] {
-        finish(
+        complete_setup(
             &fixture,
-            fixture
-                .request(
-                    Some(&signed),
-                    "GET",
-                    &format!("/github/setup?installation_id={target}"),
-                    None,
-                )
-                .await,
+            Some(&signed),
+            &format!("?installation_id={target}"),
             CallbackOutcome::Refused,
         )
         .await;
@@ -156,16 +140,10 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
         .control
         .fail_user_installations
         .store(true, Ordering::SeqCst);
-    finish(
+    complete_setup(
         &fixture,
-        fixture
-            .request(
-                Some(&signed),
-                "GET",
-                "/github/setup?installation_id=101",
-                None,
-            )
-            .await,
+        Some(&signed),
+        "?installation_id=101",
         CallbackOutcome::Refused,
     )
     .await;

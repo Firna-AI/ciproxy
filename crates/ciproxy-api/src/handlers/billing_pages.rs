@@ -52,7 +52,7 @@ pub(crate) async fn plans(
         let current = offer.selection.tier == usage.status.selection.tier;
         let covers_use = offer.selection.tier == usage.offer.selection.tier && !current;
         let mut features = vec![
-            feature("Own Linux machines", false),
+            feature("Own Linux machines and Macs", false),
             feature("Boat overflow", false),
             feature("Transparent cache", false),
             feature("Warm runners", false),

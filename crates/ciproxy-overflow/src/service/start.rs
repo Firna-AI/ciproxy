@@ -137,6 +137,7 @@ impl OverflowService {
             phase: StartPhase::Unsent,
             sandbox: None,
             starts_at: now,
+            launched_at: None,
             ends_at: None,
             billing: None,
             start_fee_bound_usd: facts.start_fee_bound_usd,

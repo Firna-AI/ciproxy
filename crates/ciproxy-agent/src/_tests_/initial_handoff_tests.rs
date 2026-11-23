@@ -17,7 +17,7 @@ use crate::layout::Layout;
 use crate::process::{CommandsMock, UnitState};
 
 use super::configuration_delivery_tests::{hello, socket};
-use super::{Guests, LinuxGuests};
+use super::{GuestChannels, Guests};
 
 #[tokio::test(start_paused = true)]
 async fn boot_connection_failure_keeps_first_authority_until_configuration_is_sent() {
@@ -36,7 +36,7 @@ async fn boot_connection_failure_keeps_first_authority_until_configuration_is_se
             .once();
     }));
     let (events, mut observed) = mpsc::channel(16);
-    let mut guests = LinuxGuests::new(
+    let mut guests = GuestChannels::new(
         Layout {
             data: PathBuf::from("/fixture"),
             firecracker: PathBuf::new(),

@@ -118,6 +118,8 @@ The unit runs the loader as root before each listener start.
 This includes boot and each automatic restart.
 The loader reads the current resolvers and applies the rules in one nftables
 transaction. A failed load keeps the listener stopped.
+The loader passes the rules to `nft` on standard input. SELinux denies
+`nft` a direct read of the temporary file in `/run`.
 Install and hourly repair create the system user and restore these files.
 They apply the policy before they download a release.
 Install and repair check the actual cache process before they move data.
@@ -230,7 +232,7 @@ Live KVM proof remains required.
 - [Cache](../../docs/protocol/cache.md) defines the cache rules and the
   job ID pair. [Cache handoff](../../docs/protocol/cache-handoff.md) defines
   the cache handoff.
-- [Security](../../docs/protocol/security.md) defines job isolation.
+- [Isolation](../../docs/protocol/security-isolation.md) defines job isolation.
 - [Cache sidecar](../ciproxy-cache-sidecar/README.md) gives the admin
   listener routes and the restore result without entry facts.
 - [Smoke checks](smoke-checks.md) give the live cache and Docker checks.

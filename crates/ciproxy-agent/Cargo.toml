@@ -19,7 +19,7 @@ getrandom = "0.4.3"
 hex = "0.4.3"
 internal-error = { workspace = true }
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls", "stream"] }
-rustix = { version = "1.1.6", features = ["fs"] }
+rustix = { version = "1.1.6", features = ["fs", "net", "process"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.11.1"
@@ -33,7 +33,13 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 uuid = { version = "1.29.0", features = ["v4"] }
 zstd = "0.14.3"
 
+[target.'cfg(target_os = "macos")'.dependencies]
+ciproxy-vz = { path = "../ciproxy-vz" }
+libc = "0.2.191"
+
 [dev-dependencies]
+# The pure `VmSettings` check of the macOS VM helper runs in Linux tests.
+ciproxy-vz = { path = "../ciproxy-vz" }
 tokio = { version = "1.54.1", features = ["test-util"] }
 log = "0.4.35"
 unimock = "0.6.8"

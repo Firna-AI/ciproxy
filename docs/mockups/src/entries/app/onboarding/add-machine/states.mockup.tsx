@@ -44,3 +44,17 @@ export const noKvm = defineScreen({
     <OnboardingScreen viewport={context.viewport} state="machine-no-kvm" />
   ),
 });
+
+export const mac = defineScreen({
+  slug: "mac",
+  title: "A Mac connected",
+  description:
+    "A what-if: the first machine of mokly-ai is mac-studio-1, a Mac Studio. The same command connected it. The line under its name gives its cores, memory, virtualization, and 6 slots, and the next line says that it runs the jobs of macOS labels, at most 2 at a time. The note under the command names what a Linux machine and a Mac need: on a Mac, Apple Silicon, macOS 26.7.3 or later, 16 GB of memory, and about 176 GB of free disk for the macOS image and the jobs. Continue opens the Boat step, which only Linux jobs use.",
+  rationale:
+    "The agent install doc says that the one install command detects macOS and installs the agent as a launchd service. A Mac uses the slot rule of a Linux machine and runs at most 2 job VMs at a time, because Apple allows at most 2 macOS VMs at a time on one Mac.",
+  relatedDocs: related("agent", "agentInstall", "jobRouting"),
+  address: orgAddress("setup"),
+  render: (_props, context) => (
+    <OnboardingScreen viewport={context.viewport} state="machine-mac" />
+  ),
+});

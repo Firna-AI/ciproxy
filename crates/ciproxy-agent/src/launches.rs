@@ -1,11 +1,11 @@
 //! Reserve shared resources and hold the selected image through VM preparation.
 
-use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_agent::root_sizing::{RootFit, RootRule, RootSizing};
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::reports::DrainState;
 use ciproxy_protocol::runners::{RunnerReport, RunnerSpec, RunnerState};
 
-use crate::capacity::machine_resources;
+use crate::capacity::{machine_resources, real_space_fits};
 use crate::controller::Controller;
 use crate::error::{Error, Result};
 use crate::registration::{RegistrationAction, configure};
@@ -45,9 +45,22 @@ impl Controller {
                 }
                 let image = self.images.hold_newest()?;
                 let metadata = image.metadata();
-                let size = RootSizing::for_image(&metadata)
-                    .vm_size(runner.size)
-                    .ok_or(Error::Capacity)?;
+                let root = RootRule::for_platform(
+                    report.hardware.platform,
+                    Some(&metadata),
+                    RootSizing::for_image(&metadata),
+                );
+                if root.fit(runner.size.disk_bytes) == RootFit::AboveImage {
+                    tracing::warn!(image = %metadata.image_id.0, free_job_bytes = runner.size.disk_bytes, "the label asks for more free disk than the image gives");
+                }
+                let size = root.vm_size(runner.size).ok_or(Error::Capacity)?;
+                if !real_space_fits(&report.hardware, size) {
+                    tracing::warn!(
+                        needed_bytes = size.disk_bytes,
+                        "the disk has too little real free space for a new VM"
+                    );
+                    return Err(Error::Capacity);
+                }
                 let available = machine_resources(&report.hardware, self.image_budget)
                     .available(state.runners.iter().map(|vm| vm.report.size));
                 let leased = self

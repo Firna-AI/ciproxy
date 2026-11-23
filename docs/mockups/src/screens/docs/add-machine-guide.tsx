@@ -1,6 +1,7 @@
-// The guide Add a machine, ciproxy.dev/docs/guides/add-a-machine: what the
-// machine needs, the install command with its token, the machines that run
-// fewer jobs, what follows the connection, and a repeat install. The step that
+// The guide Add a machine, ciproxy.dev/docs/guides/add-a-machine: what a
+// Linux machine and a Mac need, the install command with its token, the
+// machines that run fewer jobs, what follows the connection, and a repeat
+// install. The same command connects a Linux machine and a Mac. The step that
 // shows the connected machine says that a new machine first downloads the job
 // image. No text promises a time, because a slow link makes the download long.
 
@@ -12,12 +13,16 @@ import { CodeBlock } from "../../components/figures.tsx";
 import { docsInstallCommand } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
+import { machineSlots } from "../../fixtures/hardware.ts";
+import { macMini } from "../../fixtures/macs.ts";
 import { defaultWarmRunners } from "../../fixtures/machines.ts";
+import { macosVmLimit, minimumMacos } from "../../fixtures/platform.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
 import { DocsH2, DocsTitle } from "./docs-parts.tsx";
 
 const toc: readonly TocItem[] = [
   { id: "what-the-machine-needs", label: "What the machine needs" },
+  { id: "add-a-mac", label: "Add a Mac" },
   { id: "run-the-install-command", label: "Run the install command" },
   {
     id: "when-a-machine-runs-fewer-jobs",
@@ -27,23 +32,51 @@ const toc: readonly TocItem[] = [
   { id: "run-the-command-again", label: "Run the command again" },
 ];
 
+const network = (
+  <li>
+    Outbound HTTPS to ciproxy, to GitHub, and to{" "}
+    <span className="inline-code">get.ciproxy.dev</span>. The machine opens no
+    inbound port.
+  </li>
+);
+
+function MacNeeds() {
+  return (
+    <ul className="docs-list">
+      <li>A Mac with Apple Silicon, M1 or later.</li>
+      <li>
+        {unbroken(minimumMacos)} or later. A macOS VM cannot run a newer macOS
+        than its Mac, so the Mac needs the macOS of the job image.
+      </li>
+      <li>
+        {unbroken("16 GB")} of memory, and about {unbroken("176 GB")} of free
+        disk for the macOS image and the jobs.
+      </li>
+      <li>
+        Outbound HTTPS to ciproxy, to GitHub, to{" "}
+        <span className="inline-code">get.ciproxy.dev</span>, and to{" "}
+        <span className="inline-code">
+          785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com
+        </span>
+        , which serves the macOS image. The Mac opens no inbound port.
+      </li>
+    </ul>
+  );
+}
+
 function Needs() {
   return (
     <ul className="docs-list">
       <li>x64 Linux with systemd, {unbroken("cgroup v2")}, and KVM.</li>
       <li>
-        A supported distribution: Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-        AlmaLinux.
+        A supported distribution: Debian, Ubuntu, Fedora, RHEL, CentOS Stream,
+        Rocky Linux, AlmaLinux, openSUSE, or Arch Linux.
       </li>
       <li>
         {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
         {unbroken("250 GB")} of disk or more.
       </li>
-      <li>
-        Outbound HTTPS to ciproxy, to GitHub, and to{" "}
-        <span className="inline-code">get.ciproxy.dev</span>. The machine opens
-        no inbound port.
-      </li>
+      {network}
     </ul>
   );
 }
@@ -63,14 +96,14 @@ function InstallSteps() {
         </div>
       </li>
       <li>
-        Run the command on the machine. It installs the agent, prepares the
-        machine, and connects it to your workspace.
+        Run the command on the machine, in Terminal on a Mac. It installs the
+        agent, prepares the machine, and connects it to your workspace.
       </li>
       <li>
         Keep the page open. It shows that it waits for the machine. Then it
-        shows the host name of the machine and what the agent reported: threads,
-        memory, KVM, and slots. A new machine first downloads the job image and
-        takes jobs when it is ready.
+        shows the host name of the machine and what the agent reported: threads
+        or cores, memory, virtualization, and slots. A new machine first
+        downloads the job image and takes jobs when it is ready.
       </li>
     </ol>
   );
@@ -83,6 +116,11 @@ function FewerJobs() {
         <strong>No KVM:</strong> the machine connects, but it cannot start VMs,
         so it gets no slots. Turn on virtualization for the machine, then run
         the command again.
+      </li>
+      <li>
+        <strong>A Mac with an older macOS:</strong> the Mac connects, but it
+        cannot start VMs, so it gets no slots. Update the Mac to{" "}
+        {unbroken(minimumMacos)} or later, then run the command again.
       </li>
       <li>
         <strong>Too little CPU or memory:</strong> a machine without room for
@@ -132,7 +170,7 @@ export function AddMachineGuideScreen({ viewport }: { viewport: Viewport }) {
     <DocsShell viewport={viewport} page={paths.addMachineGuide} toc={toc}>
       <DocsTitle
         title="Add a machine"
-        lead="Connect a Linux machine to your workspace with one command."
+        lead="Connect a Linux machine or a Mac to your workspace with one command."
       />
       <div className="docs-flow">
         <p>
@@ -140,6 +178,7 @@ export function AddMachineGuideScreen({ viewport }: { viewport: Viewport }) {
           the open-source agent, which starts a fresh VM for each job.
         </p>
         <DocsH2 id="what-the-machine-needs">What the machine needs</DocsH2>
+        <p>A Linux machine needs:</p>
         <Needs />
         <p>
           A machine with more threads and memory has more slots, so it runs more
@@ -154,6 +193,26 @@ export function AddMachineGuideScreen({ viewport }: { viewport: Viewport }) {
           for example with RAID0 or one LVM volume. Its jobs, its machine cache,
           and its Docker disks are disposable.
         </Notice>
+        <DocsH2 id="add-a-mac">Add a Mac</DocsH2>
+        <p>
+          A Mac runs the jobs of macOS labels, each in a fresh macOS VM with
+          Xcode. A Mac needs:
+        </p>
+        <MacNeeds />
+        <p>
+          A Mac uses the same slots as a Linux machine, but it runs at most{" "}
+          {macosVmLimit} jobs at a time, because Apple allows at most{" "}
+          {macosVmLimit} macOS VMs on one Mac. A Mac with{" "}
+          {unbroken(`${macMini.memoryGb} GB`)} of memory has room for{" "}
+          {machineSlots(macMini)} slot, so it runs {machineSlots(macMini)} job
+          at a time. Jobs of a macOS label never run on Boat. They wait for a
+          free Mac. A Mac counts as one machine of your plan, as a Linux machine
+          does.
+        </p>
+        <p>
+          Run the same install command in Terminal on the Mac. The agent runs as
+          a launchd service.
+        </p>
         <DocsH2 id="run-the-install-command">Run the install command</DocsH2>
         <p>Only an Admin of the workspace sees the install command.</p>
         <InstallSteps />

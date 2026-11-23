@@ -16,19 +16,26 @@ import { diskLimit } from "./machines-capacity.ts";
 import {
   contactSince,
   countRunners,
-  hardwareText,
+  machineSize,
   machineStatus,
   untilReadyText,
 } from "./machines.ts";
+import {
+  defaultLabelName,
+  platformName,
+  virtualizationProblem,
+} from "./platform.ts";
 
 /**
- * "AMD Ryzen 7 · 16 threads · 64 GB · 1,000 GB disk": the processor, the
- * threads, the memory, and each disk that the agent reported.
+ * "Linux · AMD Ryzen 7 · 16 threads · 64 GB · 1,000 GB disk": the platform,
+ * the processor, the threads, the memory, and each disk that the agent
+ * reported.
  */
 export function machineSubtitle(machine: MachineView): string {
   return dotJoin(
+    platformName[machine.platform],
     machine.processor,
-    hardwareText(machine),
+    machineSize(machine),
     ...machine.disks.map((disk) =>
       detailCopy.disk(gigabytes(disk.capacity_bytes)),
     ),
@@ -76,7 +83,13 @@ export function headerActions(machine: MachineView): HeaderAction[] {
 
 export type MachineNotice = {
   key:
-    "offline" | "no-kvm" | "no-slots" | "draining" | "preparing" | "disk-limit";
+    | "offline"
+    | "no-virtualization"
+    | "no-slots"
+    | "draining"
+    | "preparing"
+    | "disk-limit"
+    | "mac-slots";
   tone: NoticeTone;
   title: string;
   body: string;
@@ -111,6 +124,22 @@ function preparingNotice(
   };
 }
 
+/**
+ * A Mac whose threads and memory leave fewer slots than its limit of VMs:
+ * it runs fewer jobs at a time than a larger Mac.
+ */
+function macSlotsNotice(machine: MachineView): MachineNotice | null {
+  const vmLimit = machine.vm_limit ?? null;
+  if (vmLimit === null || machine.slots >= vmLimit) return null;
+  return {
+    key: "mac-slots",
+    tone: "info",
+    title: noticeCopy.macSlotsTitle(machine.hostname, machine.slots),
+    body: noticeCopy.macSlots(machine.slots, vmLimit),
+    fix: false,
+  };
+}
+
 function statusNotice(
   machine: MachineView,
   machines: readonly MachineView[],
@@ -127,8 +156,9 @@ function statusNotice(
         body: `${noticeCopy.lostContact(contactSince(machine, now))} ${noticeCopy.offlineCheck}`,
         fix: false,
       };
-    case "no-slots":
-      return machine.kvm
+    case "no-slots": {
+      const problem = virtualizationProblem(machine.virtualization);
+      return problem === null
         ? {
             key: "no-slots",
             tone: "danger",
@@ -137,12 +167,13 @@ function statusNotice(
             fix: false,
           }
         : {
-            key: "no-kvm",
+            key: "no-virtualization",
             tone: "danger",
-            title: noticeCopy.noKvmTitle(host),
-            body: noticeCopy.noKvm,
+            title: noticeCopy.noVirtualizationTitle(host),
+            body: problem,
             fix: true,
           };
+    }
     case "draining":
       return {
         key: "draining",
@@ -155,13 +186,14 @@ function statusNotice(
       return preparingNotice(machine, machines, summary);
     case "healthy": {
       const limit = diskLimit(machine);
+      const label = defaultLabelName(machine);
       return limit === null
-        ? null
+        ? macSlotsNotice(machine)
         : {
             key: "disk-limit",
             tone: "warning",
-            title: noticeCopy.diskLimitTitle(host, limit.jobs),
-            body: noticeCopy.diskLimit(limit.vmDisk, limit.jobDisk),
+            title: noticeCopy.diskLimitTitle(host, limit.jobs, label),
+            body: noticeCopy.diskLimit(limit.vmDisk, limit.jobDisk, label),
             fix: false,
           };
     }
@@ -169,7 +201,8 @@ function statusNotice(
 }
 
 /**
- * The notice that leads the page: offline, no KVM, no room for a slot, a
+ * The notice that leads the page: offline, no virtualization, no room for a
+ * slot, a Mac with fewer slots than its limit of VMs, a
  * drain, the first job image, or a disk that holds fewer jobs of ciproxy than
  * the slots, when the API says that the disk sets that number. Each state
  * shows one notice. `machines` and `summary` say where jobs run until a

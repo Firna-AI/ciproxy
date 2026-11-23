@@ -38,6 +38,7 @@ mod own_reservation;
 mod own_result_guard;
 mod own_results;
 mod own_runners;
+mod platform_text;
 mod routing_snapshot;
 mod runners;
 mod scale_set_tracking;

@@ -143,6 +143,7 @@ async fn several_admin_workspaces_require_an_exact_offered_choice_and_fresh_inst
         .unwrap();
     let links = claims(&fixture, &current).await;
     assert_eq!(links[0]["state"], "choose_workspace");
+    assert_eq!(links[0]["reauthorization_url"], "/continue");
     assert_eq!(links[0]["workspaces"].as_array().unwrap().len(), 2);
     assert_eq!(
         links[0]["workspaces"]

@@ -17,6 +17,9 @@ const docs = {
   overflow: "docs/protocol/overflow.md",
   paidMoves: "docs/protocol/billing-paid-moves.md",
   security: "docs/protocol/security.md",
+  securityData: "docs/protocol/security-data.md",
+  securityIsolation: "docs/protocol/security-isolation.md",
+  termsAcceptance: "docs/protocol/terms-acceptance.md",
   workspaces: "docs/protocol/workspaces.md",
 } as const;
 

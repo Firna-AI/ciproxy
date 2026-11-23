@@ -16,6 +16,12 @@ export const freeAddsOrganization = defineUseCase({
         "Free still offers Add an organization, and the caption says that a new one stays inactive until Team. Cal adds mokly-studio on GitHub.",
     },
     {
+      screenPath: paths.termsStep,
+      title: "Continue with GitHub",
+      description:
+        "GitHub returns to the terms step, which shows the terms notice of sign-in. Continue with GitHub signs Cal in again, so that ciproxy can check the install with his account.",
+    },
+    {
       screenPath: paths.inactivePlan,
       title: "mokly-studio is inactive",
       description:

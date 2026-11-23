@@ -1,7 +1,10 @@
 // The labels of the organization: a table on desktop and cards on mobile,
-// each with its size, where its jobs run now, and its jobs of 30 days. As in
-// the machine table, the size is a caption under the name. Without a Boat
-// account, the labels that fit a machine run on the machines only.
+// each with its platform and size, where its jobs run now, and its jobs of 30
+// days. As in the machine table, the platform and size are a caption under
+// the name. Without a Boat account, the labels that fit a machine run on the
+// machines only. A macOS label runs on the Macs only, with or without Boat.
+// The list shows the Linux labels first, then the macOS labels, each from the
+// smallest size to the largest.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -14,8 +17,11 @@ import {
 } from "../../components/data-table.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import { DotLabel, Tag } from "../../components/status.tsx";
-import { formatCount } from "../../fixtures/format.ts";
+import { dotJoin, formatCount } from "../../fixtures/format.ts";
+import type { Machine } from "../../fixtures/machines.ts";
+import { platformName, type Platform } from "../../fixtures/platform.ts";
 import {
+  macosLabel,
   nothingFitsLabel,
   placementOf,
   type Label,
@@ -33,18 +39,46 @@ const columns: readonly Column[] = [
 const placementText: Record<Placement, string> = {
   "machines-then-boat": "Your machines, then Boat",
   "machines-only": "Your machines only",
+  "macs-only": "Your Macs only",
   "boat-only": "Boat only",
   waits: "Waits: nothing fits",
 };
 
 /** The labels whose dialog has a screen of its own, with and without Boat. */
 const editPaths: Readonly<Record<string, CataloguePath>> = {
-  "ciproxy-8vcpu": paths.editLabel,
+  "ciproxy-large": paths.editLabel,
   [nothingFitsLabel.name]: paths.nothingFits,
+  [macosLabel.name]: paths.editMacosLabel,
 };
 const editPathsNoBoat: Readonly<Record<string, CataloguePath>> = {
-  "ciproxy-8vcpu": paths.editLabelNoBoat,
+  "ciproxy-large": paths.editLabelNoBoat,
 };
+
+/** Linux labels come before macOS labels in the list. */
+const platformRank: Readonly<Record<Platform, number>> = {
+  linux: 0,
+  macos: 1,
+};
+
+/** Two names by character code, so the order is the same in every locale. */
+function byCharacterCode(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+/**
+ * The order of the list: by platform, then vCPU, memory, free disk, and
+ * name, as "The label list" in docs/protocol/labels.md says.
+ */
+function listOrder(a: Label, b: Label): number {
+  return (
+    platformRank[a.platform] - platformRank[b.platform] ||
+    a.vcpu - b.vcpu ||
+    a.memoryGb - b.memoryGb ||
+    a.freeDiskGb - b.freeDiskGb ||
+    byCharacterCode(a.name, b.name)
+  );
+}
 
 function LabelName({ label }: { label: Label }) {
   return (
@@ -55,18 +89,26 @@ function LabelName({ label }: { label: Label }) {
   );
 }
 
-/** The name, and the size under it. */
+/** "Linux · 2 vCPU · 8 GB · 20 GB free disk": the platform and the size. */
+function labelText(label: Label): string {
+  return dotJoin(platformName[label.platform], sizeText(label));
+}
+
+/** The name, and the platform and size under it. */
 function LabelCell({ label }: { label: Label }) {
   return (
     <span className="label-cell">
       <LabelName label={label} />
-      <span className="caption">{sizeText(label)}</span>
+      <span className="caption">{labelText(label)}</span>
     </span>
   );
 }
 
-function Placed({ label, boat }: { label: Label; boat: boolean }) {
-  const placement = placementOf(label, boat);
+/** Where the jobs of a label run, and the machines that decide it. */
+type Where = { boat: boolean; machines?: readonly Machine[] };
+
+function Placed({ label, where }: { label: Label; where: Where }) {
+  const placement = placementOf(label, where.boat, where.machines);
   return placement === "waits" ? (
     <DotLabel tone="warn">{placementText.waits}</DotLabel>
   ) : (
@@ -87,16 +129,16 @@ function EditLabel({ label, boat }: { label: Label; boat: boolean }) {
   );
 }
 
-function cell(label: Label, key: string, boat: boolean) {
+function cell(label: Label, key: string, where: Where) {
   switch (key) {
     case "label":
       return <LabelCell label={label} />;
     case "where":
-      return <Placed label={label} boat={boat} />;
+      return <Placed label={label} where={where} />;
     case "jobs":
       return <span className="num">{formatCount(label.jobs)}</span>;
     default:
-      return <EditLabel label={label} boat={boat} />;
+      return <EditLabel label={label} boat={where.boat} />;
   }
 }
 
@@ -105,20 +147,25 @@ export function LabelList({
   labels,
   loading,
   boat = true,
+  machines,
 }: {
   viewport: Viewport;
   labels: readonly Label[];
   loading: boolean;
   /** The workspace has a Boat account. */
   boat?: boolean;
+  /** The machines of the moment, when they are not the busy afternoon's. */
+  machines?: readonly Machine[];
 }) {
+  const where: Where = { boat, machines };
+  const ordered = [...labels].sort(listOrder);
   if (viewport === "desktop") {
     return (
       <DataTable
         columns={columns}
-        rows={loading ? [] : labels}
+        rows={loading ? [] : ordered}
         rowKey={(label) => label.name}
-        cell={(label, key) => cell(label, key, boat)}
+        cell={(label, key) => cell(label, key, where)}
         loading={loading}
         loadingRowCount={3}
       />
@@ -127,13 +174,13 @@ export function LabelList({
   if (loading) return <LoadingRows count={3} />;
   return (
     <ul className="label-cards">
-      {labels.map((label) => (
+      {ordered.map((label) => (
         <li key={label.name} className="label-card">
           <span className="label-card-text">
             <LabelName label={label} />
-            <span className="small">{sizeText(label)}</span>
+            <span className="small">{labelText(label)}</span>
             <span className="small">
-              <Placed label={label} boat={boat} />
+              <Placed label={label} where={where} />
             </span>
             <span className="caption">
               {formatCount(label.jobs)} jobs in 30 days

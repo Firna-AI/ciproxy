@@ -127,7 +127,7 @@ pub trait Overflow: Send + Sync {
     async fn start(&self, workspace_id: Uuid, request: StartRequest) -> Result<StartOutcome>;
     /// Resume an existing delivery without creating a second sandbox or runner.
     async fn resume(&self, workspace_id: Uuid, delivery_id: Uuid) -> Result<StartOutcome>;
-    /// Accept one report per token and immediately attempt sandbox deletion.
+    /// Save one exit report per token before attempting deletion, which can defer to cleanup.
     async fn report_end(&self, token: Secret, runner_id: Uuid) -> Result<()>;
     /// Recover pending deletes and remove marked sandboxes whose runners are unneeded.
     async fn cleanup(&self, workspace_id: Uuid) -> Result<()>;

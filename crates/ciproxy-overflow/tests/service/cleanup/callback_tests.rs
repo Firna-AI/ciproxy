@@ -1,5 +1,6 @@
 //! Scoped callback claims and safe orphan cleanup across control-plane outages.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use chrono::Duration;
@@ -154,4 +155,60 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
         harness.service.start(id(1), next).await.unwrap(),
         StartOutcome::Started(_)
     ));
+}
+
+#[tokio::test]
+async fn callback_skips_provider_calls_when_cleanup_ends_delivery_before_waiting_lock() {
+    let usage_calls = Arc::new(AtomicUsize::new(0));
+    let delete_calls = Arc::new(AtomicUsize::new(0));
+    let usage = usage_calls.clone();
+    let deletes = delete_calls.clone();
+    let backend = capabilities(
+        Unimock::new((
+            BoatAccountApiMock::usage
+                .each_call(matching!(_, _, _))
+                .answers_arc(Arc::new(move |_, _, _, _| {
+                    usage.fetch_add(1, Ordering::SeqCst);
+                    Ok(None)
+                })),
+            SandboxLifecycleMock::destroy_sandbox
+                .each_call(matching!(_))
+                .answers_arc(Arc::new(move |_, _| {
+                    deletes.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                })),
+        ))
+        .no_verify_in_drop(),
+    );
+    let harness = Harness::new(backend, (), Runtime::ExitReport);
+    let token = Secret::new("test-exit-report-token");
+    harness.seed_token(record(StartPhase::Running), &token);
+    let ended_at = at() + Duration::seconds(90);
+    *harness.now.lock().unwrap() = ended_at;
+    let store = harness.database.store.clone();
+    harness.state.lock().unwrap().lock_effect = Some(Box::new(move || {
+        let mut session = store.lock_overflow(id(1)).unwrap();
+        let mut ended = session.snapshot().unwrap().starts.remove(0);
+        ended.phase = StartPhase::Ended;
+        ended.ends_at = Some(ended_at);
+        session.save_start(&ended).unwrap();
+    }));
+
+    harness.service.report_end(token, id(12)).await.unwrap();
+
+    assert!(
+        harness.state.lock().unwrap().lock_effect.is_none(),
+        "an exit report must use the waiting workspace lock"
+    );
+    assert_eq!(harness.start(id(11)).ends_at, Some(ended_at));
+    assert_eq!(
+        usage_calls.load(Ordering::SeqCst),
+        0,
+        "an ended delivery must not read provider usage"
+    );
+    assert_eq!(
+        delete_calls.load(Ordering::SeqCst),
+        0,
+        "an ended delivery must not request another provider delete"
+    );
 }

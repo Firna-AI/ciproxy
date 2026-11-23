@@ -20,9 +20,11 @@ encrypted OAuth grant only while a role or an open access request exists. A
 deleted session leaves only the signed-in install or access page. It cannot
 authorize a private workspace route.
 
-The session response provides a same-origin reauthorization URL. The frontend
-uses top-level navigation to get fresh GitHub proof for Check again or
-promotion. A matching GitHub identity keeps the first sign-in expiry.
+The session response, when it includes a reauthorization URL, points to
+`/continue`. Each organization link uses the same URL. The frontend opens
+this dashboard terms page for Check again or promotion. Continue starts
+fresh GitHub authorization. A matching GitHub identity keeps the first
+sign-in expiry.
 Reauthorization rotates session and CSRF secrets. Membership refresh uses the
 latest stored grant under a database lease. It does not create another access
 request after an Admin declines one.
@@ -94,12 +96,19 @@ on update OFF. The separate PKCE flow requests `offline_access`. M13 owns
 `/hooks/github` and periodic repository refresh. Stripe uses `/hooks/stripe`.
 There is no `/hooks` alias.
 
-The public setup route treats incoming ID/state as untrusted. It reads the
-configured-App installation and starts fresh user authorization. Its sealed
-one-use binding captures purpose and prior token-free metadata at the start. The
-callback requires the same installation/account through the fresh user token and
-requires organization membership or exact personal ownership. Only then can
-sign-in persistence run. Verified Add claims can then choose their workspace.
+The public setup route treats the incoming installation ID and state as
+untrusted. It checks the configured-App installation, seals the pending setup
+in `__Host-ciproxy-oauth` for 10 minutes, and opens `/continue`. No OAuth
+attempt starts until Continue opens `/api/auth/github?resume=setup`. That
+request replaces a valid pending setup with a one-use OAuth binding that
+keeps the setup purpose and the current browser's token-free sign-in metadata.
+Without a valid pending setup, Continue starts a plain sign-in. The plain
+sign-in route `/api/auth/github` also replaces any pending setup.
+
+The callback requires the same installation and account through the fresh
+user token. It requires organization membership or exact personal ownership.
+Only then can sign-in persistence run. Verified Add claims can then choose
+their workspace.
 GET `/session` returns typed setup and installation-link outcomes without
 frontend installation-ID forwarding.
 Its `installation_continuation` lists the exact claim IDs from the latest

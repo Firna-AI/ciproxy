@@ -9,14 +9,16 @@ use ciproxy_protocol::identifiers::{
 };
 use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobIdBinding, JobScope, Repository};
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use ciproxy_protocol::reports::{DiskReport, HardwareReport};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::runners::{RunnerReport, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisks;
 use crate::boundaries::{Cache, CacheMock, HostMock};
 use crate::cache_authority::CacheAuthority;
-use crate::docker::{DockerDisks, LinuxDockers};
+use crate::docker::LinuxDockers;
 use crate::docker_files;
 use crate::error::Error;
 use crate::layout::Layout;
@@ -60,10 +62,11 @@ impl TemporaryLayout {
                         .some_call(matching!())
                         .answers_arc(Arc::new(move |_| {
                             Ok(HardwareReport {
+                                platform: Platform::LinuxX64,
                                 processor: "Fixture CPU".to_owned(),
                                 threads: 4,
                                 memory_bytes: 16_000_000_000,
-                                kvm: true,
+                                virtualization: Virtualization::Available,
                                 disks: vec![DiskReport {
                                     name: "data".to_owned(),
                                     capacity_bytes: (free_pool * 4).div_ceil(3),
@@ -189,5 +192,6 @@ pub(super) fn metadata(id: &str, root_disk_bytes: u64) -> ImageMetadata {
     ImageMetadata {
         image_id: ImageId(id.to_owned()),
         root_disk_bytes,
+        free_job_bytes: None,
     }
 }

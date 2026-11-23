@@ -46,7 +46,11 @@ test("each slot row keeps its reported index, in index order", () => {
 });
 
 test("a machine without slots says where its jobs go instead", () => {
-  const lab = machine({ id: "lab", kvm: false });
+  const lab = machine({
+    id: "lab",
+    kvm: false,
+    virtualization: "kvm_unavailable",
+  });
   const other = machine({ id: "other" });
   assert.deepEqual(slotsModel(lab, [lab, other], summary()), {
     kind: "message",

@@ -28,6 +28,41 @@ struct Blocking {
     blocked: bool,
 }
 
+impl TaggedStore {
+    /// Get the dedicated connection of an open workspace session on this store.
+    pub(in crate::store) fn workspace_session_pid(&self, observer: &mut PgConnection) -> i32 {
+        self.find_workspace_session_pid(observer).unwrap()
+    }
+
+    /// Observe this store's workspace session waiting, or return false if the call finishes first.
+    pub(in crate::store) fn wait_for_workspace_blocker(
+        &self,
+        observer: &mut PgConnection,
+        blocker: i32,
+        finished: &dyn Fn() -> bool,
+    ) -> bool {
+        observe_blocker(
+            observer,
+            blocker,
+            &|observer| self.find_workspace_session_pid(observer),
+            finished,
+        )
+    }
+
+    fn find_workspace_session_pid(&self, observer: &mut PgConnection) -> Option<i32> {
+        diesel::sql_query(
+            "SELECT pid FROM pg_stat_activity
+             WHERE datname = current_database() AND pid <> $1
+               AND application_name = (SELECT application_name FROM pg_stat_activity WHERE pid = $1)",
+        )
+        .bind::<sql_types::Integer, _>(self.pid)
+        .get_result::<Backend>(observer)
+        .optional()
+        .unwrap()
+        .map(|backend| backend.pid)
+    }
+}
+
 pub(in crate::store) fn tagged_store(database_url: &str) -> TaggedStore {
     let tag = format!("metering-operation-{}", Uuid::new_v4());
     let mut url = Url::parse(database_url).unwrap();
@@ -50,19 +85,31 @@ pub(in crate::store) fn backend_pid(connection: &mut PgConnection) -> i32 {
 
 /// The deadline detects hung setup, never the timing of a product outcome.
 pub(in crate::store) fn wait_for_blocker(observer: &mut PgConnection, waiter: i32, blocker: i32) {
+    observe_blocker(observer, blocker, &|_| Some(waiter), &|| false);
+}
+
+fn observe_blocker(
+    observer: &mut PgConnection,
+    blocker: i32,
+    waiter_pid: &dyn Fn(&mut PgConnection) -> Option<i32>,
+    finished: &dyn Fn() -> bool,
+) -> bool {
     let deadline = Instant::now() + Duration::from_secs(10);
-    loop {
-        let state = diesel::sql_query("SELECT $1 = ANY(pg_blocking_pids($2)) AS blocked")
-            .bind::<sql_types::Integer, _>(blocker)
-            .bind::<sql_types::Integer, _>(waiter)
-            .get_result::<Blocking>(observer)
-            .unwrap();
-        if state.blocked {
-            return;
+    while !finished() {
+        if let Some(waiter) = waiter_pid(observer) {
+            let state = diesel::sql_query("SELECT $1 = ANY(pg_blocking_pids($2)) AS blocked")
+                .bind::<sql_types::Integer, _>(blocker)
+                .bind::<sql_types::Integer, _>(waiter)
+                .get_result::<Blocking>(observer)
+                .unwrap();
+            if state.blocked {
+                return true;
+            }
         }
         if Instant::now() >= deadline {
             panic!("the tagged metering worker did not reach its expected blocker");
         }
         thread::yield_now();
     }
+    false
 }

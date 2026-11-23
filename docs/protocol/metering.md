@@ -68,7 +68,9 @@ of each tier.
 - The count is the current number, not the highest number of the period.
 - The count includes every registered machine, also one that is offline,
   [draining](agent.md#drain-and-remove), or unable to run jobs, such as a
-  machine without KVM.
+  machine whose [virtualization check](agent.md#the-virtualization-check)
+  fails.
+- A Mac counts as one own machine, as an x64 Linux computer does.
 - **Decision:** a machine that cannot run jobs still counts. Reason: the
   count stays stable while a machine recovers, and no limit stops a job.
 - A machine joins the count when it registers.
@@ -199,7 +201,7 @@ of each tier.
 - The report shows the starts and the minutes on own machines and on Boat.
 - It shows the starts of each day, on own machines and on Boat.
 - On every tier, ciproxy keeps the daily totals of 90 days, as
-  [Data retention](security.md#data-retention) says.
+  [Data retention](security-data.md#data-retention) says.
 - The daily totals stay also when the [job history](billing.md#tiers) of
   the tier is shorter.
 

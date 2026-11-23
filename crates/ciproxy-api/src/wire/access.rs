@@ -32,7 +32,7 @@ pub struct SessionView {
     pub state: SignInState,
     /// CSRF token for requests that change data.
     pub csrf_token: String,
-    /// Same-origin top-level navigation for fresh GitHub authorization.
+    /// Dashboard terms page. Continue starts fresh GitHub authorization.
     pub reauthorization_url: Option<String>,
     /// Whether a newly available role/request needs fresh GitHub membership proof.
     pub reauthorization_required: bool,
@@ -106,6 +106,14 @@ pub struct MemberView {
 pub struct RoleChange {
     /// The granted nested workspace role.
     pub role: WorkspaceRole,
+}
+
+/// Parameters to start GitHub authorization from the dashboard.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct OAuthStart {
+    /// Set to `setup` to resume a valid pending setup. Otherwise start a plain sign-in.
+    pub resume: Option<String>,
 }
 
 /// OAuth callback parameters returned by GitHub.

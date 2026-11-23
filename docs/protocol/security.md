@@ -1,7 +1,11 @@
 # Security
 
 This doc states the security requirements of ciproxy: sign-in, access,
-GitHub permissions, keys, isolation, and job data.
+GitHub permissions, and keys. [Terms acceptance](terms-acceptance.md)
+states who accepts the terms of service, the terms notice, and new
+versions of the terms. [Isolation](security-isolation.md) states how
+ciproxy keeps workspaces and jobs apart. [Data and retention](security-data.md)
+states the job data and how long ciproxy keeps each kind of data.
 [Workspaces](workspaces.md) states which organizations a workspace holds.
 
 ## Terms
@@ -15,6 +19,8 @@ GitHub permissions, keys, isolation, and job data.
 - A person signs in to the [dashboard](../architecture.md#components) with
   GitHub.
 - ciproxy has no password of its own.
+- Every GitHub sign-in to the dashboard starts after the terms notice, as
+  [The terms notice](terms-acceptance.md#the-terms-notice) says.
 - When a sign-in does not finish, the dashboard shows an error and the same
   sign-in button.
 - A sign-in lasts 30 days.
@@ -64,6 +70,9 @@ GitHub permissions, keys, isolation, and job data.
 - When an Admin gives a person the Admin role, the dialog says that an
   Admin can add machines and connect Boat, which run the jobs and their
   secrets of every organization of the workspace.
+- The dialog also says that an Admin accepts
+  [new versions of the Terms](terms-acceptance.md#who-accepts) for the
+  customer that holds the workspace, with a link to the Terms.
 - An organization that wants other people to control its runners uses a
   workspace of its own.
 - **Decision:** adding a machine needs the Admin role only, in a workspace
@@ -192,87 +201,19 @@ GitHub permissions, keys, isolation, and job data.
   [customer portal](billing.md#customer-portal), so the card never reaches
   ciproxy.
 
-## Tenant isolation
-
-- Each workspace has its own machines, [labels](labels.md),
-  settings, keys, caches, and data.
-- An own machine runs the jobs of every organization of its workspace, each
-  in a fresh [job VM](agent.md#job-vms).
-- An own machine never runs a job of another workspace.
-- The repositories of all the organizations of a workspace keep their cache
-  entries and their Docker disks apart, as [Job isolation](#job-isolation)
-  says.
-- **Decision:** an own machine runs the jobs of every organization of its
-  workspace, and tenant isolation holds between workspaces. Rejected: own
-  machines for each organization. Reason: one fleet serves the customer,
-  and the cache scopes already keep the repositories apart.
-
-## Job isolation
-
-- Each job on an own machine runs in a fresh
-  [job VM](agent.md#job-vms).
-- So a job never reads the files or the secrets of another job.
-- On Boat, each job runs in its own sandbox, as
-  [Overflow runners](overflow.md#overflow-runners) says.
-- A job VM cannot reach another job VM, the agent, or the host of its own
-  machine.
-- A job VM can reach the [machine cache](cache.md#cache-tiers) of its own
-  machine.
-- Apart from the machine cache, a job VM reaches the internet only.
-- A job VM cannot reach a private network or a cloud metadata service, also
-  when its machine can reach them.
-- **Decision:** a job VM reaches the internet only, as on GitHub-hosted
-  runners, so a job behaves the same on an own machine and on Boat.
-  Rejected: the private networks too, as on a classic self-hosted runner,
-  because the code of a pull request could then probe the internal network
-  and read the cloud credentials of the host.
-- Cache entries and Docker disks follow the isolation rules of
-  [Cache scopes](cache.md#cache-scopes),
-  [Trusted write-back](cache.md#trusted-write-back), and
-  [Docker disks](cache.md#docker-disks).
-
-## Secrets and job data
-
-- Code and secrets go from GitHub straight to the runner.
-- The control plane never receives, stores, or logs the code, the secrets,
-  the logs, or the cache contents of a job.
-- The control plane stores the job metadata that the dashboard shows.
-- The job metadata is the name, workflow, repository, ref, result, place,
-  times, label, [VM size](labels.md#terms) that ran, cache source, and
-  [cache counts](cache.md#terms) of a job.
-- The control plane also stores what the agent reports about each machine,
-  as [Health](agent.md#health) says.
-- Job logs stay on GitHub, and the job page links to them.
-- [Removing the App](app-removal.md#removing-the-app) says when ciproxy
-  deletes the data of an organization that removes the App.
-
-## Data retention
-
-- ciproxy keeps the job metadata of each finished job for 90 days, on every
-  [tier](billing.md#tiers).
-- Each page shows only the jobs of the job history of the tier.
-- ciproxy keeps the daily totals of the
-  [savings report](metering.md#savings-report) for 90 days.
-- ciproxy keeps the last report of each own machine, and the cache hits of
-  its last 7 days.
-- ciproxy keeps the record of a person only while the person has a role or
-  an open request for access.
-- After 90 days, ciproxy deletes the job metadata and the daily totals.
-- **Decision:** 90 days of job metadata on every tier. Rejected: the window
-  of the current tier, 13 months of daily totals, and a setting that makes
-  the window shorter. Reason: a tier change then deletes nothing, and an
-  upgrade shows the older jobs at once.
-
 ## Related docs
 
 - [Architecture](../architecture.md): the components and their boundaries.
+- [Terms acceptance](terms-acceptance.md): who accepts the terms of
+  service, the terms notice, and new versions of the terms.
+- [Isolation](security-isolation.md): tenant isolation and job isolation.
+- [Data and retention](security-data.md): secrets, job data, and how long
+  ciproxy keeps each kind of data.
 - [Workspaces](workspaces.md): the organizations of a workspace, and what
   the workspace owns.
 - [Agent](agent.md): machine identity, job VMs, and removal.
 - [Cache](cache.md): cache scopes, trusted write-back, and Docker disks.
 - [Overflow](overflow.md): the Boat account and its sandboxes.
-- [Labels](labels.md) and [Job routing](job-routing.md): labels and
-  runners.
 - [Billing](billing.md): tiers, Checkout, and the customer portal.
 - [Removing or suspending the App](app-removal.md): what ciproxy revokes,
   keeps, and deletes when an organization removes the App.

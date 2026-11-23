@@ -50,6 +50,7 @@ pub(super) fn seed(pages: &Pages) -> Uuid {
         phase: StartPhase::Unsent,
         sandbox: None,
         starts_at: starts,
+        launched_at: None,
         ends_at: None,
         billing: None,
         start_fee_bound_usd: None,

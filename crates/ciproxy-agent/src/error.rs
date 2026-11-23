@@ -18,6 +18,50 @@ pub enum Error {
     /// Run this command as root on x64 Linux.
     #[error("[agent] run this command as root on x64 Linux")]
     HostUnsupported,
+    /// Run this command as root on a Mac with Apple Silicon.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS host check returns it.")
+    )]
+    #[error("[agent] run this command as root on a Mac with Apple Silicon")]
+    MacHostUnsupported,
+    /// The Mac runs a macOS release that cannot run the macOS image.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS host check returns it.")
+    )]
+    #[error(
+        "[agent/host] ciproxy needs macOS {minimum} or later on this Mac. This Mac runs macOS {current}. Update macOS in System Settings, then run the install again."
+    )]
+    MacosVersion {
+        /// The macOS release of this Mac.
+        current: String,
+        /// The oldest macOS release that runs the macOS image.
+        minimum: String,
+    },
+    /// The command names an image or runner of another platform.
+    #[error("[agent] the command names another platform than this machine")]
+    PlatformMismatch,
+    /// A VM helper cannot run its VM.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS VM helper returns it.")
+    )]
+    #[error("[agent/vm] {reason}")]
+    VmHelper {
+        /// Why the helper stopped.
+        reason: String,
+    },
+    /// This platform does not support the named agent part yet.
+    #[cfg_attr(
+        target_os = "linux",
+        expect(dead_code, reason = "Linux implements every agent part.")
+    )]
+    #[error("[agent/platform] {part} is not supported on this platform yet")]
+    PlatformUnsupported {
+        /// Agent part that has no implementation on this platform.
+        part: &'static str,
+    },
     /// Host preparation needs the named repair before it can continue safely.
     #[error("[agent/host] {component}: {repair}")]
     Preparation {
@@ -70,6 +114,24 @@ pub enum Error {
     /// The image checksum or byte count does not match.
     #[error("[agent] the image checksum or byte count does not match")]
     ImageVerification,
+    /// The image host answered with an HTTP error status, for example `403`
+    /// for an expired download URL.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS image download returns it.")
+    )]
+    #[error("[agent/images] the image host answered with HTTP status {status}")]
+    ImageStatus {
+        /// The HTTP status code of the answer.
+        status: u16,
+    },
+    /// The image host sent an answer that does not continue the download.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(dead_code, reason = "Only the macOS image download returns it.")
+    )]
+    #[error("[agent/images] the image host sent an answer that does not continue the download")]
+    ImageAnswer,
     /// The image bundle must contain the released regular files only.
     #[error("[agent] the image bundle has an invalid released file layout")]
     ImageLayout,
@@ -91,3 +153,8 @@ pub enum Error {
 }
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
+
+/// Name a host component and the action that repairs it.
+pub(crate) fn repair(component: &'static str, repair: &'static str) -> Error {
+    Error::Preparation { component, repair }
+}

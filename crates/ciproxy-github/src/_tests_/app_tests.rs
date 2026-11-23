@@ -5,13 +5,14 @@ use std::sync::{Arc, Mutex};
 
 use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, LifecycleEvent};
 use ciproxy_store_interface::labels::Label;
-use ciproxy_store_interface::organizations::RepositoryAccess;
+use ciproxy_store_interface::organizations::{Organization, RepositoryAccess};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::app::webhook::{AccountKind, InstallationAction};
 use crate::app::{
-    GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome, LifecycleOutputMock,
+    AppId, AppService, GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome,
+    LifecycleOutputMock,
 };
 use crate::persistence::installation::InstallationStoreMock;
 use crate::persistence::lifecycle::LifecycleStoreMock;
@@ -34,14 +35,20 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .some_call(matching!("ciproxy", 47, None, _))
             .returns(Ok(53)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-4vcpu", 47, None, _))
+            .some_call(matching!("ciproxy-medium", 47, None, _))
             .returns(Ok(59)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-8vcpu", 47, None, _))
+            .some_call(matching!("ciproxy-large", 47, None, _))
             .returns(Ok(61)),
+        ScaleSetApiMock::ensure
+            .some_call(matching!("ciproxy-macos", 47, None, _))
+            .returns(Ok(67)),
+        ScaleSetApiMock::ensure
+            .some_call(matching!("ciproxy-macos-medium", 47, None, _))
+            .returns(Ok(71)),
     )));
     let _keep_api = api.clone();
-    let service = app(Unimock::new((
+    let mock = Unimock::new((
         (
             coordination(false),
             RuntimeMock::uuid
@@ -63,7 +70,7 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .some_call(matching!(_))
             .answers_arc(Arc::new(move |_, registration| {
                 assert_eq!(registration.workspace.unwrap().name, "customer");
-                assert_eq!(registration.organization, organization());
+                assert_eq!(registration.organization, installed());
                 assert_eq!(registration.defaults, labels());
                 assert_eq!(registration.initial_admin, 41);
                 let GithubLifecycleTarget::Active(prepared) = registration.target else {
@@ -94,9 +101,10 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .returns(Ok(repositories())),
         GitHubRestMock::restrict_runner_group
             .some_call(matching!(_, _, _, _, _))
-            .answers(&|_, installation, login, _, ids, _| {
+            .answers(&|_, installation, login, name, ids, _| {
                 assert_eq!(installation, 19);
                 assert_eq!(login, "customer");
+                assert_eq!(name, "ciproxy-2718-17");
                 assert_eq!(ids, [23]);
                 Ok(47)
             }),
@@ -112,25 +120,39 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),
-        delivery(LifecycleEvent::Active(organization())),
-    )));
+        delivery(LifecycleEvent::Active(installed())),
+    ));
+    let service = AppService {
+        app_id: AppId::new("2718".to_owned()),
+        ..app(mock)
+    };
     assert_eq!(
         service
             .installation(event(InstallationAction::Created))
             .await
             .unwrap(),
-        InstallationOutcome::Organization(organization())
+        InstallationOutcome::Organization(installed())
     );
     let mut created = created.lock().unwrap().clone();
     created.sort_by_key(|entry| entry.1);
     assert_eq!(
         created,
         vec![
-            (id(5), id(2), 53, 47),
-            (id(5), id(3), 59, 47),
-            (id(5), id(4), 61, 47)
+            (id(7), id(2), 53, 47),
+            (id(7), id(3), 59, 47),
+            (id(7), id(4), 61, 47),
+            (id(7), id(5), 67, 47),
+            (id(7), id(6), 71, 47)
         ]
     );
+}
+
+/// The new organization takes its ID after the five default labels.
+fn installed() -> Organization {
+    Organization {
+        id: id(7),
+        ..organization()
+    }
 }
 
 #[tokio::test]

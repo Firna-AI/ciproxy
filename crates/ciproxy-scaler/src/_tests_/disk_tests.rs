@@ -11,6 +11,7 @@ use crate::decision::decide;
 use crate::snapshot::RunnerState;
 
 use super::fixtures::{boat, label, large, own, queued, running, small, snapshot, start, warm};
+use ciproxy_protocol::platform::Platform;
 
 #[test]
 fn reserves_disk_for_all_starts_in_the_same_tick() {
@@ -39,22 +40,22 @@ fn reserves_disk_for_all_starts_in_the_same_tick() {
             ],
         ),
         (
-            "ciproxy-4vcpu",
+            "ciproxy-medium",
             large(),
             279,
             4,
             vec![
-                own("a", "ciproxy-4vcpu", large()),
-                own("a", "ciproxy-4vcpu", large()),
-                own("a", "ciproxy-4vcpu", large()),
+                own("a", "ciproxy-medium", large()),
+                own("a", "ciproxy-medium", large()),
+                own("a", "ciproxy-medium", large()),
             ],
         ),
         (
-            "ciproxy-8vcpu",
+            "ciproxy-large",
             largest,
             279,
             2,
-            vec![own("a", "ciproxy-8vcpu", largest)],
+            vec![own("a", "ciproxy-large", largest)],
         ),
     ] {
         let mut state = snapshot();
@@ -89,6 +90,41 @@ fn warm_preemption_frees_job_disk_even_when_slots_are_available() {
     state.machines[0].runners[0].state = RunnerState::Retiring;
     assert_eq!(decide(&state), vec![]);
     state.machines[0].runners.remove(0);
+    assert_eq!(decide(&state), vec![own("a", "large", size)]);
+}
+
+/// A stop frees real space that only the next report measures. So a real
+/// free space that is short still lets a warm runner retire for a waiting
+/// job, and the start waits for a report with the space. Only a Mac reports
+/// real free space, but the rule is the same for each machine.
+#[test]
+fn warm_preemption_retires_a_runner_when_the_real_free_space_is_short() {
+    let mut state = snapshot();
+    let mut size = large();
+    size.disk_bytes = 120 * GIGABYTE;
+    state.labels[1].size = size;
+    state.machines[0].disk_budget_bytes = 279 * GIGABYTE;
+    state.machines[0].free_bytes = Some(10 * GIGABYTE);
+    state.machines[0].warm_count = 2;
+    state.machines[0].warm_allocation =
+        vec![OrganizationId("a".into()), OrganizationId("b".into())];
+    state.machines[0].runners = vec![warm("first", "a"), warm("second", "b")];
+    state.queue = vec![queued("a", "large", 0)];
+    assert_eq!(
+        decide(&state),
+        vec![Action::StopRunner {
+            runner_id: RunnerId("first".into()),
+            reason: StopReason::WarmPreemption,
+        }]
+    );
+    state.machines[0].runners.remove(0);
+    assert_eq!(
+        decide(&state),
+        vec![],
+        "the old report still lacks the space"
+    );
+    let allocated = super::fixtures::allocated(size).disk_bytes;
+    state.machines[0].free_bytes = Some(allocated);
     assert_eq!(decide(&state), vec![own("a", "large", size)]);
 }
 
@@ -156,16 +192,19 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
     state.machines[0].selected_image = Some(ImageMetadata {
         image_id: ImageId("newer".into()),
         root_disk_bytes: 63_000_000_000,
+        free_job_bytes: None,
     });
     let mut older = state.machines[0].clone();
     older.id = MachineId("older".into());
     older.selected_image = Some(ImageMetadata {
         image_id: ImageId("older".into()),
         root_disk_bytes: 61_000_000_000,
+        free_job_bytes: None,
     });
     state.machines.push(older);
     state.queue = vec![queued("a", "ciproxy", 0); 2];
     let expected = StartRunner {
+        platform: Platform::LinuxX64,
         target: state.labels[0].targets[0].clone(),
         organization_id: OrganizationId("a".into()),
         label: state.labels[0].name.clone(),
@@ -177,7 +216,10 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
         destination: Destination::Machine(MachineId("older".into())),
         reason: StartReason::OwnMachineCapacity,
     };
-    assert_eq!(decide(&state), vec![Action::StartRunner(expected.clone())]);
+    assert_eq!(
+        decide(&state),
+        vec![Action::StartRunner(Box::new(expected.clone()))]
+    );
     state.queue.clear();
     for machine in &mut state.machines {
         machine.warm_count = 2;
@@ -185,9 +227,9 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
     }
     assert_eq!(
         decide(&state),
-        vec![Action::StartRunner(StartRunner {
+        vec![Action::StartRunner(Box::new(StartRunner {
             reason: StartReason::WarmPool,
             ..expected
-        })]
+        }))]
     );
 }

@@ -36,11 +36,17 @@ test("Setup uses actual machine capacity and KVM for its steps", () => {
   );
   const unavailable = setupModel(
     setup({ machines: 1 }),
-    [machine({ kvm: false, hostname: "no-kvm" })],
+    [
+      machine({
+        kvm: false,
+        virtualization: "kvm_unavailable",
+        hostname: "no-kvm",
+      }),
+    ],
     false,
     noBoat,
   );
-  assert.equal(unavailable.noKvm, "no-kvm");
+  assert.equal(unavailable.cannotStartVms?.host, "no-kvm");
   assert.equal(unavailable.connected, null);
   const ready = setupModel(
     setup({ machines: 1, waiting_for_machine: false }),

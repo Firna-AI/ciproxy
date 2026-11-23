@@ -1,5 +1,6 @@
 //! Isolated real PostgreSQL records for hosted lifecycle integration.
 
+use ciproxy_protocol::platform::{Platform, Virtualization};
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -14,6 +15,7 @@ use ciproxy_store_interface::store::{Store, StoreFactory};
 use ciproxy_store_interface::vm_size::VmSize;
 use ciproxy_store_interface::workspaces::Workspace;
 use ciproxy_store_pg::factory::PgStoreFactory;
+use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 use diesel::sql_types;
 use reqwest::Url;
@@ -71,6 +73,7 @@ impl Fixture {
             })
             .unwrap();
         let label = Label {
+            platform: Platform::LinuxX64,
             id: Uuid::new_v4(),
             name: "ciproxy".to_owned(),
             size: VmSize {
@@ -100,7 +103,8 @@ impl Fixture {
                     processor: "x64".to_owned(),
                     hardware_threads: 8,
                     memory_bytes: 32_000_000_000,
-                    kvm_available: true,
+                    platform: Platform::LinuxX64,
+                    virtualization: Virtualization::Available,
                     slots: 3,
                     warm_runners: 0,
                     draining: true,
@@ -114,7 +118,7 @@ impl Fixture {
         let runner_id = Uuid::new_v4();
         let report = serde_json::from_value(serde_json::json!({
             "hostname":"runtime-host", "agent_version":"0.1.0",
-            "hardware":{"processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"kvm":true,"disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
+            "hardware":{"platform":"linux_x64","processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"virtualization":"available","disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
             "capacity":3,"job_disk_bytes":645_000_000_000u64,"slots":[],
             "runners":[{"slot_indices":[0],"runner_id":runner_id,"organization_id":"42","label":"ciproxy","configuration_lost":false,"requested_size":{"vcpu":2,"memory_bytes":8_000_000_000u64,"disk_bytes":80_000_000_000u64},"size":{"vcpu":2,"memory_bytes":8_000_000_000u64,"disk_bytes":142_755_282_944u64},"image_id":"fixture","state":{"state":"warm"}}],
             "drain":"draining","cache":{"used_bytes":0,"capacity_bytes":0,"restores_last_7_days":0,"hits_last_7_days":0,"jobs":[]},"docker_disks":{"leased_bytes":0,"repositories":0,"used_bytes":0},"images":{"available":[{"image_id":"fixture","root_disk_bytes":60_263_759_872u64}],"newest":"fixture"}
@@ -174,6 +178,11 @@ impl Fixture {
         }
     }
     pub(super) fn add_machine(&mut self) -> Uuid {
+        self.add_machine_on(Platform::LinuxX64)
+    }
+
+    /// Add a connected machine of this platform with no runners and no images.
+    pub(super) fn add_machine_on(&mut self, platform: Platform) -> Uuid {
         let source = self
             .store
             .machine_snapshots(self.workspace)
@@ -183,9 +192,15 @@ impl Fixture {
         machine.id = Uuid::new_v4();
         machine.draining = false;
         machine.warm_runners = 1;
+        machine.platform = platform;
         self.store.create_machine(self.workspace, &machine).unwrap();
         let mut report = source.report.unwrap().report;
         report.runners.clear();
+        report.hardware.platform = platform;
+        if platform != Platform::LinuxX64 {
+            report.images.available.clear();
+            report.images.newest = None;
+        }
         diesel::sql_query("INSERT INTO machine_reports (workspace_id, machine_id, session_id, report, received_at) VALUES ($1,$2,$3,$4,$5)")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(machine.id).bind::<sql_types::Uuid,_>(Uuid::new_v4())
             .bind::<sql_types::Jsonb,_>(serde_json::to_value(report).unwrap()).bind::<sql_types::Timestamptz,_>(at()).execute(&mut self.connection).unwrap();
@@ -215,6 +230,30 @@ impl Fixture {
         diesel::sql_query("UPDATE boat_runner_intents SET body=body-'registration_scale_set_id' WHERE workspace_id=$1 AND runner_id=$2")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(runner)
             .execute(&mut self.connection).unwrap();
+    }
+
+    /// Fail the SQL write that saves a new Boat exit claim.
+    pub(super) fn reject_boat_exit_claims(&mut self) {
+        self.connection
+            .batch_execute(
+                "CREATE FUNCTION reject_boat_exit_claim() RETURNS trigger LANGUAGE plpgsql AS $$
+                 BEGIN RAISE EXCEPTION 'synthetic Boat exit claim failure'; END;
+                 $$;
+                 CREATE TRIGGER reject_boat_exit_claim BEFORE UPDATE OF reported_at ON overflow_starts
+                 FOR EACH ROW WHEN (OLD.reported_at IS NULL AND NEW.reported_at IS NOT NULL)
+                 EXECUTE FUNCTION reject_boat_exit_claim();",
+            )
+            .unwrap();
+    }
+
+    /// Remove the Boat exit claim fault from this test database.
+    pub(super) fn allow_boat_exit_claims(&mut self) {
+        self.connection
+            .batch_execute(
+                "DROP TRIGGER reject_boat_exit_claim ON overflow_starts;
+                 DROP FUNCTION reject_boat_exit_claim();",
+            )
+            .unwrap();
     }
 
     /// Remove source proof to model conservative legacy registration recovery.

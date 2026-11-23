@@ -12,8 +12,10 @@
   `image/check-boat-delete.py`, `image/check-boat-metadata.py`,
   `image/check-boat-run.py`, `image/check-docker-attach.py`,
   `image/check-export.py`, `image/check-kernel-metadata.py`,
-  `image/check-network-probe.py`, `image/check-runner-environment.py`, and
-  `image/check-template.py`.
+  `image/check-network-probe.py`, `image/check-runner-environment.py`,
+  `image/check-template.py`, `image/macos/check-template.py`,
+  `image/macos/check-archive.py`, `image/macos/check-r2.py`, and
+  `image/macos/check-r2-xcode.py`.
 - **Reason:** A new gate phase is a new gate, and the always-on rules
   reserve that choice for the user.
 
@@ -55,4 +57,7 @@
   records the same class for the site calculation tests.
 - **Recommendation:** A, with B for the checks that need root.
 - **Action:** ask the user, because a new gate phase or CI job is a new
-  gate.
+  gate. No gate check comes now, because a new gate needs the user's
+  explicit approval. The orchestrator agent of
+  `conductor/ciproxy-boat-start-ready-deadline` made this call on 22
+  November 2026, under the user's delegation of that day.

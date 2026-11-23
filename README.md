@@ -41,7 +41,8 @@ on a free own machine, or else on Boat.
   gives the rule. The hosted [control plane](docs/architecture.md#components)
   and the [dashboard](docs/architecture.md#components) are the paid part.
 
-ciproxy runs x64 Linux jobs of
+ciproxy runs x64 Linux jobs, and macOS jobs on the customer's own Apple
+Silicon Macs. It runs the jobs of
 [private repositories](docs/protocol/security.md#repository-access) only.
 
 ## Use ciproxy in a workflow
@@ -59,11 +60,11 @@ To move a job to ciproxy, change one line. Replace `ubuntu-latest` in its
 The label picks the [size](docs/protocol/labels.md#terms) of the VM that
 runs the job. Every workspace starts with these labels:
 
-| Label           | vCPU | Memory | Free job disk | Slots |
-| --------------- | ---- | ------ | ------------- | ----- |
-| `ciproxy`       | 2    | 8 GB   | 20 GB         | 1     |
-| `ciproxy-4vcpu` | 4    | 16 GB  | 20 GB         | 2     |
-| `ciproxy-8vcpu` | 8    | 32 GB  | 60 GB         | 4     |
+| Label            | vCPU | Memory | Free job disk | Slots |
+| ---------------- | ---- | ------ | ------------- | ----- |
+| `ciproxy`        | 2    | 8 GB   | 20 GB         | 1     |
+| `ciproxy-medium` | 4    | 16 GB  | 20 GB         | 2     |
+| `ciproxy-large`  | 8    | 32 GB  | 60 GB         | 4     |
 
 A [slot](docs/protocol/job-routing.md#slots) is 2 vCPU and 8 GB of an own
 machine. The Slots column gives the slots that one job of the label takes
@@ -103,6 +104,8 @@ The package guides give their commands and main code entry points:
 - [ciproxy-agent](crates/ciproxy-agent/README.md): the agent that runs jobs in
   fresh Firecracker VMs on customer machines.
 - [ciproxy-protocol](crates/ciproxy-protocol/README.md): shared wire types.
+- [ciproxy-vz](crates/ciproxy-vz/README.md): macOS VMs on Apple Silicon over
+  Virtualization.framework, for the agent on Macs.
 - [ciproxy-control-plane](crates/ciproxy-control-plane/README.md): the hosted
   HTTP runtime and its API, agent, and GitHub webhook routes.
 - [xtask](xtask/README.md): the repository gate.
@@ -143,7 +146,12 @@ The protocol docs hold the requirements and the decisions in force:
 - [Agent](docs/protocol/agent.md): install, the connection, machine
   identity, job VMs, the image, updates, health, drain, and remove.
 - [Security](docs/protocol/security.md): sign-in and access, GitHub App
-  permissions, repository access, key custody, isolation, and job data.
+  permissions, repository access, and key custody.
+  [Terms acceptance](docs/protocol/terms-acceptance.md) states who accepts
+  the terms of service and when a new version applies.
+  [Isolation](docs/protocol/security-isolation.md) and
+  [Data and retention](docs/protocol/security-data.md) state isolation, job
+  data, and data retention.
 - [Removing or suspending the App](docs/protocol/app-removal.md): what
   stops, what stays, and what ciproxy deletes when an organization removes
   or suspends the App, and when the last organization of a workspace
@@ -163,5 +171,5 @@ The mockups are part of the spec.
 
 Only the directories with their own `LICENSE` file are open source, under
 Apache-2.0: `crates/ciproxy-agent`, `crates/ciproxy-protocol`,
-`crates/ciproxy-guest`, `crates/ciproxy-cache-sidecar`, `image`, and
-`image/runner-patch`. The rest of this repository has no open licence.
+`crates/ciproxy-guest`, `crates/ciproxy-cache-sidecar`, `crates/ciproxy-vz`,
+`image`, and `image/runner-patch`. The rest of this repository has no open licence.

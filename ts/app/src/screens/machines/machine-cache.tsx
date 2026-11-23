@@ -6,7 +6,8 @@
 // every entry of the machine cache after a confirmation. It never deletes an
 // entry of the GitHub cache or a Docker disk. Only an Admin clears a cache,
 // and only while the machine is online. A failed clear stays in the dialog
-// with its reason.
+// with its reason. A Mac has no machine cache yet, so its panel says so, with
+// no figures and no Clear cache.
 
 import { StyleSheet, Text, View } from "react-native";
 
@@ -26,17 +27,28 @@ import {
   clearCacheBody,
   dockerUse,
   machineHits,
+  macWithoutCache,
   unknownNote,
 } from "../../view/machines-cache.ts";
 import { cacheCopy, failureCopy } from "../../view/machines-copy.ts";
 import { failureText } from "../../view/machines-outcome.ts";
+import { isMac } from "../../view/platform.ts";
 import { Meter, UnknownMeter, UnknownValue } from "./machine-figures.tsx";
 
-/** The figures of a stored report: each part measured, or Unknown. */
-function CacheFigures({ cache }: { cache: CacheView }) {
+/**
+ * The figures of a stored report: each part measured, or Unknown. A Mac has
+ * no Docker disks, because a macOS VM runs no Docker, so it shows no row.
+ */
+function CacheFigures({
+  cache,
+  showDocker,
+}: {
+  cache: CacheView;
+  showDocker: boolean;
+}) {
   const figures = cache.machine_cache;
   const docker = cache.docker_disks;
-  const note = unknownNote(cache);
+  const note = unknownNote(cache, showDocker);
   return (
     <>
       {figures.status === "measured" ? (
@@ -56,13 +68,15 @@ function CacheFigures({ cache }: { cache: CacheView }) {
             <UnknownValue />
           )}
         </DetailRow>
-        <DetailRow label={cacheCopy.docker}>
-          {docker.status === "measured" ? (
-            <Text style={text.small}>{dockerUse(docker)}</Text>
-          ) : (
-            <UnknownValue />
-          )}
-        </DetailRow>
+        {showDocker ? (
+          <DetailRow label={cacheCopy.docker}>
+            {docker.status === "measured" ? (
+              <Text style={text.small}>{dockerUse(docker)}</Text>
+            ) : (
+              <UnknownValue />
+            )}
+          </DetailRow>
+        ) : null}
       </View>
       {note === null ? null : (
         <Text style={[text.caption, styles.note]}>{note}</Text>
@@ -80,19 +94,22 @@ export function CachePanel({
   onClear: (() => void) | null;
 }) {
   const cache = machine.cache ?? null;
+  const noCache = macWithoutCache(machine);
   return (
     <Panel
       title={cacheCopy.title}
       action={
-        onClear === null ? undefined : (
+        onClear === null || noCache ? undefined : (
           <ActionButton label={cacheCopy.clear} size="sm" onPress={onClear} />
         )
       }
     >
-      {cache === null ? (
+      {noCache ? (
+        <Text style={text.small}>{cacheCopy.macBody}</Text>
+      ) : cache === null ? (
         <Text style={text.small}>{cacheCopy.unreported}</Text>
       ) : (
-        <CacheFigures cache={cache} />
+        <CacheFigures cache={cache} showDocker={!isMac(machine)} />
       )}
     </Panel>
   );

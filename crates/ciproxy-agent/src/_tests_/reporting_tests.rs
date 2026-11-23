@@ -7,9 +7,9 @@ use ciproxy_protocol::images::ImageReport;
 use serde_json::json;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisksMock;
 use crate::boundaries::{CacheMock, HostMock, ImagesMock};
 use crate::controller::Agent;
-use crate::docker::DockerDisksMock;
 use crate::error::Error;
 use crate::fixtures::{controller, empty_cache, hardware, vm};
 use crate::state::MachineState;

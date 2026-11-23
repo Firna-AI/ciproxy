@@ -51,9 +51,10 @@
     separate image for each, because a job must behave the same wherever it
     runs."
   - Two public pages give the same promise:
-    - `ts/site/src/content/docs/docs/how-ciproxy-works.md:106-108` says
-      that every job starts from one image, on your machines and on Boat,
-      so only the `runs-on` line of a workflow changes.
+    - [The job image](../../ts/site/src/content/docs/docs/how-ciproxy-works.mdx#the-job-image)
+      on How ciproxy works says that every Linux job starts from one image,
+      on your machines and on Boat, so only the `runs-on` line of a workflow
+      changes.
     - `ts/site/src/content/docs/docs/security/job-isolation.md:25-26`
       says: "A job behaves the same on your machines and on Boat."
   - The Boat smoke workflow `image/smoke-workflow.yml` checks tool
@@ -72,8 +73,8 @@
     111 GB of disk, for $0.072 an hour. The next size, `xlarge`, has
     16 vCPU and 32 GB for $0.20 an hour. It needs the Boat plan of $100 or
     more.
-  - The label `ciproxy-4vcpu` has 4 vCPU and 16 GB of memory, at
-    `docs/protocol/labels.md:36`.
+  - The label `ciproxy-medium` has 4 vCPU and 16 GB of memory, at
+    `docs/protocol/labels.md:40`.
 - **Problem:**
   - No service manager runs for a Boat job. Process 1 is the wrapper's
     Bash, outside the `chroot`.
@@ -122,14 +123,15 @@
     - Cost: each Boat job pays the overhead of a nested VM. The sandbox
       needs memory for the host and for the VM. So a label whose memory
       fills a Boat size can need the next size. An example is
-      `ciproxy-4vcpu`, with 16 GB, on `large`, with 16 GB. Measure both
+      `ciproxy-medium`, with 16 GB, on `large`, with 16 GB. Measure both
       costs on `large` first.
     - Effort: Large.
   - **D.** Accept the difference.
     - Change the decision in `docs/protocol/agent-images.md`: a Boat job
       runs without the service manager of the image.
-    - Correct the promises at
-      `ts/site/src/content/docs/docs/how-ciproxy-works.md:106` and
+    - Correct the promises in
+      [The job image](../../ts/site/src/content/docs/docs/how-ciproxy-works.mdx#the-job-image)
+      and at
       `ts/site/src/content/docs/docs/security/job-isolation.md:25`.
     - Explain the difference in `image/boat.md`.
     - Name the workarounds: a `services:` container, or a label that does

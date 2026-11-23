@@ -19,7 +19,8 @@ do
     esac
     printf 'add element inet ciproxy_cache %s { %s }\n' "$family" "$address"
 done < /etc/resolv.conf >> "$policy"
-/usr/sbin/nft -f "$policy"
+# SELinux denies nft (iptables_t) reads of this /run file, so pass it on stdin.
+/usr/sbin/nft -f - < "$policy"
 
 data=/var/lib/ciproxy/area/cache/data
 install -d -o ciproxy-cache -g ciproxy-cache -m 0700 "$data"

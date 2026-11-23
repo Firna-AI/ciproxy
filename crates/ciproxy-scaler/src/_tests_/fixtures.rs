@@ -16,6 +16,7 @@ use crate::registration::RegistrationTarget;
 use crate::snapshot::{
     Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
 };
+use ciproxy_protocol::platform::Platform;
 
 pub(super) fn small() -> VmSize {
     VmSize {
@@ -43,6 +44,7 @@ pub(super) fn snapshot() -> Snapshot {
         labels: vec![label("ciproxy", small()), label("large", large())],
         queue: Vec::new(),
         machines: vec![Machine {
+            platform: Platform::LinuxX64,
             id: MachineId("machine".into()),
             selected_image: None,
             connected: true,
@@ -50,6 +52,7 @@ pub(super) fn snapshot() -> Snapshot {
             capacity: Slots(6),
             disk_budget_bytes: 600 * GIGABYTE,
             docker_leased_bytes: Some(0),
+            free_bytes: None,
             warm_count: 0,
             warm_allocation: Vec::new(),
             runners: Vec::new(),
@@ -84,6 +87,7 @@ pub(super) fn target(organization: &str, name: &str) -> RegistrationTarget {
 
 pub(super) fn label(name: &str, size: VmSize) -> Label {
     Label {
+        platform: Platform::LinuxX64,
         targets: vec![target("a", name), target("b", name)],
         name: LabelName(name.into()),
         size,
@@ -134,6 +138,7 @@ pub(super) fn sandbox(id: &str, runner: Option<Runner>) -> Sandbox {
         runner: runner.map(|runner| BoatRunner {
             required_root_disk_bytes: allocated(runner.requested_size).disk_bytes,
             runner,
+            launched_at: None,
         }),
     }
 }
@@ -153,7 +158,8 @@ pub(super) fn start(
     destination: Destination,
     reason: StartReason,
 ) -> Action {
-    Action::StartRunner(StartRunner {
+    Action::StartRunner(Box::new(StartRunner {
+        platform: Platform::LinuxX64,
         target: target(organization, name),
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
@@ -161,7 +167,7 @@ pub(super) fn start(
         size: allocated(size),
         destination,
         reason,
-    })
+    }))
 }
 
 pub(super) fn own(organization: &str, name: &str, size: VmSize) -> Action {
@@ -198,7 +204,8 @@ pub(super) fn boat_with_request(
     size_id: &str,
     reason: StartReason,
 ) -> Action {
-    Action::StartRunner(StartRunner {
+    Action::StartRunner(Box::new(StartRunner {
+        platform: Platform::LinuxX64,
         target: target(organization, name),
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
@@ -206,7 +213,7 @@ pub(super) fn boat_with_request(
         size: allocated(size),
         destination: Destination::Boat(BoatSizeId(size_id.into())),
         reason,
-    })
+    }))
 }
 
 pub(super) fn allocated(size: VmSize) -> VmSize {

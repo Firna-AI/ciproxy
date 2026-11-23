@@ -1,5 +1,6 @@
 //! First installation, retained reinstall, and requester-owned workspace choice.
 
+use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubRegistration};
 use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
@@ -190,21 +191,25 @@ impl AppService {
 
     fn default_labels(&self) -> Vec<Label> {
         [
-            ("ciproxy", 2, 8, 20),
-            ("ciproxy-4vcpu", 4, 16, 20),
-            ("ciproxy-8vcpu", 8, 32, 60),
+            ("ciproxy", Platform::LinuxX64, 2, 8, 20),
+            ("ciproxy-medium", Platform::LinuxX64, 4, 16, 20),
+            ("ciproxy-large", Platform::LinuxX64, 8, 32, 60),
+            ("ciproxy-macos", Platform::MacosArm64, 2, 8, 20),
+            ("ciproxy-macos-medium", Platform::MacosArm64, 4, 16, 20),
         ]
         .into_iter()
-        .map(|(name, vcpus, memory_gb, disk_gb)| Label {
+        .map(|(name, platform, vcpus, memory_gb, disk_gb)| Label {
             id: self.runtime.uuid(),
             name: name.to_owned(),
+            platform,
             size: VmSize {
                 vcpus,
                 memory_gb,
                 disk_gb,
             },
             allow_machines: true,
-            allow_boat: true,
+            // A macOS label never uses Boat, as labels.md says.
+            allow_boat: platform == Platform::LinuxX64,
             when_nothing_fits: WhenNothingFits::Wait,
         })
         .collect()

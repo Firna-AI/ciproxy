@@ -54,10 +54,11 @@ node ts/app/scripts/harness-server.ts --port=4340
 pages and the Settings tabs, with the same `--port` option, by default 4341.
 It also answers the reads of History, a job, and Plans that those pages link
 to. `POST /__fixture/control` with a JSON `scenario` sets its fixture state,
-and `m20-harness-state.ts` lists its scenario names. With `holdMachines` set
-to `true`, each read of the machines waits. A control that sets it to `false`
-or names a scenario lets each waiting read answer. Any other value of
-`holdMachines` gets status 400 and changes nothing.
+and `m20-harness-state.ts` lists its scenario names. The `macs` scenario adds
+three Macs and the default macOS labels of `m20-fixtures-macs.ts`. With
+`holdMachines` set to `true`, each read of the machines waits. A control that
+sets it to `false` or names a scenario lets each waiting read answer. Any
+other value of `holdMachines` gets status 400 and changes nothing.
 
 ```sh
 npm --prefix ts run app:export
@@ -78,10 +79,16 @@ node ts/app/scripts/browser-pages-smoke.ts --case=NAME --repeat=10
 node ts/app/scripts/m20-browser-smoke.ts
 ```
 
-The shell smoke, `browser-smoke.ts`, covers the sign-in and Setup pages and
-their states, Settings under Overflow, the shell, and the reload after a
-build change. Its Setup states include a machine that gets its first job
-image, and a first job that waits for that machine after Skip for now.
+The shell smoke, `browser-smoke.ts`, covers the sign-in page, the terms
+step with the address of its Continue with GitHub, the Setup pages and their
+states, Settings under Overflow, the shell, and the reload after a build
+change. Its Setup states include a machine that gets its first job image,
+and a first job that waits for that machine after Skip for now.
+Its late approval journeys sign in again after an owner approves an install
+request, then open the workspace of that install. In one, Check again on the
+install page opens the terms step, which shows the terms notice, and its
+Continue with GitHub starts the sign-in. The other starts the sign-in on the
+sign-in page.
 
 The page smoke, `browser-pages-smoke.ts`, covers the states of Jobs, the job
 page, Savings, Plan and usage, Plans, the Checkout review and return, and the

@@ -20,7 +20,7 @@ export const preparingAx42: Machine = {
   hardware: ax42,
   status: "preparing",
   slots: Array<SlotState>(machineSlots(ax42)).fill("free"),
-  kvm: true,
+  virtualization: true,
   warmTarget: defaultWarmRunners,
   cache: {
     status: "measured",

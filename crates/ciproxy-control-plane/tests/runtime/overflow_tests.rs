@@ -6,8 +6,10 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use chrono::Duration;
 use ciproxy_control_plane::boat_callback;
+use ciproxy_control_plane::runtime::ImageOffer;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::overflow::record::StartPhase;
@@ -82,13 +84,16 @@ async fn no_eligible_machine_starts_boat_immediately_and_retains_its_original_ro
         .boat_runtime_snapshot(harness.fixture.workspace)
         .unwrap();
     assert_eq!(stored.starts[0].required_root_disk_bytes, 80_899_612_672);
-    harness.runtime.image = Some(ImageDownload {
+    harness.runtime.images = [ImageOffer::unsigned(ImageDownload {
         image_id: ImageId("new-larger-image".to_owned()),
+        platform: Platform::LinuxX64,
         download_url: Secret::new("https://images.example/new"),
         sha256: "fixture".to_owned(),
         size_bytes: 1,
         root_disk_bytes: 120_000_000_000,
-    });
+    })]
+    .into_iter()
+    .collect();
     harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.ports.creates.lock().unwrap().len(), 1);
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);

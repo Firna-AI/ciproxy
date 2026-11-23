@@ -87,6 +87,16 @@ backend must give ciproxy.
 
 ## Overflow runners
 
+- Only the jobs of Linux labels overflow to Boat.
+- A job of a [macOS label](labels.md#platform) never runs on Boat. It waits
+  for a Mac of the workspace, also when overflow is on and the Macs are
+  busy.
+- **Decision:** macOS jobs never overflow. Rejected: cloud Macs as a second
+  backend, because cloud Macs that rent by API bill 24 hours at minimum
+  under Apple's licence, so per-minute macOS overflow is not possible.
+  Reason: this holds from the MVP foundation plan of 3 November 2026.
+- The [spend limit](#spend-limit) and the overflow wait never apply to a
+  macOS job.
 - Each sandbox runs one runner, which takes one job.
 - Each sandbox has the cheapest Boat size that covers the label's vCPU,
   memory, and complete VM root allocation.
@@ -111,64 +121,13 @@ backend must give ciproxy.
 - A held largest-size runner keeps its original image. Its exception still
   uses current own-machine fit, new-start catalog fit, and largest size.
 - A new image's larger disk floor does not invalidate that held runner.
-- ciproxy stops and deletes each sandbox when its job ends.
 - The ciproxy program in each sandbox tells the control plane when its
   runner exits, with a token that works only for that sandbox.
-- The control plane then deletes the sandbox at once, also when GitHub
-  reports no job for the runner.
-- Each sandbox gets a lifetime of 6 hours, or 2 hours on a Boat free
-  trial. Boat ends the sandbox at that time, also during an outage of the
-  control plane.
-- So a job on Boat runs for at most 6 hours, as a job on a GitHub-hosted
-  runner does.
-- **Decision:** the sandbox reports the end of its runner, and a lifetime
-  set at the start is the backstop. Rejected: a Boat key in each sandbox,
-  a lifetime that the control plane renews, a key that ciproxy creates for
-  each sandbox, and AWS EC2 as the first backend. Reason: each sandbox
-  ends at once when its runner exits, and no sandbox bills past its
-  lifetime.
-- A Boat runner can stay without a job when an own machine took the
-  waiting job first.
-- ciproxy stops and deletes the sandbox of such a runner as soon as no
-  waiting job needs the runner.
-- An App removal changes this rule, as
-  [After an App removal](#after-an-app-removal) says.
+- [Sandbox end](overflow-sandbox-end.md) states when ciproxy stops and
+  deletes each sandbox, what the control plane does with that exit report,
+  and the ready deadline and the lifetime of each sandbox.
 - A Boat runner that takes no job is not a [start](metering.md#starts).
 - A job on Boat uses only the [GitHub cache](cache.md#cache-tiers).
-
-### Orphan cleanup
-
-- ciproxy marks each sandbox that it starts.
-- ciproxy deletes each marked sandbox that runs no job and whose runner no
-  waiting job needs.
-- This rule also covers sandboxes whose jobs ended during an outage of the
-  [control plane](../architecture.md#components).
-- An App removal changes this rule, as
-  [After an App removal](#after-an-app-removal) says.
-- ciproxy never stops or deletes a sandbox that it did not start.
-
-### After an App removal
-
-- These rules apply to the sandboxes of an
-  [organization](workspaces.md#terms) that removed the GitHub App.
-- A new install that joins the organization to the workspace that it left
-  ends these rules.
-- [Removing the App](app-removal.md#removing-the-app) states the other
-  effects of a removal.
-- ciproxy does not stop a sandbox of the organization whose runner started,
-  also when the runner has no job.
-- ciproxy still deletes such a sandbox at once when its runner reports its
-  exit.
-- Otherwise, Boat ends the sandbox at its lifetime of 6 hours, or 2 hours on
-  a Boat free trial.
-- So an idle sandbox of the organization can bill until its lifetime ends.
-- Boat jobs of the organization that run at the removal finish.
-- ciproxy deletes each sandbox of the organization whose runner has not
-  started.
-- **Decision:** after an App removal, ciproxy does not stop idle sandboxes
-  early, and they end at their lifetime. Rejected: a new mechanism in the
-  sandbox that lets ciproxy stop idle sandboxes early. Reason: App removal
-  is rare, and the cost is bounded by the lifetime and the spend limit.
 
 ## Spend limit
 
@@ -250,6 +209,8 @@ backend must give ciproxy.
 - [Architecture](../architecture.md): the components and the open-core
   decision.
 - [Labels](labels.md): the labels, their sizes, and "When nothing fits".
+- [Sandbox end](overflow-sandbox-end.md): when ciproxy deletes a sandbox,
+  the exit report, the ready deadline, and the lifetime.
 - [Job routing](job-routing.md): slots and where a job runs.
 - [Agent](agent.md): own machines and the image.
 - [Security](security.md): key custody.

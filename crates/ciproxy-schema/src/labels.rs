@@ -7,6 +7,7 @@ diesel::table! {
         id -> Uuid,
         workspace_id -> Uuid,
         name -> Text,
+        platform -> Text,
         vcpus -> Int4,
         memory_gb -> Int4,
         disk_gb -> Int4,

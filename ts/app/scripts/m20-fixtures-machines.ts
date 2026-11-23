@@ -61,14 +61,14 @@ export function slotJob(overrides: Partial<Job> = {}): Job {
   } satisfies Job;
 }
 
-/** A job of ciproxy-4vcpu that holds two slots, as one job. */
+/** A job of ciproxy-medium that holds two slots, as one job. */
 function buildJob(): Job {
   return slotJob({
     actual_size: { vcpus: 4, memory_bytes: bytes(16), disk_bytes: bytes(81) },
     git_ref: "refs/heads/main",
     head_branch: "main",
     id: slotJobIds.build,
-    label: { name: "ciproxy-4vcpu", vcpus: 4, memory_gb: 16, disk_gb: 20 },
+    label: { name: "ciproxy-medium", vcpus: 4, memory_gb: 16, disk_gb: 20 },
     location: {
       kind: "machine",
       id: machineIds.primary,
@@ -182,6 +182,7 @@ export function fixtureMachines(): Machine[] {
       id: machineIds.noKvm,
       hostname: "lab-no-kvm",
       kvm: false,
+      virtualization: "kvm_unavailable",
       slots: 0,
       concurrent_default_jobs: "0",
       default_jobs_by_slots: "0",

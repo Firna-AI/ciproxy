@@ -10,10 +10,9 @@ use uuid::Uuid;
 
 use crate::area::AreaFiles;
 use crate::area_types::{AreaRecord, Backing, Inventory, Phase};
-use crate::error::{ErrorResultExt, Result};
+use crate::error::{ErrorResultExt, Result, repair};
 use crate::host_file_ops::{atomic, directory, metadata, owned_file, ownership, sync};
 use crate::host_paths::{AREA, BACKING, CONTROL, MOUNT_PATH, mount_unit};
-use crate::host_system::repair;
 use crate::state::MachineState;
 
 pub(crate) struct LinuxAreaFiles {

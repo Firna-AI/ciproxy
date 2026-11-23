@@ -10,6 +10,7 @@ use crate::identifiers::{
 };
 use crate::images::{ImageDownload, ImageMetadata, ImageReport};
 use crate::jobs::{JobAssignment, JobFacts, JobIdBinding, Repository, UnknownJobScopeReason};
+use crate::platform::{Platform, Virtualization};
 use crate::reports::{
     DiskReport, DrainState, HardwareReport, MachineReport, SlotOccupancy, SlotReport,
 };
@@ -61,6 +62,7 @@ pub(crate) fn runner() -> RunnerSpec {
         runner_id: runner_id(),
         organization_id: organization_id(),
         label: LabelName("ciproxy".into()),
+        platform: Platform::LinuxX64,
         size: VmSize {
             disk_bytes: 20 * GIGABYTE,
             ..size()
@@ -72,6 +74,7 @@ pub(crate) fn runner() -> RunnerSpec {
 pub(crate) fn image() -> ImageDownload {
     ImageDownload {
         image_id: image_id(),
+        platform: Platform::LinuxX64,
         download_url: Secret::new(DOWNLOAD_URL),
         sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
         size_bytes: 12 * GIGABYTE,
@@ -116,10 +119,11 @@ pub(crate) fn report() -> MachineReport {
         hostname: "build-machine".into(),
         agent_version: "0.1.0".into(),
         hardware: HardwareReport {
+            platform: Platform::LinuxX64,
             processor: "Example x64 CPU".into(),
             threads: 8,
             memory_bytes: 32 * GIGABYTE,
-            kvm: true,
+            virtualization: Virtualization::Available,
             disks: vec![DiskReport {
                 name: "nvme0n1".into(),
                 capacity_bytes: 512 * GIGABYTE,
@@ -245,10 +249,12 @@ pub(crate) fn report() -> MachineReport {
                 ImageMetadata {
                     image_id: ImageId("ubuntu-image-0".into()),
                     root_disk_bytes: 59 * GIGABYTE,
+                    free_job_bytes: None,
                 },
                 ImageMetadata {
                     image_id: image_id(),
                     root_disk_bytes: 60_263_759_872,
+                    free_job_bytes: None,
                 },
             ],
             newest: Some(image_id()),

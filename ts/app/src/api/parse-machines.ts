@@ -18,6 +18,7 @@ import {
   time,
 } from "./parse-core.ts";
 import { readJob } from "./parse-jobs.ts";
+import { readPlatform, readVirtualization } from "./parse-platform.ts";
 import type {
   CacheView,
   DiskView,
@@ -115,6 +116,7 @@ function machine(value: unknown): MachineView {
     monthly_cost_cents: optional(fields.monthly_cost_cents, decimal),
     occupancy: array(fields.occupancy, slot),
     offline: boolean(fields.offline),
+    platform: readPlatform(fields.platform),
     processor: string(fields.processor),
     selected_image_disk_bytes: optional(
       fields.selected_image_disk_bytes,
@@ -127,6 +129,8 @@ function machine(value: unknown): MachineView {
       ready: true,
     })(fields.state),
     threads: integer(fields.threads),
+    virtualization: readVirtualization(fields.virtualization),
+    vm_limit: optional(fields.vm_limit, integer),
     warm_runners: integer(fields.warm_runners),
   };
 }

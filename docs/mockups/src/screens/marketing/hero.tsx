@@ -21,7 +21,7 @@ export function Hero({ viewport }: { viewport: Viewport }) {
         </p>
         <h1 className="hero-title">
           <span className="hero-line">Pay less for CI.</span>{" "}
-          <span className="hero-line hero-soft">Keep your jobs fast.</span>
+          <span className="hero-line hero-soft">Run your jobs faster.</span>
         </h1>
         <p className="hero-lead">
           ciproxy runs your GitHub Actions jobs on your own machines first, and

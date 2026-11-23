@@ -1257,9 +1257,9 @@ export interface components {
              */
             unavailable_machines: number;
         };
-        /** @description Label definition whose name never changes after creation. */
+        /** @description Label definition whose name and platform never change after creation. */
         LabelInput: {
-            /** @description Whether Boat may run this label. */
+            /** @description Whether Boat may run this label. Always false for a macOS label. */
             allow_boat: boolean;
             /** @description Whether own machines may run this label. */
             allow_machines: boolean;
@@ -1276,11 +1276,16 @@ export interface components {
             /** @description Workflow label accepted by GitHub. */
             name: string;
             /**
+             * @description Platform of the label's job VMs. Jobs run only on machines of this platform.
+             *     An absent value means `linux_x64`.
+             */
+            platform?: components["schemas"]["Platform"];
+            /**
              * Format: int32
              * @description Requested hardware threads.
              */
             vcpus: number;
-            /** @description What happens when neither destination fits. */
+            /** @description What happens when neither destination fits. Always `wait` for a macOS label. */
             when_nothing_fits: components["schemas"]["NothingFits"];
         };
         /** @description One eligible machine's physical offer from the exact prepared snapshot. */
@@ -1375,7 +1380,7 @@ export interface components {
             id: string;
             /** @description Exact prepared job-area bytes, unavailable before a trusted report. */
             job_disk_bytes?: string | null;
-            /** @description Whether KVM can start job VMs. */
+            /** @description Deprecated: whether `virtualization` is `available`. Read `virtualization`. */
             kvm: boolean;
             /**
              * Format: date-time
@@ -1391,6 +1396,8 @@ export interface components {
             occupancy: components["schemas"]["SlotView"][];
             /** @description Whether no contact arrived during the last sixty seconds. */
             offline: boolean;
+            /** @description Platform reported at registration: Linux x64 or macOS on Apple Silicon. */
+            platform: components["schemas"]["Platform"];
             /** @description Processor model. */
             processor: string;
             /** @description Full root disk of this machine's selected image, absent when unknown. */
@@ -1407,6 +1414,13 @@ export interface components {
              * @description Reported hardware threads.
              */
             threads: number;
+            /** @description Whether the machine can start job VMs, or why it cannot. */
+            virtualization: components["schemas"]["Virtualization"];
+            /**
+             * Format: int32
+             * @description Most job VMs that may run at once, absent when only slots and disk limit them.
+             */
+            vm_limit?: number | null;
             /**
              * Format: int32
              * @description Desired count of warm runners.
@@ -1491,7 +1505,7 @@ export interface components {
             organization_id?: string | null;
             /** @description Reading metadata does not authorize use of a stored GitHub grant. */
             reauthorization_required: boolean;
-            /** @description Fresh authorization action for this original person. */
+            /** @description Dashboard terms page. Continue starts fresh GitHub authorization. */
             reauthorization_url: string;
             /** @description Current progress. */
             state: components["schemas"]["LinkState"];
@@ -1831,6 +1845,14 @@ export interface components {
             /** @description Current use, offer, and the one page banner. */
             usage: components["schemas"]["PlanUsagePage"];
         };
+        /**
+         * @description An operating system and processor architecture that ciproxy supports.
+         *
+         *     A label, a machine, an image, and a job VM each have one platform. A job
+         *     VM runs only on a machine, and from an image, of the label's platform.
+         * @enum {string}
+         */
+        Platform: "linux_x64" | "macos_arm64";
         /** @description One Stripe portal redirect for invoices, card, or cancellation. */
         PortalLink: {
             /** @description Stripe-hosted customer portal URL. */
@@ -2033,7 +2055,7 @@ export interface components {
             pending_install_requests: components["schemas"]["PendingInstallation"][];
             /** @description Whether a newly available role/request needs fresh GitHub membership proof. */
             reauthorization_required: boolean;
-            /** @description Same-origin top-level navigation for fresh GitHub authorization. */
+            /** @description Dashboard terms page. Continue starts fresh GitHub authorization. */
             reauthorization_url?: string | null;
             removed_organization?: components["schemas"]["RemovedOrganization"] | null;
             setup?: components["schemas"]["SetupOutcome"] | null;
@@ -2219,6 +2241,13 @@ export interface components {
             /** @description The mutation completed successfully. */
             ok: boolean;
         };
+        /**
+         * @description Whether a machine can run job VMs, and the cause when it cannot.
+         *
+         *     A machine whose virtualization is not available has no slots.
+         * @enum {string}
+         */
+        Virtualization: "available" | "kvm_unavailable" | "framework_unsupported" | "entitlement_missing" | "operating_system_too_old";
         /** @description One waiting label's current resource policy for every workspace role. */
         WaitingLabelFit: {
             /** @description This notice asks an Admin because the current caller cannot edit the label. */
@@ -2288,7 +2317,10 @@ export type $defs = Record<string, never>;
 export interface operations {
     auth_begin: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Set to `setup` to resume a valid pending setup. Otherwise start a plain sign-in. */
+                resume?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2707,7 +2739,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Fresh GitHub authorization or failed setup redirect */
+            /** @description Dashboard terms page with pending setup, or failed setup redirect */
             303: {
                 headers: {
                     Location?: string;

@@ -43,8 +43,11 @@ def check_answer_refresh(case, workspace):
     artifact = root / "artifact"
     artifact.write_bytes(b"fixture artifact\n")
     pins.update(RUNNER_IMAGES_SHA256=checksum(archive), RUNNER_SHA256=checksum(artifact))
+    overlay = root / "worker-overlay"
+    overlay.mkdir()
+    (overlay / "stock-deps.sha256").write_text("fixture\n")
     args = types.SimpleNamespace(upstream_archive=archive, runner=artifact, guest=artifact,
-                                 cache=artifact, worker=artifact, reference=artifact,
+                                 cache=artifact, worker=overlay, reference=artifact,
                                  metadata_cache=None, output=root / "bundle.tar.gz")
     _, values = responses(root)
     release = values["repos/Kitware/CMake/releases?per_page=100&page=2"][0]

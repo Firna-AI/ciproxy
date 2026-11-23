@@ -11,7 +11,7 @@ modules.
 
 Use the Node version in [.nvmrc](../../.nvmrc).
 The `.nvmrc` file must name a Node version that Mokly accepts.
-Mokly rejects Node older than 22.15, Node 23, and Node 24.14 to 24.18.
+Mokly rejects Node older than 22.14.
 Run these commands from the repository root:
 
 ```sh
@@ -137,6 +137,15 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
   `src/components/role-actions.tsx`, such as "Ask an Admin".
+- Each GitHub sign-in that does not start on sign-in opens the terms step at
+  `/continue` first: the return from an install on GitHub, and each link that
+  leaves for a new GitHub sign-in, such as Check again of a sign-in with no
+  workspace. A user flow steps through the terms step at each such place.
+  Sign-in and the terms step show one terms notice, from
+  `src/screens/auth/terms-notice.tsx`.
+- Each checkout review with a pay button says that paid plans are for business
+  use only, with a link to the terms, from
+  `src/screens/billing/business-use-note.tsx`.
 - The public site has two sections: Marketing, with the landing page, the
   pricing page, and the frames of the terms and the privacy policy, and Docs,
   in the structure of Starlight: the sidebar of
@@ -146,6 +155,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   or press. Its cost claim uses no sample of an organization: `cost-claim.ts`
   computes every number from the list prices in `price-lists.ts`, each with
   its source and the day it was checked.
+- The Docs page of the catalogue shows five screens, its limit. So a new docs
+  page gets its own folder with an `index.mockup.tsx`, as `how-ciproxy-works/`
+  does, and keeps a path such as `docs/how-ciproxy-works`.
 - Each tier feature has one record in `tiers.ts`, with its first tier and
   whether it ships at launch. Every page that lists a feature reads the record,
   and a feature that ships later says "Coming later", through
@@ -213,7 +225,7 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 ### Key Code
 
 - `../../mokly.config.json`: the catalogue root, the renderer, and the package
-  root `ts` for module resolution. Mokly 0.18 reads only a JSON configuration.
+  root `ts` for module resolution. Mokly reads only a JSON configuration.
 - `src/render.tsx`: the renderer. It adds the base stylesheet, the static
   Firna CSS with the tokens, and the Firna theme provider around every screen.
 - [`@ciproxy/tokens`](../../ts/tokens/README.md): the Graphite tokens: the
@@ -233,6 +245,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/screens/docs/docs-shell.tsx`: the frame of a docs page, in the structure
   of Starlight, with the sidebar from `docs-nav.ts` and the article parts in
   `docs-parts.tsx`.
+- `src/screens/docs/job-path-figure.tsx`: the picture of How ciproxy works:
+  the parts of ciproxy and the path of one job, as the steps 01 to 04 of "A job
+  on your machines", with the other way to Boat. It is boxes in a CSS grid with
+  an arrow between neighbours, from the tokens, so that the site builds the
+  same picture in plain HTML and CSS. It takes its layout from its own width:
+  one column in a narrow article, and a row from left to right from 560 px.
 - `src/components/shell/app-shell.tsx`: the signed-in frame: a white sidebar
   and a top bar with the workspace switch and the page as breadcrumbs on
   desktop, and a top bar with tabs on mobile, with the banner slot for

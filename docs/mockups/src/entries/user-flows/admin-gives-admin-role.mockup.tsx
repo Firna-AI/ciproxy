@@ -6,7 +6,7 @@ import { relatedMvp } from "../../components/related-docs.ts";
 export const adminGivesAdminRole = defineUseCase({
   title: "An Admin gives the Admin role",
   description:
-    "Cal Moore gives Dana Kim, who has the Billing role, the Admin role on 18 November. Before her role changes, a dialog says what the Admin role controls in the workspace mokly-ai.",
+    "Cal Moore gives Dana Kim, who has the Billing role, the Admin role on 18 November. Before her role changes, a dialog says what the Admin role controls in the workspace mokly-ai, and that an Admin accepts new versions of the terms for its customer.",
   relatedDocs: relatedMvp("security", "workspaces"),
   steps: [
     {
@@ -19,7 +19,7 @@ export const adminGivesAdminRole = defineUseCase({
       screenPath: paths.grantAdmin,
       title: "What the Admin role controls",
       description:
-        "The dialog says that an Admin can add machines and connect Boat, which run the jobs of mokly-ai and mokly-labs with their secrets, and that an organization whose runners other people should control gets a workspace of its own. Cal gives the role.",
+        "The dialog says that an Admin can add machines and connect Boat, which run the jobs of mokly-ai and mokly-labs with their secrets, and that an organization whose runners other people should control gets a workspace of its own. It also says that an Admin accepts new versions of the ciproxy Terms for the customer that holds the workspace. Cal gives the role.",
     },
   ],
 });

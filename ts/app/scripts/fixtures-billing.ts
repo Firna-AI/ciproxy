@@ -41,7 +41,7 @@ function feature(name: string, comingLater = false): PlanFeature {
 
 function planFeatures(tier: PlanSelection["tier"]): PlanFeature[] {
   return [
-    feature("Own Linux machines"),
+    feature("Own Linux machines and Macs"),
     feature("Boat overflow"),
     feature("Transparent cache"),
     feature("Warm runners"),

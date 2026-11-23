@@ -10,9 +10,9 @@ use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
 use ciproxy_protocol::secret::Secret;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::DockerDisksMock;
 use crate::boundaries::{CacheMock, ImagesMock, StoreMock, VmsMock};
 use crate::controller::Agent;
-use crate::docker::DockerDisksMock;
 use crate::fixtures::{controller, metadata, trusted_facts, vm};
 use crate::state::MachineState;
 

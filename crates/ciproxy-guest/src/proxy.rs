@@ -11,6 +11,7 @@ use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 use tokio::time::timeout;
 
 use crate::error::{Error, ErrorOptionExt, ErrorResultExt, Result};
+use crate::platform::Platform;
 
 #[cfg_attr(test, unimock::unimock(api = ProxySessionMock))]
 #[async_trait]
@@ -30,7 +31,7 @@ pub(crate) async fn start(config: CacheProxyConfig) -> Result<Box<dyn ProxySessi
         .args([
             "proxy",
             "--listen",
-            "0.0.0.0:8230",
+            Platform::current().proxy_listen(),
             "--config-stdin",
             "--ready-stdout",
         ])

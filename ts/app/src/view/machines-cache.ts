@@ -7,6 +7,7 @@
 import type { CacheView, MachineView } from "../api/schema.ts";
 import { cacheCopy, listCopy } from "./machines-copy.ts";
 import { gigabytes } from "./machines-format.ts";
+import { isMac } from "./platform.ts";
 
 /** A machine cache that the machine measured for its last report. */
 export type MeasuredCache = Extract<
@@ -59,18 +60,30 @@ export function machineHits(figures: MeasuredCache): string {
   );
 }
 
-/** The note under the cache figures that names the parts that show Unknown. */
-export function unknownNote(cache: CacheView): string | null {
+/**
+ * The note under the cache figures that names the parts that show Unknown.
+ * A Mac has no Docker disks, so its note never names them.
+ */
+export function unknownNote(cache: CacheView, docker = true): string | null {
   const cacheUnknown = cache.machine_cache.status === "unavailable";
-  const dockerUnknown = cache.docker_disks.status === "unavailable";
+  const dockerUnknown = docker && cache.docker_disks.status === "unavailable";
   if (cacheUnknown && dockerUnknown) return cacheCopy.unknownBoth;
   if (cacheUnknown) return cacheCopy.unknownCache;
   if (dockerUnknown) return cacheCopy.unknownDocker;
   return null;
 }
 
+/**
+ * A Mac has no machine cache yet, as the agent doc says, so its cache is
+ * never measured. Its page and its cell say so, in place of Unknown.
+ */
+export function macWithoutCache(machine: MachineView): boolean {
+  return isMac(machine) && machine.cache?.machine_cache.status !== "measured";
+}
+
 /** The cache cell of the machines table: the use, Unknown, or no report. */
 export function cacheText(machine: MachineView): string {
+  if (macWithoutCache(machine)) return cacheCopy.macUnavailable;
   const cache = machine.cache ?? null;
   if (cache === null) return cacheCopy.noReport;
   const figures = cache.machine_cache;

@@ -1,0 +1,43 @@
+---
+// A box of the picture of How ciproxy works (JobPathFigure.astro): a part of
+// ciproxy and what it does. A box of the path shows the number of its step
+// in "A job on your machines", and the Boat box has none. The icon is
+// decoration, so screen readers read the number, the name, and the text.
+
+import type { JobPathBox, JobPathPart } from "../../data/job-path.ts";
+import BrandMark from "../BrandMark.astro";
+import Icon from "../icon/Icon.astro";
+import type { IconName } from "../icon/icons.ts";
+
+interface Props {
+  box: JobPathBox;
+}
+
+/** The size of an icon, in CSS pixels. */
+const iconSize = 16;
+
+/** The Lucide icon of each part. The ciproxy box shows the ciproxy mark. */
+const icons: Readonly<Record<Exclude<JobPathPart, "ciproxy">, IconName>> = {
+  github: "github",
+  runner: "box",
+  machine: "server",
+  boat: "cloud",
+};
+
+const { box } = Astro.props;
+---
+
+<div class:list={["job-path-box", `job-path-${box.part}`]}>
+  {box.step !== undefined && (
+    <span class="job-path-number">{String(box.step).padStart(2, "0")}</span>
+  )}
+  <span class="job-path-icon" aria-hidden="true">
+    {box.part === "ciproxy" ? (
+      <BrandMark size={iconSize} />
+    ) : (
+      <Icon name={icons[box.part]} size={iconSize} strokeWidth={1.75} />
+    )}
+  </span>
+  <p class="job-path-title">{box.title}</p>
+  <p class="job-path-text">{box.text}</p>
+</div>

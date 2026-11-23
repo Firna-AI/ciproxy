@@ -1,12 +1,9 @@
 //! Hourly CLI upgrades replace only the agent binary and restart its own unit.
 
-use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use cli_updater::{
-    BinaryInstaller, TarGzBinaryInstaller, UpdateCheck, UpdateRequest, Updater, UpgradeOutcome,
-};
+use cli_updater::{TarGzBinaryInstaller, UpdateCheck, UpdateRequest, Updater, UpgradeOutcome};
 
 use crate::boundaries::Updates;
 use crate::cache_install::{CheckedCacheRelease, LinuxCacheInstallFiles};
@@ -16,33 +13,11 @@ use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
 use crate::error::{ErrorResultExt, Result};
 use crate::process::{Commands, arguments};
 use crate::release_client::SecureReleases;
+use crate::updates_checked::CheckedInstaller;
 
 pub(crate) struct AgentUpdates {
     pub(crate) commands: Arc<dyn Commands>,
     pub(crate) release_server: String,
-}
-
-pub(crate) struct CheckedInstaller {
-    pub(crate) installer: Arc<dyn BinaryInstaller + Send + Sync>,
-}
-
-impl BinaryInstaller for CheckedInstaller {
-    fn install(
-        &self,
-        bytes: &[u8],
-        binary: &str,
-        current_exe: &Path,
-        checksum: Option<&str>,
-        asset_name: &str,
-    ) -> cli_updater::Result<()> {
-        if checksum.is_none() {
-            return Err(cli_updater::Error::ChecksumMismatch {
-                asset_name: asset_name.to_owned(),
-            });
-        }
-        self.installer
-            .install(bytes, binary, current_exe, checksum, asset_name)
-    }
 }
 
 #[async_trait]

@@ -8,7 +8,7 @@
 - **Source:** Review.
 - **Category:** Code structure.
 - **Location:** `ts/app/scripts/browser-driver.ts`, `ts/app/README.md`, and
-  `ts/site/_tests_/browser/search.test.ts`.
+  `ts/site/_tests_/browser/docs.test.ts`.
 - **Reason:** The change of the app scripts is outside the files of #55.
 - **Terms:**
   - **Playwright:** the browser automation library that the browser checks

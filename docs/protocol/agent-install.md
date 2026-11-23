@@ -20,7 +20,8 @@ command, and the wait for the first image.
   [Roles](security.md#roles) says.
 - Next to the command, the dashboard says how long the install token works
   and what the machine needs.
-- The command is one line, with the install token after `--token`:
+- The command is one line, with the install token after `--token`.
+- The same command works on x64 Linux and on a Mac:
 
   ```sh
   curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
@@ -44,9 +45,10 @@ command, and the wait for the first image.
 
 ## What install prepares
 
-- Install prepares Firecracker, its jailer, and the required host tools.
-- Install prepares a persistent reflink disk area in one XFS file on any
-  filesystem.
+- On Linux, install prepares Firecracker, its jailer, and the required host
+  tools.
+- On Linux, install prepares a persistent reflink disk area in one XFS file
+  on any filesystem.
 - The area holds the [job disk](job-routing.md#terms).
 - The area holds the separate [image budget](job-routing-capacity.md#disk).
 - Its filesystem overhead comes from the host reserve.
@@ -61,6 +63,15 @@ command, and the wait for the first image.
   Rejected: customer preparation, full copies without reflinks, and
   deferral until after launch. Reason: one command must prepare the machine
   without a slow full-copy path.
+- On a Mac, install prepares a launchd service for the agent, the pf rules
+  of [Job isolation](security-isolation.md#job-isolation-on-a-mac), and a
+  disk area in a folder on an APFS volume.
+- APFS makes copy-on-write clones on every APFS volume, so a Mac needs no
+  extra filesystem file.
+- A Mac needs no tool other than the agent. Virtualization.framework is
+  part of macOS.
+- Uninstall on a Mac removes the launchd service, the pf rules, and the
+  disk area, after the running jobs finish.
 
 ## The install token
 
@@ -80,21 +91,90 @@ command, and the wait for the first image.
 
 ## What an own machine needs
 
-- An own machine needs x64 Linux with KVM, 4 cores, 16 GB of memory, and
-  250 GB of disk or more.
+- An own machine is an x64 Linux computer or an Apple Silicon Mac.
+
+### Linux
+
+- An x64 Linux machine needs KVM, 4 cores, 16 GB of memory, and 250 GB of
+  disk or more.
 - Reason: the 140 GB image budget leaves 110 GB before the host reserve.
 - The host keeps 27.5 GB, so the job disk is 82.5 GB.
 - [Worked examples](job-routing-examples.md) shows the default job fit with
   the current image root.
 - An own machine also needs systemd and cgroup v2.
-- Its Linux distribution is Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-  AlmaLinux.
+- The supported Linux distributions are Debian, Ubuntu, Fedora, RHEL,
+  CentOS Stream, Rocky Linux, AlmaLinux, openSUSE, and Arch Linux.
+- `install` checks each host tool that the agent needs. It installs only
+  the missing tools, with the package manager of the distribution.
+- It selects the package manager by the distribution ID, and then by the
+  related IDs in `ID_LIKE`. A host with every tool present needs no known
+  distribution.
 - **Decision:** own machines need systemd, cgroup v2, and one of these
   distributions. Rejected: a promise of any x64 Linux host that meets the
   hardware minimum, because customers must know these limits before they
   set up a machine.
-- **Decision:** own machines run x64 Linux only. Rejected: more platforms,
-  because one platform is the fastest way to ship.
+- **Decision:** `install` checks the tools and installs only the missing
+  ones. The user chose this on 23 November 2026, with CentOS Stream,
+  openSUSE, and Arch Linux added. Rejected: a fixed package list for each
+  distribution name, because it fails when the host has another variant of
+  a package, such as `iptables-legacy` on Arch or `coreutils-single` on
+  CentOS Stream.
+- On Arch, `install` does not refresh the package databases.
+- **Decision:** Arch installs use `pacman -S --needed` without a refresh,
+  and a failure tells the user to run `pacman -Syu`. The user chose this
+  on 23 November 2026. Rejected: `pacman -Syu`, because it upgrades the
+  whole machine, and `pacman -Sy`, because Arch does not support it.
+
+### Mac
+
+- A Mac needs Apple Silicon, which is an M1 chip or later.
+- Virtualization.framework runs macOS VMs only on Apple Silicon. So
+  `install` refuses a Mac with an Intel processor, with a message that
+  names the cause.
+- A Mac needs 16 GB of memory or more. With 16 GB, the
+  [host reserve](job-routing.md#slots) leaves 1 slot.
+- Virtualization.framework runs no macOS guest that is newer than the macOS
+  of the Mac.
+- So the macOS of a Mac must be the macOS version of the
+  [macOS image](agent-images.md#the-macos-image) or later.
+- `install` refuses a Mac with an older macOS, with a message that names
+  the version that the Mac needs.
+- The minimum is macOS 26.7.3 (25G342), the macOS of the macOS image. The
+  build installs Apple's newest full restore image, macOS 26.6.2, and then
+  updates the guest to macOS 26.7.3.
+- The pinned GitHub runner image `macos-26-arm64/20261117.0516`, which
+  `macos-latest` names now, runs macOS 26.7.2. Software Update offers no
+  26.7.2 now, only 26.7.3 in the macOS 26 line.
+- **Decision:** the macOS image runs macOS 26.7.3 (25G342), so a Mac needs
+  macOS 26.7.3 or later. Reason: Software Update offers no 26.7.2, and a
+  build can reach only the update that Apple offers. The user chose this
+  on 22 November 2026. Rejected: a pin of the macOS 26 line alone, with the
+  reached build in the manifest, because builds would then differ without
+  a change of the pin.
+- When a Mac cannot run the image that it has, its
+  [virtualization check](agent.md#the-virtualization-check) reports
+  `operating_system_too_old`.
+- A Mac needs about 176 GB of free disk. The default area volume takes
+  three quarters of the free space, and it needs at least 132 GB: the
+  100 GB image budget and the job disk of one default job. A Mac with
+  160 GB free sets `CIPROXY_AREA_BYTES` to 132 GB or more, or keeps the
+  area on another disk.
+- With 176 to 200 GB free, a Mac runs one default macOS job at a time. Its
+  16 GB of memory also gives it 1 slot.
+- A Mac must stay awake. The agent prevents system sleep while it runs.
+- Other apps can also run macOS VMs. Each such VM counts against the limit
+  of 2 macOS VMs on the Mac, as [Platforms](agent.md#platforms) says.
+- In place of the startup disk, the disk area can be on an external APFS
+  disk. The agent then needs Full Disk Access, as
+  [Area on another disk](../../crates/ciproxy-agent/macos-host.md#area-on-another-disk)
+  says.
+- A Mac also needs outbound HTTPS to
+  `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
+  the macOS image.
+- **Decision:** own machines run x64 Linux or macOS on Apple Silicon. This
+  replaces the decision of x64 Linux only. Reason: the user chose macOS
+  jobs on the customer's own Macs on 21 November 2026. Rejected: Linux
+  arm64 jobs on Macs.
 
 ## Related docs
 

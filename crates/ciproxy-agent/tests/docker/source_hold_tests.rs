@@ -8,7 +8,8 @@ use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::CacheMock;
-use crate::docker::{DockerDisks, LinuxDockers};
+use crate::boundaries::DockerDisks;
+use crate::docker::LinuxDockers;
 use crate::error::Error;
 use crate::fixtures::{TemporaryLayout, facts, vm};
 use crate::process::CommandsMock;

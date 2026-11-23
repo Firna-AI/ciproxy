@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::identifiers::ImageId;
+use crate::platform::Platform;
 use crate::secret::Secret;
 
 /// One published image that the agent can fetch and verify.
@@ -10,6 +11,8 @@ use crate::secret::Secret;
 pub struct ImageDownload {
     /// The release that this download provides.
     pub image_id: ImageId,
+    /// The platform of the VMs that start from this image.
+    pub platform: Platform,
     /// Download URL, including any signature, hidden from diagnostics.
     pub download_url: Secret,
     /// SHA-256 digest in hexadecimal for verification after download.
@@ -27,6 +30,13 @@ pub struct ImageMetadata {
     pub image_id: ImageId,
     /// Logical length of that release's verified root disk.
     pub root_disk_bytes: u64,
+    /// Measured free bytes inside a macOS image disk: the space that a job
+    /// in the guest can write. It is not a cap on the host space of a clone,
+    /// because a write to a shared block also takes a new host block. A
+    /// Linux image has none, because its job root grows to the label's free
+    /// disk before boot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub free_job_bytes: Option<u64>,
 }
 
 /// The machine's locally available image releases.

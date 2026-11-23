@@ -31,7 +31,7 @@ against a tier.
 - Stripe bills each paid tier monthly.
 - A tier includes its starts in each [period](metering.md#periods).
 - The job history of a tier is the window of finished jobs that its pages
-  show. [Data retention](security.md#data-retention) says how long ciproxy
+  show. [Data retention](security-data.md#data-retention) says how long ciproxy
   keeps them.
 - Every workspace starts on Free.
 - The customer picks a paid tier by hand, and ciproxy never picks one by
@@ -45,11 +45,19 @@ against a tier.
 
 ### Tier features
 
-- Every tier includes own Linux machines, Boat overflow, the
+- Every tier includes own machines, both x64 Linux computers and Apple
+  Silicon Macs, Boat overflow for Linux jobs, the
   [transparent cache](cache.md#transparent-cache), warm runners, the
   dashboard, and the [savings report](metering.md#savings-report).
+- A Mac counts as one own machine, on every tier and in the add-ons, at the
+  price of any own machine.
+- **Decision:** a Mac counts as one own machine at the same price.
+  Rejected: a separate Mac price. Reason: the user chose one count and one
+  price on 21 November 2026.
 - Team adds several GitHub organizations, sticky Docker disks, alerts by
   email and Slack, and email support.
+- Sticky Docker disks apply to Linux machines only, as
+  [Docker disks on a Mac](docker-disks.md#docker-disks-on-a-mac) says.
 - Business adds single sign-on, an audit log, custom VM images, and
   priority support.
 - A tier also includes each feature of the tiers below it.
@@ -124,6 +132,16 @@ against a tier.
 - It offers to try again.
 - **Decision:** Stripe takes every payment. Reason: no card data reaches
   ciproxy, and the ciproxy team already uses Stripe for billing.
+- Paid tiers are for business use only: the customer buys a paid tier for
+  its trade, business, or profession.
+- Each review with a pay button says so, with a link to the
+  [Terms](terms-acceptance.md#who-accepts).
+- **Decision:** paid tiers are for business use only. Rejected: a checkout
+  open to consumers, with each withdrawal handled by hand, an express
+  request with a durable confirmation and a withdrawal function, and a
+  merchant of record. Reason: ciproxy serves GitHub organizations, and the
+  consumer-only duties then do not apply. Agent call of 22 November 2026,
+  under the user's delegation.
 - Every sign-in button of the
   [public site](../architecture.md#public-site) says "Start free", also on
   the paid tiers of the pricing page.

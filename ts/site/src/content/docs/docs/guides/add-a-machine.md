@@ -1,6 +1,7 @@
 ---
 title: Add a machine
-description: Connect a Linux machine to your workspace with one command.
+description: >-
+  Connect a Linux machine or a Mac to your workspace with one command.
 ---
 
 ciproxy runs your jobs on your own machines first. Each machine runs the
@@ -8,9 +9,11 @@ open-source agent, which starts a fresh VM for each job.
 
 ## What the machine needs
 
+A Linux machine needs:
+
 - x64 Linux with systemd, cgroup v2, and KVM.
-- A supported distribution: Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-  AlmaLinux.
+- A supported distribution: Debian, Ubuntu, Fedora, RHEL, CentOS Stream,
+  Rocky Linux, AlmaLinux, openSUSE, or Arch Linux.
 - 4 cores, 16 GB of memory, and 250 GB of disk or more.
 - Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The
   machine opens no inbound port.
@@ -25,6 +28,69 @@ example with RAID0 or one LVM volume. Its jobs, its machine cache, and its
 Docker disks are disposable.
 :::
 
+## Add a Mac
+
+A Mac runs the jobs of macOS labels, each in a fresh macOS VM with Xcode.
+[The macOS image](/docs/reference/macos-image/) lists what the VM holds and
+how it differs from GitHub `macos-latest`. A Mac needs:
+
+- A Mac with Apple Silicon, M1 or later.
+- macOS 26.7.3 or later. A macOS VM cannot run a newer macOS than its Mac,
+  so the Mac needs the macOS of the job image.
+- 16 GB of memory or more.
+- About 176 GB of free disk. The agent takes three quarters of the free
+  space for its disk area, which holds the macOS image and the jobs. With
+  176 to 200 GB free, the Mac runs one macOS job at a time. With less free
+  space, the install command stops and says how much to free. In place of
+  the startup disk, you can use an external APFS SSD, as
+  [Use an external disk](#use-an-external-disk) says.
+- Outbound HTTPS to ciproxy, to GitHub, to `get.ciproxy.dev`, and to
+  `785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`, which serves
+  the macOS image. The Mac opens no inbound port.
+
+A Mac uses the same slots as a Linux machine, but it runs at most 2 jobs at
+a time, because Apple allows at most 2 macOS VMs on one Mac. A Mac with
+16 GB of memory has room for 1 slot, so it runs 1 job at a time. Jobs of a
+macOS label never run on Boat. They wait for a free Mac. A Mac counts as one
+machine of your plan, as a Linux machine does. Other apps that run macOS
+VMs on the Mac count against its limit of 2 VMs too.
+
+Run the same install command in Terminal on the Mac. The agent runs as a
+launchd service, and it keeps the Mac awake, so the Mac needs no sleep
+setting. In **System Settings**, under **Energy**, turn on **Start up
+automatically after a power failure**.
+
+### Use an external disk
+
+A Mac with a small internal disk can keep the disk area of the agent on an
+external SSD. Format the SSD as APFS in Disk Utility, and connect it. Then
+add `env CIPROXY_AREA_DISK=/Volumes/NAME` after `sudo` in the install
+command, with the name of the SSD:
+
+```sh title="Terminal"
+curl -fsSL https://get.ciproxy.dev | sudo env CIPROXY_AREA_DISK=/Volumes/NAME sh -s -- install --token <install token>
+```
+
+macOS lets the agent use an external disk only with Full Disk Access.
+After the install command, open **System Settings**, then **Privacy &
+Security**, then **Full Disk Access**. Select **+**, press Command-Shift-G,
+enter `/usr/local/bin/ciproxy-agent`, and turn the entry on. Until then,
+the install command stops with a line that says so, and the agent waits.
+It starts by itself within 5 seconds of the grant. The grant stays across
+agent updates. A Mac under MDM can get it from a privacy profile for the
+identifier `dev.ciproxy.agent`.
+
+Keep the SSD connected. While it is unplugged, the Mac takes no jobs, and
+its running jobs fail. When you connect it again, the Mac takes jobs again.
+The setting applies to the first install only. To move the disk area,
+uninstall the agent first.
+
+:::caution[FileVault stops jobs after a restart]
+With FileVault on, macOS starts no service after a restart until a person
+logs in. So the Mac takes no jobs until someone logs in. To check, open
+**System Settings**, then **Privacy & Security**, and find **FileVault**.
+:::
+
 ## Run the install command
 
 Only an Admin of the workspace sees the install command.
@@ -37,12 +103,12 @@ Only an Admin of the workspace sees the install command.
    curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
    ```
 
-3. Run the command on the machine. It installs the agent, prepares the
-   machine, and connects it to your workspace.
+3. Run the command on the machine, in Terminal on a Mac. It installs the
+   agent, prepares the machine, and connects it to your workspace.
 4. Keep the page open. It shows that it waits for the machine. Then it
-   shows the host name of the machine and what the agent reported: threads,
-   memory, KVM, and slots. A new machine first downloads the job image and
-   takes jobs when it is ready.
+   shows the host name of the machine and what the agent reported: threads
+   or cores, memory, virtualization, and slots. A new machine first
+   downloads the job image and takes jobs when it is ready.
 
 The install token works for one hour. Within that hour, it adds any number
 of machines, so you can run the same command on each of them. To end the
@@ -56,6 +122,9 @@ command does on the machine.
 
 - **No KVM:** the machine connects, but it cannot start VMs, so it gets no
   slots. Turn on virtualization for the machine, then run the command again.
+- **A Mac with an older macOS:** the Mac connects, but it cannot start VMs,
+  so it gets no slots. Update the Mac to macOS 26.7.3 or later, then run the
+  command again.
 - **Too little CPU or memory:** a machine without room for one slot after
   the host reserve connects and gets no slots. ciproxy says why.
 - **Too little disk:** each job also holds disk, so a machine can run fewer

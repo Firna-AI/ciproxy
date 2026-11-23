@@ -2,11 +2,12 @@
 
 use std::time::Duration;
 
-use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_agent::root_sizing::{RootRule, RootSizing};
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
 use ciproxy_protocol::images::ImageMetadata;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::boat::{BoatAccount, Sandbox};
@@ -39,6 +40,14 @@ pub struct Snapshot {
     pub overflow_wait: Duration,
 }
 
+/// The one label that warm runners serve on a machine of this platform.
+pub fn warm_label(platform: Platform) -> &'static str {
+    match platform {
+        Platform::LinuxX64 => "ciproxy",
+        Platform::MacosArm64 => "ciproxy-macos",
+    }
+}
+
 /// Routing settings shared by all organizations of one workspace.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Label {
@@ -46,12 +55,24 @@ pub struct Label {
     pub targets: Vec<RegistrationTarget>,
     /// GitHub scale set label.
     pub name: LabelName,
+    /// Platform of the label's job VMs, fixed when the label is created.
+    pub platform: Platform,
     /// Current label dimensions, with disk measured as free job bytes.
     pub size: VmSize,
     /// Destinations enabled by the customer.
     pub destinations: Destinations,
     /// Behavior when neither own machines nor the Boat catalog fits.
     pub nothing_fits: NothingFits,
+}
+
+impl Label {
+    /// Whether Boat may serve this label.
+    ///
+    /// Only Linux labels use Boat. Cloud Macs bill 24 hours at minimum, so a
+    /// macOS label waits for a free Mac whatever its Boat switch says.
+    pub fn allows_boat(&self) -> bool {
+        self.destinations.boat && self.platform == Platform::LinuxX64
+    }
 }
 
 /// The two independent label destination settings.
@@ -86,6 +107,8 @@ pub struct WaitingJob {
 pub struct Machine {
     /// Own-machine identity.
     pub id: MachineId,
+    /// Platform reported at registration. Only labels of this platform fit.
+    pub platform: Platform,
     /// Exact selected local release, absent until reported by the machine.
     pub selected_image: Option<ImageMetadata>,
     /// Whether the machine is connected to the control plane.
@@ -101,6 +124,10 @@ pub struct Machine {
     pub disk_budget_bytes: u64,
     /// Active Docker reservations, absent while their statistics are unavailable.
     pub docker_leased_bytes: Option<u64>,
+    /// Real free space of the machine's disk in its last report. Only a Mac
+    /// gives it: its VMs are APFS clones that grow as their jobs write, so
+    /// the job disk count alone can promise space that they already took.
+    pub free_bytes: Option<u64>,
     /// One shared warm count for this machine, across all organizations.
     pub warm_count: usize,
     /// Per-machine targets from the documented warm-runner allocation policy.
@@ -114,11 +141,10 @@ pub struct Machine {
 }
 
 impl Machine {
-    /// Prefer selected local release facts to the deployment fallback.
-    pub fn root_sizing(&self, fallback: RootSizing) -> RootSizing {
-        self.selected_image
-            .as_ref()
-            .map_or(fallback, RootSizing::for_image)
+    /// The root rule of this machine's platform and selected image. A Linux
+    /// machine with no selected image uses the deployment fallback.
+    pub fn root_rule(&self, fallback: RootSizing) -> RootRule {
+        RootRule::for_platform(self.platform, self.selected_image.as_ref(), fallback)
     }
 }
 

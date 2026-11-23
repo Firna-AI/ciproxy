@@ -62,12 +62,14 @@ The control plane is closed source and written in Rust. It has these parts:
   [subscription](protocol/billing.md#subscription-states) of each
   workspace in step with Stripe.
 - **Store:** keeps the state of the control plane.
-  [Secrets and job data](protocol/security.md#secrets-and-job-data) says
+  [Secrets and job data](protocol/security-data.md#secrets-and-job-data) says
   what ciproxy stores.
 
 ### Agent
 
-The agent is open source and written in Rust. On its own machine, it does
+The agent is open source and written in Rust. It runs on an x64 Linux
+computer or on an Apple Silicon Mac, as
+[Platforms](protocol/agent.md#platforms) says. On its own machine, it does
 these things:
 
 - It starts a fresh [job VM](protocol/agent.md#job-vms) for each runner,
@@ -85,9 +87,21 @@ these things:
 
 ### Job VMs and sandboxes
 
-A job VM is a KVM VM on an own machine. A Boat sandbox plays the same part
-for overflow. Both start from the image, which holds the GitHub Actions
-runner. The runner takes one job.
+A job VM is a fresh VM on an own machine. A Boat sandbox plays the same
+part for overflow of Linux jobs. Both start from the image, which holds the
+GitHub Actions runner. The runner takes one job.
+
+- On an x64 Linux machine, a job VM is a Firecracker VM over KVM. It runs
+  Linux.
+- On a Mac, a job VM is a macOS VM over Apple's Virtualization.framework.
+  The agent drives the framework with its own Rust code, through the
+  `objc2-virtualization` crate.
+- A macOS job never runs on Boat, as
+  [Overflow runners](protocol/overflow.md#overflow-runners) says.
+- **Decision:** the agent runs macOS VMs with its own Rust code over
+  Virtualization.framework. Rejected: Tart and Lume as external tools.
+  Reason: one agent binary, the Apache-2.0 licence of the agent, and no
+  limit from the licence of a third party.
 
 ### Dashboard
 
@@ -134,7 +148,8 @@ design tokens that the dashboard uses.
 - **GitHub and the runners:** each runner opens its own connection to
   GitHub. It gets one job with its code and secrets, and it sends the logs
   and the artifacts to GitHub. These never pass through the control plane,
-  as [Secrets and job data](protocol/security.md#secrets-and-job-data) says.
+  as [Secrets and job data](protocol/security-data.md#secrets-and-job-data)
+  says.
 - **The control plane and the agents:** each agent opens an outbound
   connection to the machine gateway, with its
   [machine credential](protocol/agent.md#machine-identity). The agent sends
@@ -154,8 +169,8 @@ design tokens that the dashboard uses.
   cache URLs, the runtime token, and the cache rights of the job to the
   agent. The agent trusts only that first handoff, as
   [The cache handoff](protocol/cache.md#the-cache-handoff) says.
-  [Job isolation](protocol/security.md#job-isolation) says what a job VM
-  can reach.
+  [Job isolation](protocol/security-isolation.md#job-isolation) says what a
+  job VM can reach.
 - **The agent and GitHub:** the machine cache opens its own connection to
   the GitHub cache, with the runtime token of the job. It streams each
   entry that a job restores from the GitHub cache, and it sends each save

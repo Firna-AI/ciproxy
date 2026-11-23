@@ -1,5 +1,5 @@
-// Draft legal text needs the owner's approval before launch. Retention limits
-// follow docs/protocol/security.md, app-removal.md, and overflow.md.
+// The legal pages of the site. Retention limits follow
+// docs/protocol/security-data.md, app-removal.md, and overflow.md.
 
 import { listText } from "./format.ts";
 import { privacySections } from "./legal-privacy.ts";

@@ -15,17 +15,17 @@ struct Connection {
 }
 
 pub(crate) struct VsockChannel {
-    listener: VsockListener,
+    port: u32,
+    listener: Option<VsockListener>,
     connection: Option<Connection>,
     observations: Observations,
 }
 
 impl VsockChannel {
     pub(crate) async fn accept(port: u32) -> Result<Self> {
-        let listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_ANY, port))
-            .context("bind guest vsock")?;
         Ok(Self {
-            listener,
+            port,
+            listener: Some(bind(port)?),
             connection: None,
             observations: Observations::default(),
         })
@@ -35,7 +35,19 @@ impl VsockChannel {
         if self.connection.is_some() {
             return Ok(());
         }
-        let (stream, _) = self.listener.accept().await.context("accept agent vsock")?;
+        let listener = match &mut self.listener {
+            Some(listener) => listener,
+            None => self.listener.insert(bind(self.port)?),
+        };
+        let (stream, _) = match listener.accept().await {
+            Ok(accepted) => accepted,
+            Err(error) => {
+                // A restored macOS VM has a new socket device. Its listener
+                // from before the save can fail, so a new one replaces it.
+                self.listener = None;
+                return Err(error).context("accept agent vsock");
+            }
+        };
         let (reader, writer) = split(stream);
         self.connection = Some(Connection {
             reader: BufReader::new(reader).lines(),
@@ -60,13 +72,17 @@ impl VsockChannel {
     }
 }
 
+fn bind(port: u32) -> Result<VsockListener> {
+    VsockListener::bind(VsockAddr::new(VMADDR_CID_ANY, port)).context("bind guest vsock")
+}
+
 #[async_trait]
 impl Channel for VsockChannel {
     fn receive(&mut self) -> CommandFuture<'_> {
         Box::pin(async move {
             loop {
                 if let Err(error) = self.connected().await {
-                    tracing::warn!(%error, "agent channel will reconnect");
+                    tracing::warn!(%error, cause = %error.diagnosis(), "agent channel will reconnect");
                     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     continue;
                 }
@@ -79,7 +95,9 @@ impl Channel for VsockChannel {
                                 self.connection = None;
                             }
                         },
-                        Ok(None) | Err(_) => {
+                        Ok(None) => self.connection = None,
+                        Err(error) => {
+                            tracing::warn!(%error, "agent connection failed; wait for a new one");
                             self.connection = None;
                         }
                     }

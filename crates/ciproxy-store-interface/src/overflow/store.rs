@@ -41,10 +41,18 @@ pub struct OverflowSnapshot {
 pub trait OverflowStore: Send + Sync {
     /// Acquire one live workspace session. Closing it releases the lock.
     fn try_lock_overflow(&self, workspace_id: Uuid) -> Result<Option<Box<dyn OverflowSession>>>;
-    /// Wait for the workspace session so a guest callback is never lost as busy.
+    /// Wait within the store's lock limit for a workspace session.
     fn lock_overflow(&self, workspace_id: Uuid) -> Result<Box<dyn OverflowSession>>;
     /// Derive workspace authority from a callback digest, including consumed tokens.
     fn overflow_token_workspace(&self, hash: &TokenHash) -> Result<Option<Uuid>>;
+    /// Consume one live sandbox token and request deletion without a workspace session.
+    fn accept_end(
+        &self,
+        workspace_id: Uuid,
+        hash: &TokenHash,
+        runner_id: Uuid,
+        at: DateTime<Utc>,
+    ) -> Result<Option<StartRecord>>;
 }
 
 /// Queries on the dedicated connection that owns the workspace session lock.
@@ -91,14 +99,8 @@ pub trait OverflowSession: Send {
     /// Read the sealed registration only while startup or cleanup needs it.
     fn encrypted_launch(&mut self, delivery_id: Uuid) -> Result<Option<EncryptedLaunch>>;
     /// Save phase and provider identity, and atomically materialize runner/cost facts.
+    /// Keep the first report and end, and do not regress deletion.
     fn save_start(&mut self, record: &StartRecord) -> Result<()>;
-    /// Consume one live sandbox token and request deletion before provider access.
-    fn accept_end(
-        &mut self,
-        hash: &TokenHash,
-        runner_id: Uuid,
-        at: DateTime<Utc>,
-    ) -> Result<Option<StartRecord>>;
     /// Erase unused retired keys and completed operation data older than the cutoff.
     fn collect(&mut self, before: DateTime<Utc>) -> Result<()>;
 }
