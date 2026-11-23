@@ -12,8 +12,8 @@ open-source agent, which starts a fresh VM for each job.
 A Linux machine needs:
 
 - x64 Linux with systemd, cgroup v2, and KVM.
-- A supported distribution: Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-  AlmaLinux.
+- A supported distribution: Debian, Ubuntu, Fedora, RHEL, CentOS Stream,
+  Rocky Linux, AlmaLinux, openSUSE, or Arch Linux.
 - 4 cores, 16 GB of memory, and 250 GB of disk or more.
 - Outbound HTTPS to ciproxy, to GitHub, and to `get.ciproxy.dev`. The
   machine opens no inbound port.

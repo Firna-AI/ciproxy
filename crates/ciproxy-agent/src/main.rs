@@ -81,6 +81,8 @@ mod host_preparation;
 #[cfg(target_os = "linux")]
 mod host_release;
 #[cfg(target_os = "linux")]
+mod host_requirements;
+#[cfg(target_os = "linux")]
 mod host_system;
 #[cfg(target_os = "linux")]
 mod host_tool_files;

@@ -61,8 +61,8 @@ function Needs() {
     <ul className="docs-list">
       <li>x64 Linux with systemd, {unbroken("cgroup v2")}, and KVM.</li>
       <li>
-        A supported distribution: Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-        AlmaLinux.
+        A supported distribution: Debian, Ubuntu, Fedora, RHEL, CentOS Stream,
+        Rocky Linux, AlmaLinux, openSUSE, or Arch Linux.
       </li>
       <li>
         {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
