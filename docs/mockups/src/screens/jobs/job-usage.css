@@ -62,8 +62,12 @@
   white-space: nowrap;
 }
 
-.usage-figure-number .dot-label {
-  color: var(--c-ink);
+/* A count of processes that ran out of memory: a red dot before the
+   figure, which keeps the ink of the other figures. */
+.usage-figure-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* A meter with the size of the label as a tick, ringed in the surface
@@ -86,14 +90,10 @@
 }
 
 /* The steps: a table that runs to the panel edges on desktop, and a dense
-   list on a phone. A long step name wraps rather than widens the table. */
+   list on a phone. */
 
 .usage-steps {
   border-top: 1px solid var(--c-border);
-}
-
-.usage-steps .dt td.col-step {
-  white-space: normal;
 }
 
 .step-title {
@@ -111,9 +111,12 @@
   flex-shrink: 0;
 }
 
+/* A long step name wraps rather than widens the table, whose cells keep
+   their text on one line. */
 .step-name {
   min-width: 0;
   overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .step-script {

@@ -5,16 +5,16 @@
 // step, and a step that holds no point, show no figures. The out-of-memory
 // column shows only when a step ran out of memory.
 
-import { useState, type ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { useFocusRing } from "@firna/ui/focusRing";
-import { Table, type TableColumn } from "@firna/ui/table";
+import { useMemo, type ReactNode } from "react";
+import { StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { createTableStyles, type TableColumn } from "@firna/ui/table";
+import { useSharedUiTheme } from "@firna/ui/theme";
 
 import { colors, fonts } from "@ciproxy/tokens";
 
-import { ExternalIcon } from "../../components/icons.tsx";
 import { StatusLabel } from "../../components/status-label.tsx";
 import { text } from "../../components/text.ts";
+import { TextLink } from "../../components/text-link.tsx";
 import {
   figureLine,
   usageCopy,
@@ -37,61 +37,7 @@ const killColumn: TableColumn = {
   align: "right",
 };
 
-const linkSizes = {
-  body: { fontSize: 14, lineHeight: "20px" },
-  small: { fontSize: 13, lineHeight: "18px" },
-} as const;
-
-/** A name that hides a script: a link to the step on GitHub, in a new tab. */
-function StepLink({
-  step,
-  href,
-  size,
-}: {
-  step: UsageStepRow;
-  href: string;
-  size: Size;
-}) {
-  const focus = useFocusRing();
-  const [hovered, setHovered] = useState(false);
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={`Open step ${step.number} on GitHub`}
-      aria-label={`${step.name}, opens step ${step.number} on GitHub`}
-      {...focus.focusRingDomProps}
-      onFocus={focus.onFocus}
-      onBlur={focus.onBlur}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 4,
-        color: hovered ? colors.ink : colors.ink2,
-        fontFamily: fonts.sans,
-        ...linkSizes[size],
-        fontWeight: 500,
-        overflowWrap: "anywhere",
-        ...focus.focusRingVariables,
-      }}
-    >
-      <span
-        style={{
-          textDecorationLine: "underline",
-          textDecorationColor: hovered ? "currentColor" : colors.border2,
-          textUnderlineOffset: "3px",
-        }}
-      >
-        {step.name}
-      </span>
-      <ExternalIcon size={12} color={colors.muted} />
-    </a>
-  );
-}
-
+/** A name that hides a script links to the step on GitHub, in a new tab. */
 function StepTitle({ step, size }: { step: UsageStepRow; size: Size }) {
   return (
     <View style={styles.title}>
@@ -101,7 +47,15 @@ function StepTitle({ step, size }: { step: UsageStepRow; size: Size }) {
           {step.name}
         </Text>
       ) : (
-        <StepLink step={step} href={step.href} size={size} />
+        <TextLink
+          label={step.name}
+          href={step.href}
+          size={size}
+          underlined
+          external
+          title={`Open step ${step.number} on GitHub`}
+          accessibilityLabel={`${step.name}, opens step ${step.number} on GitHub`}
+        />
       )}
     </View>
   );
@@ -180,6 +134,59 @@ function StepRows({ steps }: { steps: readonly UsageStepRow[] }) {
   );
 }
 
+/** A fixed width wins; otherwise the column shares the rest by its flex. */
+function columnStyle(column: TableColumn): ViewStyle {
+  return column.width === undefined
+    ? { flex: column.flex ?? 1, minWidth: 0 }
+    : { width: column.width };
+}
+
+/**
+ * The steps on a wider window, in the look of the Firna table. That table
+ * gives a screen reader no roles, so this one names the table, its rows, its
+ * column headers, and its cells.
+ */
+function StepTable({
+  steps,
+  columns: shown,
+}: {
+  steps: readonly UsageStepRow[];
+  columns: readonly TableColumn[];
+}) {
+  const theme = useSharedUiTheme();
+  const table = useMemo(() => createTableStyles(theme), [theme]);
+  const box = (column: TableColumn) => [
+    columnStyle(column),
+    column.align === "right" && table.cellRight,
+  ];
+  return (
+    <View role="table" aria-label="Steps" style={table.table}>
+      <View role="row" style={table.headRow}>
+        {shown.map((column) => (
+          <View key={column.key} role="columnheader" style={box(column)}>
+            <Text style={[table.th, column.align === "right" && table.thRight]}>
+              {column.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+      {steps.map((step, index) => (
+        <View
+          key={step.number}
+          role="row"
+          style={[table.row, index === steps.length - 1 && table.rowLast]}
+        >
+          {shown.map((column) => (
+            <View key={column.key} role="cell" style={box(column)}>
+              {cell(step, column.key)}
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function UsageSteps({
   steps,
   killColumn: killed,
@@ -193,12 +200,9 @@ export function UsageSteps({
   if (mobile) return <StepRows steps={steps} />;
   return (
     <View style={styles.table}>
-      <Table
+      <StepTable
+        steps={steps}
         columns={killed ? [...columns, killColumn] : columns}
-        rows={[...steps]}
-        rowKey={(step) => String(step.number)}
-        cell={cell}
-        accessibilityLabel="Steps"
       />
     </View>
   );

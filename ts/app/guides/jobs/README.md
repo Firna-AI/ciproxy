@@ -69,7 +69,10 @@ query. The banner of these pages is under
   of the chart. `job-usage.tsx`, `usage-chart.tsx`, `usage-plot.tsx`, and
   `usage-steps.tsx` in `src/screens/jobs` draw them. `@firna/ui/chart` cannot
   mark steps, and it draws at a fixed width in a static render, so the chart
-  draws SVG in a box that stretches to the panel.
+  draws SVG in a box that stretches to the panel. The `Table` of
+  `@firna/ui/table` gives a screen reader no table, row, column header, or
+  cell roles. So the steps table takes the look of `createTableStyles` and
+  adds those roles.
 
 ## Related docs
 

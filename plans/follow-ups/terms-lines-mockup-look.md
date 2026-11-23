@@ -88,9 +88,11 @@
     colour `colors.ink2` is 1.5:1. The `.text-link` underline in
     `colors.border2` has 1.35:1 on white. So the dashboard link stands out
     more from the words around it.
-  - No dashboard link part has the mockup look.
-    `ts/app/src/components/text-link.tsx` and the link of
-    `ts/app/src/components/feature-parts.tsx` show an underline only on
+  - One dashboard link part has the mockup look: the underlined look of
+    `TextLink` in `ts/app/src/components/text-link.tsx`. That look is
+    opt-in, and only the links of the script steps on the job page use it.
+    The default look of that `TextLink`, and the link of
+    `ts/app/src/components/feature-parts.tsx`, show an underline only on
     hover.
   - No plan or doc records why the dashboard look differs from the mockups.
     The comment of `InlineLink` says only that the link takes the font and

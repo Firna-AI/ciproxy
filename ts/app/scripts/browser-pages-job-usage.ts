@@ -53,6 +53,38 @@ async function count(panel: Locator, words: string): Promise<number> {
   return panel.getByText(words, { exact: true }).count();
 }
 
+/**
+ * The nine steps as a screen reader moves through them: a list on a phone,
+ * and on a wider window a table with a header row and a row for each step,
+ * with a cell under each of the four column headers.
+ */
+async function stepRoles(panel: Locator, phone: boolean): Promise<void> {
+  const table = panel.getByRole("table", { name: "Steps", exact: true });
+  const headers = await table.getByRole("columnheader").all();
+  assert.deepEqual(
+    {
+      tables: await table.count(),
+      rows: await table.getByRole("row").count(),
+      headers: await Promise.all(headers.map((header) => header.textContent())),
+      cells: await table.getByRole("cell").count(),
+      items: await panel
+        .getByRole("list", { name: "Steps", exact: true })
+        .getByRole("listitem")
+        .count(),
+    },
+    phone
+      ? { tables: 0, rows: 0, headers: [], cells: 0, items: 9 }
+      : {
+          tables: 1,
+          rows: 10,
+          headers: ["Step", "Duration", "Average CPU", "Peak memory"],
+          cells: 36,
+          items: 0,
+        },
+    "the steps are a list on a phone, and a table on a wider window",
+  );
+}
+
 /** One sentence in place of the figures. */
 function sentence(words: string): UsageLayout {
   return async (page, width) => {
@@ -85,6 +117,7 @@ export const usageLayouts = {
       1,
       "without a kill, only the figure of the job names out of memory",
     );
+    await stepRoles(panel, width === 390);
   }) satisfies UsageLayout,
   labelSize: (async (page, width) => {
     const panel = await placed(page, width);

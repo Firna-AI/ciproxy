@@ -17,7 +17,7 @@ import { ProgressBar } from "@firna/ui/loader";
 import { useSharedUiTheme } from "@firna/ui/theme";
 
 import { Panel } from "../../components/page.tsx";
-import { DotLabel } from "../../components/status.tsx";
+import { Dot } from "../../components/status.tsx";
 import {
   dotJoin,
   formatDuration,
@@ -136,7 +136,10 @@ function Measured({
                 job.oomKills === 0 ? (
                   "None"
                 ) : (
-                  <DotLabel tone="err">{processes(job.oomKills)}</DotLabel>
+                  <span className="usage-figure-alert">
+                    <Dot tone="err" />
+                    <span>{processes(job.oomKills)}</span>
+                  </span>
                 )
               }
             />
