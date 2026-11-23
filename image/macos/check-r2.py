@@ -147,14 +147,19 @@ class Publish(FakeR2):
                     f"Published {image_id}, variant {variant}.",
                     f"MACOS_IMAGE_MANIFEST_PATH=releases/{image_id}/manifest.json"])
 
-    def test_refuses_a_variant_that_disagrees_with_test_image(self):
-        for variant, test_image in [("standard", True), ("test", False)]:
-            with self.subTest(variant=variant):
+    def test_refuses_an_unknown_variant_or_one_that_disagrees_with_test_image(self):
+        disagrees = "manifest.json says variant {} and test_image"
+        for variant, test_image, message in [
+                ("standard", True, disagrees.format("standard")),
+                ("full", True, disagrees.format("full")),
+                ("test", False, disagrees.format("test")),
+                ("huge", False, "manifest.json has an unknown variant: 'huge'")]:
+            with self.subTest(variant=variant, test_image=test_image):
                 folder = self.artifacts(variant=variant, test_image=test_image)
                 result = self.publish("--test-image", folder)
                 shutil.rmtree(folder)
                 self.assertEqual(result.returncode, 1)
-                self.assertIn(f"manifest.json says variant {variant} and test_image", result.stderr)
+                self.assertIn(message, result.stderr)
                 self.assertEqual(self.calls(), [])
 
     def test_counts_an_older_build_without_variant_by_its_test_flag(self):

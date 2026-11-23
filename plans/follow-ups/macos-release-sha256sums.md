@@ -6,9 +6,10 @@
 - **Added:** 2026-11-23, from `calummoore/h4-publish-and-xcode-fetch-gomg`,
   review round 2, a problem outside the scope.
 - **Location:** `image/macos/package.sh`, the `SHA256SUMS` writer.
-- **Reason:** The file list of `SHA256SUMS` belongs to the packaging of PR
-  #113. The bucket layout of the macOS image hosting plan fixes which files
-  a release holds.
+- **Reason:** The change splits a file that `package.sh` writes and
+  `publish.sh` checks, so it needs a package run on a Mac to check. The
+  "Publish" section of `image/macos/README.md` fixes which files a release
+  holds.
 
 - **Background:** `package.sh` writes `SHA256SUMS` for the artifact folder.
   `publish.sh` checks it there, then uploads it with the release.
@@ -30,5 +31,5 @@
 - **Wider fix:** A.
 - **Previous examples:** None found.
 - **Recommendation:** A. Each list then passes where it lives.
-- **Action:** fix after merge, apply A, because the packaging belongs to the
-  open macOS image build branch.
+- **Action:** fix after merge, apply A, because the change needs a package
+  run on a Mac to check.

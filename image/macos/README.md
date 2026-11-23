@@ -289,7 +289,8 @@ variant preparation offline. `python3 image/macos/check-archive.py` checks the
 archive writer and checker against the agent's member list.
 `python3 image/macos/check-r2.py` runs `publish.sh`, and
 `python3 image/macos/check-r2-xcode.py` runs the Xcode download of
-`fetch.sh`, against a fake `aws` on `PATH`. They check the upload order,
+`fetch.sh` and the `fetch` and `install` phases of `build.sh`, against a
+fake `aws` on `PATH`. They check the upload order,
 the variants, the refusals, and that no key reaches the output, a trace,
 or the `aws` arguments. They need bash and `shasum`, and run on Linux too.
 Lint the R2 scripts from the repository root:

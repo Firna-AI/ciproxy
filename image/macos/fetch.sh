@@ -58,21 +58,24 @@ mkdir -p "$inputs/xcode"
 xcode_xip="$inputs/xcode/$XCODE_XIP_NAME"
 xcode_keys=(R2_ACCOUNT_ID R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY)
 missing_keys=$(r2_missing "${xcode_keys[@]}")
-if [[ ! -f "$xcode_xip" && -n "${XCODE_DIR:-}" ]]; then
-    source_xip="$XCODE_DIR/$XCODE_XIP_NAME"
-    [[ -f "$source_xip" ]] || source_xip="$XCODE_DIR/Xcode_${XCODE_VERSION}_Universal.xip"
-    cp -c "$source_xip" "$xcode_xip"
-elif [[ ! -f "$xcode_xip" && -z $missing_keys ]]; then
-    # No minimum version: aws s3 cp works on any AWS CLI v2.
-    r2_require_aws ""
-    r2_aws R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY s3 cp \
-        "s3://ciproxy-xcode/xcode/$XCODE_XIP_NAME" "$xcode_xip.part"
-    # A bad download keeps the .part name, so the next run downloads again.
-    check "$XCODE_SHA256" "$xcode_xip.part"
-    mv "$xcode_xip.part" "$xcode_xip"
-fi
+# A new archive arrives as a .part file and gets its name only after the
+# check, so the next run fetches a bad copy again.
 if [[ -f "$xcode_xip" ]]; then
     check "$XCODE_SHA256" "$xcode_xip"
+elif [[ -n "${XCODE_DIR:-}" || -z $missing_keys ]]; then
+    rm -f "$xcode_xip.part"
+    if [[ -n "${XCODE_DIR:-}" ]]; then
+        source_xip="$XCODE_DIR/$XCODE_XIP_NAME"
+        [[ -f "$source_xip" ]] || source_xip="$XCODE_DIR/Xcode_${XCODE_VERSION}_Universal.xip"
+        cp -c "$source_xip" "$xcode_xip.part"
+    else
+        # No minimum version: aws s3 cp works on any AWS CLI v2.
+        r2_require_aws ""
+        r2_aws R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY s3 cp \
+            "s3://ciproxy-xcode/xcode/$XCODE_XIP_NAME" "$xcode_xip.part"
+    fi
+    check "$XCODE_SHA256" "$xcode_xip.part"
+    mv "$xcode_xip.part" "$xcode_xip"
 else
     if [[ $missing_keys != "${xcode_keys[*]}" ]]; then
         echo "The R2 Xcode download also needs $missing_keys." >&2

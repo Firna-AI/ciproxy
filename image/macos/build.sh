@@ -33,11 +33,13 @@ phase=start
 trap 'echo "build.sh: phase $phase failed at line $LINENO (exit $?)" >&2' ERR
 
 phase_fetch() {
-    # Only fetch.sh gets the R2 Xcode keys.
-    (
-        export R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
-        bash "$definition/fetch.sh" "$work_dir"
-    )
+    # Only fetch.sh gets the R2 Xcode keys. No subshell, so that the ERR trap
+    # reports a failure once.
+    local status=0
+    export R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
+    bash "$definition/fetch.sh" "$work_dir" || status=$?
+    export -n R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
+    return "$status"
 }
 
 phase_tools() {
