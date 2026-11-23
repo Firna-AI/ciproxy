@@ -161,26 +161,50 @@ export function installCommand(
 }
 
 /**
- * The labels of Setup with the placement that the API gives for these
- * machines: a ready machine fits each label, and a machine that gets its
- * first job image leaves the placement unknown. Without a machine, each label
- * keeps the placement of the fixture.
+ * The Setup labels when the fixture machine `forge-01` is ready: it fits the
+ * default label, so the label runs on own machines.
  */
-export function labelsFor(
-  labels: readonly LabelView[],
-  machines: readonly MachineView[],
-): LabelView[] {
-  const ready = machines.filter((item) => item.state === "ready").length;
-  const preparing = machines.some((item) => item.state === "preparing");
-  if (ready === 0 && !preparing) return [...labels];
-  return labels.map((view) => ({
+export function machineFitLabels(): LabelView[] {
+  const target = machine();
+  return setup().labels.map((view) => ({
     ...view,
     fit: {
       ...view.fit,
-      eligible_machines: machines.length,
-      fitting_machines: ready,
-      no_machine_fits: ready === 0,
-      placement: ready > 0 ? "machines_only" : "unavailable",
+      eligible_machines: 1,
+      fitting_machines: 1,
+      machines: [
+        {
+          concurrent_jobs: "2",
+          hostname: target.hostname,
+          id: target.id,
+          job_disk_bytes: "20000000000",
+          memory_bytes: "8000000000",
+          required_root_disk_bytes: "41000000000",
+          slots: "1",
+          vcpus: "4",
+        },
+      ],
+      maximum_jobs: "2",
+      minimum_jobs: "2",
+      no_machine_fits: false,
+      placement: "machines_only",
+    },
+  }));
+}
+
+/**
+ * The Setup labels while `forge-01` gets its first job image: the API does
+ * not know its capacity yet, so the placement is unknown.
+ */
+export function preparingFitLabels(): LabelView[] {
+  return setup().labels.map((view) => ({
+    ...view,
+    fit: {
+      ...view.fit,
+      eligible_machines: 1,
+      no_machine_fits: false,
+      placement: "unavailable",
+      unavailable_machines: 1,
     },
   }));
 }

@@ -5,6 +5,7 @@ import type { BrowserContext, Page } from "./browser-driver.ts";
 import type { SmokeCase } from "./browser-cases.ts";
 import { control, facts, keyboardMenu, visible } from "./browser-fixture.ts";
 import { workspaceId } from "./fixtures-core.ts";
+import { agentPromptCopy } from "./browser-agent-prompt.ts";
 import { exerciseReviewCase } from "./browser-review-actions.ts";
 
 async function pickWorkspace(page: Page): Promise<void> {
@@ -170,6 +171,7 @@ export async function exerciseCase(
         exact: true,
       }),
     );
+    await agentPromptCopy(page);
   }
   if (
     item.name === "setup-load-failure" ||

@@ -15,8 +15,9 @@ import {
 } from "./fixtures-core.ts";
 import {
   job,
-  labelsFor,
   machine,
+  machineFitLabels,
+  preparingFitLabels,
   preparingMachine,
   setup,
 } from "./fixtures-setup.ts";
@@ -244,11 +245,13 @@ export function recordedScenario(name: ScenarioName): Scenario {
     ].includes(name)
   ) {
     data.machines = [machine()];
+    data.setup.labels = machineFitLabels();
     data.setup.machines = 1;
     data.setup.waiting_for_machine = false;
   }
   if (name === "setup-preparing" || name === "setup-image-wait") {
     data.machines = [preparingMachine()];
+    data.setup.labels = preparingFitLabels();
     data.setup.machines = 1;
     data.setup.waiting_for_machine = false;
   }
@@ -278,6 +281,5 @@ export function recordedScenario(name: ScenarioName): Scenario {
   applyLateApprovalScenario(data);
   applyBoatScenario(data);
   applyPageScenario(data);
-  data.setup.labels = labelsFor(data.setup.labels, data.machines);
   return data;
 }

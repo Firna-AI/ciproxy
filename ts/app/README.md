@@ -75,7 +75,8 @@ first job ended.
 The first-job step copies a prompt for a coding agent. The prompt lists the
 labels of the workspace with their platforms and sizes, and moves each job
 of a repository to the label that fits the platform and the size of its
-runner. It leaves out a label that no machine and no Boat size fits.
+runner. It leaves out a label that no machine or Boat size runs at its full
+size.
 `?reason=github` or `?reason=ended` on `/sign-in` adds a notice.
 The shell holds the navigation, the workspace switch, the account menu, and
 Add an organization for Admins. A person with no role sees a page that names

@@ -46,14 +46,15 @@ Design calls, my calls, 23 November 2026:
   workspace with its platform, vCPU, memory, and free disk, from the
   `labels` field of the Setup response. Reason: the Setup API already
   returns them, custom labels can exist, and Setup shows only API facts.
-- **Only labels that fit somewhere.** The prompt leaves out each label
-  whose placement in the Setup response is `waits`. That placement means
-  that no allowed destination fits the label: no machine of its platform
-  fits it, and Boat does not. A label whose placement is unknown, such as
-  while a machine gets its first job image, stays in. Reason: the server
-  already decides placement, and a job on a label that fits nowhere waits
-  forever. Changed after review finding 1, which showed that the earlier
-  rule kept `ciproxy-macos-medium` for a Mac too small to run it.
+- **Only labels that run at full size.** The prompt leaves out each label
+  that no destination runs at its own size: its placement in the Setup
+  response is `waits`, or its placement is `boat_only` and only the largest
+  Boat size, which is smaller, runs it. A label whose placement is unknown,
+  such as while a machine gets its first job image, stays in. A label whose
+  fitting Boat size Boat refuses for now also stays in, because the server
+  placement leaves out temporary start holds. Reason: the server already
+  decides placement, and a job on such a label waits forever or gets a
+  smaller VM. Changed after review findings 1 and 9.
 - **The platform and size rule.** Each label line gives the operating
   system and the CPU architecture, such as "Linux on x64" or "macOS on
   Apple silicon (arm64)". For each job, the agent picks the smallest label
@@ -74,10 +75,12 @@ Design calls, my calls, 23 November 2026:
   self-hosted runners above.
 - **Only the runner changes.** When a `runs-on` value comes from a matrix,
   an input, or a variable that other lines also read, the agent keeps the
-  value. It maps the value to the label in the `runs-on` line only, and
-  the prompt gives one example expression. Reason: a changed matrix value
-  makes conditions, exclusions, and check names stop matching. Changed
-  after review finding 2.
+  value. It maps the value to the label in the `runs-on` line only. The
+  prompt gives the shape of that expression with the placeholders
+  `<runner>` and `<label>`. Reason: a changed matrix value makes
+  conditions, exclusions, and check names stop matching, and a concrete
+  example could pair a runner with a label of another platform or size.
+  Changed after review findings 2 and 8.
 - **One label order.** The prompt sorts the labels with `compareLabels`,
   the order of the Settings list. Reason: one order for the same labels.
   Changed after review finding 7.
