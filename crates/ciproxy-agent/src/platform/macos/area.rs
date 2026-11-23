@@ -13,7 +13,7 @@ use super::area_target::target;
 use super::diskutil::{Plist, area_error, diskutil, info_value, new_device, run_checked};
 use crate::error::{Error, ErrorResultExt, Result};
 pub(crate) use crate::macos::area_disk::AreaRecord;
-use crate::macos::area_disk::{AreaDisk, Deletion, MISSING_REPAIR, deletion};
+use crate::macos::area_disk::{AreaDisk, Deletion, MISSING_REPAIR, area_mounted, deletion};
 use crate::macos::paths::{AREA, CONTROL};
 use crate::persistence::{atomic_private_write, private_directory};
 
@@ -143,13 +143,13 @@ fn ensure_owners(record: &AreaRecord) -> Result<()> {
         }
         Some(false) => {}
     }
-    if let Err(error) = diskutil(&["enableOwnership", AREA]) {
+    if let Err(error) = diskutil(&["enableOwnership", &real_area().to_string_lossy()]) {
         tracing::warn!(%error, "cannot turn on file owners on the area volume");
     }
     if owners(record)? == Some(false) {
         return Err(Error::Preparation {
             component: "area volume",
-            repair: "Run sudo diskutil enableOwnership /var/db/ciproxy/area. The agent keeps root-only files on its volume, so the volume must use file owners. Then restart the agent.",
+            repair: "Run sudo diskutil enableOwnership /private/var/db/ciproxy/area. If owners stay off, unmount and mount the ciproxy volume. The agent keeps root-only files on its volume, so the volume must use file owners. Then restart the agent.",
         });
     }
     Ok(())
@@ -197,10 +197,25 @@ pub(crate) fn remove() -> Result<()> {
             volume_uuid = %record.volume_uuid,
             "the volume with the recorded UUID has another name or container; keep it"
         ),
+        Deletion::Unknown => return Err(area_error("read the container of the area volume")),
     }
+    remove_mount_point()?;
     remove_fstab_line(&record.volume_uuid)?;
-    std::fs::remove_file(record_path()).context("remove the area record")?;
-    match std::fs::remove_dir(AREA) {
+    // The record goes last, so a failed step above repeats on a retry.
+    std::fs::remove_file(record_path()).context("remove the area record")
+}
+
+/// Remove the mount point. While its disk is unplugged, the folder is a
+/// bare folder on the startup disk, and it can hold files that the agent
+/// wrote there, so all of it goes. A folder that is still a mount point is
+/// only removed when it is empty.
+fn remove_mount_point() -> Result<()> {
+    let removed = if area_mounted(Path::new(AREA)) {
+        std::fs::remove_dir(AREA)
+    } else {
+        std::fs::remove_dir_all(AREA)
+    };
+    match removed {
         Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
             Err(error).context("remove the area mount point")
         }

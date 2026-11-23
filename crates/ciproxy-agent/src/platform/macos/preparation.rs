@@ -48,7 +48,7 @@ impl Preparation for MacPreparation {
             stage_error(
                 error,
                 "area volume",
-                "Check that the startup disk is APFS and has free space. Then rerun install.",
+                "Check that the disk of the area is APFS and has free space, and that CIPROXY_AREA_DISK names it. Then rerun install.",
             )
         })?;
         for folder in ["images", "vms", "seats"] {

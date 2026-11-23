@@ -187,9 +187,11 @@ BYTESB -nomount`, records the volume UUID in `area.json`, adds the fstab
   (`tmutil addexclusion -v`).
 - Daemon start mounts the recorded volume when it is not mounted. Install
   and uninstall act only on the volume with the recorded UUID and the name
-  `ciproxy`. `area.json` also records the UUID of the volume's container,
-  so uninstall deletes the volume only in that container.
-- Each mount checks that the volume uses file owners
+  `ciproxy`. For a volume on another disk, `area.json` also records the
+  UUID of the volume's container, so uninstall deletes the volume only in
+  that container.
+- Each mount by the agent (daemon start, install, `prepare-host`, and
+  `import-image`) checks that the volume uses file owners
   (`GlobalPermissionsEnabled`). macOS can ignore owners on an external
   volume, and then any user could write the root-only files of the agent.
   The agent runs `diskutil enableOwnership`, and refuses a volume where
@@ -220,7 +222,7 @@ sudo env CIPROXY_AREA_DISK=/Volumes/NAME /usr/local/bin/ciproxy-agent install --
 
 - The value is a mounted path, such as `/Volumes/NAME`, or an APFS
   container reference, such as `disk5`. With no value, the agent uses the
-  startup disk, as before.
+  startup disk, as before, and the record keeps its older form.
 - The agent reads the container and its free space from the target with
   `diskutil info -plist` and `diskutil apfs list -plist`. It reads the
   disk facts from the container's physical store.
@@ -252,8 +254,10 @@ The disk must stay connected. The agent then acts as follows:
   disk is back, macOS mounts the volume again, and the Mac takes jobs
   again with no restart.
 - **Uninstall with the disk gone:** with no recorded VM, uninstall goes on.
-  It warns that the volume stays on its disk, and it removes the fstab
-  line and the record. Delete the volume later with
+  It warns that the volume stays on its disk. It removes the bare mount
+  folder with any file in it, then the fstab line, and the record last.
+  When `diskutil` finds the volume but not its container, uninstall stops
+  and keeps the record, so a retry decides. Delete the volume later with
   `diskutil apfs deleteVolume UUID`. With a recorded VM, uninstall needs
   the disk, because it drains the VMs first.
 

@@ -21,14 +21,12 @@ pub(super) fn target(disk: &AreaDisk) -> Result<Target> {
             let free = info_value(STARTUP, "APFSContainerFree")?
                 .parse()
                 .context("read the container free space")?;
-            let container_uuid = Plist::container(&container)
-                .and_then(|list| list.value("Containers.0.APFSContainerUUID"))
-                .inspect_err(|error| tracing::warn!(%error, "the area record keeps no container"))
-                .ok();
+            // No container UUID: the record of the startup disk keeps the
+            // older form, so an older agent can still read it.
             return Ok(Target {
                 container,
                 free,
-                container_uuid,
+                container_uuid: None,
                 external: false,
             });
         }

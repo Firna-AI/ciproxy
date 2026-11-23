@@ -62,7 +62,7 @@ pub(crate) fn setting_error() -> Error {
 pub(crate) fn not_local() -> Error {
     Error::Preparation {
         component: "area disk",
-        repair: "CIPROXY_AREA_DISK names no local APFS disk. A network share cannot hold the area. Check the name with diskutil apfs list. Then rerun install.",
+        repair: "CIPROXY_AREA_DISK names no local APFS container. A network share cannot hold the area. Name the container that diskutil apfs list shows, such as disk5, not its physical disk, or a mounted path. Then rerun install.",
     }
 }
 
@@ -144,6 +144,9 @@ pub(crate) enum Deletion {
     Missing,
     /// A volume has the UUID but another name or container. Keep it.
     Foreign,
+    /// A volume has the UUID and the name, but `diskutil` gave no container
+    /// to compare. Keep the volume and the record, so a retry decides.
+    Unknown,
 }
 
 /// Decide from the facts of the volume with the recorded UUID: its name and
@@ -156,15 +159,14 @@ pub(crate) fn deletion(
     let Some((found_name, found_container)) = found else {
         return Deletion::Missing;
     };
-    let container_matches = match (&record.container_uuid, found_container) {
-        (None, _) => true,
-        (Some(recorded), Some(found)) => recorded.eq_ignore_ascii_case(found),
-        (Some(_), None) => false,
-    };
-    if found_name == name && container_matches {
-        Deletion::Delete
-    } else {
-        Deletion::Foreign
+    if found_name != name {
+        return Deletion::Foreign;
+    }
+    match (&record.container_uuid, found_container) {
+        (None, _) => Deletion::Delete,
+        (Some(recorded), Some(found)) if recorded.eq_ignore_ascii_case(found) => Deletion::Delete,
+        (Some(_), Some(_)) => Deletion::Foreign,
+        (Some(_), None) => Deletion::Unknown,
     }
 }
 

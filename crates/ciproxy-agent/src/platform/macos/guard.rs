@@ -61,12 +61,11 @@ async fn check(isolation: &dyn Isolation, launchd: &dyn Launchd, folders: &VmFol
     }
     if !area_mounted(&folders.area) {
         tracing::error!("the area volume is gone, with the disks of the VMs; stop every VM");
-        for local_id in running {
-            if let Err(error) = launchd.bootout_vm(&local_id).await {
+        for local_id in &running {
+            if let Err(error) = launchd.bootout_vm(local_id).await {
                 tracing::warn!(%error, local_id = %local_id, "the VM stop will retry");
             }
         }
-        return;
     }
     let network = match isolation.ensure().await {
         Ok(network) => Some(network),

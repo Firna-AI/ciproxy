@@ -146,10 +146,15 @@ fn uninstall_deletes_only_the_named_volume_in_the_recorded_container() {
         Deletion::Delete
     );
     assert_eq!(deletion(&recorded, None, "ciproxy"), Deletion::Missing);
+    assert_eq!(
+        deletion(&recorded, Some(("ciproxy", None)), "ciproxy"),
+        Deletion::Unknown,
+        "an unreadable container keeps the volume and the record"
+    );
     for found in [
         ("ciproxy", Some("other")),
-        ("ciproxy", None),
         ("Data", Some("c-uuid")),
+        ("Data", None),
     ] {
         assert_eq!(
             deletion(&recorded, Some(found), "ciproxy"),

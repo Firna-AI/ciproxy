@@ -113,7 +113,7 @@ impl Vms for MacVms {
             }
             remove_helper_files(&self.folders, &vm.local_id)?;
         }
-        if self.builds {
+        if self.builds && area_mounted(&self.folders.area) {
             let request = BuildRequest {
                 seat: vm.network_index,
                 image: vm.report.image_id.clone(),
