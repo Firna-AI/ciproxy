@@ -9,8 +9,8 @@
   Machines, Boat, and Settings pages.
 - **Source:** Review.
 - **Category:** Repository rule.
-- **Location:** `ts/app/src/api/client.ts:30-35`,
-  `ts/app/src/api/endpoints.ts:29-72`, `ts/app/src/api/billing.ts:63-92`,
+- **Location:** `ts/app/src/api/client.ts:30-35`, `createEndpoints` in
+  `ts/app/src/api/endpoints.ts`, `ts/app/src/api/billing.ts:63-92`,
   `ts/app/src/api/billing-payment.ts:83-114`,
   `ts/app/src/api/machine-endpoints.ts:37-63`,
   `ts/app/src/api/overflow-endpoints.ts:28-42`, and

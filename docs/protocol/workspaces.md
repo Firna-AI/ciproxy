@@ -57,7 +57,7 @@ workspace and takes one out, and when an organization is inactive.
 - Each organization keeps its own repository access, as
   [Repository access](security.md#repository-access) says.
 - An own machine runs the jobs of every organization of its workspace, as
-  [Tenant isolation](security.md#tenant-isolation) says.
+  [Tenant isolation](security-isolation.md#tenant-isolation) says.
 - A person with a role sees the jobs of every organization of the
   workspace, as [Roles](security.md#roles) says.
 - [Who gets a role](security.md#who-gets-a-role) says how a person joins a
@@ -73,6 +73,8 @@ workspace and takes one out, and when an organization is inactive.
   the CSRF token of the sign-in.
 - An Add saves durable evidence of its purpose before GitHub opens.
 - Installation entries have no age limit.
+- An installation entry that links to an organization goes with the data
+  of that organization, or with the data of its workspace.
 - **Decision:** create an installation entry only when a person starts an
   install. Rejected: creating an entry on each sign-in state read, because
   normal dashboard reads can then leave permanent unused entries.
@@ -87,8 +89,10 @@ workspace and takes one out, and when an organization is inactive.
 - ciproxy serves GitHub organizations only.
 - When a person installs the app on a personal account, ciproxy makes no
   workspace for it.
-- The page that GitHub then returns to says that ciproxy works with
-  organizations only.
+- [The terms notice](terms-acceptance.md#the-terms-notice) states the steps
+  between the return from GitHub and the sign-in that continues the setup.
+- After that sign-in, the dashboard shows a page that says that ciproxy
+  works with organizations only.
 - The page offers to install the app on an organization, and it links to
   the GitHub settings that remove the app from the personal account.
 - **Decision:** a personal account gets this page and no workspace.
@@ -233,7 +237,7 @@ workspace and takes one out, and when an organization is inactive.
 - The rules of [Removing the App](app-removal.md#removing-the-app) do not
   apply to a take-out, because ciproxy itself removed the App.
 - A take-out deletes no data. The jobs of the organization stay in the job
-  history of the workspace, as [Data retention](security.md#data-retention)
+  history of the workspace, as [Data retention](security-data.md#data-retention)
   says.
 - A person keeps a role only while the person is a member of an
   organization that stays in the workspace, as
@@ -246,8 +250,8 @@ workspace and takes one out, and when an organization is inactive.
 
 ## Related docs
 
-- [Security](security.md): sign-in, roles, repository access, and tenant
-  isolation.
+- [Security](security.md): sign-in, roles, and repository access.
+- [Isolation](security-isolation.md#tenant-isolation): tenant isolation.
 - [Billing](billing.md): the tiers, their features, and the subscription of
   a workspace.
 - [Metering](metering.md): the counts and the savings report of a

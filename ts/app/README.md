@@ -25,6 +25,9 @@ Action buttons and link buttons come from
 label, so a long name in a label shows in full at each width.
 An install link uses the optional `onActivate` callback for a plain click.
 Modified clicks keep the browser's navigation to the stable install page.
+A link inside a sentence, such as Terms, comes from
+[src/components/inline-link.tsx](src/components/inline-link.tsx). It stays
+underlined. In a dialog or a review, it opens a new tab.
 Colours, fonts, and radii come from the [token package](../tokens/README.md).
 The icons and the brand mark are inline SVG elements.
 
@@ -36,6 +39,7 @@ The static export holds one HTML file for each route.
 | -------------------- | ---------------------------------------------------- |
 | `/`                  | Opens the page that the session asks for             |
 | `/sign-in`           | Sign in with GitHub                                  |
+| `/continue`          | The terms step before a GitHub sign-in               |
 | `/install`           | The App install, or the wait for an owner's approval |
 | `/add-organization`  | The workspace choice and its state after an install  |
 | `/personal-account`  | An install on a personal account                     |

@@ -151,7 +151,8 @@ snapshots through the production adapter.
 
 - [Metering](../../docs/protocol/metering.md) defines the calculation rules.
 - [Billing](../../docs/protocol/billing.md) defines prices and add-ons.
-- [Security](../../docs/protocol/security.md#data-retention) defines retention.
+- [Data retention](../../docs/protocol/security-data.md#data-retention)
+  defines retention.
 - [Workspaces](../../docs/protocol/workspaces.md) defines shared counts.
 - [Overflow](../../docs/protocol/overflow.md#spend-limit) defines Boat costs.
 - [Architecture](../../docs/architecture.md) describes hosted boundaries.

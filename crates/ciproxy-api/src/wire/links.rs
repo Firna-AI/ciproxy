@@ -126,6 +126,6 @@ pub struct OrganizationLinkView {
     pub organization_id: Option<Uuid>,
     /// Linked local state, absent before registration.
     pub activation: Option<ActivationView>,
-    /// Fresh authorization action for this original person.
+    /// Dashboard terms page. Continue starts fresh GitHub authorization.
     pub reauthorization_url: String,
 }

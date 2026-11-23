@@ -122,11 +122,14 @@ function LinkedActions({
   );
 }
 
-/** Install again starts Add an organization; the return links it at once. */
+/**
+ * Install again starts Add an organization. The return from GitHub opens the
+ * terms step, and after its sign-in the organization links at once.
+ */
 function RemovedActions() {
   return (
     <span className="row org-actions">
-      <LinkAction to={paths.organizations} size="sm">
+      <LinkAction to={paths.termsStep} size="sm">
         Install again
       </LinkAction>
     </span>

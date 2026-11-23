@@ -201,7 +201,7 @@ of each tier.
 - The report shows the starts and the minutes on own machines and on Boat.
 - It shows the starts of each day, on own machines and on Boat.
 - On every tier, ciproxy keeps the daily totals of 90 days, as
-  [Data retention](security.md#data-retention) says.
+  [Data retention](security-data.md#data-retention) says.
 - The daily totals stay also when the [job history](billing.md#tiers) of
   the tier is shorter.
 

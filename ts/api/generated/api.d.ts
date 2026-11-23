@@ -1505,7 +1505,7 @@ export interface components {
             organization_id?: string | null;
             /** @description Reading metadata does not authorize use of a stored GitHub grant. */
             reauthorization_required: boolean;
-            /** @description Fresh authorization action for this original person. */
+            /** @description Dashboard terms page. Continue starts fresh GitHub authorization. */
             reauthorization_url: string;
             /** @description Current progress. */
             state: components["schemas"]["LinkState"];
@@ -2055,7 +2055,7 @@ export interface components {
             pending_install_requests: components["schemas"]["PendingInstallation"][];
             /** @description Whether a newly available role/request needs fresh GitHub membership proof. */
             reauthorization_required: boolean;
-            /** @description Same-origin top-level navigation for fresh GitHub authorization. */
+            /** @description Dashboard terms page. Continue starts fresh GitHub authorization. */
             reauthorization_url?: string | null;
             removed_organization?: components["schemas"]["RemovedOrganization"] | null;
             setup?: components["schemas"]["SetupOutcome"] | null;
@@ -2317,7 +2317,10 @@ export type $defs = Record<string, never>;
 export interface operations {
     auth_begin: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Set to `setup` to resume a valid pending setup. Otherwise start a plain sign-in. */
+                resume?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2736,7 +2739,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Fresh GitHub authorization or failed setup redirect */
+            /** @description Dashboard terms page with pending setup, or failed setup redirect */
             303: {
                 headers: {
                     Location?: string;

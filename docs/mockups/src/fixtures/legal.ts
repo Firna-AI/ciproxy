@@ -1,7 +1,7 @@
 // The legal pages of the public site: the terms of service and the privacy
 // policy, with their section headings. The user writes or approves the text
 // of each section before the launch. Only the data retention of the privacy
-// policy has text now, because security.md decides its limits.
+// policy has text now, because security-data.md decides its limits.
 
 import { appRemoval } from "./access.ts";
 import { tierOrder, tiers } from "./tiers.ts";
@@ -53,7 +53,7 @@ export const legalPages: Readonly<
 /** The section of the privacy policy that states the decided limits. */
 export const retentionId = "retention";
 
-/** The limits of "Data retention" in security.md, in days. */
+/** The limits of "Data retention" in security-data.md, in days. */
 const keep = { jobDays: 90, totalsDays: 90, cacheHitDays: 7 } as const;
 
 export type RetentionRow = { data: string; kept: string };

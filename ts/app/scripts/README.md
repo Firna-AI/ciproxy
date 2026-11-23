@@ -79,10 +79,16 @@ node ts/app/scripts/browser-pages-smoke.ts --case=NAME --repeat=10
 node ts/app/scripts/m20-browser-smoke.ts
 ```
 
-The shell smoke, `browser-smoke.ts`, covers the sign-in and Setup pages and
-their states, Settings under Overflow, the shell, and the reload after a
-build change. Its Setup states include a machine that gets its first job
-image, and a first job that waits for that machine after Skip for now.
+The shell smoke, `browser-smoke.ts`, covers the sign-in page, the terms
+step with the address of its Continue with GitHub, the Setup pages and their
+states, Settings under Overflow, the shell, and the reload after a build
+change. Its Setup states include a machine that gets its first job image,
+and a first job that waits for that machine after Skip for now.
+Its late approval journeys sign in again after an owner approves an install
+request, then open the workspace of that install. In one, Check again on the
+install page opens the terms step, which shows the terms notice, and its
+Continue with GitHub starts the sign-in. The other starts the sign-in on the
+sign-in page.
 
 The page smoke, `browser-pages-smoke.ts`, covers the states of Jobs, the job
 page, Savings, Plan and usage, Plans, the Checkout review and return, and the

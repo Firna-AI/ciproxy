@@ -173,6 +173,7 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
             &data
         };
         assert_eq!(view["state"], "reauthorization_required");
+        assert_eq!(view["reauthorization_url"], "/continue");
         assert_eq!(view["reauthorization_required"], true);
         assert_eq!(view["workspaces"], json!([]));
         assert!(view["activation"].is_null());

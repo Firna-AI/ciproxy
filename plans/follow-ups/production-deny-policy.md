@@ -47,7 +47,11 @@
     merged change can remove it. It needs a GCP organization above the
     project. Effort: Medium.
   - **C.** Keep the backups of the database and the KMS key in a second
-    project that CI cannot reach. Effort: Medium.
+    project that CI cannot reach. Since 22 November 2026, "Data retention"
+    in `docs/protocol/security-data.md` requires the backup limits: the 14
+    most recent daily backups, and each manual backup deleted within 14
+    days. So the copies in the second project must keep these limits too.
+    Effort: Medium.
 - **Left out:** Required reviewers on each production run, because a
   person must act after each merge, which the user rejected.
 - **Wider fix:** B. GCP itself refuses the deletes, whatever the pipeline

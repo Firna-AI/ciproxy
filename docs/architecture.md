@@ -62,7 +62,7 @@ The control plane is closed source and written in Rust. It has these parts:
   [subscription](protocol/billing.md#subscription-states) of each
   workspace in step with Stripe.
 - **Store:** keeps the state of the control plane.
-  [Secrets and job data](protocol/security.md#secrets-and-job-data) says
+  [Secrets and job data](protocol/security-data.md#secrets-and-job-data) says
   what ciproxy stores.
 
 ### Agent
@@ -148,7 +148,8 @@ design tokens that the dashboard uses.
 - **GitHub and the runners:** each runner opens its own connection to
   GitHub. It gets one job with its code and secrets, and it sends the logs
   and the artifacts to GitHub. These never pass through the control plane,
-  as [Secrets and job data](protocol/security.md#secrets-and-job-data) says.
+  as [Secrets and job data](protocol/security-data.md#secrets-and-job-data)
+  says.
 - **The control plane and the agents:** each agent opens an outbound
   connection to the machine gateway, with its
   [machine credential](protocol/agent.md#machine-identity). The agent sends
@@ -168,8 +169,8 @@ design tokens that the dashboard uses.
   cache URLs, the runtime token, and the cache rights of the job to the
   agent. The agent trusts only that first handoff, as
   [The cache handoff](protocol/cache.md#the-cache-handoff) says.
-  [Job isolation](protocol/security.md#job-isolation) says what a job VM
-  can reach.
+  [Job isolation](protocol/security-isolation.md#job-isolation) says what a
+  job VM can reach.
 - **The agent and GitHub:** the machine cache opens its own connection to
   the GitHub cache, with the runtime token of the job. It streams each
   entry that a job restores from the GitHub cache, and it sends each save

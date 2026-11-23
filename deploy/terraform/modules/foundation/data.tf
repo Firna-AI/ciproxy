@@ -20,6 +20,8 @@ resource "google_sql_database_instance" "main" {
       name  = "cloudsql.iam_authentication"
       value = "on"
     }
+    # The privacy policy on the site promises this backup count. "Data
+    # retention" in docs/protocol/security-data.md states it.
     backup_configuration {
       enabled                        = true
       point_in_time_recovery_enabled = true

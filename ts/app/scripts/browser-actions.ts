@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+import { githubResumeHref } from "../src/api/endpoints.ts";
 import type { BrowserContext, Page } from "./browser-driver.ts";
 import type { SmokeCase } from "./browser-cases.ts";
 import { control, facts, keyboardMenu, visible } from "./browser-fixture.ts";
@@ -259,6 +260,14 @@ export async function exerciseCase(
         (fact) =>
           fact.path === "/api/auth/github" && fact.kind === "navigation",
       ),
+    );
+  }
+  if (item.name === "terms-step") {
+    assert.equal(
+      await page
+        .getByRole("link", { name: "Continue with GitHub", exact: true })
+        .getAttribute("href"),
+      githubResumeHref,
     );
   }
 }

@@ -33,8 +33,8 @@ export const notFound = defineScreen({
   description:
     "An old link opens a job that the history of the plan no longer shows, or a job of another workspace. The API answers that it has no such job. Open History leads back.",
   rationale:
-    "security.md: each page shows only the jobs of the job history of the tier. The page names both reasons, because the API does not tell them apart.",
-  relatedDocs: related("security", "billing"),
+    "security-data.md: each page shows only the jobs of the job history of the tier. The page names both reasons, because the API does not tell them apart.",
+  relatedDocs: related("securityData", "billing"),
   address: orgAddress("jobs/48100001"),
   render: (_props, context) => (
     <JobReadScreen viewport={context.viewport} state="not-found" />

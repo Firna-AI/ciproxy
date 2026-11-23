@@ -64,8 +64,8 @@ command, and the wait for the first image.
   deferral until after launch. Reason: one command must prepare the machine
   without a slow full-copy path.
 - On a Mac, install prepares a launchd service for the agent, the pf rules
-  of [Job isolation](security.md#job-isolation-on-a-mac), and a disk area
-  in a folder on an APFS volume.
+  of [Job isolation](security-isolation.md#job-isolation-on-a-mac), and a
+  disk area in a folder on an APFS volume.
 - APFS makes copy-on-write clones on every APFS volume, so a Mac needs no
   extra filesystem file.
 - A Mac needs no tool other than the agent. Virtualization.framework is

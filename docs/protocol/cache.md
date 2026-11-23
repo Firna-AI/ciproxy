@@ -244,5 +244,6 @@ This doc states the cache rules for jobs on
 - [Cache handoff](cache-handoff.md): the handoff of the cache rights of a
   job to the host.
 - [Docker disks](docker-disks.md): the Docker disks of own machines.
-- [Security](security.md): job isolation and job data.
+- [Isolation](security-isolation.md#job-isolation): job isolation.
+- [Data and retention](security-data.md): job data.
 - [Overflow](overflow.md): the jobs that run on Boat.

@@ -366,5 +366,6 @@ that only creates its output files. The check does not link.
 - [Agent endpoint](../../docs/protocol/agent-endpoint.md) defines endpoint use.
 - [Job routing](../../docs/protocol/job-routing.md) defines VM resources.
 - [Labels](../../docs/protocol/labels.md) defines the sizes of job VMs.
-- [Security](../../docs/protocol/security.md) defines isolation and key custody.
+- [Security](../../docs/protocol/security.md) defines key custody.
+- [Isolation](../../docs/protocol/security-isolation.md) defines job isolation.
 - [Cache](../../docs/protocol/cache.md) defines cache integration.

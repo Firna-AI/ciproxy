@@ -137,6 +137,15 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
   `src/components/role-actions.tsx`, such as "Ask an Admin".
+- Each GitHub sign-in that does not start on sign-in opens the terms step at
+  `/continue` first: the return from an install on GitHub, and each link that
+  leaves for a new GitHub sign-in, such as Check again of a sign-in with no
+  workspace. A user flow steps through the terms step at each such place.
+  Sign-in and the terms step show one terms notice, from
+  `src/screens/auth/terms-notice.tsx`.
+- Each checkout review with a pay button says that paid plans are for business
+  use only, with a link to the terms, from
+  `src/screens/billing/business-use-note.tsx`.
 - The public site has two sections: Marketing, with the landing page, the
   pricing page, and the frames of the terms and the privacy policy, and Docs,
   in the structure of Starlight: the sidebar of

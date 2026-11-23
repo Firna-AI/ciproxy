@@ -7,7 +7,8 @@
 // workspace whose plan includes no more organizations, the new one joins
 // inactive. A request to the owners waits: after the approval, the person who
 // asked chooses at the next sign-in. With no Admin workspace, the install
-// waits for that person. A failed check offers a new GitHub sign-in.
+// waits for that person. A failed check offers a new GitHub sign-in, which
+// opens the terms step first.
 
 import type { ReactNode } from "react";
 import { Github } from "lucide-react";
@@ -120,7 +121,7 @@ function NotConfirmed() {
         your account.
       </Notice>
       <LinkAction
-        to={paths.addOrganization}
+        to={paths.termsStep}
         tone="primary"
         size="lg"
         icon={Github}

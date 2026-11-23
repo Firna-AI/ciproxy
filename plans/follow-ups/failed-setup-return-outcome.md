@@ -17,8 +17,16 @@
 
 - **Terms:**
   - **Setup return:** GitHub sends the browser to `/api/github/setup` after
-    an install or an install request. ciproxy then starts a GitHub sign-in
-    that proves the install with the person's own GitHub account.
+    an install or an install request. Since 22 November 2026, ciproxy then
+    keeps the pending setup and opens the terms step.
+  - **Terms step:** the dashboard page at `/continue`, with the terms
+    notice and a "Continue with GitHub" button.
+  - **Pending setup:** the setup that a setup return keeps, sealed in the
+    one-use OAuth cookie `__Host-ciproxy-oauth` for 10 minutes.
+  - **Setup sign-in:** the GitHub sign-in with the setup purpose. It proves
+    the install with the person's own GitHub account. Until 22 November
+    2026, the setup return started it. Now Continue with GitHub starts it
+    from a valid pending setup.
   - **Setup outcome:** the `setup` field of `GET /session`: `organization`,
     `organizations_only` for a personal account, or `waiting_approval`.
     `SetupOutcome` in `crates/ciproxy-api/src/wire/access.rs` defines it.
@@ -27,9 +35,24 @@
     setup outcome and the install context.
 - **Background:**
   - Line numbers are from `d304418`.
-  - `begin` in `crates/ciproxy-api/src/handlers/github_setup.rs` starts a
-    sign-in with a setup purpose. Its sealed binding keeps the earlier
-    browser cookie, at `crates/ciproxy-api/src/access/flow.rs:50-60`.
+  - At `d304418`, `begin` in `crates/ciproxy-api/src/handlers/github_setup.rs`
+    started a sign-in with a setup purpose. Its sealed binding kept the
+    earlier browser cookie, at `crates/ciproxy-api/src/access/flow.rs:50-60`.
+  - Since 22 November 2026, the setup return starts no sign-in. `begin` in
+    `github_setup.rs` checks its input as before. Then it keeps the pending
+    setup in the OAuth cookie, through `hold_setup`, and opens `/continue`.
+    Continue with GitHub on that page opens
+    `/api/auth/github?resume=setup`. With a valid pending setup, `begin` in
+    `crates/ciproxy-api/src/handlers/auth.rs` and `begin_login` in
+    `crates/ciproxy-api/src/access/authentication.rs` start the setup
+    sign-in. Its sealed binding still keeps the earlier browser cookie.
+    Without a valid pending setup, Continue starts a plain sign-in.
+  - The binding of the setup sign-in takes the place of the pending setup
+    in the same cookie. A plain `/api/auth/github` also replaces a pending
+    setup. So a read of the code shows that no pending setup is left after a
+    failed or cancelled setup sign-in. Each retry then starts a plain
+    sign-in: from the sign-in page, from a second Continue with GitHub, and
+    from a link inside the dashboard, which now opens the terms step first.
   - `finish` proves the outcome with `prove_setup`, at
     `crates/ciproxy-api/src/access/sign_in.rs:55-78`. `prove_setup`, at
     `crates/ciproxy-api/src/access/setup.rs:46-84`, only reads GitHub. It
@@ -79,12 +102,22 @@
   what the retry shows.
   - Start from the personal setup return of
     `fresh_personal_setup_records_only_verified_token_free_metadata` in
-    `crates/ciproxy-api/tests/http/setup_personal_tests.rs`.
+    `crates/ciproxy-api/tests/http/setup_personal_tests.rs`. Its helper
+    `complete_setup`, in `crates/ciproxy-api/tests/http/setup_support.rs`,
+    runs the setup return, keeps the pending setup cookie, and starts the
+    setup sign-in through `/auth/github?resume=setup`, as Continue with
+    GitHub does. The helpers `begin`, `pending_cookie`,
+    `start_authorization`, and `finish` of the same file run these steps
+    one at a time.
   - Fail the cookie seal with `FailingBrowserCipher` of
-    `crates/ciproxy-api/tests/http/session_failure_tests.rs`. Sign in again
-    through `/auth/github`, and read `setup` of `GET /session`.
+    `crates/ciproxy-api/tests/http/session_failure_tests.rs`. Turn the
+    failure on after the setup sign-in starts, so that only its callback
+    fails. Sign in again through `/auth/github`, and read `setup` of
+    `GET /session`.
+  - Also retry through `/auth/github?resume=setup` with the OAuth cookie
+    that the failed sign-in left, as a second Continue with GitHub does.
   - Repeat with an earlier outcome in the browser cookie, and with a
-    cancelled authorization of the setup return.
+    cancelled GitHub authorization of the setup sign-in.
   - When the retry shows the outcome of the return, delete this item.
   - When it does not, replace this item with a finding item that holds the
     result. The decision test of the `decisions-and-findings` skill then

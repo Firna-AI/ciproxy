@@ -14,7 +14,7 @@
   `docs/mockups/src/entries/app/billing/current-contract/add-ons/states.mockup.tsx:83`,
   `docs/mockups/src/entries/app/billing/current-contract/pending/states.mockup.tsx:42`,
   `docs/mockups/src/screens/billing/api-add-ons.tsx:27`, and
-  `docs/mockups/src/screens/billing/checkout-review.tsx:97`.
+  `docs/mockups/src/screens/billing/checkout-review.tsx:99`.
 - **Reason:** The check found it in the last review fix round of the
   branch, which takes no new work, and no customer sees these scenes.
 
@@ -55,11 +55,11 @@
     through, the answer is `payment_required`, with or without that page.
   - `docs/protocol/billing.md:80-81` says that a saved add-on change takes
     effect at once, and that Stripe prorates the difference.
-    `docs/protocol/billing.md:149-158` says that a move up charges the
-    saved card at once. A failed charge keeps the tier and offers to try
-    again or to update the card. The Stripe payment page opens when the
-    bank asks for a confirmation. `crates/ciproxy-billing/README.md:30-32`
-    and `:39` say the same.
+    "Changing tiers" in `docs/protocol/billing.md` says that a move up
+    charges the saved card at once. A failed charge keeps the tier and
+    offers to try again or to update the card. The Stripe payment page
+    opens when the bank asks for a confirmation.
+    `crates/ciproxy-billing/README.md:30-32` and `:39` say the same.
   - The billing tests agree. The test at
     `crates/ciproxy-billing/tests/_tests_/changes_tests.rs:87` gets
     `Applied` with `create_prorations` for a saved add-on change. Each
@@ -86,7 +86,7 @@
       with Continue payment, is right for a move up.
   - The Checkout review mockup shows only the results of a payment whose
     answer the page did not get. Its `ReviewOutcome` at
-    `docs/mockups/src/screens/billing/checkout-review.tsx:97-100` is
+    `docs/mockups/src/screens/billing/checkout-review.tsx:99-102` is
     "unknown", "current", or "waits". The notices "invoice" and "card"
     already exist in `docs/mockups/src/screens/billing/api-outcome.tsx`.
     The add-on panel accepts "invoice", "card", and "unknown", at

@@ -13,7 +13,7 @@ use super::adapter_server::Server;
 use super::fixture::{Browser, Fixture};
 use super::fixture_io::{CallbackOutcome, cookie, json};
 use super::link_support::memberships;
-use super::setup_support::{browser, configure, finish};
+use super::setup_support::{browser, complete_setup, configure, finish};
 
 async fn session(fixture: &Fixture, browser: &Browser) -> Value {
     let response = fixture
@@ -36,6 +36,7 @@ async fn hundred_open_claims_keep_exact_continuation_with_bounded_cookies_and_fi
     let prior = fixture.login(7, None).await;
     let initial = session(&fixture, &prior).await;
     assert_eq!(initial["state"], "install_required");
+    assert_eq!(initial["reauthorization_url"], "/continue");
     let mut expected = BTreeSet::new();
     for index in 0..100 {
         let claim = InstallationClaim {
@@ -92,16 +93,10 @@ async fn hundred_open_claims_keep_exact_continuation_with_bounded_cookies_and_fi
 
     let claims =
         serde_json::to_value(fixture.database.store.installation_claims(7).unwrap()).unwrap();
-    finish(
+    complete_setup(
         &fixture,
-        fixture
-            .request(
-                Some(&current),
-                "GET",
-                "/github/setup?installation_id=201",
-                None,
-            )
-            .await,
+        Some(&current),
+        "?installation_id=201",
         CallbackOutcome::Refused,
     )
     .await;

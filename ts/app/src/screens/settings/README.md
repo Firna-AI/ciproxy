@@ -59,7 +59,9 @@ Organizations tab.
 - Members lists the requests for access and the members. The tab gives
   access, declines a request, changes a role, and removes a member. The row
   of the signed-in person has no Remove. Before a person gets the Admin role,
-  a dialog shows the trust notice of the API.
+  a dialog shows the trust notice of the API. The dialog also says that an
+  Admin accepts new versions of the ciproxy Terms for the customer that holds
+  the workspace, with a link to the Terms.
 - An organization row shows the day it joined and the counts of private
   repositories of its latest complete repository snapshot. An inactive row,
   its banner, and Turn on name the person who added the organization.
