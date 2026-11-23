@@ -1,4 +1,11 @@
 {
   "title": "Marketing",
-  "order": ["landing", "hero-backgrounds", "pricing", "terms", "privacy"]
+  "order": [
+    "landing",
+    "hero-options",
+    "hero-backgrounds",
+    "pricing",
+    "terms",
+    "privacy"
+  ]
 }

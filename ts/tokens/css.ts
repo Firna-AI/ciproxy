@@ -1,4 +1,5 @@
 import {
+  accentColors,
   chartColors,
   colors,
   fonts,
@@ -40,6 +41,7 @@ export function tokenDeclarations(): string[] {
     ...colorDeclarations("chart", chartColors),
     ...colorDeclarations("slot", slotColors),
     ...colorDeclarations("nav", navColors),
+    ...colorDeclarations("accent", accentColors),
     ...radiusDeclarations("", radii),
     ...radiusDeclarations("mark", markRadii),
     `--font-sans:${fonts.sans}`,

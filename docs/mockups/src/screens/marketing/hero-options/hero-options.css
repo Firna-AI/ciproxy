@@ -1,0 +1,82 @@
+/* The split layout of the hero options (split-hero.tsx): the text on the left
+   and the picture on the right, on the white page between the rails. The
+   pictures have their own stylesheet, hero-pictures.css. */
+
+.ho-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 56px;
+  padding-top: 96px;
+  padding-bottom: 96px;
+}
+
+.ho-copy {
+  align-items: flex-start;
+  gap: 22px;
+  text-align: left;
+}
+
+.ho-split .hero-title {
+  font-size: 54px;
+}
+
+.ho-split .hero-lead {
+  max-width: 480px;
+}
+
+.ho-split .hero-copy .mk-actions {
+  align-self: flex-start;
+}
+
+.ho-picture {
+  min-width: 0;
+}
+
+/* The accent option: the picture and the second title line in the accent. */
+
+.ho.is-accent .hero-soft {
+  color: var(--c-accent-ink);
+}
+
+.ho.is-accent .ho-card {
+  --ho-line: var(--c-accent-ink);
+  --ho-fill: var(--c-accent-soft);
+}
+
+.ho.is-accent .ho-drawing {
+  background: var(--c-accent-soft);
+}
+
+.ho.is-accent .hero-chip-code {
+  background: var(--c-accent-ink);
+}
+
+/* A phone and a narrow window stack the text over the picture. */
+
+.mockup-mobile .ho-split {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+  padding-top: 56px;
+  padding-bottom: 48px;
+}
+
+.mockup-mobile .ho-split .hero-title {
+  font-size: 44px;
+}
+
+.mockup-mobile .ho-split .hero-copy .mk-actions {
+  align-self: stretch;
+}
+
+@media (max-width: 960px) {
+  .mockup-desktop .ho-split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
+    padding-top: 72px;
+  }
+
+  .mockup-desktop .ho-split .hero-title {
+    font-size: 56px;
+  }
+}

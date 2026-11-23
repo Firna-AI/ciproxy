@@ -1,8 +1,10 @@
 // The landing page of ciproxy.dev: the hero with the outcome, how it works in
 // three steps, the features, a real cost comparison, the pricing teaser,
 // security, and the closing call to action. The hero backdrop is the grid,
-// unless a variation of marketing/hero-backgrounds picks another.
+// unless a variation of marketing/hero-backgrounds picks another. A variation
+// of marketing/hero-options replaces the whole hero.
 
+import type { ReactNode } from "react";
 import type { Viewport } from "@mokly/mokly";
 
 import { ClosingCta } from "./closing-cta.tsx";
@@ -19,13 +21,16 @@ import "./landing.css";
 export function LandingScreen({
   viewport,
   heroBackdrop,
+  hero,
 }: {
   viewport: Viewport;
   heroBackdrop?: HeroBackdrop;
+  /** A whole hero in place of the landing hero. */
+  hero?: ReactNode;
 }) {
   return (
     <MarketingShell viewport={viewport} section="home">
-      <Hero viewport={viewport} backdrop={heroBackdrop} />
+      {hero ?? <Hero viewport={viewport} backdrop={heroBackdrop} />}
       <HowItWorks />
       <Features />
       <CostCompare />
