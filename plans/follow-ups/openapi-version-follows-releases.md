@@ -10,13 +10,18 @@
     `info.version` of the API reference.
   - `crates/ciproxy-api/Cargo.toml:3` takes the workspace version.
   - `ts/api/generated/openapi.json:6` holds the saved `info.version`.
-  - `crates/ciproxy-agent/updates-and-releases.md:17-31` describes the
-    normal release-plz route. Its section "When a shared library moves"
-    describes the hand route and the takeover by release-plz.
+  - `crates/ciproxy-agent/updates-and-releases.md:17-35` describes the
+    normal release-plz route and points to the section "Version pull
+    requests".
+  - `crates/ciproxy-agent/updates-and-releases.md:37-102`, the section "When
+    a shared library moves", describes the hand route and the takeover by
+    release-plz. The takeover case refers to "Version pull requests".
+  - `crates/ciproxy-agent/updates-and-releases.md:104-129`, the section
+    "Version pull requests", gives the regeneration steps for every version
+    pull request.
   - `ts/api/README.md` for option C, and `release-plz.toml:8` for option D.
-- **Reason:** The recommended option changes what live code on `origin/main`
-  writes into `ts/api/generated/openapi.json`, so it needs the user's
-  approval.
+- **Reason:** Option A is applied, and the open wider fix C changes the
+  output of live code on `origin/main`, so it needs the user's approval.
 
 - **Terms:**
   - **release-plz:** the release tool in the `version` job of
@@ -66,13 +71,17 @@
     hand release route of `crates/ciproxy-agent/updates-and-releases.md`.
     release-plz can take over the hand pull request, and the pull request
     that remains lacks the regeneration.
-  - That branch added the regeneration steps to that takeover case of the
-    guide. The normal release-plz route at
-    `crates/ciproxy-agent/updates-and-releases.md:17-31` still does not say
-    that each version pull request needs the regeneration.
+  - That branch first added the regeneration steps to that takeover case of
+    the guide.
+  - On 23 November 2026, that branch applied option A. The guide section
+    "Version pull requests" gives the regeneration steps once, for every
+    version pull request. The normal release-plz route and the takeover case
+    refer to that section. The hand route still runs the generator before
+    its pull request opens.
 - **Problem:** Each agent version raise needs a hand run of the API
   generator, or the required repository gate fails. release-plz never runs
-  the generator. The release guide asks for it only on the hand route.
+  the generator. The release guide gives this hand step for every version
+  pull request, and a later release-plz update can make it repeat.
 - **Impact if no action:** Each release-plz version pull request fails the
   repository gate until a person regenerates the API reference on its
   branch. A later release-plz update can drop that regeneration, so the
@@ -81,12 +90,15 @@
   release-plz, pass the `api-types` check?
 - **Options:**
   - **A.** Document the regeneration for every version pull request in
-    `crates/ciproxy-agent/updates-and-releases.md`. Add it to the normal
-    release-plz route, as the hand route already has it. It keeps a hand
-    step on each release. A later release-plz update can close a pull
-    request with the regeneration commit, so the step can repeat. The
-    required repository gate still stops a missed regeneration. Effort:
-    Small.
+    `crates/ciproxy-agent/updates-and-releases.md`.
+    - Applied on 23 November 2026. The orchestrator agent of
+      `conductor/ciproxy-boat-start-ready-deadline` made this call under the
+      user's delegation.
+    - It keeps a hand step on each release. A later release-plz update can
+      close a pull request with the regeneration commit, so the step can
+      repeat.
+    - The required repository gate still stops a missed regeneration.
+    - Effort: Small.
   - **B.** Make the release workflow regenerate the API reference and commit
     it after release-plz opens or updates a version pull request. The
     `version` job already has write access, so the job needs no new write
@@ -100,8 +112,10 @@
     - Regenerate the API reference once.
     - In `ts/api/README.md`, say that the contract version does not follow
       releases.
-    - In the guide, remove the regeneration steps. Tell operators to merge
-      the release-plz pull request that remains after a takeover.
+    - In the guide, remove the regeneration steps from the section "Version
+      pull requests" and from the hand route. Remove each reference to those
+      steps. Tell operators to merge the release-plz pull request that
+      remains after a takeover.
     - A version raise then changes only `Cargo.toml` and `Cargo.lock`. So
       every version pull request passes the repository gate with no hand
       commit, on every route.
@@ -165,4 +179,5 @@
 - **Recommendation:** C. It removes the hand regeneration on every route
   with a Small change, and no code reads the field that it changes.
 - **Action:** ask the user, because C changes the output of live code on
-  `origin/main`, and such a change needs the user's approval.
+  `origin/main`, and such a change needs the user's approval. A is
+  applied, so the item waits only for C.

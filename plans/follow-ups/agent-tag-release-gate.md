@@ -122,5 +122,10 @@
   conflict.
 - **Recommendation:** E. It closes the class for every tag run, also after
   a hand tag or a manual run on a tag, with a Small change.
-- **Action:** ask the user, because E adds a check to every agent release,
-  and a new gate needs the user's approval.
+- **Action:** ask the user, because E makes publishing stricter, and a new
+  gate needs the user's explicit approval. Until the user answers, C
+  applies, with no change to the tag runs. Each release route that
+  `crates/ciproxy-agent/updates-and-releases.md` documents already passes
+  the release gate before release-plz creates the tag. The orchestrator
+  agent of `conductor/ciproxy-boat-start-ready-deadline` made this call on
+  23 November 2026, under the user's delegation.
