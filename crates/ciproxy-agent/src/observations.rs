@@ -184,6 +184,13 @@ impl Controller {
                     return Err(Error::GuestMismatch);
                 }
                 self.retire(&vm).await?;
+                let usage = usage.and_then(|report| {
+                    let (usage, reason) = report.into_parts();
+                    if let Some(reason) = reason {
+                        tracing::warn!(%reason, "dropped guest job usage");
+                    }
+                    usage.map(Into::into)
+                });
                 AgentMessage::RunnerExited {
                     runner_id,
                     exit,

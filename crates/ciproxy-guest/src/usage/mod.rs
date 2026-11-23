@@ -204,7 +204,10 @@ async fn collect(
                         warn!("job usage sample report could not be delivered");
                     }
                     let reporter = job.reporter.clone();
-                    let message = GuestToAgent::UsageSamples { runner_id: job.runner_id.clone(), usage };
+                    let message = GuestToAgent::UsageSamples {
+                        runner_id: job.runner_id.clone(),
+                        usage: usage.into(),
+                    };
                     posting = Some(Box::pin(async move {
                         if reporter.post_samples(message).await.is_err() {
                             warn!("job usage sample report could not be delivered");
@@ -218,10 +221,8 @@ async fn collect(
 
 fn report(window: &Window, log: &mut Option<WorkerLog>) -> Option<JobUsage> {
     let mut usage = window.report()?;
-    if let Some(started_at_ms) = window.started_at_ms()
-        && let Some(worker_log) = log
-    {
-        match worker_log.report(started_at_ms) {
+    if let Some(worker_log) = log {
+        match worker_log.report() {
             Ok(steps) => usage.steps = steps,
             Err(_) => {
                 warn!("runner step log unavailable");

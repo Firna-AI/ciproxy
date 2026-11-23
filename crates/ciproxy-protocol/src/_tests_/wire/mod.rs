@@ -6,4 +6,5 @@ mod control_tests;
 pub(crate) mod fixtures;
 mod guest_tests;
 mod organization_tests;
+mod usage_decode_tests;
 mod workspace_tests;

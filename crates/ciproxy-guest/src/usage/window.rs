@@ -52,7 +52,6 @@ impl Reading {
 /// A sampled job window. After a gap, retain the longest contiguous segment.
 pub(super) struct Window {
     platform: Platform,
-    started_at_ms: Option<i64>,
     previous: Option<(Instant, Reading)>,
     current: Option<Series>,
     longest: Option<Series>,
@@ -63,7 +62,6 @@ impl Window {
     pub(super) fn new(platform: Platform) -> Self {
         Self {
             platform,
-            started_at_ms: None,
             previous: None,
             current: None,
             longest: None,
@@ -79,7 +77,6 @@ impl Window {
             self.end_segment();
             return;
         };
-        self.started_at_ms.get_or_insert(next.at_ms);
         let Some((taken, previous)) = self.previous.replace((now, next)) else {
             return;
         };
@@ -94,11 +91,6 @@ impl Window {
             warn!("job usage sample window unavailable");
             self.end_segment();
         }
-    }
-
-    /// Time of the first baseline, even if a later gap breaks the series.
-    pub(super) fn started_at_ms(&self) -> Option<i64> {
-        self.started_at_ms
     }
 
     /// Report the longest segment without shifting points across unread seconds.

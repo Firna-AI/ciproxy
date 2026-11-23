@@ -6,6 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::platform::Platform;
 
+pub use self::wire::{UsageDecodeDrop, UsageReport};
+
+mod wire;
+
 /// Maximum number of points in a report.
 pub const MAX_POINTS: usize = 3_600;
 /// Maximum number of steps in a report.

@@ -9,7 +9,7 @@ use crate::jobs::JobFacts;
 use crate::reports::MachineReport;
 use crate::runners::{RunnerExit, RunnerSpec};
 use crate::secret::Secret;
-use crate::usage::JobUsage;
+use crate::usage::UsageReport;
 use crate::version::ProtocolVersion;
 
 /// Messages sent by an agent to the control plane.
@@ -63,7 +63,7 @@ pub enum AgentMessage {
         exit: RunnerExit,
         /// Usage from the guest, when it reported any.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        usage: Option<JobUsage>,
+        usage: Option<UsageReport>,
     },
     /// Correlate a command with its outcome.
     CommandResult {

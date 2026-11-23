@@ -62,7 +62,7 @@ async fn guest_exit_forwards_job_usage() {
             GuestToAgent::RunnerExited {
                 runner_id: runner_id.clone(),
                 exit,
-                usage: Some(usage.clone()),
+                usage: Some(usage.clone().into()),
             },
         )
         .await
@@ -72,7 +72,7 @@ async fn guest_exit_forwards_job_usage() {
         Some(AgentMessage::RunnerExited {
             runner_id,
             exit,
-            usage: Some(usage),
+            usage: Some(usage.into()),
         })
     );
 }
@@ -130,7 +130,7 @@ async fn rejects_boat_usage_samples_over_vsock() {
             &runner_id.0,
             GuestToAgent::UsageSamples {
                 runner_id: runner_id.clone(),
-                usage: job_usage(),
+                usage: job_usage().into(),
             },
         )
         .await;

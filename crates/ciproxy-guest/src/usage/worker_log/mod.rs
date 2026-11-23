@@ -108,15 +108,14 @@ impl WorkerLog {
     }
 
     /// Read all new complete lines and return the known job steps.
-    pub(super) fn report(&mut self, started_at_ms: i64) -> io::Result<Vec<JobStep>> {
-        let first_second_ms = started_at_ms.div_euclid(1_000) * 1_000;
+    pub(super) fn report(&mut self) -> io::Result<Vec<JobStep>> {
         if !self.steps.full() {
-            self.follow(first_second_ms)?;
+            self.follow()?;
         }
-        Ok(self.steps.snapshot(first_second_ms))
+        Ok(self.steps.snapshot())
     }
 
-    fn follow(&mut self, first_second_ms: i64) -> io::Result<()> {
+    fn follow(&mut self) -> io::Result<()> {
         let mut pages = self.pages.list()?;
         pages.retain(|page| self.excluded.binary_search(page).is_err());
         pages.sort_unstable();
@@ -132,7 +131,7 @@ impl WorkerLog {
         let mut budget = MAX_REPORT_READ_BYTES;
         for page in pages.into_iter().skip(first) {
             let reader = self.pages.open(&page, offset)?;
-            let next_offset = self.read_page(reader, offset, first_second_ms, &mut budget)?;
+            let next_offset = self.read_page(reader, offset, &mut budget)?;
             self.cursor = Some(Cursor {
                 page,
                 offset: next_offset,
@@ -149,7 +148,6 @@ impl WorkerLog {
         &mut self,
         mut reader: Box<dyn BufRead>,
         mut offset: u64,
-        first_second_ms: i64,
         budget: &mut u64,
     ) -> io::Result<u64> {
         let mut line = Vec::new();
@@ -168,8 +166,7 @@ impl WorkerLog {
             let Ok(text) = str::from_utf8(&line) else {
                 return Err(ErrorKind::InvalidData.into());
             };
-            self.steps
-                .observe(text.trim_end_matches(['\r', '\n']), first_second_ms)?;
+            self.steps.observe(text.trim_end_matches(['\r', '\n']))?;
             offset += count;
         }
         Ok(offset)

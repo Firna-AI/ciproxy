@@ -44,14 +44,17 @@ fn exit_with(steps: Vec<JobStep>) -> GuestToAgent {
     GuestToAgent::RunnerExited {
         runner_id: RunnerId("runner-7".into()),
         exit: RunnerExit { code: Some(7) },
-        usage: Some(JobUsage {
-            platform: Platform::LinuxX64,
-            first_point_at_ms: 1_700_000_000_000,
-            point_seconds: 1,
-            cpu_milli_vcpu: vec![500],
-            peak_memory_mib: vec![100],
-            oom_kills: Some(vec![0]),
-            steps,
-        }),
+        usage: Some(
+            JobUsage {
+                platform: Platform::LinuxX64,
+                first_point_at_ms: 1_700_000_000_000,
+                point_seconds: 1,
+                cpu_milli_vcpu: vec![500],
+                peak_memory_mib: vec![100],
+                oom_kills: Some(vec![0]),
+                steps,
+            }
+            .into(),
+        ),
     }
 }

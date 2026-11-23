@@ -249,7 +249,7 @@ fn samples_with(last_memory: u32, points: usize, ended_at_ms: Option<i64>) -> Ob
     usage.steps = boat_steps(ended_at_ms);
     Observation::Message(GuestToAgent::UsageSamples {
         runner_id: RunnerId("runner-7".into()),
-        usage,
+        usage: usage.into(),
     })
 }
 
@@ -257,6 +257,6 @@ fn exit_with(code: i32, usage: JobUsage) -> Observation {
     Observation::Message(GuestToAgent::RunnerExited {
         runner_id: RunnerId("runner-7".into()),
         exit: RunnerExit { code: Some(code) },
-        usage: Some(usage),
+        usage: Some(usage.into()),
     })
 }

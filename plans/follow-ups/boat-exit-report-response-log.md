@@ -8,8 +8,9 @@
   scope of that docs-only diff.
 - **Source:** Review.
 - **Category:** Product bug.
-- **Location:** `crates/ciproxy-guest/src/boat.rs:55-60` and `:81-95`,
-  `BoatChannel::send`, and `image/boat-smoke.md:230`.
+- **Location:** `crates/ciproxy-guest/src/boat.rs:41-51` (`BoatCallback::post`),
+  `:82-87` (client), `:115-119` (`BoatChannel::send`), and
+  `image/boat-smoke.md:230`.
 - **Reason:** The branch that found it changes only docs, and guest code
   reaches a sandbox only in a new guest release and Boat snapshot.
 
@@ -23,29 +24,29 @@
     `reported_at` on its delivery, the record of one VM and runner
     (`crates/ciproxy-store-pg/src/overflow/completion.rs:16-44`).
 - **Background:**
-  - The recorded Boat runs used guest release 0.1.4. Its report client
+  - The recorded Boat runs used guest release 0.1.4. The report client
     allows HTTPS only, follows no redirect, and stops after 30 seconds
-    (`boat.rs:55-60`). The guest README disables redirects "to keep that
-    token at its intended endpoint" (`crates/ciproxy-guest/README.md:60`).
+    (`boat.rs:82-87`). The guest README disables redirects "to keep that
+    token at its intended endpoint" (`crates/ciproxy-guest/README.md:84`).
   - The report URL and the token come from a private registration file.
-    The guest keeps both as secrets (`boat.rs:20-25`).
+    The guest keeps both as secrets (`boat.rs:23-27` and `:34-38`).
   - After the answer, the guest calls `error_for_status`. Then it logs
-    `runner exit report accepted` at the info level (`boat.rs:91-92`).
-  - In the pinned `reqwest` 0.13.5 (`Cargo.lock:2716-2717`),
+    `runner exit report accepted` at the info level (`boat.rs:115-119`).
+  - In the pinned `reqwest` 0.13.5 (`Cargo.lock:2833-2834`),
     `error_for_status` fails only for a client error or a server error
     (`src/async_impl/response.rs:378-386` of that crate).
-  - In the pinned `http` 1.5.0 (`Cargo.lock:1564-1565`), a client error is
+  - In the pinned `http` 1.5.0 (`Cargo.lock:1616-1617`), a client error is
     400 to 499, and a server error is 500 to 599 (`src/status.rs:194-202`).
     A status code can be 100 to 999 (`src/status.rs:73-74`).
   - So the guest logs "accepted" for each answer that is not 4xx or 5xx. A
     3xx, or a nonstandard code from 600 to 999, also logs it.
-  - The route answers only 204, 400, 401, or 503
-    (`crates/ciproxy-control-plane/src/boat_callback.rs:22-46`). Its axum
+  - For an exit report, the route answers only 204, 400, 401, or 503
+    (`crates/ciproxy-control-plane/src/boat_callback.rs:38-50`). Its axum
     0.8.9 JSON extractor can also answer 400, 415, or 422 for a bad body.
     No route code answers 3xx. A 3xx alone therefore proves no claim. A
     different component can generate or change the response.
   - After an error, the guest logs only "guest observation could not be
-    delivered", with no status (`crates/ciproxy-guest/src/service.rs:45-49`).
+    delivered", with no status (`crates/ciproxy-guest/src/service.rs:48-51`).
     The error text is dropped there. That text holds the report URL
     (`src/error.rs:301` of `reqwest` 0.13.5).
   - The image's Boat smoke guide says "A successful callback prints
@@ -96,8 +97,9 @@
     option D of the [lock-timeout item][lock-timeout-item], and the user did
     not choose it on 22 November 2026. #116 closed that item with its
     option B.
-- **Wider fix:** None. The guest makes one HTTP call, the exit report, so
-  no other place repeats this log.
+- **Wider fix:** None for the exit acceptance message. Exit and sample
+  reports both send through `BoatCallback::post`. Only the exit path logs
+  `runner exit report accepted`.
 - **Previous examples:** None found of a log that claims more than its
   check shows. Two items record other diagnostic gaps:
   `plans/follow-ups/delivery-link-parse-warning.md` and

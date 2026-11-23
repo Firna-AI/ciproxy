@@ -24,9 +24,14 @@ impl AgentExitUsage {
         else {
             return None;
         };
+        let runner_id = parse_runner_id(runner_id)?;
+        let (usage, reason) = usage.take()?.into_parts();
+        if let Some(reason) = reason {
+            tracing::warn!(%reason, "dropped agent job usage");
+        }
         Some(Self {
-            runner_id: parse_runner_id(runner_id)?,
-            usage: usage.take()?,
+            runner_id,
+            usage: usage?,
         })
     }
 

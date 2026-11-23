@@ -120,3 +120,7 @@ impl Channel for BoatChannel {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/boat_tests.rs"]
+mod boat_tests;

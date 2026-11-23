@@ -41,7 +41,7 @@ facts of the process.
 | `/agent/cache-metadata`     | Cache entry metadata for a job on the calling machine.    |
 | `/hooks/github`             | GitHub App webhooks, up to GitHub's 25 MiB payload limit. |
 | `/hooks/stripe`             | Raw signed Stripe billing webhooks.                       |
-| `/hooks/boat/runner-exit`   | Boat sandbox exit reports, while Boat is configured.      |
+| `/hooks/boat/runner-exit`   | Boat sandbox exit and sample reports, when configured.    |
 | `/api`                      | The dashboard API.                                        |
 | `/api/auth/github/callback` | The GitHub sign-in callback.                              |
 | `/api/github/setup`         | The GitHub App setup URL.                                 |
@@ -51,6 +51,10 @@ facts of the process.
 Register `PUBLIC_URL/hooks/github` as the App webhook URL.
 [The API guide](../ciproxy-api/README.md#quick-start) gives the other App
 registration settings. No route has an alias.
+The Boat callback keeps the exit when usage does not decode. It keeps
+decodable points when only the steps do not decode. A sample report whose
+points do not decode gets HTTP 422. Drop logs give a reason without report
+values.
 The API owns sign-in, membership, setup, and workspace management.
 It also serves Jobs, Savings, Plan and usage, Plans, Checkout, and the shared
 page banner. Stripe deliveries use the host root and need no browser cookie.
@@ -239,7 +243,8 @@ GitHub, and database access, so they stay operator work.
 - [src/agent_usage.rs](src/agent_usage.rs) checks and saves usage for a
   runner of the authenticated machine before the exit enters the queue.
   The gateway worker saves usage through `JobUsageStore`. The queue keeps
-  no usage payload, and a usage failure does not change the exit event.
+  no usage payload. A usage decode or validation failure does not change
+  the exit event.
 - [src/runtime_payloads.rs](src/runtime_payloads.rs) retains exact Worker
   IDs under the shared byte budget, including events still being handled.
 - [src/runtime_tasks.rs](src/runtime_tasks.rs) owns and joins one GitHub or

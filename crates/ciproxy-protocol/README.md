@@ -47,6 +47,10 @@ Both runner exit messages can carry `JobUsage`. It holds whole-VM CPU and
 memory points, out-of-memory kills on Linux, and the steps of the job.
 Messages without `usage` still decode. `UsageSamples` defines the Boat
 callback report for the series collected so far. It does not use vsock.
+These messages use `UsageReport` to keep a decode failure in `usage` from
+rejecting the message. It drops usage when the points do not decode. It
+keeps the points when only the steps do not decode. It returns a fixed
+reason without the dropped values. The JSON for valid usage is unchanged.
 See [Job usage](../../docs/protocol/job-usage.md) for the units and limits.
 
 A ciproxy workspace owns each machine, its install token, and its machine

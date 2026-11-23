@@ -9,10 +9,12 @@ use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::identifiers::RunnerId;
 use ciproxy_protocol::platform::Platform;
 use ciproxy_protocol::runners::RunnerExit;
+use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::usage::{JobStep, JobStepTiming, JobUsage};
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::job_usage::StoredJobUsage;
 use ciproxy_store_interface::overflow::record::StartRecord;
+use serde_json::Value;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -23,28 +25,49 @@ use super::support::at;
 pub(super) struct Callback {
     pub(super) harness: Harness,
     pub(super) job: GithubJob,
-    token: String,
-    runner: Uuid,
+    pub(super) runner: Uuid,
+    token: Secret,
     router: Router,
+}
+
+pub(super) struct Sandbox {
+    pub(super) runner: Uuid,
+    token: Secret,
+}
+
+impl Sandbox {
+    fn from_registration(fields: &Value) -> Self {
+        Self {
+            runner: fields["configure"]["runner_id"]
+                .as_str()
+                .unwrap()
+                .parse()
+                .unwrap(),
+            token: Secret::new(fields["exit_report_token"].as_str().unwrap()),
+        }
+    }
 }
 
 impl Callback {
     pub(super) async fn new() -> Self {
+        Self::start(false).await
+    }
+
+    pub(super) async fn with_two_deliveries() -> (Self, Sandbox) {
+        let callback = Self::start(true).await;
+        let second = Sandbox::from_registration(&callback.harness.ports.inputs.lock().unwrap()[1]);
+        (callback, second)
+    }
+
+    async fn start(with_second_job: bool) -> Self {
         let harness = Harness::new(false, false).await;
         let job = harness.queued();
+        if with_second_job {
+            harness.queued();
+        }
         harness.runtime.settled_tick().await.unwrap();
-        let (token, runner) = {
-            let inputs = harness.ports.inputs.lock().unwrap();
-            let fields = &inputs[0];
-            (
-                fields["exit_report_token"].as_str().unwrap().to_owned(),
-                fields["configure"]["runner_id"]
-                    .as_str()
-                    .unwrap()
-                    .parse()
-                    .unwrap(),
-            )
-        };
+        let Sandbox { runner, token } =
+            Sandbox::from_registration(&harness.ports.inputs.lock().unwrap()[0]);
         let router = boat_callback::router(harness.service.clone());
         Self {
             harness,
@@ -60,11 +83,12 @@ impl Callback {
     }
 
     pub(super) fn saved_usage(&self) -> Option<StoredJobUsage> {
+        self.saved_usage_for(self.runner)
+    }
+
+    pub(super) fn saved_usage_for(&self, runner: Uuid) -> Option<StoredJobUsage> {
         let fixture = &self.harness.fixture;
-        fixture
-            .store
-            .job_usage(fixture.workspace, self.runner)
-            .unwrap()
+        fixture.store.job_usage(fixture.workspace, runner).unwrap()
     }
 
     pub(super) fn delivery(&self) -> StartRecord {
@@ -74,15 +98,18 @@ impl Callback {
             .boat_runtime_snapshot(fixture.workspace)
             .unwrap()
             .starts
-            .remove(0)
+            .into_iter()
+            .find(|delivery| delivery.runner_id == self.runner)
+            .unwrap()
     }
 
     pub(super) async fn sample_for(&self, runner: Uuid, usage: JobUsage) -> StatusCode {
-        self.post(GuestToAgent::UsageSamples {
-            runner_id: RunnerId(runner.to_string()),
-            usage,
-        })
-        .await
+        self.post(sample_report(runner, usage)).await
+    }
+
+    pub(super) async fn sample_from(&self, sender: &Sandbox, usage: JobUsage) -> StatusCode {
+        let body = serde_json::to_vec(&sample_report(self.runner, usage)).unwrap();
+        self.post_raw_with_token(body, &sender.token).await
     }
 
     pub(super) async fn sample(&self, usage: JobUsage) -> StatusCode {
@@ -93,18 +120,33 @@ impl Callback {
         self.post(GuestToAgent::RunnerExited {
             runner_id: RunnerId(self.runner.to_string()),
             exit: RunnerExit { code: Some(0) },
-            usage: Some(usage),
+            usage: Some(usage.into()),
         })
         .await
     }
 
     async fn post(&self, message: GuestToAgent) -> StatusCode {
+        self.post_raw(serde_json::to_vec(&message).unwrap()).await
+    }
+
+    pub(super) async fn post_raw(&self, body: Vec<u8>) -> StatusCode {
+        self.post_raw_with_token(body, &self.token).await
+    }
+
+    async fn post_raw_with_token(&self, body: Vec<u8>, token: &Secret) -> StatusCode {
         let request = Request::post("/hooks/boat/runner-exit")
-            .header("authorization", format!("Bearer {}", self.token))
+            .header("authorization", format!("Bearer {}", token.expose_secret()))
             .header("content-type", "application/json")
-            .body(Body::from(serde_json::to_vec(&message).unwrap()))
+            .body(Body::from(body))
             .unwrap();
         self.router.clone().oneshot(request).await.unwrap().status()
+    }
+}
+
+fn sample_report(runner: Uuid, usage: JobUsage) -> GuestToAgent {
+    GuestToAgent::UsageSamples {
+        runner_id: RunnerId(runner.to_string()),
+        usage: usage.into(),
     }
 }
 

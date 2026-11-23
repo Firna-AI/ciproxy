@@ -38,6 +38,9 @@ samples and the steps that the reports of a sandbox carry.
   while it has not recorded the end of that sandbox.
 - The exit report carries the final [samples](job-usage.md#terms) and
   [steps](job-usage.md#steps) of the job.
+- Usage that does not decode does not change how the control plane handles
+  the exit. If only the steps do not decode, it keeps the valid points.
+- If the final points do not decode, the newest saved sample report stays.
 - The control plane saves an accepted report before it deletes the
   sandbox.
 - A success answer means only that the control plane saved the report.
@@ -70,6 +73,7 @@ samples and the steps that the reports of a sandbox carry.
   the end of that sandbox.
 - It accepts at most one sample report for each sandbox in 10 seconds.
 - It checks each sample report as [Checks](job-usage.md#checks) says.
+- It answers HTTP 422 if the points do not decode or fail a check.
 - Each accepted sample report replaces the samples and the steps that the
   control plane kept for the job.
 - The exit report replaces them with the final samples and steps.

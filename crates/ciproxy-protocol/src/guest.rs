@@ -8,7 +8,7 @@ use crate::jobs::JobFacts;
 use crate::runners::RunnerExit;
 use crate::runtime::RuntimeCredentials;
 use crate::secret::Secret;
-use crate::usage::JobUsage;
+use crate::usage::UsageReport;
 use crate::version::ProtocolVersion;
 
 /// The own-machine source-hook format that waits for a host decision.
@@ -118,13 +118,13 @@ pub enum GuestToAgent {
         exit: RunnerExit,
         /// Usage for the finished job, when the guest measured it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        usage: Option<JobUsage>,
+        usage: Option<UsageReport>,
     },
     /// Report usage so far to the Boat callback. Never sent over vsock.
     UsageSamples {
         /// Runner whose job is still running.
         runner_id: RunnerId,
         /// The entire series collected so far.
-        usage: JobUsage,
+        usage: UsageReport,
     },
 }

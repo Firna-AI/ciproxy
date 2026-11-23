@@ -126,3 +126,7 @@ impl GuestSocket for Socket {
             .context("send guest message")
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/guest_transport_tests.rs"]
+mod guest_transport_tests;

@@ -63,9 +63,10 @@ Runtime mode actions use one locked owner. Removal remains terminal.
 A late Drain remains applied and cannot undo removal.
 Reconciliation enforces current mode after each wait.
 
-When a guest reports a runner exit, the agent forwards any CPU and memory
-points and job steps with the exit. When the agent detects a stopped or
-missing VM itself, it reports the exit without usage.
+When a guest reports a runner exit, the agent forwards the CPU and memory
+points and job steps that it can decode. It keeps the exit if it cannot
+decode the usage. It logs the reason without report values. When the agent
+detects a stopped or missing VM itself, it reports the exit without usage.
 
 State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.

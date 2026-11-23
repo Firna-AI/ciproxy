@@ -153,7 +153,7 @@ fn agent_runner_exit_round_trips_with_macos_usage() {
         AgentMessage::RunnerExited {
             runner_id: fixtures::runner_id(),
             exit: RunnerExit { code: Some(0) },
-            usage: Some(usage),
+            usage: Some(usage.into()),
         },
     );
 }

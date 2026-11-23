@@ -42,6 +42,7 @@ mod overflow_support;
 mod overflow_takeout_support;
 mod overflow_takeout_tests;
 mod overflow_tests;
+mod overflow_usage_decode_tests;
 mod overflow_usage_support;
 mod overflow_usage_tests;
 mod own_replacement_tests;

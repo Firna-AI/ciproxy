@@ -9,12 +9,7 @@ use ciproxy_protocol::usage::{JobStep, JobStepTiming, MAX_STEP_NAME_CHARS, MAX_S
 #[derive(Default)]
 pub(super) struct Steps {
     finished: Vec<JobStep>,
-    current: Option<PendingStep>,
-}
-
-struct PendingStep {
-    step: JobStep,
-    last_at_ms: i64,
+    current: Option<JobStep>,
 }
 
 enum Event<'line> {
@@ -49,7 +44,7 @@ impl<'line> Event<'line> {
 
 impl Steps {
     /// Consume one complete trace line in the pinned Worker log format.
-    pub(super) fn observe(&mut self, line: &str, first_second_ms: i64) -> io::Result<()> {
+    pub(super) fn observe(&mut self, line: &str) -> io::Result<()> {
         if self.full() {
             return Ok(());
         }
@@ -68,25 +63,21 @@ impl Steps {
         let at_ms = utc_millis(stamp).ok_or(ErrorKind::InvalidData)?;
 
         if let Event::Processing(name) = event {
-            self.finish_step(first_second_ms);
+            self.finish_step();
             if !self.full() {
-                self.current = Some(PendingStep {
-                    step: JobStep {
-                        name: name.chars().take(MAX_STEP_NAME_CHARS).collect(),
-                        timing: JobStepTiming::Ran {
-                            started_at_ms: None,
-                            ended_at_ms: None,
-                        },
+                self.current = Some(JobStep {
+                    name: name.chars().take(MAX_STEP_NAME_CHARS).collect(),
+                    timing: JobStepTiming::Ran {
+                        started_at_ms: None,
+                        ended_at_ms: None,
                     },
-                    last_at_ms: at_ms,
                 });
             }
             return Ok(());
         }
 
         let current = self.current.as_mut().ok_or(ErrorKind::InvalidData)?;
-        current.last_at_ms = current.last_at_ms.max(at_ms);
-        match (&mut current.step.timing, event) {
+        match (&mut current.timing, event) {
             (JobStepTiming::Ran { started_at_ms, .. }, Event::Starting)
                 if started_at_ms.is_none() =>
             {
@@ -94,7 +85,7 @@ impl Steps {
             }
             (JobStepTiming::Ran { ended_at_ms, .. }, Event::Result) => {
                 *ended_at_ms = Some(at_ms);
-                self.finish_step(first_second_ms);
+                self.finish_step();
             }
             (
                 JobStepTiming::Ran {
@@ -103,8 +94,8 @@ impl Steps {
                 },
                 Event::Skipping,
             ) => {
-                current.step.timing = JobStepTiming::Skipped;
-                self.finish_step(first_second_ms);
+                current.timing = JobStepTiming::Skipped;
+                self.finish_step();
             }
             _ => return Err(ErrorKind::InvalidData.into()),
         }
@@ -116,22 +107,18 @@ impl Steps {
         self.finished.len() == MAX_STEPS
     }
 
-    /// Keep steps with an event in the sample window, including an open step.
-    pub(super) fn snapshot(&self, first_second_ms: i64) -> Vec<JobStep> {
+    /// Keep observed steps, including an open step.
+    pub(super) fn snapshot(&self) -> Vec<JobStep> {
         let mut steps = self.finished.clone();
-        if let Some(pending) = &self.current
-            && pending.last_at_ms >= first_second_ms
-        {
-            steps.push(pending.step.clone());
+        if let Some(pending) = &self.current {
+            steps.push(pending.clone());
         }
         steps
     }
 
-    fn finish_step(&mut self, first_second_ms: i64) {
-        if let Some(pending) = self.current.take()
-            && pending.last_at_ms >= first_second_ms
-        {
-            self.finished.push(pending.step);
+    fn finish_step(&mut self) {
+        if let Some(step) = self.current.take() {
+            self.finished.push(step);
         }
     }
 }

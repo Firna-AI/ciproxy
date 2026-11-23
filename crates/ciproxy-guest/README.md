@@ -123,8 +123,8 @@ Both images run the listener once and write Worker logs in
 `/opt/actions-runner/_diag`. The step reader excludes files that exist
 before the listener starts. It follows new pages in name order and reads
 only new complete lines at each Boat sample report and at runner exit.
-It keeps a step that crosses the sample start. It includes events in the
-same UTC second and drops steps that ended before that second.
+It keeps the steps on those pages even if they ended before the first
+sample.
 
 The guest keeps the first 1,000 steps and the first 256 characters of each
 name. It sends names as the runner writes them. A skipped step has no times.
@@ -226,6 +226,8 @@ starts the built binary with the real `runuser` and entry script. It uses
 a stand-in for `systemd-run` and a fixture file for the score adjustments.
 The [Boat launch check](../../image/checks.md#boat-launch) starts it
 through the Boat launcher without a registration.
+The Boat sample sender test checks the path, bearer token, and report body
+at a loopback HTTP receiver. It does not use a Boat sandbox.
 Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 
 ### Key Code

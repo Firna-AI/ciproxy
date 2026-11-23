@@ -74,7 +74,7 @@ fn receive_exit(fixture: &Fixture, machine_id: Uuid, usage: JobUsage) -> Arc<Mac
             AgentMessage::RunnerExited {
                 runner_id: RunnerId(runner_id.to_string()),
                 exit: RunnerExit { code: Some(0) },
-                usage: Some(usage),
+                usage: Some(usage.into()),
             },
         )
         .unwrap();

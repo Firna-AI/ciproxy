@@ -72,6 +72,8 @@ what the job page shows.
 
 - The guest reads the name, the start, and the end of each step of its job
   from the runner log. It sends the steps with the samples.
+- The guest excludes log pages that exist before it starts the runner.
+  It keeps steps on new pages even if they ended before the first sample.
 - So the steps come from the runner in the VM, and job code can change
   them, as [Trust](#trust) says.
 - **Decision:** the guest reads the steps from the runner log in the VM.
@@ -133,8 +135,8 @@ what the job page shows.
   runs. Rejected: the exit report alone, because a sandbox delete before
   that report then loses every figure. Rejected: a read of the samples
   through Boat before each delete, because it adds a Boat call to each one.
-- The samples and the steps are optional in each report, so a report
-  without them still reports the exit of the runner.
+- Samples and steps are optional in an exit report. A report without them
+  still reports the exit of the runner.
 - A failed sample or a failed sample report never stops the runner or its
   exit report.
 - A lost or refused exit report loses its figures. On Boat, the newest
@@ -144,6 +146,7 @@ what the job page shows.
 
 ### Checks
 
+- Usage that cannot be decoded follows the same drop rules as failed checks.
 - The control plane drops the samples and the steps of a report when its
   samples pass one of these limits:
   - more than 3,600 points
@@ -161,7 +164,7 @@ what the job page shows.
 - When the samples of an exit report fail a check, the control plane keeps
   the samples of the newest sample report.
 - A drop never changes how the control plane handles the exit.
-- The control plane logs a drop without the dropped figures.
+- A drop log gives the reason without values from the report.
 
 ## Out of memory
 

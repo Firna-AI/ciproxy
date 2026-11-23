@@ -10,6 +10,7 @@ use ciproxy_overflow::api::Overflow;
 use ciproxy_overflow::error::Error;
 use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_protocol::usage::{JobUsage, UsageReport};
 use uuid::Uuid;
 
 /// Mount only the narrow token-authenticated sandbox callback.
@@ -40,6 +41,7 @@ async fn report(
             let Ok(runner) = runner_id.0.parse::<Uuid>() else {
                 return StatusCode::BAD_REQUEST;
             };
+            let usage = usage.and_then(decoded_usage);
             match overflow.report_end(token, runner, usage).await {
                 Ok(()) => StatusCode::NO_CONTENT,
                 Err(Error::InvalidToken) => StatusCode::UNAUTHORIZED,
@@ -49,6 +51,9 @@ async fn report(
         GuestToAgent::UsageSamples { runner_id, usage } => {
             let Ok(runner) = runner_id.0.parse::<Uuid>() else {
                 return StatusCode::BAD_REQUEST;
+            };
+            let Some(usage) = decoded_usage(usage) else {
+                return StatusCode::UNPROCESSABLE_ENTITY;
             };
             match overflow.report_samples(token, runner, usage).await {
                 Ok(()) => StatusCode::NO_CONTENT,
@@ -64,4 +69,12 @@ async fn report(
         }
         _ => StatusCode::BAD_REQUEST,
     }
+}
+
+fn decoded_usage(report: UsageReport) -> Option<JobUsage> {
+    let (usage, reason) = report.into_parts();
+    if let Some(reason) = reason {
+        tracing::warn!(%reason, "dropped Boat job usage");
+    }
+    usage
 }

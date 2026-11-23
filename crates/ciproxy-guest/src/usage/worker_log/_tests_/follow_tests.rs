@@ -10,7 +10,6 @@ use super::{LogPagesMock, WorkerLog};
 const OLD: &str = "Worker_20231114-210000-utc.log";
 const FIRST: &str = "Worker_20231114-221318-utc.log";
 const SECOND: &str = "Worker_20231114-221322-utc.log";
-const BASELINE: i64 = 1_700_000_000_123;
 const FIRST_LINES: &str = concat!(
     "[2023-11-14 22:13:18Z INFO StepsRunner] Processing step: DisplayName='Earlier step'\n",
     "[2023-11-14 22:13:18Z INFO StepsRunner] Skipping step due to condition evaluation.\n",
@@ -60,21 +59,27 @@ fn follows_new_pages_in_order_and_waits_for_a_complete_line() {
     ))));
     log.exclude_existing_pages().unwrap();
 
+    let earlier = JobStep {
+        name: "Earlier step".into(),
+        timing: JobStepTiming::Skipped,
+    };
     let crossing = ran(
         "Crosses baseline",
         1_699_999_999_000,
         Some(1_700_000_000_000),
     );
     assert_eq!(
-        log.report(BASELINE).unwrap(),
+        log.report().unwrap(),
         [
+            earlier.clone(),
             crossing.clone(),
             ran("Active step", 1_700_000_000_000, None)
         ]
     );
     assert_eq!(
-        log.report(BASELINE).unwrap(),
+        log.report().unwrap(),
         [
+            earlier,
             crossing,
             ran("Active step", 1_700_000_000_000, Some(1_700_000_001_000)),
             ran("Post action", 1_700_000_002_000, Some(1_700_000_003_000)),

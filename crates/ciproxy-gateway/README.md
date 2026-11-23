@@ -63,10 +63,11 @@ this close on its next contact. A caller that needs immediate removal uses
 Unsupported versions use code 1008 and the fixed reason
 `[gateway] unsupported protocol version`. A replaced connection uses code
 1008 and `[gateway] connection replaced`. A malformed frame uses code 1008
-and `[gateway] invalid message`. A failure while the hosted runtime handles
-a lifecycle message does not close the connection. The runtime logs a
-warning instead. Hosted logging excludes dependency targets that can expose
-frame contents at every verbosity.
+and `[gateway] invalid message`. Usage that does not decode does not reject
+a runner exit frame. The hosted runtime handles the drop. A failure while
+the hosted runtime handles a lifecycle message does not close the
+connection. The runtime logs a warning instead. Hosted logging excludes
+dependency targets that can expose frame contents at every verbosity.
 
 A first-message deadline closes with code 1008 and the fixed reason
 `[gateway] handshake timed out`. The close operation sends the close frame

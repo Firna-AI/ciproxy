@@ -104,7 +104,7 @@ fn guest_runner_exit_round_trips_with_job_usage() {
         GuestToAgent::RunnerExited {
             runner_id: fixtures::runner_id(),
             exit: RunnerExit { code: Some(0) },
-            usage: Some(fixtures::job_usage()),
+            usage: Some(fixtures::job_usage().into()),
         },
     );
 }
@@ -122,7 +122,7 @@ fn boat_usage_samples_round_trip_with_a_step_still_running() {
         "usage_samples",
         GuestToAgent::UsageSamples {
             runner_id: fixtures::runner_id(),
-            usage,
+            usage: usage.into(),
         },
     );
 }

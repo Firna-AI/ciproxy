@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use ciproxy_protocol::guest::GuestToAgent;
+use ciproxy_protocol::usage::UsageReport;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines, ReadHalf, WriteHalf, split};
 use tokio_vsock::{VMADDR_CID_ANY, VsockAddr, VsockListener, VsockStream};
 
@@ -77,7 +78,8 @@ fn encode(mut message: GuestToAgent) -> Result<Vec<u8>> {
     let mut bytes = serde_json::to_vec(&message).context("encode guest observation")?;
     if bytes.len() >= MAX_AGENT_LINE_BYTES
         && let GuestToAgent::RunnerExited {
-            usage: Some(usage), ..
+            usage: Some(UsageReport::Decoded(usage)),
+            ..
         } = &mut message
         && !usage.steps.is_empty()
     {

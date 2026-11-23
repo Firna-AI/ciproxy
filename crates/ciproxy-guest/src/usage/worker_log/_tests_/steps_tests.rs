@@ -12,11 +12,11 @@ const START: i64 = 1_709_164_800_000;
 fn pinned_worker_log_keeps_job_steps_and_incomplete_timing() {
     let mut steps = Steps::default();
     for line in include_str!("fixtures/worker-v2.338.2.txt").lines() {
-        steps.observe(line, START).unwrap();
+        steps.observe(line).unwrap();
     }
 
     assert_eq!(
-        steps.snapshot(START),
+        steps.snapshot(),
         [
             ran("Run printf %s \"smoke\"", 1, Some(2)),
             skipped("Skip smoke"),
@@ -36,7 +36,7 @@ fn rejects_malformed_step_records() {
     ] {
         let mut steps = Steps::default();
         assert_eq!(
-            steps.observe(line, START).map_err(|error| error.kind()),
+            steps.observe(line).map_err(|error| error.kind()),
             Err(ErrorKind::InvalidData),
             "malformed record: {line}"
         );
@@ -53,18 +53,16 @@ fn keeps_first_thousand_steps_and_cuts_names_at_character_boundaries() {
                 &format!(
                     "[2024-02-29 00:00:00Z INFO StepsRunner] Processing step: DisplayName='{index:04} {long_name}'"
                 ),
-                START,
             )
             .unwrap();
         steps
             .observe(
                 "[2024-02-29 00:00:00Z INFO StepsRunner] Skipping step due to condition evaluation.",
-                START,
             )
             .unwrap();
     }
 
-    let reported = steps.snapshot(START);
+    let reported = steps.snapshot();
     assert_eq!(reported.len(), 1_000);
     for (index, step) in reported.iter().enumerate() {
         assert_eq!(step, &skipped(&format!("{index:04} {}", "é".repeat(251))));

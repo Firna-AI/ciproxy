@@ -227,9 +227,11 @@ gives the production composition and its configuration.
 
 The callback route passes the Bearer token and runner ID from
 `GuestToAgent::RunnerExited` and `GuestToAgent::UsageSamples`. The token
-grants no other operation. The service saves the exit claim before it
-saves final usage or waits for the workspace lock. A usage failure cannot
-change the exit answer or prevent deletion.
+grants no other operation. The route drops usage that does not decode
+before it calls the service. It keeps points when only steps do not
+decode. The service saves the exit claim before it saves final usage or
+waits for the workspace lock. A usage failure cannot change the exit
+answer or prevent deletion.
 
 The service checks CPU and memory against the saved Boat size, not the
 label. It checks times against the sandbox start and report arrival, with

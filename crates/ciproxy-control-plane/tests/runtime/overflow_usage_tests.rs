@@ -14,13 +14,19 @@ use super::support::at;
 
 #[tokio::test]
 async fn boat_samples_use_actual_size_receipt_time_and_sandbox_token() {
-    let callback = Callback::new().await;
+    let (callback, second) = Callback::with_two_deliveries().await;
     let arrival = at() + Duration::seconds(20);
     callback.set_time(arrival);
     assert_eq!(
         callback.sample_for(Uuid::new_v4(), usage()).await,
         StatusCode::UNAUTHORIZED
     );
+    assert_eq!(
+        callback.sample_from(&second, usage()).await,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(callback.saved_usage(), None);
+    assert_eq!(callback.saved_usage_for(second.runner), None);
     let beyond_cpu = JobUsage {
         cpu_milli_vcpu: vec![8001],
         ..usage()
