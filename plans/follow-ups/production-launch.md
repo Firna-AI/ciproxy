@@ -74,6 +74,3 @@
 - **Related:** `production-deny-policy.md` is an open decision on a guard
   for production data. Decide it before the first production apply.
   `production-smoke-test.md` follows this task.
-  `deploy-order-pages-and-api.md` must land before the launch. Without it,
-  a production deploy that adds a page that the API sends people to shows
-  them a missing page until the new dashboard export is published.
