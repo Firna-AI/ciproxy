@@ -135,6 +135,7 @@ export function createAppServices(env: AppEnvironment): AppServices {
         workspaceId,
         report: sessionStore.report,
         mutate: sessionStore.mutate,
+        visibility: env.visibility,
       }),
     ),
     providerSkip: cached((workspaceId) =>

@@ -12,7 +12,8 @@
 // in the same order and holds the same mark, but it saves nothing, so no
 // read follows it. The key of a check or a connection waits only inside its
 // queued request, and the form drops it once the API accepted the
-// connection.
+// connection. A screen that watches the store reads at once and each time
+// the tab shows again, so it sees a connection made in another tab.
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { OverflowEndpoints } from "../api/overflow-endpoints.ts";
@@ -25,6 +26,7 @@ import type {
   ProviderSpendLimit,
   Success,
 } from "../api/schema.ts";
+import type { Visibility } from "./poller.ts";
 import { createStore, type Store } from "./store.ts";
 
 /** A change that the API accepted, with the provider that it changed. */
@@ -55,6 +57,12 @@ export type OverflowStore = {
   load(): Promise<void>;
   /** Read once for this document; later calls share that read. */
   ensure(): Promise<void>;
+  /**
+   * Read now, and again each time the tab shows, until the returned stop
+   * function runs. The label dialog watches the settings, so a provider that
+   * the person connects in another tab joins Add a place when they return.
+   */
+  watch(): () => void;
   /** Check a key of a provider and list its wallets. It saves nothing. */
   checkKey(
     provider: OverflowProvider,
@@ -107,8 +115,9 @@ export function createOverflowStore(options: {
   workspaceId: string;
   report: <T>(result: ApiResult<T>) => ApiResult<T>;
   mutate: <T>(run: () => Promise<ApiResult<T>>) => Promise<ApiResult<T>>;
+  visibility: Visibility;
 }): OverflowStore {
-  const { endpoints, workspaceId, report, mutate } = options;
+  const { endpoints, workspaceId, report, mutate, visibility } = options;
   const state = createStore<OverflowSnapshot>({ status: "loading" });
   const pending = createStore(false);
   let tail: Promise<unknown> = Promise.resolve();
@@ -189,6 +198,12 @@ export function createOverflowStore(options: {
     ensure() {
       first ??= load();
       return first;
+    },
+    watch() {
+      void load();
+      return visibility.watch(() => {
+        if (!visibility.hidden()) void load();
+      });
     },
     checkKey: (provider, apiKey) =>
       queue(() =>

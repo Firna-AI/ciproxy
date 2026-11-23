@@ -8,7 +8,10 @@
 // label, so its notice speaks of this label only. When the routing of the
 // API says that the label waits for a place that fits it, the notice gives
 // the reason of that place, as the label list does, and not that nothing
-// fits.
+// fits. It also gives when that place takes jobs again, from the facts of
+// the hold at the read, as the notice of the provider does. A refusal whose
+// retry time is not after the read holds nothing, so the notice leaves it
+// out.
 
 import type {
   LabelInput,
@@ -16,6 +19,11 @@ import type {
   ProviderHold,
 } from "../api/schema.ts";
 import { formatGigabytes } from "./format.ts";
+import {
+  againText,
+  type HoldFacts,
+  type HoldFactsOf,
+} from "./jobs-hold-facts.ts";
 import type { LiveNotice, NoticeAction } from "./jobs-notices.ts";
 import type { LabelPlace, ProviderPlace } from "./jobs-places.ts";
 import {
@@ -130,21 +138,30 @@ function holdAction(
   }
 }
 
-/** The provider hold that the routing of the API gives for a waiting label. */
-export function routedHold(
+/**
+ * The provider hold that the notice of a waiting label states: the hold that
+ * the routing of the API gives, with its facts at the read. A refused size
+ * has a notice of its own, and the facts drop a refusal whose retry time is
+ * not after the read.
+ */
+export function statedHold(
   place: LabelPlace,
-): { provider: OverflowProvider; hold: ProviderHold } | null {
+  facts: HoldFactsOf,
+): HoldFacts | null {
   const routing = place.routing;
   if (routing?.kind !== "waits" || routing.reason.kind !== "provider") {
     return null;
   }
-  return { provider: routing.reason.provider, hold: routing.reason.hold };
+  const { provider, hold } = routing.reason;
+  return hold === "size_refused" ? null : facts(provider, hold);
 }
 
 export function labelNotices(
   place: LabelPlace,
   action: NoticeAction | null,
   manage: (label: string) => NoticeAction,
+  /** The facts of each provider hold at the read. */
+  facts: HoldFactsOf,
   /** A notice of this provider and hold shows already, for every job. */
   shown: (provider: OverflowProvider, hold: ProviderHold) => boolean,
 ): LiveNotice[] {
@@ -155,14 +172,16 @@ export function labelNotices(
   const label = fit.current?.label ?? null;
   const request = label ? requestText(label) : null;
   const notices: LiveNotice[] = [];
-  const held = routedHold(place);
-  if (held !== null && held.hold !== "size_refused") {
+  const held = statedHold(place, facts);
+  if (held !== null) {
     if (!shown(held.provider, held.hold)) {
+      // A hold whose end the read gives says when the place takes jobs again.
+      const again = "until" in held ? ` ${againText(held)}.` : "";
       notices.push({
         key: `held-${fit.label_id}`,
         tone: "warning",
         title,
-        body: `${capitalized(holdText(held.provider, held.hold))}. No other place of its order can take them now.`,
+        body: `${capitalized(holdText(held.provider, held.hold))}. No other place of its order can take them now.${again}`,
         action: holdAction(held.hold, manage),
       });
     }

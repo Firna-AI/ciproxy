@@ -83,6 +83,12 @@ export const boatAtLimit: PlaceContext = {
   providers: { boat: "limit" },
 };
 
+/** Wednesday 25 November, 10:12: Boat refuses new sandboxes until 10:13. */
+export const boatRefusing: PlaceContext = {
+  ...boatReady,
+  providers: { boat: "refusing" },
+};
+
 /** Why a provider cannot take a job now, or nothing when it can. */
 export function holdOf(
   provider: ProviderKey,

@@ -147,7 +147,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   and of a label whose order holds only Boat while overflow is off.
   `fit-facts` shows a label that no place of its order fits, with its full
   request, a label whose order holds the own machines only, and a label that
-  runs on the largest size while Boat, which would run it, is at its limit.
+  runs on the largest size while Boat, which would run it, is at its limit,
+  with the date when Boat takes jobs again. A last screen shows that label
+  while Boat refuses new sandboxes, with the time when ciproxy tries Boat
+  again.
 - When no place of the order of a label can take a job now, the label list
   and the Jobs notice give the reason of the first place of the order that
   fits the size, such as "overflow providers are off" or the spend limit of
@@ -155,7 +158,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the provider that would run it: the first connected and available provider
   of the order whose largest size holds the image. Both take the reason from
   `placementOf` in `placement.ts`, and `src/components/hold-text.ts` words
-  it.
+  it. The Jobs notice also gives the date when a provider at its spend limit
+  takes jobs again, and the time when ciproxy tries a provider that refuses
+  new sandboxes again, in the words of the notice of the provider.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of

@@ -37,6 +37,10 @@ query. The banner of these pages is under
   label list does. A label with "Run on the largest size" gives the reason
   of the provider that would run it. A hold that a notice of the provider
   states for every job shows once.
+- A spend limit gives the date when the provider takes jobs again, and a
+  refusal the time when ciproxy tries the provider again, in the notice of
+  the provider and in the notice of a label alike. A label notice states a
+  refusal only while its retry time is after the read.
 - History asks for the finished jobs from the first UTC date of the chosen
   window, and shows every job that the API returns, newest first. The API
   gives no total, so the footer counts the jobs of the list and names the
@@ -58,6 +62,9 @@ query. The banner of these pages is under
   [jobs-places.ts](../../src/view/jobs-places.ts) gives where the waiting
   jobs of each label can start, and the hold of each provider at the time
   of the read, which every notice of the queue reads.
+  [jobs-hold-facts.ts](../../src/view/jobs-hold-facts.ts) gives the facts of
+  each provider hold at the read, with the date or the time when the
+  provider takes jobs again.
   [jobs-label-notices.ts](../../src/view/jobs-label-notices.ts) words the
   notices of each waiting label from those facts, and
   [jobs-provider-notices.ts](../../src/view/jobs-provider-notices.ts) the

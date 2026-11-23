@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { WaitingLabelFit } from "../src/api/jobs-types.ts";
+import type { JobOverflow, WaitingLabelFit } from "../src/api/jobs-types.ts";
+import type { ProviderHold } from "../src/api/schema.ts";
 import { liveNotices } from "../src/view/jobs-notices.ts";
 import { boatPlace } from "../scripts/m20-fixtures-labels.ts";
 import {
@@ -13,8 +14,17 @@ import {
   waitingLabel,
 } from "./jobs-notices-support.ts";
 
+// The retry time of a Boat refusal shows in the time zone of the browser.
+process.env.TZ = "UTC";
+
+const nbsp = "\u00a0";
 const request = "8 vCPU, 16 GB of memory, and 60 GB of free disk";
 const largestSize = "Boat xlarge, with 16 vCPU and 64 GB";
+const atLimit = {
+  ...connectedBoat,
+  counted_cents: "10000",
+  limit_reached: true,
+} satisfies JobOverflow;
 
 const fitCases: {
   name: string;
@@ -146,11 +156,6 @@ test("a label that waits for a hold of a place that fits it gives that reason on
       },
     },
   ]);
-  const atLimit = {
-    ...connectedBoat,
-    counted_cents: "10000",
-    limit_reached: true,
-  };
   const largestHeld = waitingLabel("ciproxy-32vcpu", 2, "none", largest, {
     hold: "spend_limit",
   });
@@ -163,10 +168,68 @@ test("a label that waits for a hold of a place that fits it gives that reason on
     [
       [
         "held-label-ciproxy-32vcpu",
-        "Boat reached its spend limit. No other place of its order can take them now.",
+        `Boat reached its spend limit. No other place of its order can take them now. Boat takes jobs again on 1${nbsp}December.`,
         { kind: "go", label: "Raise the limit", href: "/settings?workspace=w" },
       ],
     ],
     "the reason of the provider that would run it, not that nothing fits",
+  );
+});
+
+/** A label whose order holds only Boat, while Boat holds new starts. */
+function boatOnly(hold: ProviderHold): WaitingLabelFit {
+  return waitingLabel("ciproxy-boat", 2, "forbidden", fitting, {
+    order: [boatPlace],
+    hold,
+  });
+}
+
+const holdEndCases: {
+  name: string;
+  label: WaitingLabelFit;
+  overflow: JobOverflow;
+  notices: [string, string][];
+}[] = [
+  {
+    name: "a Boat-only queue at the Boat limit",
+    label: boatOnly("spend_limit"),
+    overflow: atLimit,
+    notices: [
+      [
+        "held-label-ciproxy-boat",
+        `Boat reached its spend limit. No other place of its order can take them now. Boat takes jobs again on 1${nbsp}December.`,
+      ],
+    ],
+  },
+  {
+    name: "a Boat refusal whose retry time is after the read",
+    label: boatOnly("retry_after"),
+    overflow: { ...connectedBoat, retry_at: "2026-11-06T12:05:00Z" },
+    notices: [
+      [
+        "held-label-ciproxy-boat",
+        "Boat refuses new sandboxes. No other place of its order can take them now. ciproxy tries Boat again at 12:05.",
+      ],
+    ],
+  },
+  {
+    name: "a Boat refusal whose retry time passed before the read",
+    label: boatOnly("retry_after"),
+    overflow: { ...connectedBoat, retry_at: "2026-11-06T11:59:00Z" },
+    notices: [["machines-full", "2 jobs start on Boat at once."]],
+  },
+];
+
+test("a label that waits for a held provider gives when it takes jobs again, and no refusal whose retry time passed before the read", () => {
+  assert.deepEqual(
+    holdEndCases.map((item) => [
+      item.name,
+      liveNotices(
+        queue([item.label], item.overflow),
+        "/settings?workspace=w",
+        readAt,
+      ).map((notice) => [notice.key, notice.body]),
+    ]),
+    holdEndCases.map((item) => [item.name, item.notices]),
   );
 });

@@ -5,8 +5,9 @@
 // not counted, the Boat limit while a label that only Boat runs waits, a
 // refused Boat size of one label, a label whose order holds only Boat while
 // overflow is off, a label that no place of its order fits, a label whose
-// order holds no provider, a largest-size label while Boat is at its limit,
-// a removed organization, and a quiet queue with no warm runners. Each list shows every job that the API sends, so no row says
+// order holds no provider, a largest-size label while Boat is at its limit
+// or refuses new sandboxes, a removed organization, and a quiet queue with no
+// warm runners. Each list shows every job that the API sends, so no row says
 // "N more". A full queue lists one running job in each own slot.
 
 import { none, own, rows, type Job } from "../../fixtures/jobs.ts";
@@ -36,6 +37,7 @@ export const factStates = [
   "nothing-fits-request",
   "machines-only",
   "largest-held",
+  "largest-refused",
   "app-removed",
   "quiet-no-warm",
 ] as const;
@@ -183,6 +185,17 @@ const full = scene(fullRunning, limitWaiting);
 /** The full queue, with two jobs of a label that only Boat runs. */
 const withBoatOnly = scene(fullRunning, [...limitWaiting, ...boatOnlyWaiting]);
 
+/**
+ * Two load tests of a largest-size label wait while Boat, which would run
+ * them, takes no job. The own machines run the other jobs and have free
+ * slots.
+ */
+const largestWaits = scene(
+  steadyRunning.filter((job) => job.where.kind === "own"),
+  largestBoat.waiting,
+  { warm: 3 },
+);
+
 export const factScenes: Readonly<Record<FactState, LiveScene>> = {
   "unknown-fit": scene(steadyRunning.slice(0, 8), unknownFit.waiting, {
     slotsUnknown: true,
@@ -205,11 +218,8 @@ export const factScenes: Readonly<Record<FactState, LiveScene>> = {
   ),
   "nothing-fits-request": scene(steadyRunning, nothingFits.waiting),
   "machines-only": scene(steadyRunning, nothingFits.waiting),
-  "largest-held": scene(
-    steadyRunning.filter((job) => job.where.kind === "own"),
-    largestBoat.waiting,
-    { warm: 3 },
-  ),
+  "largest-held": largestWaits,
+  "largest-refused": largestWaits,
   "app-removed": scene(ownOrganizationJobs, [], { warm: 2 }),
   "quiet-no-warm": scene([], []),
 };

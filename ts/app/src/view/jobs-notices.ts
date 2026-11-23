@@ -7,14 +7,17 @@
 // Admin". A link to GitHub is for everyone, because GitHub decides who may
 // act there. A hold of a provider shows once: in one notice for every job,
 // or, when each waiting label waits for that hold alone and none fits own
-// machines, in the notice of each label.
+// machines, in the notice of each label. Both kinds read the same facts of
+// the hold at the read, so both give the date or the time when the provider
+// takes jobs again.
 
 import type { JobsLivePage } from "../api/jobs-types.ts";
 import type { OverflowProvider, ProviderHold } from "../api/schema.ts";
 import type { NoticeTone } from "./page-model.ts";
 import { fullNotice } from "./jobs-full-notice.ts";
-import { labelNotices, routedHold } from "./jobs-label-notices.ts";
-import { labelPlaces, providerHold, type LabelPlace } from "./jobs-places.ts";
+import { holdFacts, type HoldFactsOf } from "./jobs-hold-facts.ts";
+import { labelNotices, statedHold } from "./jobs-label-notices.ts";
+import { labelPlaces, type LabelPlace } from "./jobs-places.ts";
 import { providerNotices, type HoldNotice } from "./jobs-provider-notices.ts";
 
 export type NoticeAction =
@@ -60,11 +63,12 @@ function recovery(place: LabelPlace, settings: string): NoticeAction | null {
 function statedByLabels(
   places: readonly LabelPlace[],
   entry: HoldNotice,
+  facts: HoldFactsOf,
 ): boolean {
   return (
     places.length > 0 &&
     places.every((place) => {
-      const held = routedHold(place);
+      const held = statedHold(place, facts);
       return (
         place.own !== "fits" &&
         held?.provider === entry.provider &&
@@ -109,24 +113,17 @@ export function liveNotices(
         },
   );
   const places = labelPlaces(page, readAt);
+  const facts = holdFacts(page, readAt);
   const manage = manager(page, settingsHref);
   const holds = page.overflow
-    .flatMap((overflow) =>
-      providerNotices(
-        overflow,
-        providerHold(page, overflow.provider, readAt),
-        places,
-        manage,
-      ),
-    )
-    .filter((entry) => !statedByLabels(places, entry));
+    .flatMap((overflow) => providerNotices(overflow, facts, places, manage))
+    .filter((entry) => !statedByLabels(places, entry, facts));
   notices.push(...holds.map((entry) => entry.notice));
   const shown = (provider: OverflowProvider, hold: ProviderHold) =>
     holds.some((entry) => entry.provider === provider && entry.hold === hold);
   for (const place of places) {
-    notices.push(
-      ...labelNotices(place, recovery(place, settingsHref), manage, shown),
-    );
+    const action = recovery(place, settingsHref);
+    notices.push(...labelNotices(place, action, manage, facts, shown));
   }
   const othersStart = places.some((place) =>
     place.providers.some((item) => item.start.kind === "starts"),

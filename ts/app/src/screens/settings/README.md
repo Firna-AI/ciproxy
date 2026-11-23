@@ -56,7 +56,10 @@ Organizations tab.
   with the place that runs it or the reason of the place that would. The
   dialog names no machine offer and no provider size in its fit line, and
   "Run on the largest size" names no provider. The dialog reads the
-  overflow settings for the overflow wait and the offered providers.
+  overflow settings for the overflow wait and the offered providers when it
+  opens and each time the tab shows again. So a provider that the person
+  connects through the link of the dialog, in a new tab, joins Add a place
+  on the return.
 - The shared dialog keeps its title and its footer in view, and a long body
   scrolls between them, also in the sheet of a phone.
 - A label keeps its name. Each label but `ciproxy` has Delete label. When

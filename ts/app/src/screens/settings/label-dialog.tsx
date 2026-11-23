@@ -2,10 +2,13 @@
 // changes the order, it asks the API how many jobs of the size fit on each
 // machine and what each place of the order does with them. It reads the
 // overflow settings for the overflow wait and the offered providers that Add
-// a place offers. A save goes to GitHub first for a new name, and the dialog
-// shows the refusal of GitHub under the name. An edit keeps the name and the
-// platform, and every label but `ciproxy` offers Delete label, which a rename
-// uses with a new label.
+// a place offers, when it opens and each time the tab shows again. So a
+// provider that the person connects through its link to Settings under
+// Overflow, in a new tab, joins Add a place on the return to the dialog. A
+// save goes to GitHub first for a new name, and the dialog shows the refusal
+// of GitHub under the name. An edit keeps the name and the platform, and
+// every label but `ciproxy` offers Delete label, which a rename uses with a
+// new label.
 
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -59,9 +62,7 @@ export function LabelDialog({
   const { timers } = services.env;
   const overflow = services.overflow(workspaceId);
   const overflowState = useValue(overflow.state);
-  useEffect(() => {
-    void overflow.ensure();
-  }, [overflow]);
+  useEffect(() => overflow.watch(), [overflow]);
   const settings =
     overflowState.status === "ready" ? overflowState.settings : null;
   const offered =

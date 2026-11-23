@@ -136,7 +136,7 @@ export function jobsScreenRuns(origin: string) {
       async layoutCheck(page, width) {
         await insideViewport(
           page.getByText(
-            "Boat reached its spend limit. No other place of its order can take them now.",
+            "Boat reached its spend limit. No other place of its order can take them now. Boat takes jobs again on 1 December.",
             { exact: true },
           ),
           width,
