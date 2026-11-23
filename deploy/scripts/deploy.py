@@ -80,6 +80,10 @@ def main():
     ciproxy_file = scratch / "ciproxy-values.json"
     release_file.write_text(json.dumps(release))
     ciproxy_file.write_text(json.dumps(ciproxy))
+    exports = {"site": "ts/site/dist", "dashboard": "ts/app/dist"}
+    # Stage new dashboard paths before the API can redirect people to them.
+    run("python3", "deploy/scripts/publish_static.py", f"--directory={exports['dashboard']}",
+        f"--bucket={config['buckets']['dashboard']}", "--new-only")
     run("helm", "upgrade", "--install", config["prefix"] + "-release", "deploy/helm/cli-release-server",
         f"--namespace={config['namespace']}", "--values=deploy/helm/release-values.yaml",
         f"--values={release_file}", "--wait", "--timeout=10m", "--history-max=5")
@@ -87,7 +91,7 @@ def main():
         f"--namespace={config['namespace']}", f"--values={ciproxy_file}",
         "--wait", "--timeout=10m", "--history-max=5")
 
-    for package, directory in [("site", "ts/site/dist"), ("dashboard", "ts/app/dist")]:
+    for package, directory in exports.items():
         run("python3", "deploy/scripts/publish_static.py", f"--directory={directory}",
             f"--bucket={config['buckets'][package]}")
 
