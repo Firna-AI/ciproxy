@@ -2,6 +2,7 @@ import {
   chartColors,
   colors,
   fonts,
+  heroStudyColors,
   markRadii,
   navColors,
   radii,
@@ -36,6 +37,7 @@ function radiusDeclarations(
 export function tokenDeclarations(): string[] {
   return [
     ...colorDeclarations("", colors),
+    ...colorDeclarations("hero", heroStudyColors),
     ...colorDeclarations("status", statusColors),
     ...colorDeclarations("chart", chartColors),
     ...colorDeclarations("slot", slotColors),

@@ -2,6 +2,7 @@
 // three steps, the features, a real cost comparison, the pricing teaser,
 // security, and the closing call to action.
 
+import type { ReactNode } from "react";
 import type { Viewport } from "@mokly/mokly";
 
 import { ClosingCta } from "./closing-cta.tsx";
@@ -14,10 +15,16 @@ import { PricingTeaser } from "./pricing-teaser.tsx";
 import { Security } from "./security.tsx";
 import "./landing.css";
 
-export function LandingScreen({ viewport }: { viewport: Viewport }) {
+export function LandingScreen({
+  viewport,
+  hero,
+}: {
+  viewport: Viewport;
+  hero?: ReactNode;
+}) {
   return (
     <MarketingShell viewport={viewport} section="home">
-      <Hero viewport={viewport} />
+      {hero ?? <Hero viewport={viewport} />}
       <HowItWorks />
       <Features />
       <CostCompare />
