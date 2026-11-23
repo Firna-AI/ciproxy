@@ -107,13 +107,16 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
     }
     *harness.now.lock().unwrap() = at() + Duration::seconds(90);
     assert!(matches!(
-        harness.service.report_end(token.clone(), id(999)).await,
+        harness
+            .service
+            .report_end(token.clone(), id(999), None)
+            .await,
         Err(Error::InvalidToken)
     ));
     assert!(matches!(
         harness
             .service
-            .report_end(Secret::new("another-workspace-token"), id(12))
+            .report_end(Secret::new("another-workspace-token"), id(12), None)
             .await,
         Err(Error::InvalidToken)
     ));
@@ -132,11 +135,11 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
     );
     harness
         .service
-        .report_end(token.clone(), id(12))
+        .report_end(token.clone(), id(12), None)
         .await
         .unwrap();
     assert!(matches!(
-        harness.service.report_end(token, id(12)).await,
+        harness.service.report_end(token, id(12), None).await,
         Err(Error::InvalidToken)
     ));
     assert_eq!(*deletion.lock().unwrap(), 1);
@@ -194,7 +197,11 @@ async fn callback_skips_provider_calls_when_cleanup_ends_delivery_before_waiting
         session.save_start(&ended).unwrap();
     }));
 
-    harness.service.report_end(token, id(12)).await.unwrap();
+    harness
+        .service
+        .report_end(token, id(12), None)
+        .await
+        .unwrap();
 
     assert!(
         harness.state.lock().unwrap().lock_effect.is_none(),

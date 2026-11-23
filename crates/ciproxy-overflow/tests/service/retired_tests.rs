@@ -49,7 +49,11 @@ async fn retirement_preserves_an_already_running_runner_until_its_end() {
             &[7, 7]
         );
         let token = Secret::new(format!("seed-callback-{}", id(11)));
-        harness.service.report_end(token, id(12)).await.unwrap();
+        harness
+            .service
+            .report_end(token, id(12), None)
+            .await
+            .unwrap();
         assert_eq!(provider.counts.lock().unwrap().deletes, 1);
         assert_eq!(harness.start(id(11)).phase, StartPhase::Ended);
         assert_eq!(

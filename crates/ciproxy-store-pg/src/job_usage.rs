@@ -1,12 +1,17 @@
 //! Saves and reads each report as a set of samples and ordered steps.
 
+mod boat;
+mod own;
 mod rows;
 
 use chrono::{DateTime, Utc};
 use ciproxy_protocol::usage::JobStep;
 use ciproxy_schema::job_usage::{job_usage_samples, job_usage_steps};
 use ciproxy_store_interface::error::Result;
-use ciproxy_store_interface::job_usage::{JobUsageStore, StoredJobUsage};
+use ciproxy_store_interface::job_usage::{
+    BoatSampleWrite, BoatUsageTarget, JobUsageStore, OwnUsageTarget, StoredJobUsage,
+};
+use ciproxy_store_interface::secrets::TokenHash;
 use diesel::prelude::*;
 use diesel::query_dsl::methods;
 use diesel::sql_types;
@@ -97,7 +102,61 @@ fn replace_steps(
     Ok(())
 }
 
+fn write_report(
+    connection: &mut PgConnection,
+    sample: &SampleRow,
+    workspace_id: Uuid,
+    runner_id: Uuid,
+    steps: &[JobStep],
+) -> Result<bool> {
+    if !upsert_samples(connection, sample)? {
+        return Ok(false);
+    }
+    replace_steps(connection, workspace_id, runner_id, steps)?;
+    Ok(true)
+}
+
 impl JobUsageStore for PgStore {
+    fn own_usage_target(
+        &self,
+        workspace_id: Uuid,
+        machine_id: Uuid,
+        runner_id: Uuid,
+    ) -> Result<Option<OwnUsageTarget>> {
+        own::target(
+            &mut *self.connection()?,
+            workspace_id,
+            machine_id,
+            runner_id,
+        )
+    }
+
+    fn boat_usage_target(
+        &self,
+        hash: &TokenHash,
+        runner_id: Uuid,
+    ) -> Result<Option<BoatUsageTarget>> {
+        boat::target(&mut *self.connection()?, hash, runner_id)
+    }
+
+    fn save_boat_sample(
+        &self,
+        workspace_id: Uuid,
+        delivery_id: Uuid,
+        runner_id: Uuid,
+        report: &StoredJobUsage,
+        previous_at_or_before: DateTime<Utc>,
+    ) -> Result<BoatSampleWrite> {
+        boat::save(
+            &mut *self.connection()?,
+            workspace_id,
+            delivery_id,
+            runner_id,
+            report,
+            previous_at_or_before,
+        )
+    }
+
     fn save_job_usage(
         &self,
         workspace_id: Uuid,
@@ -106,11 +165,13 @@ impl JobUsageStore for PgStore {
     ) -> Result<bool> {
         let sample = SampleRow::from_report(workspace_id, runner_id, report);
         transaction(&mut *self.connection()?, |connection| {
-            if !upsert_samples(connection, &sample)? {
-                return Ok(false);
-            }
-            replace_steps(connection, workspace_id, runner_id, &report.usage.steps)?;
-            Ok(true)
+            write_report(
+                connection,
+                &sample,
+                workspace_id,
+                runner_id,
+                &report.usage.steps,
+            )
         })
     }
 

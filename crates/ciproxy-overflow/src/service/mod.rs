@@ -11,6 +11,7 @@ mod launch;
 mod preparation;
 mod provider_preparation;
 mod refresh;
+mod reports;
 mod retired;
 mod start;
 mod usage;

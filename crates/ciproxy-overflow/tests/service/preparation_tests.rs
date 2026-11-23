@@ -85,7 +85,7 @@ async fn disconnect_cancels_unsent_without_keys_or_provider_access() {
         );
         let token = ciproxy_protocol::secret::Secret::new("callback-token-for-one-sandbox");
         assert!(matches!(
-            harness.service.report_end(token, id(12)).await,
+            harness.service.report_end(token, id(12), None).await,
             Err(Error::InvalidToken)
         ));
         let view = harness.service.view(id(1)).await.unwrap();

@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::boat::BoatAccount;
 use crate::error::Result;
+use crate::job_usage::JobUsageStore;
 use crate::overflow::account::AccountState;
 use crate::overflow::admission::{DispatchFacts, PreparedDispatch, ReservationOutcome};
 use crate::overflow::connection::ConnectionGrant;
@@ -38,7 +39,7 @@ pub struct OverflowSnapshot {
 
 /// Durable persistence used only by the hosted overflow service.
 #[unimock(api = OverflowStoreMock)]
-pub trait OverflowStore: Send + Sync {
+pub trait OverflowStore: JobUsageStore + Send + Sync {
     /// Acquire one live workspace session. Closing it releases the lock.
     fn try_lock_overflow(&self, workspace_id: Uuid) -> Result<Option<Box<dyn OverflowSession>>>;
     /// Wait within the store's lock limit for a workspace session.

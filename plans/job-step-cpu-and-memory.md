@@ -765,6 +765,18 @@ Design calls, my calls, 23 November 2026, from Milestone 5:
   flight, and it cancels that post when the runner exits. Reason: the exit
   report must never wait for a sample report.
 
+Design calls, my calls, 23 November 2026, from Milestone 8:
+
+- **Queue choice:** the control plane saves the usage of an agent's exit
+  report before it admits the event to the queue, and only for a runner
+  of the machine of that connection. Reason: the usage does not change the
+  state of the runner, and the queue keeps its small fixed-size events.
+- **Sample report answers:** 204 saved, 400 a runner ID that is not a
+  UUID, 401 a bad token or another runner, 410 a sandbox whose end is
+  recorded, 422 points that fail a check, 429 a report within 10 seconds
+  of the last one, and 503 a store failure. The exit report keeps its own
+  answers. Reason: a guest can tell a closed sandbox from a fault.
+
 Contract sketch, for the protocol crate:
 
 - Times in the agent protocol are whole milliseconds since the Unix epoch,
@@ -961,17 +973,17 @@ Depends on: 7
 The control plane saves the samples from both exit reports and from the
 Boat sample reports.
 
-- [ ] Save the usage of `AgentMessage::RunnerExited` for the job of its
+- [x] Save the usage of `AgentMessage::RunnerExited` for the job of its
       runner. Pass it as the control plane queue design call says, not in
       the fixed-size event of
       `crates/ciproxy-control-plane/src/runtime_agent_event.rs`.
-- [ ] Save the usage of the Boat end report that
+- [x] Save the usage of the Boat end report that
       `crates/ciproxy-control-plane/src/boat_callback.rs` receives.
-- [ ] Save the steps of each report with its samples, after the script
+- [x] Save the steps of each report with its samples, after the script
       names design call. Apply the step limits of the design. Test each
       kind of name and each limit. Pin with a test that a one-word command
       shaped like an action, such as "Run foo/bar@baz", keeps its text.
-- [ ] Accept the Boat sample reports with the report limits design call.
+- [x] Accept the Boat sample reports with the report limits design call.
       Test the rate limit, a report after the record ends, and a newer
       series that replaces an older one.
 - [ ] Add the hold of decision 4 to the retirement check in
@@ -980,9 +992,9 @@ Boat sample reports.
       seconds at the completion time that the control plane records for
       the job. Test a late end report, which keeps the final series, and a
       lost one, which keeps the newest sample report. Waits for decision 6.
-- [ ] Apply the checks of the design. Test each check, and test that a
+- [x] Apply the checks of the design. Test each check, and test that a
       dropped usage keeps the exit.
-- [ ] Update the READMEs of `ciproxy-control-plane` and `ciproxy-overflow`.
+- [x] Update the READMEs of `ciproxy-control-plane` and `ciproxy-overflow`.
 
 ## Milestone 9: Steps from the Worker log
 

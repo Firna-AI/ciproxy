@@ -71,7 +71,7 @@ async fn zero_quote_saves_the_highest_fee_through_zero_runtime_completion_and_ex
     *harness.now.lock().unwrap() = at() + Duration::seconds(2);
     harness
         .service
-        .report_end(Secret::new("callback-token-for-one-sandbox"), id(12))
+        .report_end(Secret::new("callback-token-for-one-sandbox"), id(12), None)
         .await
         .unwrap();
     let completed = harness.service.view(id(1)).await.unwrap();

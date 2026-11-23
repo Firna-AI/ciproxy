@@ -26,6 +26,15 @@ pub enum Error {
     /// A callback token is absent, consumed, or belongs to another runner.
     #[error("[overflow/callback] token is invalid or consumed")]
     InvalidToken,
+    /// An authenticated sandbox no longer accepts non-final usage.
+    #[error("[overflow/callback] sandbox does not accept sample reports")]
+    SamplesClosed,
+    /// The sandbox sent a sample report too soon after its last accepted report.
+    #[error("[overflow/callback] sample report arrived too soon")]
+    SamplesTooSoon,
+    /// The report's points did not pass the usage checks.
+    #[error("[overflow/callback] invalid sample points")]
+    InvalidSamples,
     /// A cleanup target has no proof of ciproxy ownership.
     #[error("[overflow/cleanup] sandbox ownership is unknown")]
     OwnershipUnknown,

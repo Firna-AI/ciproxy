@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_protocol::usage::JobUsage;
 use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::AccountState;
 use ciproxy_store_interface::overflow::store::AccountRecord;
@@ -124,8 +125,17 @@ impl Overflow for OverflowService {
         self.execute(&session, workspace_id, record).await
     }
 
-    async fn report_end(&self, token: Secret, runner_id: Uuid) -> Result<()> {
-        self.end_report(token, runner_id).await
+    async fn report_end(
+        &self,
+        token: Secret,
+        runner_id: Uuid,
+        usage: Option<JobUsage>,
+    ) -> Result<()> {
+        self.end_report(token, runner_id, usage).await
+    }
+
+    async fn report_samples(&self, token: Secret, runner_id: Uuid, usage: JobUsage) -> Result<()> {
+        self.sample_report(token, runner_id, usage).await
     }
 
     async fn cleanup(&self, workspace_id: Uuid) -> Result<()> {

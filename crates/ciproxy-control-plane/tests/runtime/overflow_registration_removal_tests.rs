@@ -44,7 +44,7 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
         .to_owned();
     harness
         .service
-        .report_end(Secret::new(token), ended.runner_id)
+        .report_end(Secret::new(token), ended.runner_id, None)
         .await
         .unwrap();
     let completed = store

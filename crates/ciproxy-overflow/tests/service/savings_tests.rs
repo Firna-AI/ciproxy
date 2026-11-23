@@ -49,7 +49,7 @@ async fn measured_production_start_uses_saved_fee_in_the_public_savings_report()
     *harness.now.lock().unwrap() = finished;
     harness
         .service
-        .report_end(Secret::new("callback-token-for-one-sandbox"), id(12))
+        .report_end(Secret::new("callback-token-for-one-sandbox"), id(12), None)
         .await
         .unwrap();
     let record = harness.start(id(11));

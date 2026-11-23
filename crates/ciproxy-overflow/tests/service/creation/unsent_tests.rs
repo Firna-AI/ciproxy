@@ -43,7 +43,7 @@ async fn unsent_create_ends_without_cost_or_authority_and_permits_a_new_delivery
     assert!(matches!(
         harness
             .service
-            .report_end(Secret::new("callback-token-for-one-sandbox"), id(12))
+            .report_end(Secret::new("callback-token-for-one-sandbox"), id(12), None)
             .await,
         Err(Error::InvalidToken)
     ));

@@ -214,7 +214,8 @@ Call the public boundary in this order:
    Set `required_root_disk_bytes` and `launched_at` of a retained `BoatRunner`
    from its saved `StartRecord`, also after an image update.
 9. Call `resume` after a restart or an uncertain result.
-10. Pass authenticated guest exit reports to `report_end`.
+10. Pass guest exit reports to `report_end` and sample reports to
+    `report_samples`. Both use the sandbox token.
 11. Call `cleanup` during regular reconciliation and after an outage.
 
 `OverflowView::from_snapshot` builds the view from durable store facts,
@@ -224,9 +225,24 @@ the saved size catalog for those runners and permits no new start.
 The [control-plane overflow guide](../ciproxy-control-plane/overflow.md)
 gives the production composition and its configuration.
 
-The callback route must pass the Bearer token and the message's runner ID.
-It must accept only `GuestToAgent::RunnerExited` messages.
-The token grants no other operation.
+The callback route passes the Bearer token and runner ID from
+`GuestToAgent::RunnerExited` and `GuestToAgent::UsageSamples`. The token
+grants no other operation. The service saves the exit claim before it
+saves final usage or waits for the workspace lock. A usage failure cannot
+change the exit answer or prevent deletion.
+
+The service checks CPU and memory against the saved Boat size, not the
+label. It checks times against the sandbox start and report arrival, with
+five minutes for clock differences. It drops an invalid point series and
+keeps the previous report. It drops invalid steps without dropping valid
+points. It replaces script command names before each write. The shared
+[usage checks](src/job_usage.rs) also apply to own-machine reports.
+
+The store accepts at most one non-final report per sandbox in 10 seconds.
+It checks the exit claim, the recorded end, and the previous arrival time
+in the same transaction as the sample write. A sample report cannot
+replace final usage.
+
 Map typed Boat failures without stopping jobs on own machines.
 Keep the same delivery ID until a result is known.
 

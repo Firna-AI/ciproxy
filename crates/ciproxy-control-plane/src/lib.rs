@@ -4,6 +4,7 @@
 
 pub mod accounting;
 mod actions;
+mod agent_usage;
 pub mod application;
 mod assignment;
 pub mod billing;

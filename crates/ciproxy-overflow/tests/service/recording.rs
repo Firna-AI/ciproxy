@@ -7,6 +7,9 @@ use chrono::{DateTime, Utc};
 use ciproxy_overflow::crypto::KeyContext;
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::job_usage::{
+    BoatSampleWrite, BoatUsageTarget, JobUsageStore, OwnUsageTarget, StoredJobUsage,
+};
 use ciproxy_store_interface::overflow::admission::{
     DispatchFacts, PreparedDispatch, ReservationBudget, ReservationOutcome,
 };
@@ -55,6 +58,56 @@ impl RecordingStore {
             inner,
             capture: self.capture.clone(),
         })
+    }
+}
+
+impl JobUsageStore for RecordingStore {
+    fn own_usage_target(
+        &self,
+        workspace_id: Uuid,
+        machine_id: Uuid,
+        runner_id: Uuid,
+    ) -> Result<Option<OwnUsageTarget>> {
+        self.inner
+            .own_usage_target(workspace_id, machine_id, runner_id)
+    }
+
+    fn boat_usage_target(
+        &self,
+        hash: &TokenHash,
+        runner_id: Uuid,
+    ) -> Result<Option<BoatUsageTarget>> {
+        self.inner.boat_usage_target(hash, runner_id)
+    }
+
+    fn save_boat_sample(
+        &self,
+        workspace_id: Uuid,
+        delivery_id: Uuid,
+        runner_id: Uuid,
+        report: &StoredJobUsage,
+        previous_at_or_before: DateTime<Utc>,
+    ) -> Result<BoatSampleWrite> {
+        self.inner.save_boat_sample(
+            workspace_id,
+            delivery_id,
+            runner_id,
+            report,
+            previous_at_or_before,
+        )
+    }
+
+    fn save_job_usage(
+        &self,
+        workspace_id: Uuid,
+        runner_id: Uuid,
+        report: &StoredJobUsage,
+    ) -> Result<bool> {
+        self.inner.save_job_usage(workspace_id, runner_id, report)
+    }
+
+    fn job_usage(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<Option<StoredJobUsage>> {
+        self.inner.job_usage(workspace_id, runner_id)
     }
 }
 

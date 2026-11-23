@@ -48,6 +48,18 @@ impl SampleRow {
         }
     }
 
+    /// A live Boat sample never sets the final mark.
+    pub(super) fn from_sample(
+        workspace_id: Uuid,
+        runner_id: Uuid,
+        report: &StoredJobUsage,
+    ) -> Self {
+        Self {
+            is_final: false,
+            ..Self::from_report(workspace_id, runner_id, report)
+        }
+    }
+
     /// Rebuild the report with the steps from the same snapshot.
     pub(super) fn into_report(self, steps: Vec<JobStep>) -> Result<StoredJobUsage> {
         Ok(StoredJobUsage {

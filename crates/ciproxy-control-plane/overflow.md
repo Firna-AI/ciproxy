@@ -136,9 +136,11 @@ The route uses no browser session. The guest sends
 Each sandbox has its own token, which works only for its own runner.
 
 The route first saves the report as a one-use claim. The claim needs no
-workspace lock, so other Boat work of the workspace cannot drop it. The
-route then waits up to 5 seconds for that lock and deletes the sandbox in
-the request. When the wait ends first, or a step after the claim fails,
+workspace lock, so other Boat work of the workspace cannot drop it. After
+the claim, the route saves valid final usage if the report includes it.
+A usage check or write failure does not change the exit answer or the
+delete. The route waits up to 5 seconds for the workspace lock and deletes
+the sandbox in the request. When the wait ends first, or the delete fails,
 the route still answers 204, and a later cleanup pass deletes the sandbox.
 Later delivery saves keep the claim and the first recorded end.
 [The exit report](../../docs/protocol/overflow-sandbox-end.md#the-exit-report)
@@ -147,7 +149,7 @@ gives the requirements.
 | Status | Meaning                                                                                               |
 | ------ | ----------------------------------------------------------------------------------------------------- |
 | 204    | The control plane saved the report. It deletes the sandbox in the request or at a later cleanup pass. |
-| 400    | The message is not `RunnerExited`, or its runner ID is not a UUID.                                    |
+| 400    | The decoded message is not supported, or its runner ID is not a UUID.                                 |
 | 401    | The token is missing, wrong, already used, or for another runner, or its delivery already ended.      |
 | 503    | The request failed before it saved the report.                                                        |
 
@@ -156,6 +158,27 @@ and
 [After an App removal](../../docs/protocol/overflow-sandbox-end.md#after-an-app-removal)
 say what happens to the sandbox of a launched runner with no report and no
 job. Boat ends each sandbox at its lifetime at the latest.
+
+### Sample reports
+
+The same route accepts `GuestToAgent::UsageSamples` with the same sandbox
+token. A report holds the series so far. The route accepts it only before
+the exit claim or recorded end, and at most once per 10 seconds for the
+sandbox. An accepted sample report replaces the previous non-final report.
+It does not claim the exit or replace a final report.
+
+| Status | Meaning                                                                    |
+| ------ | -------------------------------------------------------------------------- |
+| 204    | The control plane saved the sample report.                                 |
+| 400    | The runner ID is not a UUID.                                               |
+| 401    | The token is missing, wrong, or for another runner.                        |
+| 410    | The sandbox does not accept samples, or a final report is already saved.   |
+| 422    | The sample points did not pass the usage checks.                           |
+| 429    | The report arrived less than 10 seconds after the last accepted report.    |
+| 503    | A store operation failed.                                                  |
+
+If only the steps fail a check, the route saves the points without the
+steps and still answers 204. These answers do not change the exit answers.
 
 ## Live smoke checks
 

@@ -47,12 +47,18 @@ impl AgentEvent {
     }
 
     fn runner(runner_id: RunnerId, state: RunnerState) -> Self {
-        match runner_id.0.parse::<Uuid>() {
-            Ok(id) if id.to_string() == runner_id.0 => Self::Runner {
+        match parse_runner_id(&runner_id) {
+            Some(id) => Self::Runner {
                 runner_id: id,
                 state,
             },
-            _ => Self::InvalidRunner,
+            None => Self::InvalidRunner,
         }
     }
+}
+
+/// Read a runner identity only in the canonical form sent to the agent.
+pub(crate) fn parse_runner_id(runner_id: &RunnerId) -> Option<Uuid> {
+    let id = runner_id.0.parse::<Uuid>().ok()?;
+    (id.to_string() == runner_id.0).then_some(id)
 }

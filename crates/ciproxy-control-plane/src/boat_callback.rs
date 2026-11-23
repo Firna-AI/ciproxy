@@ -1,4 +1,4 @@
-//! Sandbox-scoped runner-exit reports mounted outside browser authentication.
+//! Sandbox-scoped exit and usage reports mounted outside browser authentication.
 
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::secret::Secret;
 use uuid::Uuid;
 
-/// Mount only the narrow token-authenticated exit callback.
+/// Mount only the narrow token-authenticated sandbox callback.
 pub fn router(overflow: Arc<dyn Overflow>) -> Router {
     Router::new()
         .route("/hooks/boat/runner-exit", post(report))
@@ -32,15 +32,36 @@ async fn report(
     else {
         return StatusCode::UNAUTHORIZED;
     };
-    let GuestToAgent::RunnerExited { runner_id, .. } = message else {
-        return StatusCode::BAD_REQUEST;
-    };
-    let Ok(runner) = runner_id.0.parse::<Uuid>() else {
-        return StatusCode::BAD_REQUEST;
-    };
-    match overflow.report_end(Secret::new(token), runner).await {
-        Ok(()) => StatusCode::NO_CONTENT,
-        Err(Error::InvalidToken) => StatusCode::UNAUTHORIZED,
-        Err(_) => StatusCode::SERVICE_UNAVAILABLE,
+    let token = Secret::new(token);
+    match message {
+        GuestToAgent::RunnerExited {
+            runner_id, usage, ..
+        } => {
+            let Ok(runner) = runner_id.0.parse::<Uuid>() else {
+                return StatusCode::BAD_REQUEST;
+            };
+            match overflow.report_end(token, runner, usage).await {
+                Ok(()) => StatusCode::NO_CONTENT,
+                Err(Error::InvalidToken) => StatusCode::UNAUTHORIZED,
+                Err(_) => StatusCode::SERVICE_UNAVAILABLE,
+            }
+        }
+        GuestToAgent::UsageSamples { runner_id, usage } => {
+            let Ok(runner) = runner_id.0.parse::<Uuid>() else {
+                return StatusCode::BAD_REQUEST;
+            };
+            match overflow.report_samples(token, runner, usage).await {
+                Ok(()) => StatusCode::NO_CONTENT,
+                Err(Error::InvalidToken) => StatusCode::UNAUTHORIZED,
+                Err(Error::SamplesClosed) => StatusCode::GONE,
+                Err(Error::SamplesTooSoon) => StatusCode::TOO_MANY_REQUESTS,
+                Err(Error::InvalidSamples) => StatusCode::UNPROCESSABLE_ENTITY,
+                Err(_) => {
+                    tracing::warn!("dropped Boat sample report: store operation failed");
+                    StatusCode::SERVICE_UNAVAILABLE
+                }
+            }
+        }
+        _ => StatusCode::BAD_REQUEST,
     }
 }

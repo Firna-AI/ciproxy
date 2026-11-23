@@ -88,7 +88,7 @@ pub(super) async fn report_end(harness: &Harness, runner: Uuid) {
         .to_owned();
     harness
         .service
-        .report_end(Secret::new(token), runner)
+        .report_end(Secret::new(token), runner, None)
         .await
         .unwrap();
 }

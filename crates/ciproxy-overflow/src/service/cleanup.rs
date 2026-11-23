@@ -1,6 +1,7 @@
 //! One-use end callbacks, marked idle cleanup, and durable delete retries.
 
 use ciproxy_protocol::secret::Secret;
+use ciproxy_protocol::usage::JobUsage;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use sandbox_interface::ProviderRef;
 use tokio::task::spawn_blocking;
@@ -16,7 +17,13 @@ use crate::spend;
 use super::OverflowService;
 
 impl OverflowService {
-    pub(super) async fn end_report(&self, token: Secret, runner_id: Uuid) -> Result<()> {
+    pub(super) async fn end_report(
+        &self,
+        token: Secret,
+        runner_id: Uuid,
+        usage: Option<JobUsage>,
+    ) -> Result<()> {
+        let now = self.dependencies.clock.now();
         let store = self.dependencies.store.clone();
         let hash = digest(&token);
         let lookup = hash.clone();
@@ -26,12 +33,19 @@ impl OverflowService {
             .internal()?
             .ok_or(Error::InvalidToken)?;
         let store = self.dependencies.store.clone();
-        let now = self.dependencies.clock.now();
         let record = spawn_blocking(move || store.accept_end(workspace_id, &hash, runner_id, now))
             .await
             .internal()?
             .internal()?
             .ok_or(Error::InvalidToken)?;
+        if let Some(usage) = usage
+            && self
+                .save_exit_usage(workspace_id, &record, now, usage)
+                .await
+                .is_err()
+        {
+            tracing::warn!("dropped final Boat job usage: store write failed");
+        }
         let delivery_id = record.delivery_id;
         if let Err(error) = self.delete_reported(workspace_id, delivery_id).await {
             tracing::warn!(%workspace_id, %delivery_id, %error, "Boat exit report saved; cleanup deferred");

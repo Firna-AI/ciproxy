@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::secret::Secret;
+use ciproxy_protocol::usage::JobUsage;
 use ciproxy_scaler::actions::StartRunner;
 use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::record::StartRecord;
@@ -128,7 +129,14 @@ pub trait Overflow: Send + Sync {
     /// Resume an existing delivery without creating a second sandbox or runner.
     async fn resume(&self, workspace_id: Uuid, delivery_id: Uuid) -> Result<StartOutcome>;
     /// Save one exit report per token before attempting deletion, which can defer to cleanup.
-    async fn report_end(&self, token: Secret, runner_id: Uuid) -> Result<()>;
+    async fn report_end(
+        &self,
+        token: Secret,
+        runner_id: Uuid,
+        usage: Option<JobUsage>,
+    ) -> Result<()>;
+    /// Save the whole series so far without claiming or ending the sandbox.
+    async fn report_samples(&self, token: Secret, runner_id: Uuid, usage: JobUsage) -> Result<()>;
     /// Recover pending deletes and remove marked sandboxes whose runners are unneeded.
     async fn cleanup(&self, workspace_id: Uuid) -> Result<()>;
 }

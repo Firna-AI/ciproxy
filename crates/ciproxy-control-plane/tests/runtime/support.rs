@@ -256,6 +256,13 @@ impl Fixture {
             .unwrap();
     }
 
+    /// Fail final usage writes without blocking sample writes or exit claims.
+    pub(super) fn reject_final_usage(&mut self) {
+        self.connection
+            .batch_execute("ALTER TABLE job_usage_samples ADD CHECK (NOT is_final)")
+            .unwrap();
+    }
+
     /// Remove source proof to model conservative legacy registration recovery.
     pub(super) fn clear_boat_installation_authority(&mut self, runner: Uuid) {
         let count = diesel::sql_query(
