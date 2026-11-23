@@ -129,3 +129,22 @@ impl<T: Read> Read for Hashing<T> {
         Ok(read)
     }
 }
+
+/// Remove the staged files of a failed publication: the pending extraction
+/// and the checked archive. A failed extraction, such as on a full area,
+/// must not keep them, because they hold the space that new job VMs need.
+/// A file that is already gone is no error.
+pub(crate) fn discard_staged(pending: &Path, archive: &Path) {
+    match std::fs::remove_dir_all(pending) {
+        Err(error) if error.kind() != io::ErrorKind::NotFound => {
+            tracing::warn!(%error, "the next start removes the partial image extraction");
+        }
+        _ => {}
+    }
+    match std::fs::remove_file(archive) {
+        Err(error) if error.kind() != io::ErrorKind::NotFound => {
+            tracing::warn!(%error, "the next start removes the image download");
+        }
+        _ => {}
+    }
+}

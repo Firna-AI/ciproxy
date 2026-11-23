@@ -219,6 +219,7 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
     ready_report.images.available.push(ImageMetadata {
         image_id: ImageId("verified-image".to_owned()),
         root_disk_bytes: 60_000_000_000,
+        free_job_bytes: None,
     });
     let gateway = fixture.gateway.clone();
     let session = handshake.session;

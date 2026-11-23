@@ -171,6 +171,8 @@ fn machine_input(
         capacity: resources.slots, disk_budget_bytes: resources.job_disk_bytes,
         // A Mac has no Docker disks, as docker-disks.md says, so it leases no bytes.
         docker_leased_bytes: if machine.machine.platform == Platform::MacosArm64 { Some(0) } else { machine.report.as_ref().and_then(|report| report.report.docker_disks.as_ref().measured().map(|docker| docker.leased_bytes)) },
+        // A Mac reports one disk, its area volume, where its VM clones grow.
+        free_bytes: (machine.machine.platform == Platform::MacosArm64).then(|| machine.report.as_ref().and_then(|report| report.report.hardware.disks.first()).map_or(0, |disk| disk.free_bytes)),
         warm_count: count, warm_allocation: allocate(count, history),
         runners: input.runners.iter().filter(|intent| intent.runner.state != runners::RunnerState::Stopped && matches!(intent.runner.place, RunnerPlace::Machine { machine_id, .. } if machine_id == machine.machine.id)).map(|intent| {
             let running_job = input.jobs.iter().find(|job| job.phase == DemandPhase::Started && job.runner_github_id == intent.runner.github_id && job.organization_id == intent.runner.organization_id && job.scale_set_id == intent.runner.scale_set_id);

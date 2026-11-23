@@ -37,10 +37,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
         if !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }
-        let Some(size) = machine
-            .root_sizing(snapshot.root_sizing)
-            .vm_size(label.size)
-        else {
+        let Some(size) = machine.root_rule(snapshot.root_sizing).vm_size(label.size) else {
             continue;
         };
         let mut vacancies = targets(snapshot, machine);

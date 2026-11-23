@@ -80,6 +80,22 @@ fn the_index_keeps_the_newest_and_held_images() {
     assert_eq!(index.newest, Some(ImageId("a".to_owned())));
 }
 
+/// The report carries each image's measured free bytes on the wire, so the
+/// control plane can apply the image limit of a macOS label.
+#[test]
+fn the_report_sends_the_measured_free_bytes_of_each_image() {
+    let mut index = ImageIndex::default();
+    index.publish(image("a"));
+
+    let report = serde_json::to_value(index.report()).expect("encode the report");
+
+    assert_eq!(
+        report["available"][0]["free_job_bytes"],
+        serde_json::json!(100_u64 << 30)
+    );
+    assert_eq!(index.images[0].metadata().free_job_bytes, Some(100 << 30));
+}
+
 #[test]
 fn folder_names_never_follow_the_id() {
     let name = folder_name(&ImageId("../../etc".to_owned()));
@@ -102,4 +118,24 @@ fn zero_blocks_become_holes() {
         "only the data block is written"
     );
     assert_eq!(written[SPARSE_BLOCK + 5], 7);
+}
+
+/// A failed extraction leaves no archive and no pending folder behind, so
+/// it holds no space that new job VMs need.
+#[test]
+fn a_failed_publication_discards_its_staged_files() {
+    let folder = std::env::temp_dir().join(format!("ciproxy-staged-{}", uuid::Uuid::new_v4()));
+    let pending = folder.join("image.pending");
+    let archive = folder.join("image.tar");
+    std::fs::create_dir_all(pending.join("bundle")).unwrap();
+    std::fs::write(pending.join("bundle").join("disk.img"), b"partial").unwrap();
+    std::fs::write(&archive, b"checked archive").unwrap();
+
+    crate::macos::image_extract::discard_staged(&pending, &archive);
+
+    assert!(!pending.exists());
+    assert!(!archive.exists());
+    // A second call, or files that were never written, is no error.
+    crate::macos::image_extract::discard_staged(&pending, &archive);
+    std::fs::remove_dir_all(&folder).unwrap();
 }

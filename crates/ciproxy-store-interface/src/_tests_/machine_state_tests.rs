@@ -18,6 +18,7 @@ fn machine_state_requires_recent_contact_and_a_selected_reported_image() {
     let image = ImageMetadata {
         image_id: ImageId("verified-image".to_owned()),
         root_disk_bytes: 60_000_000_000,
+        free_job_bytes: None,
     };
     let selected = ImageReport {
         newest: Some(image.image_id.clone()),
