@@ -19,6 +19,7 @@ spec:
         app.kubernetes.io/name: ciproxy-control-plane
       annotations:
         checksum/boat-shared-snapshot: {{ .Values.controlPlane.boatSharedSnapshotRevision | sha256sum | quote }}
+        checksum/r2-images: {{ .Values.controlPlane.r2ImagesRevision | sha256sum | quote }}
     spec:
       serviceAccountName: control-plane
       affinity:
@@ -62,6 +63,12 @@ spec:
                 secretKeyRef:
                   name: boat-shared-snapshot
                   key: BOAT_SHARED_SNAPSHOT
+                  optional: true
+            - name: R2_IMAGES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: r2-images
+                  key: R2_IMAGES_KEY
                   optional: true
             - name: SECRETS_DIRECTORY
               value: /var/run/secrets/ciproxy

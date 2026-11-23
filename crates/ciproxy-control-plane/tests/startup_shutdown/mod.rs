@@ -7,3 +7,5 @@ pub(super) mod http;
 pub(super) mod process;
 mod secrets;
 pub(super) mod sockets;
+#[path = "../tls_store/mod.rs"]
+mod tls_store;

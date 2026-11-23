@@ -28,7 +28,6 @@ use ciproxy_github::scale_sets::{ScaleSetFactory, sdk::AppScaleSetFactory};
 use ciproxy_github::timing::RepairTiming;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_overflow::api::Overflow;
-use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::store::Store;
 use reqwest::{Client, Url, redirect};
 use secrecy::ExposeSecret;
@@ -40,9 +39,9 @@ use crate::cache_metadata::transport;
 use crate::config::Config;
 use crate::error::{ErrorResultExt, Result};
 use crate::hosted_events::Relay;
-use crate::image_signing::{CdnSigning, ImageSigning};
+use crate::image_signing::{CdnSigning, PlatformSigning};
 use crate::repositories::{RefreshRepositories, RepositoryRefresh, StoredInstallations};
-use crate::runtime::{ImageOffer, MachineRuntime, OwnMachines};
+use crate::runtime::{MachineRuntime, OwnMachines};
 
 /// The process's shared gateway, GitHub App, and runtime service boundaries.
 pub struct Hosted {
@@ -137,14 +136,14 @@ impl Hosted {
         });
         let overflow =
             crate::overflow_composition::compose(config, store.clone(), registrations.clone())?;
-        let cdn: Arc<dyn ImageSigning> = Arc::new(CdnSigning::new(
-            config.cdn_signing_key_name.clone(),
-            config.secret("cdn-signing-key")?.expose_secret(),
-        )?);
-        let offers = config.images.iter().map(|download| ImageOffer {
-            signing: (download.platform == Platform::LinuxX64).then(|| cdn.clone()),
-            download: download.clone(),
-        });
+        let offers = PlatformSigning {
+            linux: Arc::new(CdnSigning::new(
+                config.cdn_signing_key_name.clone(),
+                config.secret("cdn-signing-key")?.expose_secret(),
+            )?),
+            macos: config.macos_images.download_signing(),
+        }
+        .offers(&config.images);
         let mut machine_runtime = MachineRuntime::new(
             store.clone(),
             gateway.clone(),

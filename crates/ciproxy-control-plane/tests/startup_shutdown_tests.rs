@@ -68,3 +68,36 @@ async fn sigterm_stops_new_connections_and_drains_an_active_http_request() {
     .await
     .expect("the serving shutdown test must not hang");
 }
+
+#[tokio::test]
+async fn a_refused_macos_release_read_leaves_the_executable_ready_for_linux_work() {
+    timeout(Duration::from_secs(15), async {
+        let database = Database::new();
+        let (fixture, requests) = Fixture::serving_with_forbidden_macos().await;
+        let mut child = fixture.spawn(&database.url);
+        let address = bound_address(&mut child).await;
+        assert_eq!(
+            wait_until_ready(address).await,
+            Some(StatusCode::OK),
+            "a refused macOS read must not stop the start"
+        );
+        let requests = requests.lock().unwrap().clone();
+        assert_eq!(requests.len(), 1, "{requests:?}");
+        let (path, query) = requests[0].split_once('?').unwrap();
+        assert_eq!(
+            path,
+            "/ciproxy-macos-images/releases/macos-startup/manifest.json"
+        );
+        assert!(
+            query
+                .starts_with("X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=startup-key-id%2F")
+                && query.contains("%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=")
+                && query.contains("&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature="),
+            "{query}"
+        );
+        assert_eq!(terminate(&child).await.code(), Some(0));
+        assert_eq!(exit_code(&mut child).await, Some(0));
+    })
+    .await
+    .expect("the macOS startup test must not hang");
+}

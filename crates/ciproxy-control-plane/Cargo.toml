@@ -36,12 +36,13 @@ hmac = "0.13.0"
 sha1 = "0.11.0"
 base64 = "0.23.1"
 sha2 = "0.11.1"
+hex = "0.4.3"
+url = "2.5.8"
+percent-encoding = "2.3.2"
 
 [dev-dependencies]
-hex = "0.4.3"
 http-body-util = "0.1.5"
 tiny_http = "0.12.0"
-url = "2.5.8"
 sandbox-interface = { workspace = true }
 sandbox-boat = { workspace = true }
 diesel = { version = "2.3.14", features = ["postgres"] }
@@ -49,3 +50,5 @@ tower = { version = "0.5.3", features = ["util"] }
 unimock = "0.6.8"
 tokio-tungstenite = "0.30.0"
 futures-util = "0.3.34"
+rcgen = "0.14.10"
+tokio-rustls = "0.26.6"

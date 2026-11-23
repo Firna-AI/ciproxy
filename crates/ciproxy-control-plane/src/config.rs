@@ -14,6 +14,7 @@ use secrecy::SecretString;
 
 use crate::comparison_prices;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::macos_release::MacosImageSettings;
 
 /// Explicit process configuration. Debug never reveals secret files.
 pub struct Config {
@@ -51,6 +52,8 @@ pub struct Config {
     pub image_manifest_path: String,
     /// Exact released filesystem bytes from the same operator manifest.
     pub image_disk_bytes: u64,
+    /// Optional settings of the macOS release in the private R2 store.
+    pub macos_images: MacosImageSettings,
 }
 
 impl Config {
@@ -79,6 +82,7 @@ impl Config {
             images: Vec::new(),
             image_disk_bytes: 0,
             image_manifest_path: required("JOB_IMAGE_MANIFEST_PATH")?,
+            macos_images: MacosImageSettings::from_env(),
             comparison_prices: comparison_prices::configured()?,
         })
     }
