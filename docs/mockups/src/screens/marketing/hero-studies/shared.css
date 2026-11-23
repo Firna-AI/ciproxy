@@ -1,6 +1,9 @@
+.mk:has(.study) {
+  container-type: inline-size;
+}
 .study {
-  width: 100vw;
-  margin-inline: calc(50% - 50vw);
+  width: 100cqw;
+  margin-inline: calc(50% - 50cqw);
   overflow: clip;
 }
 .study-inner {

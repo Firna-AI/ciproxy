@@ -10,8 +10,8 @@ import "./monthly-estimate.css";
 function EstimateSlip() {
   const claim = costClaim;
   return (
-    <figure className="estimate-art">
-      <div className="estimate-slip">
+    <div className="estimate-art">
+      <figure className="estimate-slip">
         <figcaption>
           <span className="slip-brand">ciproxy</span>
           <span className="study-kicker">Monthly estimate</span>
@@ -50,8 +50,8 @@ function EstimateSlip() {
             See the calculation
           </TextLink>
         </p>
-      </div>
-    </figure>
+      </figure>
+    </div>
   );
 }
 
