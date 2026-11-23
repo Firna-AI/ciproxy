@@ -103,10 +103,6 @@
   margin-right: 6px;
 }
 
-.site-github {
-  margin-right: 6px;
-}
-
 /* The search box of the docs: a button that looks like a field. */
 
 .site-search {
@@ -159,8 +155,7 @@
 /* A narrow desktop window: the nav and the docs links give way first. */
 
 @media (max-width: 1000px) {
-  .site-header-docs .site-actions > .site-nav-link,
-  .site-header-docs .site-github {
+  .site-header-docs .site-actions > .site-nav-link {
     display: none;
   }
 

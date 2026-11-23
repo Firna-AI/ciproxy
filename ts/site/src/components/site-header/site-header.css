@@ -82,12 +82,6 @@ header.site-header {
   margin-left: auto;
 }
 
-/* GitHub keeps a wider gap before Sign in, as Pricing does on the docs. */
-
-.site-github {
-  margin-right: 6px;
-}
-
 /* The menu of a phone: a plain icon button, and the links in a panel under
    the bar. The panel is a popover, so it opens and closes without a script,
    and a tap outside it or Escape closes it. */
@@ -161,7 +155,7 @@ header.site-header {
   margin-left: 0;
 }
 
-.site-docs-pricing {
+.site-docs-link {
   margin-right: 6px;
 }
 
@@ -173,8 +167,7 @@ header.site-header {
    first. Under 50rem, Starlight's menu button holds the docs sidebar. */
 
 @media (width <= 1000px) {
-  .site-docs-pricing,
-  .is-docs .site-github,
+  .site-docs-link,
   .is-docs .site-sign-in {
     display: none;
   }
@@ -222,7 +215,6 @@ header.site-header {
   }
 
   .site-nav,
-  .site-github,
   .site-sign-in,
   .is-docs .site-start {
     display: none;

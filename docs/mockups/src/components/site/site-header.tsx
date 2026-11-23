@@ -1,7 +1,7 @@
 // The top bar of the public site, shared by the marketing pages and the docs.
-// Marketing: the wordmark, Pricing and Docs, then GitHub, the Sign in link,
-// and the Start free button. The docs: the wordmark with "Docs", the
-// search box, Pricing, and the same actions. Every button that opens sign-in
+// Marketing: the wordmark, Pricing, Docs, and GitHub, then the Sign in link
+// and the Start free button. The docs: the wordmark with "Docs", the search
+// box, Pricing, GitHub, and the same actions. Every button that opens sign-in
 // says Start free; the link serves people who already use ciproxy. On mobile,
 // a menu button holds the links that do not fit.
 
@@ -84,15 +84,18 @@ function DesktopParts({ section }: { section: SiteSection }) {
           <MockLink to={paths.docsHome} className={navClass(false)}>
             Docs
           </MockLink>
+          <span className={navClass(false)}>GitHub</span>
         </nav>
       )}
       <div className="site-actions">
         {docs ? (
-          <MockLink to={paths.pricing} className={navClass(false)}>
-            Pricing
-          </MockLink>
+          <>
+            <MockLink to={paths.pricing} className={navClass(false)}>
+              Pricing
+            </MockLink>
+            <span className={navClass(false)}>GitHub</span>
+          </>
         ) : null}
-        <span className={`${navClass(false)} site-github`}>GitHub</span>
         <MockLink to={paths.signIn} className={navClass(false)}>
           Sign in
         </MockLink>

@@ -1,9 +1,9 @@
 ---
 // The top bar of the public site, after the site header of the mockups.
-// Marketing pages: the wordmark, Pricing and Docs, then GitHub, the Sign
-// in link, and the Start free button. On a phone, the menu button opens
-// the links that do not fit. Docs: the wordmark with "Docs", the search box
-// that the Starlight header passes in, Pricing, and the same actions. Every
+// Marketing pages: the wordmark, Pricing, Docs, and GitHub, then the Sign in
+// link and the Start free button. On a phone, the menu button opens the links
+// that do not fit. Docs: the wordmark with "Docs", the search box that the
+// Starlight header passes in, Pricing, GitHub, and the same actions. Every
 // button that opens sign-in says Start free; the link serves people who
 // already use ciproxy.
 
@@ -22,11 +22,19 @@ interface Props {
   section: SiteSection;
 }
 
+/** A main link, with the section that it marks as the current page. */
+interface MainLink {
+  label: string;
+  href: string;
+  section?: SiteSection;
+}
+
 /** The main links of the marketing pages. */
-const mainLinks = [
+const mainLinks: readonly MainLink[] = [
   { label: "Pricing", href: sitePages.pricing, section: "pricing" },
   { label: "Docs", href: sitePages.docs, section: "docs" },
-] as const;
+  { label: "GitHub", href: githubUrl },
+];
 
 const { section } = Astro.props;
 const docs = section === "docs";
@@ -74,13 +82,15 @@ const Bar = docs ? "div" : "header";
     )}
     <div class="site-actions">
       {docs && (
-        <a href={sitePages.pricing} class="site-nav-link site-docs-pricing">
-          Pricing
-        </a>
+        <>
+          <a href={sitePages.pricing} class="site-nav-link site-docs-link">
+            Pricing
+          </a>
+          <a href={githubUrl} class="site-nav-link site-docs-link">
+            GitHub
+          </a>
+        </>
       )}
-      <a href={githubUrl} class="site-nav-link site-github">
-        GitHub
-      </a>
       <a href={signInUrl} class="site-nav-link site-sign-in">
         Sign in
       </a>
@@ -110,9 +120,6 @@ const Bar = docs ? "div" : "header";
           {link.label}
         </a>
       ))}
-      <a href={githubUrl} class="site-menu-link">
-        GitHub
-      </a>
       <a href={signInUrl} class="site-menu-link">
         Sign in
       </a>
