@@ -208,8 +208,19 @@ Design calls, mine, 22 November 2026:
     `crates/ciproxy-protocol` replaces the six Rust tests. The API tells the
     dashboard which platforms Boat serves, so the dashboard drops its own
     macOS tests. arm64 jobs then wait, as in A. Effort: Medium.
-- **Left out:** GitHub's hosted arm64 runners as overflow, because GitHub
-  gives the job only to the runners of its label.
+  - **D.** C, and Namespace as a second backend for arm64 jobs. Its Linux
+    instances on Apple Silicon M4 and later give `/dev/kvm` on arm64. They
+    start by API and bill per minute. They are in early access, need the
+    Team plan, and cost 7 times its other arm64 instances. Firecracker does
+    not test this host type. It needs a new account flow, as Boat has.
+    Effort: Large.
+- **Left out:**
+  - GitHub's hosted arm64 runners as overflow, because GitHub gives the job
+    only to the runners of its label.
+  - The other 40 sandbox providers of the survey of 23 November 2026,
+    because none documents `/dev/kvm` on arm64. Blacksmith and AWS
+    AgentCore document that they have none. The notes are in
+    `.context/linux-arm64-own-machines/arm64-kvm-providers.md`.
 - **Wider fix:** C, because the next platform or a Boat arm64 offer then
   needs no new search through the code.
 - **Previous examples:** The rule that macOS jobs never overflow, in
@@ -268,17 +279,32 @@ Design calls, mine, 22 November 2026:
     It needs no KVM host for the build, but the VM checks still need
     another option. It needs an Azure subscription and a new conversion
     step, and each build costs money. Effort: Large.
-- **Left out:** GitHub's hosted arm64 runners and common cloud arm64 VMs,
-  because they have no KVM.
+  - **F.** A Namespace Linux instance on Apple Silicon, started by API from
+    CI or by hand. It gives `/dev/kvm` on arm64 with no hardware of yours.
+    It bills per minute at 7 times its other arm64 instances, in early
+    access on the Team plan. An instance lives 3 to 24 hours by plan.
+    Firecracker does not test this host type, so a short check comes
+    first. Effort: Medium.
+- **Left out:**
+  - GitHub's hosted arm64 runners and common cloud arm64 VMs, because they
+    have no KVM. EC2 nested virtualization covers Intel types only.
+  - The other 40 sandbox providers of the survey of 23 November 2026,
+    because none documents `/dev/kvm` on arm64.
+  - Firecracker Nitro Sandboxes on ordinary Graviton EC2 instances, from
+    Firecracker v1.18.0. They need no KVM, but they do not check the KVM
+    path of the agent and the Pi. They need a second VM backend in the
+    agent.
 - **Wider fix:** None, because this is hardware, not a defect.
 - **Previous examples:** The macOS work used the user's Mac mini over
   Tailscale, in `plans/macos-own-machines.md` on the branch
   `calummoore/support-mac-os-kq1u`.
 - **Recommendation:** D. It runs every check and the image build on real
   hardware virtualization now, at no new cost. If its short check fails,
-  use B. The first recommendation was B.
-- **Action:** ask the user, because options C, D, and E need your hardware,
-  accounts, or money.
+  use B. The first recommendation was B. F uses the same Apple nested
+  virtualization as D, so it suits builds when the Mac is off, not a
+  failed check.
+- **Action:** ask the user, because options C, D, E, and F need your
+  hardware, accounts, or money.
 
 ## Milestone 1: Mockups
 
