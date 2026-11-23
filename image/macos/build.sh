@@ -13,9 +13,11 @@ source "$definition/pins.env"
 DISK_BYTES=${disk_override:-$DISK_BYTES}
 # IMAGE_VARIANT selects full (the default) or standard; see image_variant.py.
 IMAGE_VARIANT=${IMAGE_VARIANT:-full}
+# The variant's disk: the fit phase shrinks the shared base disk to it.
+variant_disk_bytes=$DISK_BYTES
 case $IMAGE_VARIANT in
     full) ;;
-    standard) IMAGE_ID=$STANDARD_IMAGE_ID ;;
+    standard) IMAGE_ID=$STANDARD_IMAGE_ID variant_disk_bytes=$STANDARD_DISK_BYTES ;;
     *) echo "IMAGE_VARIANT must be full or standard" >&2; exit 2 ;;
 esac
 work_dir=$(mkdir -p "${1:?Usage: image/macos/build.sh WORK_DIR [PHASE...]}" && cd "$1" && pwd)
@@ -27,7 +29,7 @@ export -n R2_PUBLISH_ACCESS_KEY_ID R2_PUBLISH_SECRET_ACCESS_KEY \
     R2_XCODE_ACCESS_KEY_ID R2_XCODE_SECRET_ACCESS_KEY
 phases=("$@")
 [[ ${#phases[@]} -gt 0 ]] || phases=(fetch tools install setup recovery configure provision
-    facts package)
+    fit facts package)
 trap 'vm_stop' EXIT
 phase=start
 trap 'echo "build.sh: phase $phase failed at line $LINENO (exit $?)" >&2' ERR
@@ -150,7 +152,11 @@ phase_provision() {
         2>&1 | tee "$run_dir/packer.log" || status=$?
     stop_helpers "$server" "$tunnel" "$guard"
     unset PKR_VAR_vm_password PKR_VAR_github_api_pat
-    return "$status"
+    [[ $status == 0 ]] || return "$status"
+    # A clean shutdown flushes the guest's last writes, such as the ciproxy
+    # step, so a copy of the VM folder after this phase is complete.
+    guest_ssh 'sync; sudo shutdown -h now' || true
+    vm_wait_stopped 300
 }
 
 phase_provision_check() {
@@ -189,14 +195,31 @@ PY
 # Shrink the configured guest to a disk of DISK_BYTES. Opt-in, for a small
 # test image. It removes the guest's Recovery container.
 phase_shrink() {
+    shrink_to "$DISK_BYTES"
+}
+
+# Shrink the provisioned guest to the variant's disk when that is smaller,
+# for example the 100 GB disk of the standard variant.
+phase_fit() {
+    local current
+    current=$(stat -f %z "$bundle/disk.img")
+    if (( variant_disk_bytes >= current )); then
+        echo "the disk has $current bytes, and the $IMAGE_VARIANT variant needs no smaller one"
+        return 0
+    fi
+    shrink_to "$variant_disk_bytes"
+}
+
+shrink_to() {
+    local size=$1
     vm_running || vm_start
     wait_ssh 600
     guest_scp /tmp/ "$definition/shrink-disk.sh"
-    guest_ssh "sudo bash /tmp/shrink-disk.sh $DISK_BYTES" | tee "$run_dir/shrink.json"
+    guest_ssh "sudo bash /tmp/shrink-disk.sh $size" | tee "$run_dir/shrink.json"
     guest_ssh 'sudo rm -f /tmp/shrink-disk.sh; sudo shutdown -h now' || true
     vm_wait_stopped 300
     python3 -c 'import os, sys; os.truncate(sys.argv[1], int(sys.argv[2]))' \
-        "$bundle/disk.img" "$DISK_BYTES"
+        "$bundle/disk.img" "$size"
     # The firmware does not start a guest whose GPT names sectors after the
     # cut, so the host fixes the GPT first. The first start proves that the
     # cut disk boots.

@@ -44,12 +44,18 @@ changes, and each change fails when the upstream text that it changes is not
 there.
 
 - `full`, the default: the software of the GitHub image, with Xcode 26.6
-  and all its simulator runtimes. Image ID `IMAGE_ID`.
+  and all its simulator runtimes. Image ID `IMAGE_ID`, and a disk of
+  `DISK_BYTES`, 200 GB.
 - `standard`: the same, but with the iOS simulator runtime only, and without
   the Android SDK, its tests, and its report section. Image ID
-  `STANDARD_IMAGE_ID`. It fits a Mac with 256 GB of storage.
+  `STANDARD_IMAGE_ID`, and a disk of `STANDARD_DISK_BYTES`, 100 GB. It fits
+  a Mac with 256 GB of storage.
 
-The manifest names the variant in `variant`. The `provision` phase extracts
+Both variants share the base disk of `DISK_BYTES` up to `provision`. The
+`fit` phase then shrinks the disk to the variant's size, as the `shrink`
+phase does, when that size is smaller. The manifest names the variant in
+`variant`, and its `inputs.DISK_BYTES` is the size of the disk that the image
+has. The `provision` phase extracts
 a fresh upstream tree each time, because the variant changes files in it.
 
 ## The build
@@ -74,7 +80,8 @@ Run from the repository root:
 ```
 
 Each step below is a phase of `build.sh`: `fetch`, `tools`, `install`,
-`setup`, `recovery`, `configure`, `provision`, `facts`, and `package`.
+`setup`, `recovery`, `configure`, `provision`, `fit`, `facts`, and
+`package`.
 Name phases after the work folder to run only those phases. Set
 `GITHUB_API_PAT` to a GitHub token without rights for a higher API rate
 limit in the upstream scripts. The token stays out of the image.
@@ -139,12 +146,15 @@ limit in the upstream scripts. The token stays out of the image.
    a token without rights for a higher GitHub API rate limit, or put it in
    `secrets/github-api-pat` of the work folder. It reaches Packer through
    the environment, not the command line. The upstream tests and software
-   report run as upstream.
-8. The `facts` phase runs `guest-facts.sh`, which reads the macOS version,
-   the used and free bytes of the data volume, SIP, and Xcode. Then it runs
-   `clean-image.sh`, which removes the build state and the build's SSH key,
-   and the guest turns off. Copy the VM folder first to run this phase
-   again. The `package` phase then packages the guest.
+   report run as upstream. The phase ends with `sync` and a clean guest
+   shutdown, because a copy of a running VM lacks the guest's last writes.
+   A copy of the VM folder after this phase is complete.
+8. The `fit` phase shrinks the disk to the variant's size when it is
+   smaller. Then the `facts` phase runs `guest-facts.sh`, which reads the
+   macOS version, the used and free bytes of the data volume, SIP, and
+   Xcode. Then it runs `clean-image.sh`, which removes the build state and
+   the build's SSH key, and the guest turns off. Copy the VM folder first to
+   run this phase again. The `package` phase then packages the guest.
 
 The shipped image has no SSH key and accepts no SSH password. The auto-login
 file holds the password in a reversible form.
