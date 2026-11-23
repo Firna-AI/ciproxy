@@ -147,7 +147,7 @@ design tokens that the dashboard uses.
   [removal or suspension](protocol/app-removal.md) of the App.
 - **GitHub and the runners:** each runner opens its own connection to
   GitHub. It gets one job with its code and secrets, and it sends the logs
-  and the artifacts to GitHub. These never pass through the control plane,
+  and the artifacts to GitHub. The control plane never stores or logs them,
   as [Secrets and job data](protocol/security-data.md#secrets-and-job-data)
   says.
 - **The control plane and the agents:** each agent opens an outbound
@@ -168,7 +168,11 @@ design tokens that the dashboard uses.
   into each job VM. Before the first step of the job, the runner hands the
   cache URLs, the runtime token, and the cache rights of the job to the
   agent. The agent trusts only that first handoff, as
-  [The cache handoff](protocol/cache.md#the-cache-handoff) says.
+  [The cache handoff](protocol/cache.md#the-cache-handoff) says. When the
+  runner exits, the [guest](protocol/agent-images.md#terms) of the job VM
+  sends the CPU and memory samples and the steps of the job to the agent.
+  The agent forwards them to the control plane, as
+  [Job usage](protocol/job-usage.md) says.
   [Job isolation](protocol/security-isolation.md#job-isolation) says what a
   job VM can reach.
 - **The agent and GitHub:** the machine cache opens its own connection to

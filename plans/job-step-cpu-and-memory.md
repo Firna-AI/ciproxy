@@ -25,8 +25,8 @@ The change does not cover size hints, figures on the job list, figures
 while a job runs, figures for each process, alerts, or an export to the
 customer's own monitoring. A job that ran before the change has no figures.
 
-Decision 6 waits for the user. Each TODO that needs its answer ends with
-"Waits for decision 6". The other TODOs do not wait.
+Decisions 6 and 7 wait for the user. Each TODO that needs an answer ends
+with "Waits for decision N". The other TODOs do not wait.
 
 Contract owners:
 
@@ -490,6 +490,43 @@ and the
 - **Action:** ask the user, because A changes the rejected list of a
   decision in force that the user made on 22 November 2026.
 
+## Decision 7. Partial Boat figures look complete
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation. The docs work of Milestone 2 found it on
+  23 November 2026.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/job-usage.md`, "How the figures reach the
+  control plane".
+- **Background:** On Boat, the guest sends sample reports every 30 seconds,
+  and the final figures in the exit report. When the exit report is lost or
+  refused, the job page shows the newest sample report. That report can
+  miss up to the last 30 seconds of the job.
+- **Problem:** The page then shows partial figures as if they covered the
+  whole job. For example, "None" out-of-memory kills can hide a kill in the
+  last seconds.
+- **Impact if no action:** A reader can trust figures that miss the end of
+  the job, often the step that failed.
+- **Root question:** How does the job page show figures that miss the end
+  of a Boat job?
+- **Options:**
+  - **A.** Show the figures with a note, such as "These figures end at
+    6:31, before the job ended." The API marks figures that come from a
+    sample report. Cost: a new mockup state, an API field, and a UI note.
+    Effort: Medium.
+  - **B.** Show no figures, as for a job without figures. Cost: the reader
+    loses the figures that did arrive. Effort: Small.
+  - **C.** Show the figures as they are. Cost: partial figures look
+    complete. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Related:** Decision 6. With its option A, this case becomes rare.
+- **Recommendation:** A. It keeps the figures that arrived, and it tells
+  the reader what they miss.
+- **Action:** ask the user, because A adds a state to the job page that no
+  requirement covers.
+
 ## Design
 
 Design calls, my calls, 22 November 2026:
@@ -661,8 +698,28 @@ Design calls, my calls, 23 November 2026, from the mockups of Milestone 1:
   chart that drifted from its mockup:
   `plans/follow-ups/savings-chart-firna-marks.md`.
 
+Design calls, my calls, 23 November 2026, from the docs of Milestone 2:
+
+- **Pre and post script names:** a replaced "Pre Run" or "Post Run" name
+  becomes "Pre Run script" or "Post Run script". Reason: the mockups show
+  them so, and the fixed prefix holds no job code.
+- **Sample report clock:** for the time check of a sample report, the life
+  of the runner ends at the arrival of the report. Reason: the runner of a
+  sample report still runs.
+- **Guest step limits:** the guest cuts a name to 256 characters and keeps
+  the first 1,000 steps. The control plane still drops the steps of a
+  report that passes a limit. Reason: the guest then sends a valid report
+  for nearly every job.
+- **Architecture words:** `docs/architecture.md` says that the control
+  plane never stores or logs the code, the secrets, the logs, and the
+  artifacts of a job. Reason: a step name from the VM can reach the
+  control plane before the name rule replaces it.
+
 Contract sketch, for the protocol crate:
 
+- Times in the agent protocol are whole milliseconds since the Unix epoch,
+  in UTC. Reason, my call of 23 November 2026: the open protocol crate has
+  no time dependency, and the dashboard API still gives RFC 3339 times.
 - `JobUsage`: the platform, the UTC start of the first point, the length
   of a point in seconds, and three arrays of the same length. The arrays
   hold the CPU in thousandths of a vCPU, the peak memory in MiB, and the
@@ -711,32 +768,48 @@ Depends on: 1
 
 The protocol docs state the requirements of the figures before the code.
 
-- [ ] Write `docs/protocol/job-usage.md`: the terms, the figures, the
+- [x] Write `docs/protocol/job-usage.md`: the terms, the figures, the
       window, the steps, what the job page shows, the platforms, the trust
       rule, retention, and decision 1 with its rejected options. Say that
       the steps come from the runner in the VM, and that job code can
       change them. State the meter top, the display units, and the macOS
       memory design calls.
-- [ ] Add the CPU and memory samples and the steps of each job to the job
+- [x] Add the CPU and memory samples and the steps of each job to the job
       metadata in "Secrets and job data" of `docs/protocol/security-data.md`,
       with the script names and rule words design calls. Link the new doc.
-- [ ] Say in "Key custody" of `docs/protocol/security.md` that the sandbox
+- [x] Say in "Key custody" of `docs/protocol/security.md` that the sandbox
       token also sends the samples of its own job.
-- [ ] Write the out-of-memory rule of decision 2 into the new doc: only
+- [x] Write the out-of-memory rule of decision 2 into the new doc: only
       the stopped process ends, and the job goes on.
-- [ ] Write the sample reports of decision 4 into "The exit report" of
+- [x] Write the sample reports of decision 4 into "The exit report" of
       `docs/protocol/overflow-sandbox-end.md`. Align the token sentence of
       `docs/protocol/overflow.md`.
 - [ ] Write the answer to decision 6 into "The end of a job" and into the
       Decision line of "The exit report" of
       `docs/protocol/overflow-sandbox-end.md`. Waits for decision 6.
-- [ ] Link the new doc from "What the dashboard shows" in
+- [x] Link the new doc from "What the dashboard shows" in
       `docs/protocol/job-routing.md`.
-- [ ] Add the samples to the boundary "The agent and its job VMs" in
+- [x] Add the samples to the boundary "The agent and its job VMs" in
       `docs/architecture.md`, and keep that doc under 250 lines. Add them
       to the job flows in `docs/architecture/data-flow.md`.
-- [ ] Add the new docs to the protocol doc list in `README.md`.
-- [ ] Run the Markdown check named in `AGENTS.md`.
+- [x] Add the new docs to the protocol doc list in `README.md`.
+- [x] Run the Markdown check named in `AGENTS.md`.
+
+## Milestone 2a: Privacy mockup and partial figures
+
+Tags: mockup
+
+Depends on: 2
+
+The docs of Milestone 2 found two mockup gaps.
+
+- [ ] Change the title "What ciproxy never receives" in
+      `docs/mockups/src/fixtures/legal.ts` to the rule words, and add the
+      samples and the steps to the data that the privacy mockup stores.
+- [ ] Add the state of figures that end before the job ended to the
+      `cpu-memory` sub-page, if decision 7 chooses A. Waits for decision 7.
+- [ ] Run the mockup check named in `AGENTS.md`. Smoke-test the changed
+      pages in the mobile and the desktop variants.
 
 ## Milestone 3: Usage in the runner exit messages
 
@@ -929,6 +1002,10 @@ The public docs explain the figures.
       samples of its own job.
 - [ ] Add a docs page about the CPU and memory panel: what each figure
       means, and how to use the figures to choose a label size.
+- [ ] Update the privacy policy draft in `ts/site/src/data/legal-privacy.ts`:
+      add the samples and the steps to the job metadata, and use the rule
+      words. The legal pages stay drafts until the user approves them, as
+      `plans/follow-ups/legal-pages-approval.md` says.
 - [ ] Build the site with `npm --prefix ts run site:build`.
 
 ## Milestone 13: Verification, commit, review, and pull request

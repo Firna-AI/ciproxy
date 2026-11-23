@@ -4,7 +4,8 @@ This doc states when ciproxy stops and deletes a Boat sandbox, what the
 control plane does with the exit report of its runner, and how long a
 waiting job waits for that runner.
 [Overflow](overflow.md) states the Boat account, the backend contract, the
-overflow runners, and the spend limit.
+overflow runners, and the spend limit. [Job usage](job-usage.md) states the
+samples and the steps that the reports of a sandbox carry.
 
 ## Terms
 
@@ -13,6 +14,8 @@ overflow runners, and the spend limit.
 - **exit report:** the report in which the ciproxy program in a sandbox
   tells the control plane that its runner exited, as
   [Overflow runners](overflow.md#overflow-runners) says.
+- **sample report:** a report of the samples and the steps of a running Boat
+  job, as [Sample reports](#sample-reports) says.
 - **cleanup:** the regular work in which ciproxy deletes the sandboxes that
   it no longer needs.
 - **launch:** the moment when Boat accepts the command that starts the
@@ -33,6 +36,8 @@ overflow runners, and the spend limit.
 
 - The control plane accepts one exit report for each sandbox, and only
   while it has not recorded the end of that sandbox.
+- The exit report carries the final [samples](job-usage.md#terms) and
+  [steps](job-usage.md#steps) of the job.
 - The control plane saves an accepted report before it deletes the
   sandbox.
 - A success answer means only that the control plane saved the report.
@@ -50,6 +55,28 @@ overflow runners, and the spend limit.
   lose a report. Rejected: no wait after the save, because fewer deletes
   then run in the request. Reason: a saved report takes effect whatever
   other work runs, and the sandbox sends it only once.
+
+### Sample reports
+
+- While the job runs, the ciproxy program in the sandbox sends a sample
+  report every 30 seconds.
+- It sends each sample report with the token of its sandbox, as it sends
+  the exit report.
+- **Decision:** each sample report holds all the samples and the steps of
+  the job so far. Rejected: only the new points, because the points merge as
+  the samples grow. Reason: a report then never depends on an earlier one.
+- So a long job sends up to about 100 KB every 30 seconds.
+- The control plane accepts a sample report only while it has not recorded
+  the end of that sandbox.
+- It accepts at most one sample report for each sandbox in 10 seconds.
+- It checks each sample report as [Checks](job-usage.md#checks) says.
+- Each accepted sample report replaces the samples and the steps that the
+  control plane kept for the job.
+- The exit report replaces them with the final samples and steps.
+- A sample report is not an exit report, so the control plane still accepts
+  only one exit report for each sandbox.
+- These limits apply because job code can read the token of the sandbox, as
+  [Key custody](security.md#key-custody) says.
 
 ## The lifetime
 
@@ -149,4 +176,6 @@ overflow runners, and the spend limit.
 - [Removing the App](app-removal.md#removing-the-app): the other effects of
   an App removal.
 - [Security](security.md#key-custody): the token of each sandbox.
+- [Job usage](job-usage.md): the samples and the steps that the reports
+  carry.
 - [Architecture](../architecture.md#components): the control plane.

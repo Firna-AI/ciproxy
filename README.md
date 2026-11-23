@@ -141,6 +141,9 @@ The protocol docs hold the requirements and the decisions in force:
   and custom labels, their sizes, and where the jobs of each label may run.
 - [Job routing](docs/protocol/job-routing.md): slots, the disk of a job,
   where a job runs, warm runners, and failures.
+- [Job usage](docs/protocol/job-usage.md): the CPU and memory samples of each
+  job, its steps, how they reach the control plane, and what the job page
+  shows.
 - [Overflow](docs/protocol/overflow.md): the Boat account, the backend
   contract, overflow runners, the spend limit, and refused sandboxes.
 - [Agent](docs/protocol/agent.md): install, the connection, machine

@@ -122,10 +122,13 @@ backend must give ciproxy.
   uses current own-machine fit, new-start catalog fit, and largest size.
 - A new image's larger disk floor does not invalidate that held runner.
 - The ciproxy program in each sandbox tells the control plane when its
-  runner exits, with a token that works only for that sandbox.
+  runner exits.
+- It also sends the [samples](job-usage.md#terms) and the
+  [steps](job-usage.md#steps) of its job.
+- It sends both with a token that works only for that sandbox.
 - [Sandbox end](overflow-sandbox-end.md) states when ciproxy stops and
-  deletes each sandbox, what the control plane does with that exit report,
-  and the ready deadline and the lifetime of each sandbox.
+  deletes each sandbox, and what the control plane does with these reports.
+  It also states the ready deadline and the lifetime of each sandbox.
 - A Boat runner that takes no job is not a [start](metering.md#starts).
 - A job on Boat uses only the [GitHub cache](cache.md#cache-tiers).
 

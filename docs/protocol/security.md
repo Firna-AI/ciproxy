@@ -188,8 +188,11 @@ states the job data and how long ciproxy keeps each kind of data.
 - ciproxy never sends the Boat key to an own machine, a
   [job VM](agent.md#job-vms), or a sandbox.
 - A sandbox holds only a token that reports the end of its own runner, as
-  [Overflow runners](overflow.md#overflow-runners) says. Job code can read
-  this token, but it can only end its own job.
+  [Overflow runners](overflow.md#overflow-runners) says.
+- The token also sends the [samples](job-usage.md#terms) and the
+  [steps](job-usage.md#steps) of the job of that sandbox.
+- Job code can read this token, but it can only end its own job and send
+  [figures](job-usage.md#terms) for it.
 - [Install](agent.md#install) says which workspace an install token belongs
   to and how long it works.
 - The [machine credential](agent.md#machine-identity) stays on its machine,

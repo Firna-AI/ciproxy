@@ -148,6 +148,8 @@ and a mini PC whose disk limits concurrent jobs.
 - The waited time runs from the moment GitHub queued the job to the moment
   a runner took it.
 - The job page also shows the label of the job and the VM size that ran it.
+- It shows the CPU and the memory of the job and of each of its steps, as
+  [Job usage](job-usage.md) says.
 
 ## Warm runners
 

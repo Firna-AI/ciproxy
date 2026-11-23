@@ -25,7 +25,13 @@ each main flow of data across the
    the Docker disk of the job.
 5. Metering counts one start. When a slot and its disk are free, the
    scaler sends the agent a registration for a new warm runner.
-6. When the job ends, the agent ends the job VM and reports it.
+6. While the job runs, the [guest](../protocol/agent-images.md#terms) in the
+   job VM samples its CPU and memory once per second. It also reads the
+   steps of the job from the log of the runner, as
+   [Job usage](../protocol/job-usage.md) says.
+7. When the runner exits, the guest sends the samples and the steps to the
+   agent. The agent forwards them to the control plane, which stores them
+   with the job. Then the agent ends the job VM and reports it.
 
 ## A job on Boat
 
@@ -39,7 +45,14 @@ each main flow of data across the
    counts one start.
    [Idle runners](../protocol/overflow-sandbox-end.md#idle-runners) says
    what a Boat runner without a job does.
-4. When the job ends, the backend client deletes the sandbox. It adds the
+4. While the job runs, the guest in the sandbox samples the sandbox and
+   reads the steps of the job, as on an own machine. It also sends the
+   samples and the steps so far to the control plane in
+   [sample reports](../protocol/overflow-sandbox-end.md#sample-reports).
+5. When the runner exits, the guest sends the final samples and steps with
+   its [exit report](../protocol/overflow-sandbox-end.md#the-exit-report).
+   The control plane keeps the newest samples and steps with the job.
+6. When the job ends, the backend client deletes the sandbox. It adds the
    cost of the sandbox to the Boat spend of the month.
 
 ## A cache restore and save

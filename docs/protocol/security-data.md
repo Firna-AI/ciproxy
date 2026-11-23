@@ -7,12 +7,20 @@ sign-in, access, GitHub permissions, and keys.
 ## Secrets and job data
 
 - Code and secrets go from GitHub straight to the runner.
-- The control plane never receives, stores, or logs the code, the secrets,
-  the logs, or the cache contents of a job.
+- The control plane never stores or logs the code, the secrets, the logs,
+  or the cache contents of a job.
+- **Decision:** the rule names what the control plane stores and logs.
+  Rejected: a rule that it never receives them, because a step name from the
+  VM or from GitHub can hold job code.
 - The control plane stores the job metadata that the dashboard shows.
 - The job metadata is the name, workflow, repository, ref, result, place,
   times, label, [VM size](labels.md#terms) that ran, cache source, and
   [cache counts](cache.md#terms) of a job.
+- The job metadata also holds the CPU and memory
+  [samples](job-usage.md#terms) and the [steps](job-usage.md#steps) of the
+  job.
+- The control plane stores no step name that can hold job code, as
+  [Step names](job-usage.md#step-names) says.
 - The control plane also stores what the agent reports about each machine,
   as [Health](agent.md#health) says.
 - Job logs stay on GitHub, and the job page links to them.
@@ -21,6 +29,8 @@ sign-in, access, GitHub permissions, and keys.
 
 - ciproxy keeps the job metadata of each finished job for 90 days, on every
   [tier](billing.md#tiers).
+- ciproxy keeps the samples and the steps of a job as long as the rest of
+  its job metadata, and deletes them with it.
 - Each page shows only the jobs of the job history of the tier.
 - ciproxy keeps the daily totals of the
   [savings report](metering.md#savings-report) for 90 days.
@@ -78,6 +88,8 @@ sign-in, access, GitHub permissions, and keys.
 - [Isolation](security-isolation.md): tenant isolation and job isolation.
 - [Removing or suspending the App](app-removal.md): what ciproxy revokes,
   keeps, and deletes when an organization removes the App.
+- [Job usage](job-usage.md): the samples and the steps of each job, and the
+  rule for step names.
 - [Billing](billing.md#tiers): the job history of each tier.
 - [Metering](metering.md#savings-report): the daily totals of the savings
   report.
