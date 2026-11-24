@@ -2,9 +2,10 @@
 
 use std::time::Duration;
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{LabelName, OrganizationId};
 use ciproxy_protocol::platform::Platform;
-use ciproxy_protocol::resources::{Slots, VmSize};
+use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
 use crate::actions::{Action, StartReason, StartRunner, StopReason};
 use crate::decision::decide;
@@ -73,10 +74,14 @@ fn skips_largest_sizes_that_cannot_start_or_hold_the_providers_image() {
         let first = &mut state.providers[1];
         match case {
             "disconnected" => first.facts.connected = false,
-            "unavailable" => first.available = false,
+            "unavailable" => first.start_geometry = None,
             "spend limit" => first.facts.spend.spent = 100,
             "billing" => first.facts.refusals.push(Refusal::BillingRequired),
-            "image floor" => first.root_sizing.image_root_bytes = 100_000_000_000,
+            "image floor" => {
+                first.start_geometry = Some(RootSizing {
+                    image_root_bytes: 100_000_000_000,
+                })
+            }
             _ => unreachable!(),
         }
         assert_eq!(decide(&state), vec![fallback(BOAT)], "{case}");
@@ -105,7 +110,7 @@ fn a_later_provider_that_fits_blocks_largest_size_even_during_its_retry_hold() {
         not_before: Duration::from_secs(101),
     });
     assert_eq!(decide(&state), vec![]);
-    state.providers[0].available = false;
+    state.providers[0].start_geometry = None;
     assert_eq!(decide(&state), vec![fallback(SECOND)]);
     state.overflow_enabled = false;
     assert_eq!(decide(&state), vec![]);
@@ -151,4 +156,28 @@ fn an_idle_largest_size_retires_when_another_provider_fits() {
             overflow(BOAT, "full", requested(), StartReason::NoEligibleMachine),
         ],
     );
+}
+
+#[test]
+fn an_idle_largest_size_covers_demand_without_a_start_image() {
+    let mut state = fallback_snapshot();
+    state.labels[1].order = vec![Place::Provider(BOAT)];
+    state.labels[1].size = VmSize {
+        disk_bytes: 35 * GIGABYTE,
+        ..large()
+    };
+    let actual = VmSize {
+        disk_bytes: 100 * GIGABYTE,
+        ..large()
+    };
+    state.providers[0].start_geometry = None;
+    state.providers[0].facts.sizes[1].size = actual;
+    let mut idle = runner("fallback", "a", "large", RunnerState::Ready);
+    idle.requested_size = state.labels[1].size;
+    idle.size = actual;
+    let mut retained = sandbox("idle", Some(idle));
+    retained.runner.as_mut().unwrap().required_root_disk_bytes = 107 * GIGABYTE;
+    state.sandboxes = vec![retained];
+
+    assert_eq!(decide(&state), []);
 }

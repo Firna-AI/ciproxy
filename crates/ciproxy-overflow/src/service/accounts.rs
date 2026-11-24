@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::overflow::account::AccountState;
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
+use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use ciproxy_store_interface::overflow_provider_accounts::OverflowProviderAccount;
 use ciproxy_store_interface::secrets::EncryptedOverflowKey;
@@ -137,6 +138,23 @@ impl Overflow for OverflowService {
             .find(|record| record.delivery_id == delivery_id)
             .ok_or(Error::DeliveryConflict)?;
         self.execute(&session, workspace_id, record).await
+    }
+
+    async fn withdraw_unsent(&self, workspace_id: Uuid, delivery_id: Uuid) -> Result<bool> {
+        let session =
+            Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
+        let snapshot = session.call(|session| session.snapshot()).await?;
+        if let Some(mut record) = snapshot
+            .starts
+            .into_iter()
+            .find(|record| record.delivery_id == delivery_id && record.ends_at.is_none())
+        {
+            if record.phase != StartPhase::Unsent {
+                return Ok(false);
+            }
+            self.cancel_unsent(&session, &mut record).await?;
+        }
+        Ok(true)
     }
 
     async fn report_end(&self, token: Secret, runner_id: Uuid) -> Result<()> {

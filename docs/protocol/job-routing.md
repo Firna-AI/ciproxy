@@ -150,6 +150,7 @@ and a mini PC whose disk limits concurrent jobs.
   - Overflow is off.
   - The provider is not connected, or it is not
     [available](overflow.md#terms).
+  - The provider check failed.
   - The provider rejected the key, as
     [A rejected key](overflow.md#a-rejected-key) says.
   - The [spend limit](overflow-spend.md) of the provider holds new starts,

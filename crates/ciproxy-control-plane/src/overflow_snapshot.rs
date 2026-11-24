@@ -8,7 +8,8 @@ use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::identifiers::{JobId, LabelName, OrganizationId, RunnerId};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 use ciproxy_scaler::provider::{
-    ProviderAccount, ProviderDispatch, ProviderRunner, Sandbox, SandboxId, StartBound,
+    ProviderAccount, ProviderCheck, ProviderDispatch, ProviderRunner, Sandbox, SandboxId,
+    StartBound,
 };
 use ciproxy_scaler::snapshot::{Runner, RunnerState};
 use ciproxy_store_interface::github::DemandPhase;
@@ -20,17 +21,31 @@ use ciproxy_store_interface::runners;
 
 use crate::snapshot::{instant, provider_id, registration_target};
 
+#[derive(Clone, Copy)]
+pub(crate) enum ProviderChecks<'a> {
+    InProgress,
+    Completed(&'a [OverflowProvider]),
+}
+
 pub(crate) fn accounts<'a>(
     view: &'a OverflowView,
     registry: &'a ProviderRegistry,
-    refreshed: &'a [OverflowProvider],
+    checks: ProviderChecks<'a>,
 ) -> impl Iterator<Item = (OverflowProvider, Result<ProviderAccount>)> + 'a {
-    view.providers.iter().map(|view| {
+    view.providers.iter().map(move |view| {
         let provider = view.provider;
-        let image = registry.start_image(provider).ok();
-        let available = image.is_some();
-        let refreshed = available && refreshed.contains(&provider);
-        let facts = if refreshed {
+        let start_geometry = registry
+            .start_image(provider)
+            .ok()
+            .map(|image| image.root_sizing);
+        let check = match checks {
+            ProviderChecks::InProgress => ProviderCheck::InProgress,
+            ProviderChecks::Completed(current) if current.contains(&provider) => {
+                ProviderCheck::Current
+            }
+            ProviderChecks::Completed(_) => ProviderCheck::Failed,
+        };
+        let facts = if check == ProviderCheck::Current {
             view.scaler_account(DateTime::UNIX_EPOCH)
         } else {
             view.retained_scaler_account(DateTime::UNIX_EPOCH)
@@ -39,9 +54,8 @@ pub(crate) fn accounts<'a>(
             provider,
             facts.map(|facts| ProviderAccount {
                 id: provider_id(provider),
-                available,
-                refreshed,
-                root_sizing: image.map(|image| image.root_sizing).unwrap_or_default(),
+                check,
+                start_geometry,
                 facts,
             }),
         )

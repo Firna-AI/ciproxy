@@ -14,6 +14,18 @@ use crate::registration::RegistrationTarget;
 pub enum Action {
     /// Register and start one new ephemeral runner, boxed to keep actions small.
     StartRunner(Box<StartRunner>),
+    /// Resume a selected unsent delivery with its saved identity.
+    ResumeProviderStart {
+        /// Runner whose unsent delivery was selected.
+        runner_id: RunnerId,
+    },
+    /// Start a replacement only after the old delivery can no longer dispatch.
+    ReplaceUnsentStart {
+        /// Runner whose unsent delivery must be withdrawn.
+        runner_id: RunnerId,
+        /// Replacement selected by the label order.
+        start: Box<StartRunner>,
+    },
     /// Retire an idle own-machine runner after confirming it is still idle.
     StopRunner {
         /// Runner whose registration must be removed before releasing its VM.
@@ -88,7 +100,7 @@ pub enum StartReason {
 }
 
 /// Why an idle runner or sandbox must retire.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StopReason {
     /// The organization is no longer active in this workspace.
     OrganizationRemoved,
@@ -103,7 +115,10 @@ pub enum StopReason {
     /// The own machine is draining.
     MachineDraining,
     /// A waiting job needs the slots or disk held by a warm runner.
-    WarmPreemption,
+    WarmPreemption {
+        /// Label of the waiting job that needs this capacity.
+        label_id: String,
+    },
     /// The runner exceeds or differs from the machine's warm allocation.
     WarmAllocationChanged,
     /// No waiting demand needs this runner.

@@ -11,7 +11,7 @@ use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Action, Destination};
 use ciproxy_scaler::decision::decide;
-use ciproxy_scaler::provider::{ProviderAccount, ProviderId, ProviderSizeId};
+use ciproxy_scaler::provider::{ProviderAccount, ProviderCheck, ProviderId, ProviderSizeId};
 use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_scaler::snapshot::{Label, NothingFits, Place, Snapshot, WaitingJob};
 use ciproxy_store_interface::overflow::provider::OverflowProvider;
@@ -157,9 +157,8 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
         overflow_enabled: view.enabled,
         providers: vec![ProviderAccount {
             id: provider,
-            available: true,
-            refreshed: true,
-            root_sizing,
+            check: ProviderCheck::Current,
+            start_geometry: Some(root_sizing),
             facts: boat.scaler_account(at()).unwrap(),
         }],
         sandboxes: Vec::new(),

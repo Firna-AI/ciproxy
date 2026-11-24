@@ -20,8 +20,8 @@ values. Each start names an organization, label, requested size, actual VM
 size, destination, and typed reason. GitHub chooses the job that a runner
 takes. A start has no job or repository assignment.
 
-The scaler counts Ready runners before Starting runners across all places.
-It counts persisted starts before it adds capacity.
+The scaler counts Ready runners before accepted Starting runners across
+all places. It considers unsent deliveries in the label order.
 It matches supply to demand by the exact registration target. That target
 contains the organization, label, binding row, and remote scale-set ID.
 An equal label name does not establish compatibility.
@@ -29,9 +29,12 @@ For remaining demand the scaler walks each label's order. It tries the
 configured places in order, with own machines and providers as entries.
 At own machines it tries free capacity. A waiting job moves past that place
 when no machine fits or when the overflow wait expires. At a provider, it
-tries the cheapest fitting size of that account. Disconnected, unavailable,
-or held accounts pass demand to the next place at once. The workspace switch
-can skip all providers. A macOS label can use own machines only.
+selects an eligible unsent delivery or tries the cheapest fitting size of
+that account. A current provider check permits a resume or a start. A
+failed check passes demand to the next place. A disconnected or unavailable
+provider is skipped. A completed check applies the account's start holds.
+The workspace switch can skip all providers. A macOS label can use own
+machines only.
 
 When no listed place fits and the label allows the largest-size fallback,
 the scaler uses the first provider that can start its largest size. The
@@ -47,9 +50,11 @@ fallback choice.
 An idle undersized fallback retires when its exception no longer
 applies. `SizeNoLongerAllowed` identifies that retirement. Account spend
 and start refusals do not retire an existing runner whose size still fits.
-A retained largest-size runner keeps its held image. Its exception checks
-current own-machine fit, current new-start catalog fit, and the largest
-allowed size. The new image's floor does not apply to that held VM.
+A retained largest-size runner keeps its saved image geometry. It remains
+eligible while its size is the largest allowed size on that account and no
+place of the order fits. A provider counts as a fit only when it has a
+connected account, a configured start image, and a size that fits with
+that image.
 
 Label disk means free bytes for the job. Each start reserves the image,
 those free bytes, and the ext4 growth allowance as its actual total root.
@@ -57,9 +62,13 @@ Every own-machine start reserves slots and that root during the decision call.
 The agent rechecks sizing and capacity under its actual newest image hold.
 This covers publication between a machine report and a runner start.
 Correctly sized idle roots keep their original image allocation after an update.
-Waiting jobs can request warm runner retirement. Each waiting job gets a
-separate projected reservation. That reservation cannot release actual
-capacity or postpone the overflow threshold.
+Waiting jobs can request warm runner retirement and a projected reservation.
+That reservation cannot release actual capacity or postpone the overflow
+threshold. A job that reaches a provider before own machines waits while
+its check is in progress. The scaler keeps an eligible unsent delivery but
+defers its resume. The waiting job blocks warm starts on machines that can
+run it. It can start or request warm retirement on an own machine once the
+provider check completes and the order selects own machines.
 
 Own machines keep warm runners only when they are first in the label order.
 One warm count caps each machine's shared allocation across organizations.
@@ -82,8 +91,8 @@ decision can start a replacement by the usual placement.
 
 - Supply a complete, consistent view of one workspace.
 - Supply `Snapshot.root_sizing` as the fallback before an own machine
-  reports its selected image. Supply `ProviderAccount.root_sizing` for
-  each provider's current image.
+  reports its selected image. Supply `ProviderAccount.start_geometry`
+  only when the provider has a configured start image.
 - Supply `Machine.selected_image` from `report.images.selected().cloned()`.
   Its exact release metadata takes precedence over that fallback.
 - List each machine, runner, and sandbox once. Identify each sandbox by
@@ -126,7 +135,7 @@ decision can start a replacement by the usual placement.
   warm runner on that machine. Existing supply and warm targets still apply.
   Keep these reservations in the gross disk budget. The scaler subtracts
   measured reservations once for fit and available capacity.
-- Supply each provider's availability, account connection, catalog dimensions
+- Supply each provider's check state, account connection, catalog dimensions
   and prices, and largest available size. Exclude refused sizes from the
   largest choice. The scaler compares prices within one catalog.
 - Supply each provider's current UTC calendar month spend for its ciproxy
@@ -145,6 +154,10 @@ For own machines, send `StartRunner.requested_size` as `RunnerSpec.size`.
 The returned actual report replaces the predicted complete allocation. Persist
 each accepted start as `Starting` before another tick. Concurrent callers
 must serialize decisions and reservation updates for the workspace.
+For `ResumeProviderStart`, reuse the saved delivery. For
+`ReplaceUnsentStart`, withdraw that delivery under the workspace session
+lock before starting the replacement. If dispatch has begun, keep the
+delivery and skip the replacement.
 
 Treat a stop or deletion as an intent. Remove the GitHub registration and
 confirm the runner is still idle before releasing its VM. If GitHub gave

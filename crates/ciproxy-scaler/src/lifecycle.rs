@@ -2,9 +2,11 @@
 
 use std::time::Duration;
 
-use crate::actions::StopReason;
-use crate::overflow::starts_held;
-use crate::provider::ProviderDispatch;
+use crate::actions::{Action, StartReason, StopReason};
+use crate::provider::{
+    ProviderAccount, ProviderCheck, ProviderDispatch, ProviderId, ProviderRunner, Refusal,
+    StartBound,
+};
 use crate::size_policy::allows_provider_runner;
 use crate::snapshot::{Place, Runner, RunnerState, Snapshot, WaitingJob};
 use crate::state::{Plan, idle, label_for, warm_candidate};
@@ -89,18 +91,7 @@ pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &Waiting
             if let Some(retained) = &sandbox.runner
                 && retained.runner.state == phase
                 && can_claim(plan, &retained.runner, job)
-                && match retained.dispatch {
-                    ProviderDispatch::Accepted => true,
-                    ProviderDispatch::Unsent(bound) => {
-                        snapshot.overflow_enabled
-                            && snapshot.provider(sandbox.provider).is_some_and(|provider| {
-                                provider.connected_and_available()
-                                    && !starts_held(provider, snapshot.now)
-                            })
-                            && bound
-                                .is_some_and(|bound| plan.reserve_provider(sandbox.provider, bound))
-                    }
-                }
+                && retained.dispatch == ProviderDispatch::Accepted
             {
                 plan.claimed.insert(retained.runner.id.clone());
                 return true;
@@ -108,6 +99,92 @@ pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &Waiting
         }
     }
     false
+}
+
+pub(crate) fn claim_unsent(
+    snapshot: &Snapshot,
+    plan: &mut Plan,
+    job: &WaitingJob,
+    provider: &ProviderAccount,
+) -> bool {
+    for (id, retained, bound) in unsent_runners(snapshot) {
+        if id == provider.id
+            && can_claim(plan, &retained.runner, job)
+            && admit_provider_start(snapshot, plan, provider, bound)
+        {
+            let runner_id = retained.runner.id.clone();
+            plan.claimed.insert(runner_id.clone());
+            if provider.check == ProviderCheck::Current {
+                plan.actions.push(Action::ResumeProviderStart { runner_id });
+            }
+            return true;
+        }
+    }
+    false
+}
+
+/// Apply the same start admission to saved and new provider deliveries.
+pub(crate) fn admit_provider_start(
+    snapshot: &Snapshot,
+    plan: &mut Plan,
+    provider: &ProviderAccount,
+    bound: Option<StartBound>,
+) -> bool {
+    snapshot.overflow_enabled
+        && provider.connected_geometry().is_some()
+        && !provider.facts.refusals.iter().any(|refusal| match refusal {
+            Refusal::RetryAfter { not_before } => snapshot.now < *not_before,
+            Refusal::RejectedKey | Refusal::BillingRequired => true,
+            Refusal::SizeNotOnPlan(_) => false,
+        })
+        && bound.is_some_and(|bound| match provider.check {
+            ProviderCheck::InProgress => plan.can_reserve(provider.id, bound),
+            ProviderCheck::Current => plan.reserve_provider(provider.id, bound),
+            ProviderCheck::Failed => false,
+        })
+}
+
+fn unsent_runners(
+    snapshot: &Snapshot,
+) -> impl Iterator<Item = (ProviderId, &ProviderRunner, Option<StartBound>)> {
+    snapshot
+        .sandboxes
+        .iter()
+        .filter(|sandbox| sandbox.marked)
+        .filter_map(|sandbox| {
+            let retained = sandbox.runner.as_ref()?;
+            let ProviderDispatch::Unsent(bound) = retained.dispatch else {
+                return None;
+            };
+            Some((sandbox.provider, retained, bound))
+        })
+}
+
+/// Pair replacements only after all jobs have claimed the unsent starts they need.
+pub(crate) fn with_unsent_replacements(snapshot: &Snapshot, plan: Plan) -> Vec<Action> {
+    let mut claimed = plan.claimed;
+    plan.actions
+        .into_iter()
+        .map(|action| {
+            let Action::StartRunner(start) = action else {
+                return action;
+            };
+            if start.reason != StartReason::WarmPool
+                && let Some((_, retained, _)) = unsent_runners(snapshot).find(|(_, retained, _)| {
+                    idle(&retained.runner)
+                        && retained.runner.target.as_ref() == Some(&start.target)
+                        && claimed.insert(retained.runner.id.clone())
+                })
+            {
+                Action::ReplaceUnsentStart {
+                    runner_id: retained.runner.id.clone(),
+                    start,
+                }
+            } else {
+                Action::StartRunner(start)
+            }
+        })
+        .collect()
 }
 
 fn can_claim(plan: &Plan, runner: &Runner, job: &WaitingJob) -> bool {

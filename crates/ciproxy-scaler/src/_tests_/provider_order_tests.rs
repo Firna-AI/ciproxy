@@ -55,7 +55,7 @@ fn skips_each_provider_start_block_without_waiting() {
                 state.providers.remove(0);
             }
             "disconnected" => first.facts.connected = false,
-            "unavailable" => first.available = false,
+            "unavailable" => first.start_geometry = None,
             "rejected key" => first.facts.refusals.push(Refusal::RejectedKey),
             "spend limit" => first.facts.spend.spent = 100,
             "retry time" => first.facts.refusals.push(Refusal::RetryAfter {

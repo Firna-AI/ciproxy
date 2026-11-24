@@ -10,8 +10,8 @@ use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner};
 use crate::provider::{
-    AccountFacts, MonthlySpend, ProviderAccount, ProviderDispatch, ProviderId, ProviderRunner,
-    ProviderSize, ProviderSizeId, Sandbox, SandboxId, StartBound,
+    AccountFacts, MonthlySpend, ProviderAccount, ProviderCheck, ProviderDispatch, ProviderId,
+    ProviderRunner, ProviderSize, ProviderSizeId, Sandbox, SandboxId, StartBound,
 };
 use crate::registration::RegistrationTarget;
 use crate::snapshot::{
@@ -63,9 +63,8 @@ pub(super) fn snapshot() -> Snapshot {
         overflow_enabled: true,
         providers: vec![ProviderAccount {
             id: BOAT,
-            available: true,
-            refreshed: true,
-            root_sizing: RootSizing::default(),
+            check: ProviderCheck::Current,
+            start_geometry: Some(RootSizing::default()),
             facts: AccountFacts {
                 connected: true,
                 spend: MonthlySpend {

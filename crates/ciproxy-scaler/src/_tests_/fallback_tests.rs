@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{ImageId, JobId, RunnerId};
 use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{Slots, VmSize};
@@ -50,7 +51,9 @@ fn retire_fallback() -> Action {
 fn wait_retires_an_idle_undersized_boat_fallback() {
     let mut state = fallback_snapshot();
     assert_eq!(decide(&state), vec![]);
-    state.providers[0].root_sizing.image_root_bytes = 90_000_000_000;
+    state.providers[0].start_geometry = Some(RootSizing {
+        image_root_bytes: 90_000_000_000,
+    });
     state.queue.push(queued("a", "large", 0));
     assert_eq!(decide(&state), vec![]);
     state.overflow_enabled = false;
@@ -162,7 +165,9 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
 fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_image() {
     let mut state = snapshot();
     state.machines.clear();
-    state.providers[0].root_sizing.image_root_bytes = 63_000_000_000;
+    state.providers[0].start_geometry = Some(RootSizing {
+        image_root_bytes: 63_000_000_000,
+    });
     let requested = VmSize {
         disk_bytes: 47_000_000_000,
         ..small()

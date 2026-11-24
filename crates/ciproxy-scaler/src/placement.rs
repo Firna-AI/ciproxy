@@ -36,7 +36,12 @@ pub(crate) fn place_own(
     false
 }
 
-pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, label: &Label) {
+pub(crate) fn reserve_after_retirement(
+    snapshot: &Snapshot,
+    plan: &mut Plan,
+    job: &WaitingJob,
+    label: &Label,
+) {
     for (index, machine) in snapshot.machines.iter().enumerate() {
         let Some(size) = machine
             .root_sizing(snapshot.root_sizing)
@@ -63,7 +68,12 @@ pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, lab
         }
         if future.fits(machine, size) {
             for runner in retire {
-                plan.stop(runner, StopReason::WarmPreemption);
+                plan.stop(
+                    runner,
+                    StopReason::WarmPreemption {
+                        label_id: job.target.label_id.clone(),
+                    },
+                );
             }
             plan.reserved[index].add(size);
             return;

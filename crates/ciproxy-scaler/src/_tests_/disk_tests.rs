@@ -84,7 +84,9 @@ fn warm_preemption_frees_job_disk_even_when_slots_are_available() {
         decide(&state),
         vec![Action::StopRunner {
             runner_id: RunnerId("first".into()),
-            reason: StopReason::WarmPreemption,
+            reason: StopReason::WarmPreemption {
+                label_id: "large".into()
+            },
         }]
     );
     state.machines[0].runners[0].state = RunnerState::Retiring;

@@ -28,6 +28,8 @@ each job runs, and the warm runners.
 
 ## A provider fails
 
+- A failed provider check sends waiting jobs to the next place of their
+  order.
 - While a provider refuses new sandboxes, new jobs skip it and go to the
   next place of their order.
 - ciproxy keeps trying the provider for the waiting jobs, as

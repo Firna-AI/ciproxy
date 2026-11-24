@@ -23,7 +23,7 @@ use ciproxy_store_interface::runtime_results::{
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
-use crate::overflow_snapshot;
+use crate::overflow_snapshot::{self, ProviderChecks};
 use crate::snapshot::build;
 
 /// Shared registration authority used by overflow cleanup and runtime recovery.
@@ -118,7 +118,9 @@ impl RunnerAuthority for OverflowRunnerAuthority {
         if !takeout && !busy {
             let view = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())?;
             let mut snapshot = build(&input, &runnable, self.clock.now(), self.root_sizing);
-            for (provider, account) in overflow_snapshot::accounts(&view, &self.providers, &[]) {
+            for (provider, account) in
+                overflow_snapshot::accounts(&view, &self.providers, ProviderChecks::InProgress)
+            {
                 match account {
                     Ok(account) => snapshot.providers.push(account),
                     Err(error) if provider == intent.provider => return Err(error),

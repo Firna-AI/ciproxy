@@ -37,15 +37,18 @@ pub fn select_provider_size<'a>(
 }
 
 impl ProviderAccount {
-    pub(crate) fn fitting_size(&self, required: VmSize) -> Option<&ProviderSize> {
+    pub(crate) fn fitting_size(&self, requested: VmSize) -> Option<&ProviderSize> {
+        let required = self.connected_geometry()?.vm_size(requested)?;
         fitting_size(self.eligible_sizes(), required)
     }
 
-    pub(crate) fn largest_for_start(&self) -> Option<&ProviderSize> {
+    pub(crate) fn largest_for_start(&self, requested: VmSize) -> Option<&ProviderSize> {
+        let geometry = self.connected_geometry()?;
+        geometry.vm_size(requested)?;
         largest_for_image(
             self.eligible_sizes(),
             self.facts.largest_size.as_ref(),
-            self.root_sizing.image_root_bytes,
+            geometry.image_root_bytes,
         )
     }
 
@@ -57,6 +60,16 @@ impl ProviderAccount {
                 .iter()
                 .any(|refusal| matches!(refusal, Refusal::SizeNotOnPlan(id) if *id == size.id))
         })
+    }
+}
+
+/// Test physical fit for a start at one place of the label order.
+pub(crate) fn place_fits(snapshot: &Snapshot, label: &Label, place: Place) -> bool {
+    match place {
+        Place::OwnMachines => own_fits(snapshot, label),
+        Place::Provider(id) => snapshot
+            .provider(id)
+            .is_some_and(|provider| provider.fitting_size(label.size).is_some()),
     }
 }
 
@@ -74,7 +87,11 @@ pub(crate) fn allows_provider_runner(
     if covers(retained.runner.size, required) {
         return true;
     }
-    if label.nothing_fits != NothingFits::LargestProviderSize || own_fits(snapshot, label) {
+    if label.nothing_fits != NothingFits::LargestProviderSize
+        || label
+            .places()
+            .any(|place| place_fits(snapshot, label, place))
+    {
         return false;
     }
     let Some(provider) = snapshot.provider(provider_id) else {
@@ -82,17 +99,6 @@ pub(crate) fn allows_provider_runner(
     };
     provider.eligible_sizes().any(|size| {
         Some(&size.id) == provider.facts.largest_size.as_ref() && size.size == retained.runner.size
-    }) && !label.places().any(|place| {
-        let Place::Provider(id) = place else {
-            return false;
-        };
-        snapshot.provider(id).is_some_and(|candidate| {
-            (id == provider_id || candidate.connected_and_available())
-                && candidate
-                    .root_sizing
-                    .vm_size(label.size)
-                    .is_some_and(|required| candidate.fitting_size(required).is_some())
-        })
     })
 }
 

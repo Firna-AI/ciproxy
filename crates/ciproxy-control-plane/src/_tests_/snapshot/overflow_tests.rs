@@ -1,6 +1,11 @@
 //! Saved Boat supply covers demand before any optional provider refresh.
 
+use std::sync::Arc;
+
 use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_overflow::boat::BoatFactory;
+use ciproxy_overflow::registry::ProviderRegistry;
+use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_scaler::actions::{Action, StopReason};
@@ -17,9 +22,28 @@ use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners;
 use uuid::Uuid;
 
+use crate::overflow_snapshot::{self, ProviderChecks};
 use crate::snapshot::build;
 
 use super::fixtures::{at, input, job};
+
+#[test]
+fn a_provider_without_a_start_image_has_no_start_geometry() {
+    let view = OverflowView::from_snapshot(input().overflow, at()).unwrap();
+    let registry = ProviderRegistry::default().with_provider(
+        OverflowProvider::Boat,
+        Arc::new(BoatFactory::new()),
+        None,
+    );
+
+    let account = overflow_snapshot::accounts(&view, &registry, ProviderChecks::InProgress)
+        .find(|(provider, _)| *provider == OverflowProvider::Boat)
+        .unwrap()
+        .1
+        .unwrap();
+
+    assert_eq!(account.start_geometry, None);
+}
 
 #[test]
 fn accepted_boat_supply_covers_waiting_demand_before_account_refresh() {

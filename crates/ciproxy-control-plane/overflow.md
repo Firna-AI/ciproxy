@@ -54,8 +54,12 @@ The scaler walks the saved order of each label and applies the
 leaving own machines. The shared service uses the chosen provider's image
 and factory. Provider requests run in supervised tasks, as the
 [remote request rules](runners.md#remote-requests) say. New provider starts
-wait for that provider's refresh. An own-machine start also waits for the
-refresh when a connected provider precedes own machines in its label.
+and unsent retries wait for a current provider check. A job waits for the
+check when a configured, connected provider precedes own machines in its
+order. It can start or free warm capacity on an own machine after the
+check if the provider cannot take it. Before starting a replacement, the
+runtime withdraws the unsent delivery under the workspace session lock.
+A delivery whose dispatch has begun still covers the waiting demand.
 
 - The runtime saves a registration identity before it asks GitHub for a JIT
   registration. The identity holds the runner, delivery, organization,

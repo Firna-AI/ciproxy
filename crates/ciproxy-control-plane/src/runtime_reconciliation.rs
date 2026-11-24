@@ -3,14 +3,14 @@
 use std::collections::HashSet;
 
 use ciproxy_github::persistence::lease::LeaseStore;
-use ciproxy_scaler::actions::{Action, Destination};
+use ciproxy_scaler::actions::{Action, Destination, StopReason};
 use ciproxy_store_interface::labels::{Label, LabelPlace};
-use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use uuid::Uuid;
 
 use crate::docker_budget::policy;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::overflow_snapshot::ProviderChecks;
 use crate::runtime::MachineRuntime;
 use crate::snapshot::build;
 
@@ -18,7 +18,7 @@ impl MachineRuntime {
     pub(crate) async fn reconcile_workspace_saved(
         &self,
         workspace_id: Uuid,
-        refreshed: &[OverflowProvider],
+        checks: ProviderChecks<'_>,
         deferred: &HashSet<String>,
     ) -> Result<()> {
         let Some(lease) = self.store.own_runner_lease(workspace_id).await.internal()? else {
@@ -29,19 +29,17 @@ impl MachineRuntime {
         let runnable = self.runnable_organizations(&input).await?;
         let sizing = self.root_sizing();
         let mut snapshot = build(&input, &runnable, self.clock.now(), sizing);
-        self.reconcile_overflow(&input, &mut snapshot, refreshed)
-            .await;
+        self.reconcile_overflow(&input, &mut snapshot, checks).await;
         for action in ciproxy_scaler::decision::decide(&snapshot) {
-            let apply = match &action {
-                Action::StartRunner(start) => match start.destination {
-                    Destination::Provider { .. } => true,
-                    Destination::Machine(_) => deferred.contains(&start.target.label_id),
-                },
-                Action::DeleteSandbox { .. } => true,
-                Action::StopRunner { runner_id, .. } => input
+            let apply = if let Some(label_id) = machine_action_label(&action) {
+                deferred.contains(label_id)
+            } else if let Action::StopRunner { runner_id, .. } = &action {
+                input
                     .overflow_intents
                     .iter()
-                    .any(|intent| intent.runner_id.to_string() == runner_id.0),
+                    .any(|intent| intent.runner_id.to_string() == runner_id.0)
+            } else {
+                true
             };
             if apply {
                 lease.check().await.internal()?;
@@ -100,12 +98,10 @@ impl MachineRuntime {
                 .sort_by_key(|job| deferred.contains(&job.target.label_id));
         }
         self.refresh_overflow(workspace_id, deferred.clone()).await;
-        self.reconcile_overflow(&input, &mut snapshot, &[]).await;
+        self.reconcile_overflow(&input, &mut snapshot, ProviderChecks::InProgress)
+            .await;
         for action in ciproxy_scaler::decision::decide(&snapshot) {
-            if let Action::StartRunner(start) = &action
-                && matches!(start.destination, Destination::Machine(_))
-                && deferred.contains(&start.target.label_id)
-            {
+            if machine_action_label(&action).is_some_and(|label_id| deferred.contains(label_id)) {
                 continue;
             }
             lease.check().await.internal()?;
@@ -135,5 +131,20 @@ impl MachineRuntime {
                     }
                     LabelPlace::Machine => false,
                 })
+    }
+}
+
+fn machine_action_label(action: &Action) -> Option<&str> {
+    match action {
+        Action::StartRunner(start) | Action::ReplaceUnsentStart { start, .. }
+            if matches!(start.destination, Destination::Machine(_)) =>
+        {
+            Some(&start.target.label_id)
+        }
+        Action::StopRunner {
+            reason: StopReason::WarmPreemption { label_id },
+            ..
+        } => Some(label_id),
+        _ => None,
     }
 }

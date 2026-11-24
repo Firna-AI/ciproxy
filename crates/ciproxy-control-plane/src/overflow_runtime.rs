@@ -5,13 +5,13 @@ use std::collections::HashSet;
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::view::{OverflowView, RefreshStatus};
 use ciproxy_scaler::snapshot::Snapshot;
-use ciproxy_store_interface::overflow::provider::OverflowProvider;
 use ciproxy_store_interface::overflow::record::StartPhase;
+use ciproxy_store_interface::overflow_runtime::OverflowRunnerIntent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use uuid::Uuid;
 
 use crate::error::{ErrorResultExt, Result};
-use crate::overflow_snapshot;
+use crate::overflow_snapshot::{self, ProviderChecks};
 use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
 
@@ -20,17 +20,15 @@ impl MachineRuntime {
         &self,
         input: &RoutingSnapshot,
         snapshot: &mut Snapshot,
-        refreshed: &[OverflowProvider],
+        checks: ProviderChecks<'_>,
     ) {
-        let Some(overflow) = &self.overflow else {
+        if self.overflow.is_none() {
             snapshot.sandboxes.clear();
             return;
-        };
+        }
         let workspace = input.workspace_id;
         if let Ok(view) = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now()) {
-            for (provider, account) in
-                overflow_snapshot::accounts(&view, &self.providers, refreshed)
-            {
+            for (provider, account) in overflow_snapshot::accounts(&view, &self.providers, checks) {
                 match account {
                     Ok(account) => snapshot.providers.push(account),
                     Err(error) => {
@@ -59,21 +57,36 @@ impl MachineRuntime {
                     tracing::warn!(%error, "Overflow registration cleanup dispatch will retry");
                 }
             } else if let Some(record) = record
-                && !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)
+                && !matches!(
+                    record.phase,
+                    StartPhase::Unsent | StartPhase::Running | StartPhase::Deleting
+                )
+                && let Err(error) = self.recover_overflow_delivery(workspace, intent)
             {
-                let delivery = record.delivery_id;
-                let overflow = overflow.clone();
-                let runtime = self.worker();
-                if let Err(error) = self.dispatch(Work::OverflowRecovery(delivery), async move {
-                    let operation = runtime.overflow_operation(workspace).await;
-                    let _operation = operation.lock().await;
-                    overflow.resume(workspace, delivery).await.internal()?;
-                    Ok(())
-                }) {
-                    tracing::warn!(%error, "Overflow delivery recovery dispatch will retry");
-                }
+                tracing::warn!(%error, "Overflow delivery recovery dispatch will retry");
             }
         }
+    }
+
+    pub(crate) fn recover_overflow_delivery(
+        &self,
+        workspace: Uuid,
+        intent: &OverflowRunnerIntent,
+    ) -> Result<()> {
+        let Some(overflow) = self.overflow.clone() else {
+            return Ok(());
+        };
+        if self.task_scope()?.contains(Work::Create(intent.runner_id)) {
+            return Ok(());
+        }
+        let delivery = intent.delivery_id;
+        let runtime = self.worker();
+        self.dispatch(Work::OverflowRecovery(delivery), async move {
+            let operation = runtime.overflow_operation(workspace).await;
+            let _operation = operation.lock().await;
+            overflow.resume(workspace, delivery).await.internal()?;
+            Ok(())
+        })
     }
 
     pub(crate) async fn refresh_overflow(&self, workspace: Uuid, deferred: HashSet<String>) {
@@ -104,7 +117,11 @@ impl MachineRuntime {
             if !refreshed.is_empty() || !deferred.is_empty() {
                 let _operation = runtime.operation.lock().await;
                 runtime
-                    .reconcile_workspace_saved(workspace, &refreshed, &deferred)
+                    .reconcile_workspace_saved(
+                        workspace,
+                        ProviderChecks::Completed(&refreshed),
+                        &deferred,
+                    )
                     .await?;
             }
             let view = view.internal()?;

@@ -1,8 +1,10 @@
 //! Public pure entry point for a complete workspace decision.
 
 use crate::actions::Action;
-use crate::lifecycle::{claim_existing, retire_obsolete, retire_unneeded};
-use crate::overflow::place_in_order;
+use crate::lifecycle::{
+    claim_existing, retire_obsolete, retire_unneeded, with_unsent_replacements,
+};
+use crate::overflow::{Placement, place_in_order};
 use crate::placement::reserve_after_retirement;
 use crate::snapshot::Snapshot;
 use crate::state::Plan;
@@ -39,13 +41,15 @@ pub fn decide(snapshot: &Snapshot) -> Vec<Action> {
         else {
             continue;
         };
-        if !place_in_order(snapshot, &mut plan, job, label) {
-            reserve_after_retirement(snapshot, &mut plan, label);
-            pending.push(job);
+        match place_in_order(snapshot, &mut plan, job, label) {
+            Placement::Placed => continue,
+            Placement::CheckingProvider => {}
+            Placement::Pending => reserve_after_retirement(snapshot, &mut plan, job, label),
         }
+        pending.push(job);
     }
     retire_unneeded(snapshot, &mut plan);
     reconcile(snapshot, &mut plan);
     replenish(snapshot, &mut plan, &pending);
-    plan.actions
+    with_unsent_replacements(snapshot, plan)
 }

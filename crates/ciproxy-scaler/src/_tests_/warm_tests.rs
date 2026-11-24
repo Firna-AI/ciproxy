@@ -109,7 +109,9 @@ fn stops_only_the_warm_capacity_a_waiting_job_needs_then_waits_for_release() {
         decide(&state),
         vec![Action::StopRunner {
             runner_id: RunnerId("first".into()),
-            reason: StopReason::WarmPreemption,
+            reason: StopReason::WarmPreemption {
+                label_id: "large".into()
+            },
         }]
     );
     state.machines[0].runners.remove(0);
@@ -240,19 +242,27 @@ fn reserves_distinct_future_capacity_for_each_waiting_job() {
         vec![
             Action::StopRunner {
                 runner_id: RunnerId("one".into()),
-                reason: StopReason::WarmPreemption
+                reason: StopReason::WarmPreemption {
+                    label_id: "large".into()
+                }
             },
             Action::StopRunner {
                 runner_id: RunnerId("two".into()),
-                reason: StopReason::WarmPreemption
+                reason: StopReason::WarmPreemption {
+                    label_id: "large".into()
+                }
             },
             Action::StopRunner {
                 runner_id: RunnerId("three".into()),
-                reason: StopReason::WarmPreemption
+                reason: StopReason::WarmPreemption {
+                    label_id: "large".into()
+                }
             },
             Action::StopRunner {
                 runner_id: RunnerId("four".into()),
-                reason: StopReason::WarmPreemption
+                reason: StopReason::WarmPreemption {
+                    label_id: "large".into()
+                }
             },
         ]
     );

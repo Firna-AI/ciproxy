@@ -105,20 +105,29 @@ pub enum Refusal {
 pub struct ProviderAccount {
     /// Stable provider identity used in label orders and destinations.
     pub id: ProviderId,
-    /// Whether the deployment has the settings to start on this provider.
-    pub available: bool,
-    /// Whether this decision may plan new starts from a completed refresh.
-    pub refreshed: bool,
-    /// Root sizing for new starts from this provider's current image.
-    pub root_sizing: RootSizing,
+    /// Result of checking whether the account facts can be used for starts.
+    pub check: ProviderCheck,
+    /// Root geometry of the deployed start image, if the provider has one.
+    pub start_geometry: Option<RootSizing>,
     /// Current account, including any saved catalog or refusals.
     pub facts: AccountFacts,
 }
 
 impl ProviderAccount {
-    pub(crate) fn connected_and_available(&self) -> bool {
-        self.available && self.facts.connected
+    pub(crate) fn connected_geometry(&self) -> Option<RootSizing> {
+        self.start_geometry.filter(|_| self.facts.connected)
     }
+}
+
+/// State of the provider check for this decision.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProviderCheck {
+    /// Start admission is waiting for the provider check result.
+    InProgress,
+    /// The check completed and placement can use the current facts.
+    Current,
+    /// The check failed and placement must skip starts on the provider.
+    Failed,
 }
 
 /// Credential-free catalog and admission facts from a provider account.
