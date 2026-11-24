@@ -22,6 +22,7 @@ import type {
   ChartPlot,
   UsageChartModel,
 } from "../../view/jobs-usage-chart.ts";
+import { axisFontSize } from "../../view/jobs-usage-times.ts";
 
 const svgStyle: CSSProperties = {
   position: "absolute",
@@ -91,6 +92,7 @@ export function Plot({
             {model.starts.map((start) => (
               <line
                 key={start}
+                data-testid="usage-mark-start"
                 x1={start}
                 x2={start}
                 y1={0}
@@ -103,6 +105,7 @@ export function Plot({
             <path d={plot.area} fill={chartColors.own} fillOpacity={0.1} />
             {plot.label === null ? null : (
               <line
+                data-testid="usage-mark-label-line"
                 x1={0}
                 x2={model.seconds}
                 y1={plot.label}
@@ -113,6 +116,7 @@ export function Plot({
               />
             )}
             <path
+              data-testid="usage-mark-line"
               d={plot.line}
               fill="none"
               stroke={chartColors.own}
@@ -125,6 +129,7 @@ export function Plot({
           {plot.kills.map((kill, index) => (
             <View
               key={index}
+              testID="usage-mark-kill"
               style={[
                 styles.kill,
                 { left: percent(kill.left), top: percent(kill.top) },
@@ -137,13 +142,16 @@ export function Plot({
   );
 }
 
+/** The column of axis labels of each row, and the gap after it, in pixels. */
+export const axisColumn = { width: 30, gap: 10 } as const;
+
 /** The rows of the chart: a column of axis labels, then the content. */
 export const chartRows = StyleSheet.create({
-  row: { flexDirection: "row", columnGap: 10 },
-  axis: { position: "relative", width: 30, flexShrink: 0 },
+  row: { flexDirection: "row", columnGap: axisColumn.gap },
+  axis: { position: "relative", width: axisColumn.width, flexShrink: 0 },
   axisText: {
     fontFamily: fonts.mono,
-    fontSize: 11,
+    fontSize: axisFontSize,
     lineHeight: 12,
     color: colors.muted,
   },

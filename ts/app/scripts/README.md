@@ -94,8 +94,11 @@ The page smoke, `browser-pages-smoke.ts`, covers the states of Jobs, the job
 page, Savings, Plan and usage, Plans, the Checkout review and return, and the
 banner. Its job cases check the CPU and memory panel in each state of
 `fixtures-job-usage.ts`: the figures with the steps, the label size on Boat, a
-step that ran out of memory, a macOS job, a job without steps, a running job,
-a job without figures, and a job that no runner took. It also covers each
+step that ran out of memory, a macOS job, a job without steps, a job of one
+hour, a running job, a job without figures, and a job that no runner took.
+They count the drawn marks of the chart and the meters by their test IDs, and
+check that each step name stays inside its cell and each time label shows in
+full in the panel. It also covers each
 page while it loads, and Viewer and Billing views of Jobs, Savings, and the
 billing pages. Its journeys open History from Live
 and go Back to Live, follow the History filters to a job and back, change the

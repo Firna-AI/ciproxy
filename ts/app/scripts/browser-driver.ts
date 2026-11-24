@@ -27,6 +27,8 @@ export type Locator = {
   ): Locator;
   getByLabel(text: string | RegExp, options?: { exact?: boolean }): Locator;
   getByText(text: string | RegExp, options?: { exact?: boolean }): Locator;
+  getByTestId(id: string): Locator;
+  evaluate<R>(read: (element: Element) => R): Promise<R>;
   getAttribute(name: string): Promise<string | null>;
   textContent(): Promise<string | null>;
   count(): Promise<number>;

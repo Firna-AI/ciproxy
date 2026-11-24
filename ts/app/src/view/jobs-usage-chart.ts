@@ -7,6 +7,8 @@
 // step, a dot marks each out-of-memory kill on the memory plot, and a line
 // marks the size of the label where the VM is larger. A point lies at the
 // middle of its time, and the last point can be shorter than the others.
+// The labels of the time axis follow from the width of the axis and the room
+// that the panel shows past it, as jobs-usage-times.ts places them.
 
 import type { JobUsageChart, JobUsageStep } from "../api/jobs-types.ts";
 import { dotJoin } from "./exact-format.ts";
@@ -17,6 +19,7 @@ import {
 } from "./format.ts";
 import { memoryText, secondsText, vcpuText } from "./jobs-format.ts";
 import type { MeasuredUsage } from "./jobs-usage.ts";
+import { timeTicks, type TimeAxis, type TimeTick } from "./jobs-usage-times.ts";
 
 /** A label of an axis, at a share of the axis from its start. */
 export type AxisTick = { text: string; share: number };
@@ -47,46 +50,12 @@ export type UsageChartModel = {
   /** The start of each step after the first, in seconds. */
   starts: readonly number[];
   plots: readonly [ChartPlot, ChartPlot];
-  times: readonly AxisTick[];
+  /** The labels of the time axis, none before the axis has a width. */
+  times: readonly TimeTick[];
   /** "Label size: 2 vCPU · 8 GB", when the label is smaller than the VM. */
   labelKey: string | null;
   killKey: boolean;
 };
-
-/** The spaces between time ticks, in seconds, shortest first. */
-const tickSpaces = [
-  5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200,
-  86400,
-];
-
-const day = 86_400;
-
-function pad(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-/** 372 -> "6:12", 3720 -> "1:02:00": the time from the first sample. */
-export function clockText(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const rest = pad(Math.floor(seconds % 60));
-  return hours > 0 ? `${hours}:${pad(minutes)}:${rest}` : `${minutes}:${rest}`;
-}
-
-/** The time ticks: at most 4 spaces on a phone and 8 on a wider window. */
-function timeTicks(seconds: number, mobile: boolean): AxisTick[] {
-  const most = mobile ? 4 : 8;
-  const space =
-    tickSpaces.find((value) => seconds / value <= most) ??
-    Math.ceil(seconds / most / day) * day;
-  return Array.from(
-    { length: Math.floor(seconds / space) + 1 },
-    (_, index) => ({
-      text: clockText(index * space),
-      share: (index * space) / seconds,
-    }),
-  );
-}
 
 /** A value of an axis, whole or to one place: 4 -> "4", 1.5 -> "1.5". */
 function tickText(value: number): string {
@@ -202,9 +171,15 @@ function summary(usage: MeasuredUsage, seconds: number, label: string[]) {
   return `CPU and memory over ${secondsText(Math.round(seconds))}: average CPU ${formatMeasuredVcpu(job.average_cpu_milli_vcpu)} of ${vcpuText(vm.vcpus)}, peak memory ${formatMeasuredGigabytes(job.peak_memory_bytes)} of ${memoryText(vm.memory_bytes)}.${sizes}`;
 }
 
+/**
+ * The chart of a measured job. `axis` gives the width of its time axis in
+ * pixels, 0 before the axis has one, and the room that the panel shows past
+ * each end of the axis.
+ */
 export function usageChartModel(
   usage: MeasuredUsage,
   mobile: boolean,
+  axis: TimeAxis,
 ): UsageChartModel {
   const start = Date.parse(usage.chart.started_at);
   const seconds = (Date.parse(usage.chart.ended_at) - start) / 1000;
@@ -234,7 +209,7 @@ export function usageChartModel(
       .filter((from) => from > 0 && from < seconds)
       .sort((a, b) => a - b),
     plots: plots(usage, seconds),
-    times: timeTicks(seconds, mobile),
+    times: timeTicks(seconds, axis, mobile),
     labelKey: label.length === 0 ? null : `Label size: ${dotJoin(...label)}`,
     killKey: usage.chart.points.some((point) => (point.oom_kills ?? 0) > 0),
   };

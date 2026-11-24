@@ -1,10 +1,13 @@
 // The CPU and memory panel of the job page in each of its states: the
 // figures with a chart and the steps, the label size of a larger Boat size, a
 // step that ran out of memory, a macOS job without that figure, a job without
-// steps, a running job, a job without figures, and a job that no runner took,
-// which has no panel. Each check keeps the panel apart from the other two
-// panels and inside the window. The job screens of the page smoke run these
-// checks, and two screens of their own open the out-of-memory and macOS jobs.
+// steps, a job of one hour, a running job, a job without figures, and a job
+// that no runner took, which has no panel. Each check keeps the panel apart
+// from the other two panels and inside the window. The checks count the
+// drawn marks of the chart and the meters, which hide from screen readers,
+// by their test IDs. The job screens of the page smoke run these checks, and
+// three screens of their own open the out-of-memory, macOS, and one-hour
+// jobs.
 
 import assert from "node:assert/strict";
 
@@ -13,8 +16,11 @@ import type { Locator, Page } from "./browser-driver.ts";
 import { insideViewport, visible } from "./browser-fixture.ts";
 import {
   absent,
+  boxInside,
   insideRegion,
   separateRegions,
+  visibleBox,
+  type Box,
 } from "./browser-pages-helpers.ts";
 import type { PageScreen } from "./browser-pages-screens.ts";
 import { workspaceId } from "./fixtures-core.ts";
@@ -51,6 +57,81 @@ async function inside(panel: Locator, words: string): Promise<void> {
 
 async function count(panel: Locator, words: string): Promise<number> {
   return panel.getByText(words, { exact: true }).count();
+}
+
+/**
+ * The marks that the panel draws, by kind: the CPU and memory lines, the
+ * line of the label size on a plot, the tick of the label size on a meter,
+ * an out-of-memory dot, a step block of the lane, and the line at the start
+ * of a step on a plot. A mark counts when its box lies inside the panel and
+ * has a length. A level or an upright line has no height or no width, so one
+ * of the two is enough.
+ */
+async function drawnMarks(panel: Locator) {
+  const outer = await visibleBox(panel);
+  const drawn = async (kind: string) => {
+    let marks = 0;
+    for (const mark of await panel.getByTestId(`usage-mark-${kind}`).all()) {
+      const box = await mark.boundingBox();
+      const length = box !== null && (box.width > 0 || box.height > 0);
+      if (length && boxInside(outer, box)) marks += 1;
+    }
+    return marks;
+  };
+  return {
+    lines: await drawn("line"),
+    labelLines: await drawn("label-line"),
+    labelTicks: await drawn("label-tick"),
+    kills: await drawn("kill"),
+    steps: await drawn("step"),
+    starts: await drawn("start"),
+  };
+}
+
+/** The rows of the steps table, and each step name that passes its cell. */
+async function namesOutside(panel: Locator) {
+  const table = panel.getByRole("table", { name: "Steps", exact: true });
+  const [, ...rows] = await table.getByRole("row").all();
+  const outside: (string | null)[] = [];
+  for (const row of rows) {
+    const [cell] = await row.getByRole("cell").all();
+    assert.ok(cell !== undefined, "Each row starts with its Step cell.");
+    const name = cell.getByTestId("usage-step-name");
+    if (!boxInside(await visibleBox(cell), await visibleBox(name)))
+      outside.push(await name.textContent());
+  }
+  return { rows: rows.length, outside };
+}
+
+/** The part of the panel that shows: the flush panel cuts off at its border. */
+async function shownPart(panel: Locator): Promise<Box> {
+  const box = await visibleBox(panel);
+  const inner = await panel.evaluate((element) => ({
+    x: element.clientLeft,
+    y: element.clientTop,
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }));
+  return { ...inner, x: box.x + inner.x, y: box.y + inner.y };
+}
+
+/**
+ * The labels of the time axis, once the axis has its width. Each label must
+ * show in full in the part of the panel that shows.
+ */
+async function timeLabels(panel: Locator): Promise<(string | null)[]> {
+  await visible(panel.getByText("0:00", { exact: true }));
+  const shown = await shownPart(panel);
+  const labels: (string | null)[] = [];
+  for (const label of await panel.getByTestId("usage-time").all()) {
+    const text = await label.textContent();
+    assert.ok(
+      boxInside(shown, await visibleBox(label)),
+      `The time ${text} must show in full in the panel.`,
+    );
+    labels.push(text);
+  }
+  return labels;
 }
 
 /**
@@ -118,6 +199,12 @@ export const usageLayouts = {
       "without a kill, only the figure of the job names out of memory",
     );
     await stepRoles(panel, width === 390);
+    const { steps, starts, labelLines, labelTicks } = await drawnMarks(panel);
+    assert.deepEqual(
+      { steps, starts, labelLines, labelTicks },
+      { steps: 8, starts: 14, labelLines: 0, labelTicks: 0 },
+      "a block for each step that lasted, its 7 later starts on both plots, and no label size",
+    );
   }) satisfies UsageLayout,
   labelSize: (async (page, width) => {
     const panel = await placed(page, width);
@@ -125,6 +212,12 @@ export const usageLayouts = {
     await inside(panel, "of 8 vCPU · label 4 vCPU");
     await inside(panel, "of 16 GB · label 8 GB");
     await inside(panel, "Label size: 4 vCPU · 8 GB");
+    const { lines, labelLines, labelTicks } = await drawnMarks(panel);
+    assert.deepEqual(
+      { lines, labelLines, labelTicks },
+      { lines: 2, labelLines: 2, labelTicks: 2 },
+      "the CPU and memory lines, and the label size on each plot and meter",
+    );
   }) satisfies UsageLayout,
   outOfMemory: (async (page, width) => {
     const panel = await placed(page, width);
@@ -137,6 +230,12 @@ export const usageLayouts = {
       "the figure, the key, and on a wider window the column of the step",
     );
     assert.equal(await count(panel, "Out of memory: 1 process"), phone ? 1 : 0);
+    assert.equal((await drawnMarks(panel)).kills, 1, "a dot for the one kill");
+    assert.deepEqual(
+      await namesOutside(panel),
+      { rows: phone ? 0 : 9, outside: [] },
+      "each step name, also a long word, stays inside its Step cell",
+    );
   }) satisfies UsageLayout,
   macos: (async (page, width) => {
     const panel = await placed(page, width);
@@ -152,6 +251,17 @@ export const usageLayouts = {
       "Figures for each step are not available for this job.",
     );
     assert.equal(await count(panel, "Step"), 0, "no lane and no table");
+  }) satisfies UsageLayout,
+  oneHour: (async (page, width) => {
+    const panel = await placed(page, width);
+    await figures(panel, /^CPU and memory over 1h 00m: /);
+    assert.deepEqual(
+      await timeLabels(panel),
+      width === 390
+        ? ["0:00", "15:00", "30:00", "45:00", "1:00:00"]
+        : ["0:00", "10:00", "20:00", "30:00", "40:00", "50:00", "1:00:00"],
+      "the axis names the end of the chart",
+    );
   }) satisfies UsageLayout,
   noFigures: sentence("Figures are not available for this job."),
   running: sentence("The figures show when the job ends."),
@@ -175,5 +285,12 @@ export const usageScreens: PageScreen[] = [
     path: jobHref(workspaceId, fixtureJobIds.older),
     heading: "Older retained job",
     layoutCheck: usageLayouts.macos,
+  },
+  {
+    name: "job-one-hour",
+    scenario: "m21-jobs-detail",
+    path: jobHref(workspaceId, fixtureJobIds.hour),
+    heading: "Nightly end-to-end",
+    layoutCheck: usageLayouts.oneHour,
   },
 ];

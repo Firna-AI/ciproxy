@@ -1,9 +1,10 @@
 // The steps of a job with their figures: a table on a wider window and a
 // dense list on a phone, in the order of GitHub, from Set up job to Complete
 // job. Each step leads with its number on GitHub. A name that hides a script
-// links to that step on GitHub, where its log names what it ran. A skipped
-// step, and a step that holds no point, show no figures. The out-of-memory
-// column shows only when a step ran out of memory.
+// links to that step on GitHub, where its log names what it ran. A long name
+// wraps inside the Step column, also within a word. A skipped step, and a
+// step that holds no point, show no figures. The out-of-memory column shows
+// only when a step ran out of memory.
 
 import { useMemo, type ReactNode } from "react";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
@@ -37,26 +38,33 @@ const killColumn: TableColumn = {
   align: "right",
 };
 
-/** A name that hides a script links to the step on GitHub, in a new tab. */
+/**
+ * The number, then the name in one slot that can shrink below its longest
+ * word, as the mockup's `.step-name` does, so a long word breaks inside the
+ * Step column. A name that hides a script links to the step on GitHub, in a
+ * new tab.
+ */
 function StepTitle({ step, size }: { step: UsageStepRow; size: Size }) {
   return (
     <View style={styles.title}>
       <Text style={styles.number}>{step.number}</Text>
-      {step.href === null ? (
-        <Text style={[size === "body" ? text.body : text.small, styles.name]}>
-          {step.name}
-        </Text>
-      ) : (
-        <TextLink
-          label={step.name}
-          href={step.href}
-          size={size}
-          underlined
-          external
-          title={`Open step ${step.number} on GitHub`}
-          accessibilityLabel={`${step.name}, opens step ${step.number} on GitHub`}
-        />
-      )}
+      <View style={styles.name} testID="usage-step-name">
+        {step.href === null ? (
+          <Text style={[size === "body" ? text.body : text.small, styles.ink]}>
+            {step.name}
+          </Text>
+        ) : (
+          <TextLink
+            label={step.name}
+            href={step.href}
+            size={size}
+            underlined
+            external
+            title={`Open step ${step.number} on GitHub`}
+            accessibilityLabel={`${step.name}, opens step ${step.number} on GitHub`}
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -227,7 +235,11 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontVariant: ["tabular-nums"],
   },
-  name: { flexShrink: 1, color: colors.ink },
+  // The slot of the name shrinks to the Step column, and the name wraps in
+  // it, also within a word. A bare Text in the row would keep the width of
+  // its longest word and run past the column.
+  name: { flexShrink: 1, minWidth: 0 },
+  ink: { color: colors.ink },
   mono: { fontFamily: fonts.mono, color: colors.ink },
   muted: { color: colors.muted },
   rowDuration: { flexShrink: 0, lineHeight: 20 },

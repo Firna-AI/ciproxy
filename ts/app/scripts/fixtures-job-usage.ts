@@ -6,8 +6,9 @@
 // step that holds its middle, and a chart of more than 600 points merges
 // neighbours in powers of two. Build and test ran on a machine, Browser
 // checks on a Boat size larger than its label, Lint ran out of memory, the
-// job with unknown timing has no steps, and the older job ran on a Mac. A
-// running job has no figures yet, and every other job has none.
+// job with unknown timing has no steps, the older job ran on a Mac, and the
+// nightly job ran for exactly one hour. A running job has no figures yet,
+// and every other job has none.
 
 import type { components } from "../../api/index.ts";
 import { fixtureJobIds } from "./fixtures-jobs.ts";
@@ -249,6 +250,16 @@ const profiles: Readonly<Record<string, (job: JobView) => Usage>> = {
       ],
       { macos: true },
     ),
+  [fixtureJobIds.hour]: (job) =>
+    measured(job, "2026-11-05T02:00:00Z", [
+      ["Set up job", 3, 0.3, 0.42, 0.48],
+      ["Run actions/checkout@v4", 4, 0.4, 0.5, 0.55],
+      ["Run actions/setup-node@v4", 9, 0.9, 0.6, 0.8],
+      ["Run script", 112, 2.4, 0.9, 2.3],
+      ["End-to-end tests", 3456, 3.2, 2.4, 6.1],
+      ["Post Run actions/checkout@v4", 15, 0.3, 1.4, 1.3],
+      ["Complete job", 1, 0.2, 1.1, 1.1],
+    ]),
 };
 
 /** The usage that the job page of a fixture job gives. */

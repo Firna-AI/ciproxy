@@ -34,6 +34,12 @@ import { UsageSteps } from "./usage-steps.tsx";
 
 type MeasuredPanel = Extract<UsagePanelModel, { state: "measured" }>;
 
+/**
+ * The padding of the body of the panel, in pixels. The panel cuts off its
+ * content only at its own edge, so a label of the chart can use this room.
+ */
+const bodyPadding = { wide: 16, phone: 14 } as const;
+
 /** A meter against the VM, with the label size as a tick over the bar. */
 function Meter({ label, meter }: { label: string; meter: UsageMeter }) {
   return (
@@ -48,6 +54,7 @@ function Meter({ label, meter }: { label: string; meter: UsageMeter }) {
       {meter.mark === null ? null : (
         <View
           aria-hidden
+          testID="usage-mark-label-tick"
           style={[styles.mark, { left: `${meter.mark * 100}%` }]}
         />
       )}
@@ -116,7 +123,11 @@ function Measured({ model }: { model: MeasuredPanel }) {
     <Panel title={usageCopy.title} flush>
       <View style={[styles.body, mobile && styles.bodyMobile]}>
         <Figures figures={model.figures} mobile={mobile} />
-        <UsageChart usage={model.usage} mobile={mobile} />
+        <UsageChart
+          usage={model.usage}
+          mobile={mobile}
+          room={mobile ? bodyPadding.phone : bodyPadding.wide}
+        />
       </View>
       {model.steps === null ? (
         <View style={note}>
@@ -163,8 +174,8 @@ export function UsageLoading() {
 }
 
 const styles = StyleSheet.create({
-  body: { gap: 20, padding: 16 },
-  bodyMobile: { padding: 14 },
+  body: { gap: 20, padding: bodyPadding.wide },
+  bodyMobile: { padding: bodyPadding.phone },
   figures: { gap: 16 },
   figuresMobile: { gap: 14 },
   figureRow: { flexDirection: "row", gap: 24 },

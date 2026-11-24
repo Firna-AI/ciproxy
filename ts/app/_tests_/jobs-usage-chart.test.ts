@@ -2,7 +2,32 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { usageChartModel } from "../src/view/jobs-usage-chart.ts";
+import type { TimeAxis } from "../src/view/jobs-usage-times.ts";
 import { at, figures, measured, plain, step } from "./jobs-usage-support.ts";
+
+/**
+ * A time axis of `width` pixels in the panel. Left of the axis, the panel
+ * shows the 30 px column of axis labels, a 10 px gap, and its padding; right
+ * of it, its padding: 16 px on a wider window, 14 px on a phone.
+ */
+const wide = (width: number): TimeAxis => ({ width, left: 56, right: 16 });
+const phone = (width: number): TimeAxis => ({ width, left: 54, right: 14 });
+
+/** The labels of the time axis of a chart of `seconds`. */
+function times(seconds: number, mobile: boolean, axis: TimeAxis) {
+  return usageChartModel(
+    measured({
+      chart: {
+        started_at: at(0),
+        ended_at: at(seconds),
+        point_seconds: 1,
+        points: [figures(0, "0")],
+      },
+    }),
+    mobile,
+    axis,
+  ).times;
+}
 
 test("the chart puts each point at the middle of its time and marks the steps, the kills, and the label size", () => {
   const usage = measured({
@@ -16,7 +41,7 @@ test("the chart puts each point at the middle of its time and marks the steps, t
       step(5, "Complete job", 4, 6),
     ],
   });
-  const chart = usageChartModel(usage, false);
+  const chart = usageChartModel(usage, false, wide(1000));
   assert.deepEqual(
     {
       seconds: chart.seconds,
@@ -36,8 +61,12 @@ test("the chart puts each point at the middle of its time and marks the steps, t
       ],
       starts: [1, 4],
       times: [
-        { text: "0:00", share: 0 },
-        { text: "0:05", share: 1 },
+        { text: "0:00", share: 0, align: "center" },
+        { text: "0:01", share: 0.2, align: "center" },
+        { text: "0:02", share: 0.4, align: "center" },
+        { text: "0:03", share: 0.6, align: "center" },
+        { text: "0:04", share: 0.8, align: "center" },
+        { text: "0:05", share: 1, align: "center" },
       ],
       labelKey: "Label size: 1 vCPU · 6 GB",
       killKey: true,
@@ -76,23 +105,13 @@ test("the chart puts each point at the middle of its time and marks the steps, t
       [{ left: 0.6, top: 0.5 }],
     ],
   );
-  assert.equal(usageChartModel(measured(), false).lane, null);
+  assert.equal(usageChartModel(measured(), false, wide(1000)).lane, null);
 });
 
 test("the time axis spaces its ticks for the length of the job and the width of the window", () => {
-  const ticks = (seconds: number, mobile: boolean) =>
-    usageChartModel(
-      measured({
-        chart: {
-          started_at: at(0),
-          ended_at: at(seconds),
-          point_seconds: 1,
-          points: [figures(0, "0")],
-        },
-      }),
-      mobile,
-    ).times.map((tick) => tick.text);
-  assert.deepEqual(ticks(372, false), [
+  const ticks = (seconds: number, mobile: boolean, axis: TimeAxis) =>
+    times(seconds, mobile, axis).map((tick) => tick.text);
+  assert.deepEqual(ticks(372, false, wide(1000)), [
     "0:00",
     "1:00",
     "2:00",
@@ -101,8 +120,13 @@ test("the time axis spaces its ticks for the length of the job and the width of 
     "5:00",
     "6:00",
   ]);
-  assert.deepEqual(ticks(372, true), ["0:00", "2:00", "4:00", "6:00"]);
-  assert.deepEqual(ticks(114, false), [
+  assert.deepEqual(ticks(372, true, phone(300)), [
+    "0:00",
+    "2:00",
+    "4:00",
+    "6:00",
+  ]);
+  assert.deepEqual(ticks(114, false, wide(1000)), [
     "0:00",
     "0:15",
     "0:30",
@@ -112,7 +136,7 @@ test("the time axis spaces its ticks for the length of the job and the width of 
     "1:30",
     "1:45",
   ]);
-  assert.deepEqual(ticks(7200, false), [
+  assert.deepEqual(ticks(7200, false, wide(1000)), [
     "0:00",
     "15:00",
     "30:00",
@@ -123,4 +147,44 @@ test("the time axis spaces its ticks for the length of the job and the width of 
     "1:45:00",
     "2:00:00",
   ]);
+  // On a narrow axis, as at 640 px, 2:00:00 at the panel edge would come
+  // within 4.2 px of 1:45:00.
+  assert.deepEqual(ticks(7200, false, wide(460)), [
+    "0:00",
+    "30:00",
+    "1:00:00",
+    "1:30:00",
+    "2:00:00",
+  ]);
+});
+
+test("the time axis names a time after the start and keeps each label where the panel shows it", () => {
+  assert.deepEqual(times(3, false, wide(1000)), [
+    { text: "0:00", share: 0, align: "center" },
+    { text: "0:01", share: 1 / 3, align: "center" },
+    { text: "0:02", share: 2 / 3, align: "center" },
+    { text: "0:03", share: 1, align: "center" },
+  ]);
+  // Centred, 1:00:00 would pass the 14 px padding by 9.1 px.
+  assert.deepEqual(times(3600, true, phone(300)), [
+    { text: "0:00", share: 0, align: "center" },
+    { text: "15:00", share: 0.25, align: "center" },
+    { text: "30:00", share: 0.5, align: "center" },
+    { text: "45:00", share: 0.75, align: "center" },
+    { text: "1:00:00", share: 1, align: "end" },
+  ]);
+  // 6:00 lies 9.7 px from the end of the axis: centred, it ends 3.5 px into
+  // the padding.
+  assert.deepEqual(
+    times(372, true, phone(300)).map((tick) => tick.align),
+    ["center", "center", "center", "center"],
+  );
+  // With no room past the axis, the first label starts at the left end of the
+  // axis, and the last label ends at its right end.
+  assert.deepEqual(
+    times(3, false, { width: 1000, left: 0, right: 0 }).map(
+      (tick) => tick.align,
+    ),
+    ["start", "center", "center", "end"],
+  );
 });

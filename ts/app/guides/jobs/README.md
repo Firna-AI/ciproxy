@@ -41,6 +41,11 @@ query. The banner of these pages is under
   VM that ran it, and on Linux its out-of-memory kills, or "None". A chart
   shows both over the time of the samples, with a lane of the steps, and a
   table, or a list on a phone, gives the figures of each step.
+- The time axis of the chart names at least one time after 0:00. Each label
+  lies centred on its time, as in the mockups, unless the panel would cut it
+  off. Then it moves just inside the edge of the panel. The labels keep apart
+  at each width. A long step name wraps inside its column, also within a
+  word.
 - A measured figure has one decimal, half up. A VM size or a label size keeps
   the whole numbers of Details. When the VM is larger than the label, as a
   Boat size can be, a tick on each meter and a grey line on each plot mark
@@ -66,7 +71,9 @@ query. The banner of these pages is under
   memory of a job. [jobs-usage.ts](../../src/view/jobs-usage.ts) turns them
   into the figures and the steps of the panel, and
   [jobs-usage-chart.ts](../../src/view/jobs-usage-chart.ts) into the geometry
-  of the chart. `job-usage.tsx`, `usage-chart.tsx`, `usage-plot.tsx`, and
+  of the chart. [jobs-usage-times.ts](../../src/view/jobs-usage-times.ts)
+  places the labels of its time axis at the width of the axis.
+  `job-usage.tsx`, `usage-chart.tsx`, `usage-plot.tsx`, and
   `usage-steps.tsx` in `src/screens/jobs` draw them. `@firna/ui/chart` cannot
   mark steps, and it draws at a fixed width in a static render, so the chart
   draws SVG in a box that stretches to the panel. The `Table` of

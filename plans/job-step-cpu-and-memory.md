@@ -997,6 +997,13 @@ Design calls, my calls, 23 November 2026, from Milestone 11:
 - **Long jobs:** the time axis reads `m:ss` below one hour and `h:mm:ss`
   from one hour. Reason: the mockups cover only short jobs, and a job can
   run for hours.
+- **Time labels:** on 23 November 2026, after review round 2, the axis
+  has tick spaces from 1 second, so each chart shows a time after `0:00`.
+  Each label stays centred on its time, as the mockup draws it. A label
+  that the flush panel would cut off moves only as far as it must to show
+  in full. Reason: a three-second chart showed only `0:00`, and the panel
+  cut `1:00:00` off at the end of a one-hour chart. The mockup keeps its
+  centred labels, because no mockup frame has such a span.
 - **Unknown step time:** a step that is not skipped and has no time reads
   "Unknown" in grey and shows no figures. Reason: the app shows "Unknown"
   for each value that the API leaves out.

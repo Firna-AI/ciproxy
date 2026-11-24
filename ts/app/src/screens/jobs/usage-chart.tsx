@@ -6,7 +6,9 @@
 // from the token package: the plots take the series colour of the chart
 // tokens, and the label size takes the context grey. The figure names the
 // figures of the job for screen readers, and hides the lane and the axes
-// from them. The key names the label line and the out-of-memory dot.
+// from them. The time axis measures its width, so a label that the panel
+// would cut off moves just inside the part of the panel that shows. The key
+// names the label line and the out-of-memory dot.
 
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -26,7 +28,8 @@ import {
   type LaneBlock,
   type UsageChartModel,
 } from "../../view/jobs-usage-chart.ts";
-import { chartRows, percent, Plot } from "./usage-plot.tsx";
+import type { TimeAxis, TimeTick } from "../../view/jobs-usage-times.ts";
+import { axisColumn, chartRows, percent, Plot } from "./usage-plot.tsx";
 
 /** The narrowest step block, in pixels, that shows its number. */
 const numberWidth = 22;
@@ -50,7 +53,7 @@ function Lane({ blocks }: { blocks: readonly LaneBlock[] }) {
               { left: percent(block.left), width: percent(block.width) },
             ]}
           >
-            <View style={styles.block}>
+            <View style={styles.block} testID="usage-mark-step">
               <Text style={styles.blockText}>
                 {block.width * width >= numberWidth ? block.number : ""}
               </Text>
@@ -60,6 +63,13 @@ function Lane({ blocks }: { blocks: readonly LaneBlock[] }) {
       </View>
     </View>
   );
+}
+
+/** A label centred on its time, or at the visible edge that it would pass. */
+function timePlace(tick: TimeTick, axis: TimeAxis) {
+  if (tick.align === "start") return { left: -axis.left };
+  if (tick.align === "end") return { right: -axis.right };
+  return [styles.timeCenter, { left: percent(tick.share) }];
 }
 
 function Keys({ model }: { model: UsageChartModel }) {
@@ -88,11 +98,21 @@ function Keys({ model }: { model: UsageChartModel }) {
 export function UsageChart({
   usage,
   mobile,
+  room,
 }: {
   usage: MeasuredUsage;
   mobile: boolean;
+  /** The room in pixels that the panel shows past each side of the chart. */
+  room: number;
 }) {
-  const model = usageChartModel(usage, mobile);
+  const [width, setWidth] = useState(0);
+  // Left of the time axis, the panel also shows the column of axis labels.
+  const axis = {
+    width,
+    left: axisColumn.width + axisColumn.gap + room,
+    right: room,
+  };
+  const model = usageChartModel(usage, mobile, axis);
   const height = mobile ? 64 : 76;
   return (
     <View role="figure" aria-label={model.summary}>
@@ -108,15 +128,15 @@ export function UsageChart({
       ))}
       <View style={[chartRows.row, styles.timesRow]} aria-hidden>
         <View style={chartRows.axis} />
-        <View style={styles.times}>
+        <View
+          style={styles.times}
+          onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+        >
           {model.times.map((tick) => (
             <Text
               key={tick.text}
-              style={[
-                chartRows.axisText,
-                styles.xTick,
-                { left: percent(tick.share) },
-              ]}
+              testID="usage-time"
+              style={[chartRows.axisText, styles.xTick, timePlace(tick, axis)]}
             >
               {tick.text}
             </Text>
@@ -147,7 +167,8 @@ const styles = StyleSheet.create({
   },
   timesRow: { marginTop: 8 },
   times: { position: "relative", flexGrow: 1, flexShrink: 1, height: 12 },
-  xTick: { position: "absolute", transform: [{ translateX: "-50%" }] },
+  xTick: { position: "absolute" },
+  timeCenter: { transform: [{ translateX: "-50%" }] },
   keysRow: { marginTop: 14 },
   keys: {
     flexGrow: 1,

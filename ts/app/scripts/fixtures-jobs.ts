@@ -11,6 +11,7 @@ export const fixtureJobIds = {
   cancelled: "50000000-0000-4000-8000-000000000105",
   untimed: "50000000-0000-4000-8000-000000000106",
   older: "50000000-0000-4000-8000-000000000107",
+  hour: "50000000-0000-4000-8000-000000000108",
   running: "50000000-0000-4000-8000-000000000201",
   waiting: "50000000-0000-4000-8000-000000000202",
 } as const;
@@ -139,6 +140,17 @@ export function historyJobs(): JobView[] {
       queued_at: "2026-10-10T11:50:00Z",
       started_at: "2026-10-10T11:50:00Z",
       completed_at: "2026-10-10T11:56:12Z",
+    }),
+    // A job of exactly one hour, the day before, so History of today keeps
+    // its jobs. Its chart ends on a time tick.
+    fixtureJob({
+      id: fixtureJobIds.hour,
+      name: "Nightly end-to-end",
+      workflow: "Nightly",
+      queued_at: "2026-11-05T02:00:00Z",
+      started_at: "2026-11-05T02:00:00Z",
+      completed_at: "2026-11-05T03:00:00Z",
+      runtime_seconds: "3600",
     }),
   ];
 }

@@ -105,6 +105,18 @@ export async function visibleBox(locator: Locator) {
   return box;
 }
 
+export type Box = { x: number; y: number; width: number; height: number };
+
+/** The inner box lies inside the outer box, to a pixel. */
+export function boxInside(outer: Box, inner: Box): boolean {
+  return (
+    inner.x >= outer.x - 1 &&
+    inner.y >= outer.y - 1 &&
+    inner.x + inner.width <= outer.x + outer.width + 1 &&
+    inner.y + inner.height <= outer.y + outer.height + 1
+  );
+}
+
 export async function insideRegion(
   region: Locator,
   item: Locator,
@@ -112,10 +124,7 @@ export async function insideRegion(
   const outer = await visibleBox(region);
   const inner = await visibleBox(item);
   assert.ok(
-    inner.x >= outer.x - 1 &&
-      inner.y >= outer.y - 1 &&
-      inner.x + inner.width <= outer.x + outer.width + 1 &&
-      inner.y + inner.height <= outer.y + outer.height + 1,
+    boxInside(outer, inner),
     "The row must stay inside its named panel.",
   );
 }
