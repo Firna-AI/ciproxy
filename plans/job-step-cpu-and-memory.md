@@ -1346,13 +1346,15 @@ The change works end to end, and the review passes.
       before it adds the `secrets` context, so the main step shows the
       expression; only the post step name can hold a resolved and masked
       secret (found in review round 2).
-- [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
-- [ ] Commit with Conventional Commits and push the branch.
-- [ ] Review the complete local diff against `origin/main` with the
+- [x] Run the targeted tests and the complete gate named in `AGENTS.md`.
+      CI ran the complete gate on `36ecb5f` and passed.
+- [x] Commit with Conventional Commits and push the branch.
+- [x] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, record
       follow-up items under `plans/follow-ups/` for the rest, re-review
-      once, and report.
+      once, and report. Done on 23 November 2026: two review rounds and two
+      fix rounds. Findings 1, 3, 106, 202, and 304 wait for the user.
 - [ ] Delete this plan when the `plans` skill says, under "Deleting the
       plan".
 - [ ] Open the pull request. Its description gives the decisions and the
