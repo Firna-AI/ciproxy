@@ -770,9 +770,9 @@ branch.
 
 Depends on: every other milestone
 
-- [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
-- [ ] Commit with Conventional Commits and push the branch.
-- [ ] Review the complete local diff against `origin/main` with the
+- [x] Run the targeted tests and the complete gate named in `AGENTS.md`.
+- [x] Commit with Conventional Commits and push the branch.
+- [x] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, record follow-up
       items under `plans/follow-ups/` for the rest, re-review once, and
@@ -782,6 +782,9 @@ Depends on: every other milestone
 - [ ] Open the pull request. Its description gives the decisions and the
       design calls of this plan with their dates, a permalink to this plan,
       and the follow-up items that the change adds.
+
+Evidence: `.context/providers-interface/m14/` and
+`.context/reviews/calummoore/ciproxy-providers-interface-s8rp/`.
 
 ## Post-merge follow-up (non-blocking)
 
